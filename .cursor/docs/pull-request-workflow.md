@@ -48,9 +48,29 @@ Fill it out consistently:
 | ----- | -------- |
 | **Title** | `<TICKET_NUMBER>: <Short description>` |
 | **Clickup** | Full ClickUp URL for the task |
-| **Description** | What changed and why (bullets welcome) |
+| **Description** | What changed and why (bullets welcome). Include a **fenced code block with the tip commit hash** (see **Commit hash** below). |
 | **Test Evidence** | See **Testing & verification** below—prefer screenshots; call out automated tests only when they matter |
 | **Checklist** | All boxes checked before requesting review |
+
+### Commit hash
+
+After you push, capture the revision reviewers should look at (usually **latest commit on the PR branch**):
+
+```bash
+git rev-parse HEAD
+```
+
+In the PR body (often under **Description** or its own short heading), include the hash in a **markdown fenced code block** so it stays easy to copy:
+
+````markdown
+### Commit
+
+```
+abc123def4567890abcd...
+```
+````
+
+Use the same pattern in **Slack / Teams** PR announcements when you paste the hash for quick reference.
 
 ---
 
@@ -62,7 +82,7 @@ Fill it out consistently:
 4. **`git add <only relevant files>`** — Do **not** add unrelated changes.
 5. **`git commit`** — Ticket-prefixed subject line; optional body.
 6. **`git push -u origin <TICKET_NUMBER>`**
-7. **`gh pr create`** — Use the repo PR template; **`--base main`** unless the team uses a different default branch.
+7. **`gh pr create`** — Use the repo PR template; **`--base main`** unless the team uses a different default branch. Include the **commit hash** in a fenced code block in the PR body (see **Commit hash** above).
 
 ### CLI example (`gh`)
 
@@ -94,6 +114,12 @@ Use this structure in the GitHub PR body (adjust headings if the template differ
 - Mirrors the Callisto implementation (PRDV-15263): env check lives solely in the swagger bootstrap module, not `main.ts`.
 - Swagger UI (`/triton/swagger`) and JSON endpoint (`/triton/swagger-json`) are now only registered when `ENV_NAME` is `local`. All other environments (`dev`, `tst`, `sb`, `prod`, `undefined`) return nothing.
 
+### Commit
+
+```
+a1b2c3d4e5f678901234567890abcd1234567890
+```
+
 ### Testing and Verification
 
 https://atlas-sb.planetdepos.com/triton/swagger  
@@ -122,10 +148,13 @@ https://atlas-dev.planetdepos.com/triton/swagger
 
 Paste and fill in the blanks:
 
-```
+````
 PR for **PRDV-15263 - [BE] Turn off Swagger for Callisto in higher environments**
 https://app.clickup.com/t/43227262/PRDV-15263
 https://github.com/planetdepos/callisto-back-end/pull/312
 ```
+a1b2c3d4e5f678901234567890abcd1234567890
+```
+````
 
-Swap ticket title, ClickUp URL, and GitHub PR URL per task.
+Swap ticket title, ClickUp URL, GitHub PR URL, and commit hash per task. The inner triple-backtick block is the **commit hash code block** (easy to copy in Slack/Teams).
