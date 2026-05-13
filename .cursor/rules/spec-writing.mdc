@@ -1,0 +1,69 @@
+---
+description: Required sections when authoring epic and story specs (artifacts, schema, migrations, DTOs, projections).
+globs: granting-client-acess/**/*.md
+alwaysApply: false
+---
+
+# Epic and story specs (Callisto / Atlas)
+
+When creating or extending **epic** or **story** markdown under `granting-client-acess/`, include the sections below for **backend** work. If a section does not apply, add a one-line **N/A** with a short reason (e.g. "N/A — UI-only story") so reviewers know it was considered.
+
+Reference shape: `epics/set-track-and-collection/story-2-set-track-and-collection-on-drag-and-drop-upload.md`.
+
+## 1. Folder hierarchy
+
+- Tree of **new** paths under `callisto-back-end-neptune/src/` (and `og-atlas-front-end/src/` when relevant).
+- Follow module layout from Callisto rules: `application/controllers/actions/…`, `domain/transaction-scripts/{name}-ts/`, `infrastructure/repositories/`, `registries/`, etc.
+
+## 2. New classes (name + path)
+
+- Table or bullet list: **PascalCase class name** → **file path** (kebab-case filename).
+- Include actions, services, transaction scripts, repositories, responders, swagger helpers, assemblers, mappers, converters when applicable.
+
+## 3. New entities
+
+- **Entity class name** and **table name** (`@Entity('…')`).
+- Columns and relationships at a level that matches existing story specs (snippet or table).
+- **Entity ownership** — call out whether the entity is domain-specific (`{module}/domain/entities/`) or shared (`src/shared/shared-entities/entities/`), with the full file path. For Callisto-owned tables, note audit column convention (`created_user_identity` / `modified_user_identity`).
+
+## 4. Modified entities
+
+- **Entity class name** and path.
+- **Only new or changed properties** (column name, type, nullability, FK).
+- **Entity ownership** — call out whether the entity is domain-specific or shared, with the full file path. This helps reviewers understand cross-domain impact (e.g. modifying a shared entity affects multiple modules).
+
+## 5. New migrations (file names)
+
+- Ordered list of migration **files** as they should appear under `src/typeorm/migrations/` (timestamp prefix + descriptive kebab name), e.g. `{ts}-create__deliverable_collections__table.ts`.
+- Distinguish DDL vs seed when both exist.
+
+## 6. New migration classes
+
+- **TypeScript class name** per migration file (TypeORM migration class), aligned with the filename.
+
+## 7. New DTOs
+
+- **Request/response class names** and paths under `application/` (or action colocation).
+- Note required vs optional fields when it affects API contract.
+
+## 8. New projections (and domain inputs if relevant)
+
+- **Projection type names** and file paths (`.projection.ts` next to the transaction script or per team convention).
+- For new commands/params used by services or TS, call those out explicitly so domain layer stays free of `Dto` in names.
+
+## Cross-cutting
+
+- Link **parent epic**, **feature flags**, and **companion tickets** when the story depends on or establishes shared work.
+- Frontend-only stories still benefit from sections 1–2 scoped to `og-atlas-front-end/`; use N/A for 3–8 when no API or schema change.
+
+## Optional callouts (when applicable)
+
+Use **N/A** when none; otherwise a short list is enough.
+
+- **HTTP surface** — method(s), path(s), and whether the contract is new or a breaking change to an existing route.
+- **Registries and module wiring** — new entries in `action.registry.ts`, `transaction-script.registry.ts`, `repository.registry.ts`, `*.module.ts` providers/imports/exports.
+- **Ports** — new or extended domain ports (`Symbol` tokens + type shape) and which infrastructure class implements them.
+- **Domain events / dispatchers / outbox** — new emission points or runners when messaging is part of the story.
+- **Domain exceptions** — new thrown types or error codes consumers rely on.
+- **Authorization** — new or changed guards, roles, or policy checks.
+- **Spec tests** — new `__specs__/*.spec.ts` paths (or explicit “deferred” with reason).
