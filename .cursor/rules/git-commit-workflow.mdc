@@ -20,6 +20,19 @@ When the user tells you to **push**, **commit**, **follow the git workflow**, **
 3. **`git commit -m "` + short subject matching §Commit messages below + `"`** (default). If **`git push`** would fail because there is nothing staged and nothing changed, explain that `main` already matches the work—or that there is nothing to commit—rather than committing an empty patch.
 4. **`git push`** to **`origin`** (your current branch—usually **`main`**).
 5. Leave **no leftovers**: delete any temp message/helper files created for git; ensure the repo is in the state the user expects (committed + pushed, or cleanly explained why not).
+6. **Give a copy‑paste‑friendly SHA in chat**: after **`git push`** succeeds on the commits you landed, run **`git rev-parse HEAD`** and include its output in **one fenced code block** with **nothing in that block except one line—the full forty‑character commit hash**—so the human can copy the SHA straight from Cursor without scraping surrounding text.
+
+**Commit SHA block example**
+
+After you push, reply may end with language like:
+
+> Pushed **`main`**; latest commit SHA:
+
+```
+0123456789abcdef0123456789abcdef01234567
+```
+
+(Use the real **`git rev-parse HEAD`** output; avoid mixing the SHA inside a sentence.)
 
 **Commit subject sanity**
 
