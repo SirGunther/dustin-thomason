@@ -1,0 +1,41 @@
+---
+description: Default git status / add / commit / push flow and short commit-message style for this repo (and assistant command-only responses).
+alwaysApply: true
+---
+
+# Git commit & push (this repo)
+
+Use this as the default habit when saving work to `main` unless a ticket or team process says otherwise.
+
+## 1. Command sequence
+
+Run in order:
+
+1. `git status`
+2. `git add -A`
+3. `git commit -m "message"`
+4. `git push`
+
+### 1.1 When not to use `git add -A`
+
+If there are **untracked or modified files you do not intend to commit**, stage paths explicitly (e.g. `git add path/to/file`) instead of `-A`, then continue with commit and push.
+
+## 2. Commit messages
+
+### 2.1 Length and shape
+
+- Aim for **about five to seven words**.
+- Describe **what changed**, not implementation detail (unless the change *is* process or tooling).
+
+### 2.2 Wording
+
+- Use **imperative** phrasing: **add**, **fix**, **update**, **remove**, **refactor**, **revert**, etc.
+- Examples: `Add natural sort spec fixtures`, `Fix upload validation on empty file`.
+
+## 3. Working with an assistant
+
+When you want **no extra commentary**—only the runnable steps—ask for output in this form: **return only the four commands** in §1 with a filled-in `-m "…"` message following §2.
+
+## 4. Interpretation
+
+Edge cases (amend, rebase, partial staging, branch other than `main`, hooks) are intentionally out of scope; this document is the **default** path. Diverge when ticket or review workflow requires it.
