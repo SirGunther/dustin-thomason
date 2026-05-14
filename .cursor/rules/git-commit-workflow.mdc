@@ -1,41 +1,72 @@
 ---
-description: Default git status / add / commit / push flow and short commit-message style for this repo (and assistant command-only responses).
+description: Standard commit/push habit for dustin-thomason—runs to completion via git status → add → commit → push when an agent pushes work here.
 alwaysApply: true
 ---
 
-# Git commit & push (this repo)
+# Git commit & push (dustin-thomason)
 
-Use this as the default habit when saving work to `main` unless a ticket or team process says otherwise.
+Baseline for landing changes on **`main`** in this repo. Team or ticket tooling can override when it conflicts.
 
-## 1. Command sequence
+---
 
-Run in order:
+## For Cursor agents (read this first)
 
-1. `git status`
-2. `git add -A`
-3. `git commit -m "message"`
-4. `git push`
+When the user tells you to **push**, **commit**, **follow the git workflow**, **use `.cursor/rules/git-commit-workflow.mdc`**, or similar, do **not** stop at proposing commands unless they **explicitly** ask for command text only.
 
-### 1.1 When not to use `git add -A`
+**You should**
 
-If there are **untracked or modified files you do not intend to commit**, stage paths explicitly (e.g. `git add path/to/file`) instead of `-A`, then continue with commit and push.
+1. Run **`git status`** and read what changed.
+2. Stage with **`git add -A`** when **everything** listed should go in one commit. If something must stay out (unrelated edits, secrets, accidental files), stage **explicit paths only** instead, and say—in one short sentence—what you staged and why.
+3. **`git commit -m "` + short subject matching §Commit messages below + `"`** (default). If **`git push`** would fail because there is nothing staged and nothing changed, explain that `main` already matches the work—or that there is nothing to commit—rather than committing an empty patch.
+4. **`git push`** to **`origin`** (your current branch—usually **`main`**).
+5. Leave **no leftovers**: delete any temp message/helper files created for git; ensure the repo is in the state the user expects (committed + pushed, or cleanly explained why not).
 
-## 2. Commit messages
+**Commit subject sanity**
 
-### 2.1 Length and shape
+The subject must be **only** the short phrase from §Commit messages—not merge noise, trailers, or long bodies. After committing, glance at **`git log -1 --pretty=%s`**; **`git commit --amend`** once if something else appended itself to your subject line, then push again if needed (**`git push`** with **`--force-with-lease`** only if amend rewrote history after prior push—you should avoid that when possible).
 
-- Aim for **about five to seven words**.
-- Describe **what changed**, not implementation detail (unless the change *is* process or tooling).
+**Command-only mode**
 
-### 2.2 Wording
+Only when the user explicitly asks something like **“paste the four git commands only”**, respond with exactly those commands and a filled-in **`-m`**, matching §Human quick reference. Otherwise you **execute** the workflow yourself.
 
-- Use **imperative** phrasing: **add**, **fix**, **update**, **remove**, **refactor**, **revert**, etc.
-- Examples: `Add natural sort spec fixtures`, `Fix upload validation on empty file`.
+---
 
-## 3. Working with an assistant
+## Human quick reference
 
-When you want **no extra commentary**—only the runnable steps—ask for output in this form: **return only the four commands** in §1 with a filled-in `-m "…"` message following §2.
+```bash
+git status
+git add -A
+git commit -m "message"
+git push
+```
 
-## 4. Interpretation
+Use **`git add <paths>…`** instead of **`-A`** when you deliberately want fewer files in the commit.
 
-Edge cases (amend, rebase, partial staging, branch other than `main`, hooks) are intentionally out of scope; this document is the **default** path. Diverge when ticket or review workflow requires it.
+---
+
+## Commit messages
+
+### Length & focus
+
+About **five to seven words**.
+
+Describe **what** changed from the reviewer’s angle, not how you coded it unless the ticket *is* process or infra.
+
+### Wording
+
+**Imperative mood**: start with **add**, **fix**, **update**, **remove**, **refactor**, **revert**, and so on—like a terse news headline.
+
+Examples:
+
+- `Add natural-sort text fixtures for qa`
+- `Fix empty-file validation on upload`
+
+### One commit / one narrative
+
+Prefer **one cohesive subject** per commit. If unrelated pieces land together, **`git add -A`** is the wrong habit—stage by path.
+
+---
+
+## Out of scope (defaults only)
+
+Interactive rebase, merge strategies, branching away from **`main`**, signing, or release tagging are left to other docs. This rule is the **straight path**: status → stage → commit → push.
