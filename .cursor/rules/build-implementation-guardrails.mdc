@@ -1,0 +1,61 @@
+---
+description: Mandatory tests + architecture guardrails for Codex/agent builds — coverage for new APIs and functions, non-regression posture, graceful failure, SOLID/functional shaping, avoid raw Postgres/SQL unless unavoidable.
+alwaysApply: true
+---
+
+# Build guardrails — implementation & tests
+
+Read this sheet **before** substantive feature work (**new endpoints, callers, transactions, integrations, sizeable refactors**) in Atlas / Nest services / Vue apps. Prefer matching the **patterns already documented** in repo-specific **`/.cursor/rules/**`** (architecture, layering, Nest patterns).
+
+---
+
+## 1. Automated tests — default obligation
+
+Treat tests as **part of shipping**, not a follow-on ticket unless the repo standard explicitly waives (`jest-e2e` carve-outs, trivial config-only tweaks, docs-only churn).
+
+When you introduce or materially change behavior, add or extend tests so that:
+
+- **Surface coverage** — the **new behavior** itself is asserted (happy path + meaningful failure / edge branches you introduced).
+- **Regression / isolation posture** — where shared infrastructure is touched (**global filters, middleware, Axios interceptors, query clients, routers, caches, decorators**), extend or add tests that show **neighbor paths still behave**. Prefer **narrow contract tests** (same module + peers) rather than brittle full-stack guesses.
+- **Graceful degradation** — when failures are intentional or expected (**validation, downstream 5xx/timeouts**, missing deps), asserts should cover **controlled outcomes** (**mapped exceptions DTO/status**, **`Result` folds**, **`catch` UX paths**, **`onError`** handling in Vue)—not unchecked throws or silent breakage.
+
+Repos using **`__specs__/*.spec.{ts,vue,...}`**, **`vitest`**, **`jest`**—follow **existing layout and helpers** (**`createApplyMock`**, **`createComposableMock`**, etc.) rather than inventing parallel harnesses.
+
+If you truly cannot reach the target without heavy harness debt, spell out **blocked cases** plainly and propose the smallest scaffolding task—still avoid shipping **zero** tests for risky paths.
+
+---
+
+## 2. Architecture & framework fit
+
+Implement **inside established folder patterns** (controller actions, services, repos, adapters, Vue composables, Pinia/query modules—whatever the codebase already favors). Prefer **thin glue at edges** (**HTTP**, **CLI**, UI) **+** cohesive domain/core units.
+
+Defer to **architecture / DDD / hexagonal docs** pinned in **`/.cursor/rules/**`** for the touched repository when they conflict with guesses here.
+
+---
+
+## 3. SOLID class seams, functional internals
+
+Bias toward **SOLID** composition at boundaries (**single responsibility coordinators**, invert dependencies via ports/interfaces as the repo dictates).
+
+Prefer **implementations that stay easy to substitute**: **deterministic helpers**, **`async` pipelines with early returns**, **pure transforms** layered behind **narrow facades/classes** hosting DI (`@Injectable()` gateways, façade services). Avoid **kitchen-sink** classes accumulating unrelated branches—split or extract before growth.
+
+Design so tests can **`vi.mock`** / **`jest.mock`** collaborators without booting the universe.
+
+---
+
+## 4. Data access — avoid brittle SQL
+
+Default to **typed repository / TypeORM constructs / query-builder patterns** sanctioned in the codebase.
+
+Do **not** sprinkle **vendor-locked Postgres** (or handwritten SQL blobs) purely for ergonomics unless the existing module already embraces that—and even then encapsulate aggressively and test defensively.
+
+If only raw SQL qualifies, cite **why** narrowly, constrain surface area (**single repository method** / dedicated reader), guard against **`NULL`/column drift**, document parameters, prefer **migration-backed views** instead of duplicated logic.
+
+---
+
+## 5. When shipping
+
+Before calling work **done**:
+
+- Lint/test pipeline expectations for that workspace are acknowledged (respect **`npm run lint`**, **`audit` thresholds**, **`vitest`**/**`jest`** runs when those scripts apply).
+- If you shipped code without executable tests owing to unblockers, annotate **risk + follow-ups** succinctly alongside the explanation.
