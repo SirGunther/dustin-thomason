@@ -1,11 +1,15 @@
 ---
-description: Standard commit/push habit for dustin-thomason—runs to completion via git status → add → commit → push when an agent pushes work here.
+description: Standard commit/push habit for dustin-thomason—runs to completion via npm audit/lint gates (when applicable), git status → add → commit → push when an agent pushes work here or in sibling Node repos.
 alwaysApply: true
 ---
 
 # Git commit & push (dustin-thomason)
 
-Baseline for landing changes on **`main`** in this repo. Team or ticket tooling can override when it conflicts.
+Baseline for landing changes on **`main`** when that matches the workflow the user invokes. Team or ticket tooling can override when it conflicts.
+
+Repositories such as **`atlas-front-end`**, **`callisto-back-end`**, **`europa-back-end`**, and **`triton-back-end`** expose **`npm run lint`**—often with **`eslint --fix`** wired into that script (**backend** repos and **Triton**). **`atlas-front-end`** uses **`npm run lint`** (no fix; **`eslint . --max-warnings 0`**) plus a separate **`npm run lint:fix`** when autofix helps; **`npm run lint`** must succeed before you commit here.
+
+If the repo root has **no** **`package.json`** (many **`dustin-thomason`** changes are doc-only)—**skip §Pre-flight** entirely.
 
 ---
 
@@ -13,38 +17,62 @@ Baseline for landing changes on **`main`** in this repo. Team or ticket tooling 
 
 When the user tells you to **push**, **commit**, **follow the git workflow**, **use `.cursor/rules/git-commit-workflow.mdc`**, or similar, do **not** stop at proposing commands unless they **explicitly** ask for command text only.
 
-**You should**
+### Pre-flight (**npm**)—before **`git commit`**
 
-1. Run **`git status`** and read what changed.
-2. Stage with **`git add -A`** when **everything** listed should go in one commit. If something must stay out (unrelated edits, secrets, accidental files), stage **explicit paths only** instead, and say—in one short sentence—what you staged and why.
-3. **`git commit -m "` + short subject matching §Commit messages below + `"`** (default). If **`git push`** would fail because there is nothing staged and nothing changed, explain that `main` already matches the work—or that there is nothing to commit—rather than committing an empty patch.
-4. **`git push`** to **`origin`** (your current branch—usually **`main`**).
-5. Leave **no leftovers**: delete any temp message/helper files created for git; ensure the repo is in the state the user expects (committed + pushed, or cleanly explained why not).
-6. **Give a copy‑paste‑friendly SHA in chat**: after **`git push`** succeeds on the commits you landed, run **`git rev-parse HEAD`** and include its output in **one fenced code block** with **nothing in that block except one line—the full forty‑character commit hash**—so the human can copy the SHA straight from Cursor without scraping surrounding text.
+From **the repo root whose changes you intend to ship** (`package.json` at that cwd):
+
+**A.** Run **`npm audit --audit-level=high`**.
+
+- If it exits non‑zero (**HIGH** or **CRITICAL** vulns)—**STOP immediately**. Do **not** run **`git commit`** or **`git push`**. Give a short recap of **`npm audit`** for the developer to triage (**`npm audit fix`**, policy exception, downgrade, fork). Only proceed after they resolve audits or waive them.
+
+**B.** Run **`npm run lint`**.
+
+- If it exits non‑zero—**STOP before commit.** Fix surfaced issues (including rerunning **`npm run lint`** after edits). **`atlas-front-end`**: **`npm run lint:fix`** is available when ESLint autofix clears noise; rerun **`npm run lint`** afterward until it passes.
+- Scripts that embed **`eslint --fix`** (**e.g.** Callisto/Europa/Triton backend packages) **may mutate files.** After any fixes land, rerun **`git status`** and fold those changes into the next **`git add`** so the pushed tree matches ESLint reality.
+
+Audit first, lint second—you avoid patching code only to discover **`npm audit`** afterward would have blocked shipment anyway.
+
+### Git sequence
+
+Once **§Pre-flight** is satisfied—or skipped because there is no npm workspace—continue:
+
+**3.** **`git status`**—read staged vs unstaged vs untracked.
+
+**4.** Stage with **`git add -A`** when **everything** listed should ride in **one** commit. If paths must remain out (**secrets**, stray scratch files, unrelated edits), **`git add <paths>`** selectively and—in one terse sentence—what you staged and why.
+
+**5.** **`git commit -m "`** + §Commit-message subject below + **`"`**. If neither staging nor substantive working-tree changes remain, explain that **`main`** (or the current branch) already matches **`origin`** rather than forging an empty commit.
+
+**6.** **`git push`** to **`origin`** (your current branch—usually **`main`**).
+
+**7.** Leave **no temp helper files**. Delete ephemeral commit-message scratch paths.
+
+**8.** **Paste one clean SHA**: after **`git push`**, run **`git rev-parse HEAD`** into **one fenced markdown block containing only that forty‑character hash** so the reader copies it cleanly from Cursor.
+
+---
 
 **Commit SHA block example**
 
-After you push, reply may end with language like:
-
-> Pushed **`main`**; latest commit SHA:
+> Pushed **`main`** with passing lint / audit gates; landing SHA:
 
 ```
 0123456789abcdef0123456789abcdef01234567
 ```
 
-(Use the real **`git rev-parse HEAD`** output; avoid mixing the SHA inside a sentence.)
-
-**Commit subject sanity**
-
-The subject must be **only** the short phrase from §Commit messages—not merge noise, trailers, or long bodies. After committing, glance at **`git log -1 --pretty=%s`**; **`git commit --amend`** once if something else appended itself to your subject line, then push again if needed (**`git push`** with **`--force-with-lease`** only if amend rewrote history after prior push—you should avoid that when possible).
-
-**Command-only mode**
-
-Only when the user explicitly asks something like **“paste the four git commands only”**, respond with exactly those commands and a filled-in **`-m`**, matching §Human quick reference. Otherwise you **execute** the workflow yourself.
+(Replace with **`git rev-parse HEAD`**.)
 
 ---
 
-## Human quick reference
+### Commit subject sanity
+
+The **`git`** subject stays **exactly** the short §phrase below—no stray trailers merging into the title. Run **`git log -1 --pretty=%s`**; **`git commit --amend`** once when tooling corrupts **`HEAD`**’s subject line, then push again when history rewrite is allowed (**`--force-with-lease`** sparingly).
+
+### Command-only mode
+
+When the human demands **literally paste four git commands**, deliver **§Human quick reference** verbatim with the filled **`message`**. Omit npm blocks unless asked for full gate steps.
+
+---
+
+## Human quick reference (git only)
 
 ```bash
 git status
@@ -53,7 +81,22 @@ git commit -m "message"
 git push
 ```
 
-Use **`git add <paths>…`** instead of **`-A`** when you deliberately want fewer files in the commit.
+Swap **`git add -A`** for explicit paths anytime one commit shouldn’t sweep the tree.
+
+---
+
+## Human quick reference (Node repo—before commit)
+
+Typical prelude when **`package.json`** ships **`lint`**:
+
+```bash
+npm audit --audit-level=high
+npm run lint
+```
+
+Whenever **`eslint --fix`** rewrote tracked files (`npm run lint` exits **0**, but **`git status`** gains diffs—common on backends), rerun **`git status`**, **`git add`**, rerun **`npm run lint`** once more until clean, **then** run the bash block in **Human quick reference (git only)**.
+
+**atlas-front-end:** run **`npm run lint:fix`** first when ESLint autofix likely helps—**`npm run lint`** must exit **0** before **`git commit`**.
 
 ---
 
@@ -61,25 +104,20 @@ Use **`git add <paths>…`** instead of **`-A`** when you deliberately want fewe
 
 ### Length & focus
 
-About **five to seven words**.
+Roughly **five to seven words** describing **surface change**—keep implementation chatter out unless the ticket truly is infra.
 
-Describe **what** changed from the reviewer’s angle, not how you coded it unless the ticket *is* process or infra.
+### Wording starts
 
-### Wording
+**Add**, **fix**, **update**, **remove**, **refactor**, **revert**, etc.—telegram-style headline.
 
-**Imperative mood**: start with **add**, **fix**, **update**, **remove**, **refactor**, **revert**, and so on—like a terse news headline.
+Examples: **`Add natural-sort QA text fixtures`**, **`Fix upload validation empty file`**.
 
-Examples:
+### One narrative per commit
 
-- `Add natural-sort text fixtures for qa`
-- `Fix empty-file validation on upload`
-
-### One commit / one narrative
-
-Prefer **one cohesive subject** per commit. If unrelated pieces land together, **`git add -A`** is the wrong habit—stage by path.
+Unrelated deltas → split commits or refrain from **`git add -A`** wholesale.
 
 ---
 
-## Out of scope (defaults only)
+## Out of scope (defaults here)
 
-Interactive rebase, merge strategies, branching away from **`main`**, signing, or release tagging are left to other docs. This rule is the **straight path**: status → stage → commit → push.
+Heavy **rebase/merge choreography**, tagging, signatures, husky internals. This memo covers **straight line**: optional **audit + lint gates → git status/add/commit/push** when Node repo applies.
