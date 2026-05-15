@@ -13,11 +13,19 @@ Read this sheet **before** substantive feature work (**new endpoints, callers, t
 
 Treat tests as **part of shipping**, not a follow-on ticket unless the repo standard explicitly waives (`jest-e2e` carve-outs, trivial config-only tweaks, docs-only churn).
 
-When you introduce or materially change behavior, add or extend tests so that:
+**If executable tests do not yet exist for the unit you touch** (**new endpoint, adapter, composable, service, mapper, reducer, Vue surface**, …)—**create them immediately** beside that code using the repo’s **`__specs__` / **`*.spec.*`** layout. Leaving production logic uncovered—when sibling files already carry specs and no repo waiver applies—is unacceptable.
 
-- **Surface coverage** — the **new behavior** itself is asserted (happy path + meaningful failure / edge branches you introduced).
-- **Regression / isolation posture** — where shared infrastructure is touched (**global filters, middleware, Axios interceptors, query clients, routers, caches, decorators**), extend or add tests that show **neighbor paths still behave**. Prefer **narrow contract tests** (same module + peers) rather than brittle full-stack guesses.
-- **Graceful degradation** — when failures are intentional or expected (**validation, downstream 5xx/timeouts**, missing deps), asserts should cover **controlled outcomes** (**mapped exceptions DTO/status**, **`Result` folds**, **`catch` UX paths**, **`onError`** handling in Vue)—not unchecked throws or silent breakage.
+Each relevant **unit suite** tied to shipped behavior must be **comprehensive across the seams you influence**—not just a lone smoke assertion:
+
+- **Happy path** — success returns / side effects asserted.
+- **Failure paths** — invalid input, forbidden states, **`Promise.reject`**, mapped domain/application errors surfaced the way callers see them.
+- **Edge cases** — boundaries that plausibly break behavior (**empty**/null payloads, extremes, concurrency-safe assumptions documented with at least minimal coverage where risk exists).
+- **Graceful degradation** — not only “it throws”: assert **controlled handling** (**HTTP/status shape**, **`onError`/toast flows**, deterministic fallbacks)—no silent breakage, no leaky raw stack traces promised to callers.
+
+When you introduce or materially change behavior, **add new specs or extend existing ones** so that:
+
+- **Surface coverage** — the **new behavior** stays reflected in assertions across the bullets above—not just a lone green path.
+- **Regression / isolation posture** — when shared infrastructure moves (**global filters, middleware, Axios interceptors, query clients, routers, caches, decorators**), extend or add **narrow contract tests** proving **neighbor API routes / callers / widgets** retain **happy**, **failure**, **edge**, and **graceful** guarantees wherever risk migrated—rather than brittle end-to-end guesswork alone.
 
 Repos using **`__specs__/*.spec.{ts,vue,...}`**, **`vitest`**, **`jest`**—follow **existing layout and helpers** (**`createApplyMock`**, **`createComposableMock`**, etc.) rather than inventing parallel harnesses.
 
