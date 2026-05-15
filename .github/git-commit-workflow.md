@@ -4,10 +4,6 @@ Operational instructions—including **`npm audit --audit-level=high`**, **`npm 
 
 **[`/.cursor/rules/git-commit-workflow.mdc`](../.cursor/rules/git-commit-workflow.mdc)**
 
-## Related Cursor rules
-
-- **[`build-implementation-guardrails.mdc`](../.cursor/rules/build-implementation-guardrails.mdc)** — tests (create if missing; happy/failure/edge/graceful), architecture posture, SOLID/functional seams, SQL caution.
-
 ## Why stay in `.cursor/`?
 
 Cursor loads **`alwaysApply`** rules from **`.cursor/rules/`**. Moving the authoritative file exclusively into **`.github/`** drops that automation unless you rebuild wiring elsewhere—so **`git-commit-workflow.mdc` stays canonical here**, and **this Markdown file only helps people browsing **`.github/**` on GitHub or in the IDE.
