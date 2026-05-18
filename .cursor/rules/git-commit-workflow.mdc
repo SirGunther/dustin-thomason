@@ -112,7 +112,7 @@ Roughly **five to seven words** describing **surface change**—keep implementat
 
 **Add**, **fix**, **update**, **remove**, **refactor**, **revert**, etc.—telegram-style headline.
 
-Examples: **`Add natural-sort QA text fixtures`**, **`Fix upload validation empty file`**.
+Examples: **`PRDV-14699: Co-locate comparator with proceeding mapper`** (ticket-prefixed repos such as Callisto/Europa/Triton back-end and atlas-front-end), **`Add natural-sort QA text fixtures`**, **`Fix upload validation empty file`**.
 
 ### One narrative per commit
 
