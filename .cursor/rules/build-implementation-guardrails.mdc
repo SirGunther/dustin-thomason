@@ -67,3 +67,12 @@ Before calling work **done**:
 
 - Lint/test pipeline expectations for that workspace are acknowledged (respect **`npm run lint`**, **`audit` thresholds**, **`vitest`**/**`jest`** runs when those scripts apply).
 - If you shipped code without executable tests owing to unblockers, annotate **risk + follow-ups** succinctly alongside the explanation.
+
+---
+
+## 6. Local app-server checks
+
+Do **not** run a local test whose only purpose is to confirm the app server is already listening. Only start or probe a local server when it directly verifies requested behavior (**browser automation**, endpoint checks, or a manual repro path), and state the behavioral signal it provides.
+
+
+
