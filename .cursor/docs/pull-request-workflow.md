@@ -9,7 +9,7 @@ Personal playbook for opening branches, commits, and PRs with consistent ticketi
 | **This file** (`.cursor/docs/pull-request-workflow.md`) | Reference; copy/paste templates | Bookmark it; `@`-mention it in Cursor when you want this followed; paste into PRs or channels |
 | **Cursor Rules** (`.cursor/rules/*.mdc`) | Always-on or path-scoped AI hints | Use for repo-specific conventions (e.g. “never commit `.env`”) inside a **code** project—not required for this personal folder |
 
-Reference **this doc** when you open PRs. Add a **rule** in an application repo only if you want every AI session there reminded automatically.
+**Starting a branch?** Use [new-branch-get-started.md](./new-branch-get-started.md) first. Use **this file** when you open the PR.
 
 ---
 
@@ -54,11 +54,22 @@ Fill it out consistently:
 
 ### Commit hash
 
-After you push, capture the revision reviewers should look at (usually **latest commit on the PR branch**):
+After you push, capture the revision reviewers should look at (usually **latest commit on the PR branch**). The same habit applies when you land work on **`main`** via [git-commit-workflow.mdc](../rules/git-commit-workflow.mdc): agents and tooling should leave you a **copy-pasteable** hash, not only a narrative “pushed successfully.”
+
+**PowerShell (preferred on Windows):** copy to the clipboard **and** echo to the terminal so you can paste again from chat output if needed:
+
+```powershell
+git rev-parse HEAD | Set-Clipboard
+git rev-parse HEAD
+```
+
+**Bash / sh:**
 
 ```bash
 git rev-parse HEAD
 ```
+
+**Cursor agents (after `git push`):** run **`git rev-parse HEAD`**, then reply with **one fenced markdown block containing only the forty-character hash** (no branch name, no `commit` prefix)—same shape as the PR body example below.
 
 In the PR body (often under **Description** or its own short heading), include the hash in a **markdown fenced code block** so it stays easy to copy:
 
@@ -66,7 +77,7 @@ In the PR body (often under **Description** or its own short heading), include t
 ### Commit
 
 ```
-abc123def4567890abcd...
+abc123def4567890abcd0123456789abcdef01234567
 ```
 ````
 
@@ -82,7 +93,8 @@ Use the same pattern in **Slack / Teams** PR announcements when you paste the ha
 4. **`git add <only relevant files>`** — Do **not** add unrelated changes.
 5. **`git commit`** — Ticket-prefixed subject line; optional body.
 6. **`git push -u origin <TICKET_NUMBER>`**
-7. **`gh pr create`** — Use the repo PR template; **`--base main`** unless the team uses a different default branch. Include the **commit hash** in a fenced code block in the PR body (see **Commit hash** above).
+7. **Commit hash** — **`git rev-parse HEAD | Set-Clipboard`** (pwsh) or **`git rev-parse HEAD`**; paste the hash into the PR body (see **Commit hash** above).
+8. **`gh pr create`** — Use the repo PR template; **`--base main`** unless the team uses a different default branch. Include the **commit hash** in a fenced code block in the PR body (see **Commit hash** above).
 
 ### CLI example (`gh`)
 
