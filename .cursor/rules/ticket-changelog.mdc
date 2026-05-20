@@ -1,0 +1,66 @@
+---
+description: Ticket changelog in dustin-thomason—scaffold on branch start, verbatim requirements on first pass, session log before every PlanetDepos commit.
+alwaysApply: true
+---
+
+# Ticket changelog (agents)
+
+Cross-session memory for **`PRDV-*`** work. Full playbook: [docs/ticket-changelog-workflow.md](../../docs/ticket-changelog-workflow.md).
+
+**Path:** `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md`  
+**Scaffold (human or agent):** `scripts/new-ticket-changelog.ps1` (see script help).
+
+---
+
+## When this rule applies
+
+| Trigger | Action |
+| ------- | ------ |
+| User starts a ticket / new branch | Scaffold changelog if missing; **first pass** verbatim requirements |
+| User `@` or names `docs/.../PRDV-*-changelog` or branch `PRDV-*` | **Read** existing file or scaffold; treat as active ticket for this thread |
+| User asks to **commit** / **push** / git workflow | **Session log** entry **before** `git commit` (then [git-commit-workflow.mdc](./git-commit-workflow.mdc) pre-flight + git) |
+| User opens a PR | Summarize from changelog; do not paste the whole file |
+
+Skip only for trivial **`dustin-thomason`**-only edits with **no** ticket.
+
+---
+
+## First pass (file missing)
+
+1. Run scaffold (preferred):
+
+   ```powershell
+   cd C:\Users\dustin.thomason\dustin-thomason
+   .\scripts\new-ticket-changelog.ps1 -Ticket PRDV-12345 -System atlas -Title "One-line title" -Repo atlas-front-end
+   ```
+
+   Or copy `docs/_templates/TICKET-changelog.template.md` manually.
+
+2. Under **Requirements (verbatim)** — paste ClickUp / user text **verbatim** (blockquote). **Do not paraphrase** the initial capture.
+
+3. Fill **Ticket** metadata and **Context** if the user gave constraints.
+
+---
+
+## Before every `git commit` (PlanetDepos repos)
+
+1. Resolve ticket from branch name, user message, or commit subject.
+2. Ensure `docs/<system>/PRDV-XXXXX-changelog.md` exists (scaffold if not).
+3. Append a **Session log** entry (newest first):
+   - Date, repo(s), summary of **this conversation**, files/areas, intended commit message.
+4. Update **Current state** when scope changes.
+5. Proceed with audit → lint → tests → git per [git-commit-workflow.mdc](./git-commit-workflow.mdc).
+
+**Gate:** No `git commit` without a session log entry covering this conversation's code changes.
+
+---
+
+## System → default repo
+
+| `<system>` | Default repo |
+| ---------- | ------------ |
+| `atlas` | `atlas-front-end` |
+| `callisto` | `callisto-back-end` |
+| `europa` | `europa-back-end` |
+| `triton` | `triton-back-end` |
+| `other` | _(set `-Repo` explicitly)_ |

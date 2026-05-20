@@ -1,0 +1,43 @@
+---
+description: Routes dustin-thomason personal standards into any workspace repo (Atlas, Callisto, etc.) without copying rules there or requiring @-mentions.
+alwaysApply: true
+---
+
+# Personal methodology (dustin-thomason)
+
+**dustin-thomason** is in the workspace so your standards apply while you work in **any** app repo. The user does **not** need to say “use dustin-thomason rules” or `@` this file. Do **not** ask them to copy these rules into `callisto-back-end`, `atlas-front-end`, etc.
+
+## Intent → what to follow
+
+| User says or means | Apply automatically |
+| ------------------ | ------------------- |
+| Write / extend / review an **epic** or **story** **spec** | [spec-writing.mdc](./spec-writing.mdc) — all required sections, any repo path |
+| **Commit**, **push**, git workflow | [git-commit-workflow.mdc](./git-commit-workflow.mdc) + [ticket-changelog.mdc](./ticket-changelog.mdc) |
+| **New ticket**, **new branch**, start PRDV work | Read [new-branch-get-started.md](../docs/new-branch-get-started.md); update changelog in `dustin-thomason/docs/<system>/` |
+| **Open PR**, PR description, `gh pr create` | Read [pull-request-workflow.md](../docs/pull-request-workflow.md) |
+| **Implement** feature, endpoint, refactor, tests | [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) + that repo’s `.cursor/rules/` |
+
+## Ticket memory (`@` changelog when starting a thread)
+
+Changelog **content** lives in `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md`.
+
+| User does | You do |
+| --------- | ------ |
+| `@docs/.../PRDV-XXXXX-changelog` or says “working on PRDV-XXXXX” | **Read** that file first; continue from **Current state** and **Session log** |
+| New ticket, no file yet | Run `scripts/new-ticket-changelog.ps1` or template; **Requirements (verbatim)** on first pass |
+| **Commit** / **push** | Append **Session log** in that file **before** `git commit` ([ticket-changelog.mdc](./ticket-changelog.mdc)) |
+
+Optional human opener: [.cursor/docs/session-start.md](../docs/session-start.md).
+
+## Skills (not automatic — user invokes)
+
+| Skill | When |
+| ----- | ---- |
+| `grill-me` | User wants plan/design stress-tested |
+| `workflow-housekeeping` | User asks to audit/sync workflow docs after edits |
+
+## Overlap with app repos
+
+- **Spec / build / commit habits** → personal rules above win for *how you work*.
+- **Commit subject on `PRDV-*` branches** → still use app repo `PRDV-X:` format when present.
+- **Vue / Nest / architecture patterns** → app repo rules still apply alongside personal guardrails.

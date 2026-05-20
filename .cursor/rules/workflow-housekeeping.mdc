@@ -1,0 +1,26 @@
+---
+description: When workflow docs or rules change in dustin-thomason, sync workflow-index and run validate-workflows.ps1.
+globs: .cursor/rules/**/*.mdc,.cursor/docs/**/*.md,docs/**/*.md,scripts/*.ps1,.github/*.md
+alwaysApply: false
+---
+
+# Workflow housekeeping (dustin-thomason)
+
+Triggers when you edit playbooks, rules, scripts, or workflow docs in **this repo**.
+
+## After any workflow change
+
+1. Run **`.\scripts\validate-workflows.ps1`** from repo root; fix reported gaps.
+2. Update [docs/workflow-index.md](../../docs/workflow-index.md):
+   - **What to @ by task** — add/remove rows
+   - **Personal rules**, **Skills**, **Scripts** tables
+   - **Playbooks** table — match `.cursor/docs/*.md` (exclude README, session-start)
+3. Update [personal-methodology.mdc](./personal-methodology.mdc) intent table if a new top-level task was added.
+4. If you added a playbook, link it from [.cursor/docs/README.md](../docs/README.md) when it is a top-level task.
+5. Do **not** duplicate ticket changelogs under `.cursor/docs/` — only `docs/<system>/`.
+
+## Do not auto-run across other repos
+
+This rule applies to **dustin-thomason** files only. App repos (Atlas, Callisto, etc.) keep their own `.cursor/rules/`; do not copy personal playbooks there.
+
+For a full audit on demand, user invokes the **workflow-housekeeping** skill.

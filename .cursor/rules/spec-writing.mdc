@@ -1,12 +1,13 @@
 ---
-description: Required sections when authoring epic and story specs (artifacts, schema, migrations, DTOs, projections).
-globs: granting-client-acess/**/*.md
-alwaysApply: false
+description: Required sections when authoring epic and story specs (artifacts, schema, migrations, DTOs, projections) — any repo in the workspace.
+alwaysApply: true
 ---
 
 # Epic and story specs (Callisto / Atlas)
 
-When creating or extending **epic** or **story** markdown under `granting-client-acess/`, include the sections below for **backend** work. If a section does not apply, add a one-line **N/A** with a short reason (e.g. "N/A — UI-only story") so reviewers know it was considered.
+When the user asks you to **write, extend, or review** an **epic** or **story** spec — in **any** workspace repo (`callisto-back-end`, `atlas-front-end`, `larry-adams`, etc.) — include the sections below. You do **not** need the user to `@` this file or copy it into the app repo.
+
+If a section does not apply, add a one-line **N/A** with a short reason (e.g. "N/A — UI-only story") so reviewers know it was considered.
 
 Reference shape: `epics/set-track-and-collection/story-2-set-track-and-collection-on-drag-and-drop-upload.md`.
 

@@ -2,6 +2,8 @@
 
 Personal playbook for opening branches, commits, and PRs with consistent ticketing and evidence. Use this in PlanetDepos repos (and similar) where tickets follow the `PRDV-*` pattern.
 
+**Not sure which doc to use?** [workflow-index.md](../../docs/workflow-index.md)
+
 ## Where this fits (doc vs Cursor rule)
 
 | Approach | What it is | When to use |
@@ -9,7 +11,9 @@ Personal playbook for opening branches, commits, and PRs with consistent ticketi
 | **This file** (`.cursor/docs/pull-request-workflow.md`) | Reference; copy/paste templates | Bookmark it; `@`-mention it in Cursor when you want this followed; paste into PRs or channels |
 | **Cursor Rules** (`.cursor/rules/*.mdc`) | Always-on or path-scoped AI hints | Use for repo-specific conventions (e.g. “never commit `.env`”) inside a **code** project—not required for this personal folder |
 
-**Starting a branch?** Use [new-branch-get-started.md](./new-branch-get-started.md) first. Use **this file** when you open the PR.
+**Starting a branch?** Use [new-branch-get-started.md](./new-branch-get-started.md) first (includes creating the ticket changelog). Use **this file** when you open the PR.
+
+**Ticket changelog (source of truth):** [docs/ticket-changelog-workflow.md](../../docs/ticket-changelog-workflow.md) and `docs/<system>/PRDV-XXXXX-changelog.md` — summarize **Requirements**, **Current state**, and the latest **Session log** entry into the PR Description; do not paste the whole changelog.
 
 ---
 
@@ -87,14 +91,15 @@ Use the same pattern in **Slack / Teams** PR announcements when you paste the ha
 
 ## Steps (happy path)
 
-1. **`git status` / `git diff`** — Confirm only intended files are staged or modified.
-2. **`git log`** — Match recent commit message style in that repo.
-3. **`git checkout -b <TICKET_NUMBER>`** — Skip if the branch already exists **in this session**; then `git checkout <TICKET_NUMBER>`.
-4. **`git add <only relevant files>`** — Do **not** add unrelated changes.
-5. **`git commit`** — Ticket-prefixed subject line; optional body.
-6. **`git push -u origin <TICKET_NUMBER>`**
-7. **Commit hash** — **`git rev-parse HEAD | Set-Clipboard`** (pwsh) or **`git rev-parse HEAD`**; paste the hash into the PR body (see **Commit hash** above).
-8. **`gh pr create`** — Use the repo PR template; **`--base main`** unless the team uses a different default branch. Include the **commit hash** in a fenced code block in the PR body (see **Commit hash** above).
+1. **Changelog** — In `dustin-thomason`, ensure `docs/<system>/PRDV-XXXXX-changelog.md` has a fresh **Session log** entry for this push (agents do this automatically per [git-commit-workflow.mdc](../rules/git-commit-workflow.mdc)).
+2. **`git status` / `git diff`** — Confirm only intended files are staged or modified.
+3. **`git log`** — Match recent commit message style in that repo.
+4. **`git checkout -b <TICKET_NUMBER>`** — Skip if the branch already exists **in this session**; then `git checkout <TICKET_NUMBER>`.
+5. **`git add <only relevant files>`** — Do **not** add unrelated changes.
+6. **`git commit`** — Ticket-prefixed subject line; optional body.
+7. **`git push -u origin <TICKET_NUMBER>`**
+8. **Commit hash** — **`git rev-parse HEAD | Set-Clipboard`** (pwsh) or **`git rev-parse HEAD`**; paste the hash into the PR body (see **Commit hash** above).
+9. **`gh pr create`** — Use the repo PR template; **`--base main`** unless the team uses a different default branch. Include the **commit hash** in a fenced code block in the PR body (see **Commit hash** above).
 
 ### CLI example (`gh`)
 

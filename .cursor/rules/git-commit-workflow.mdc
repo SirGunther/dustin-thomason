@@ -9,6 +9,8 @@ Baseline for landing changes on **`main`** when that matches the workflow the us
 
 **Browsing on GitHub?** [.github/git-commit-workflow.md](../../.github/git-commit-workflow.md) jumps here—we keep authoritative text **in `.cursor/rules/`** so Cursor keeps loading it automatically (**`alwaysApply`**); we do **not** relocate solely under **`.github/`**.
 
+**Ticket changelog (before commit):** [ticket-changelog.mdc](./ticket-changelog.mdc) and [docs/ticket-changelog-workflow.md](../../docs/ticket-changelog-workflow.md). Scaffold: `scripts/new-ticket-changelog.ps1`.
+
 Repositories such as **`atlas-front-end`**, **`callisto-back-end`**, **`europa-back-end`**, and **`triton-back-end`** expose **`npm run lint`**—often with **`eslint --fix`** wired into that script (**backend** repos and **Triton**). **`atlas-front-end`** uses **`npm run lint`** (no fix; **`eslint . --max-warnings 0`**) plus a separate **`npm run lint:fix`** when autofix helps; **`npm run lint`** must succeed before you commit here. Those app repos also ship **`test`** scripts—run them **serially** (**`--runInBand`** for Jest, **`vitest run --maxWorkers 1`** for Atlas) so local runs do not spawn enough parallel workers to overwhelm the machine.
 
 If the repo root has **no** **`package.json`** (many **`dustin-thomason`** changes are doc-only)—**skip §Pre-flight** entirely.
@@ -40,6 +42,10 @@ From **the repo root whose changes you intend to ship** (`package.json` at that 
 If tests exit non‑zero—**STOP before commit.** Fix or report failures; rerun the same command until green.
 
 Audit first, lint second, tests third—you avoid patching code only to discover **`npm audit`** or a red suite would have blocked shipment anyway.
+
+### Ticket changelog — before **`git commit`**
+
+Follow [ticket-changelog.mdc](./ticket-changelog.mdc) (**Session log** + first-pass rules), then continue here.
 
 ### Git sequence
 

@@ -2,6 +2,10 @@
 
 Do this when you pick up a ticket.
 
+**Map of all workflows:** [workflow-index.md](../../docs/workflow-index.md)
+
+**Ticket memory:** Create or open the changelog in `dustin-thomason` before deep work — see [ticket-changelog-workflow.md](../../docs/ticket-changelog-workflow.md).
+
 ## 1. Go to the right repo
 
 `atlas-front-end`, `callisto-back-end`, `europa-back-end`, or `triton-back-end` — whichever owns the work.
@@ -30,7 +34,24 @@ git branch --show-current
 
 Should print `PRDV-15263` (your ticket).
 
-## 4. Work, then commit
+## 4. Create the ticket changelog (first pass)
+
+In **`dustin-thomason`** (this personal repo), not the app repo:
+
+```powershell
+cd C:\Users\dustin.thomason\dustin-thomason
+.\scripts\new-ticket-changelog.ps1 -Ticket PRDV-15263 -System atlas -Title "Your one-line title"
+```
+
+(`<system>` = `atlas`, `callisto`, `europa`, `triton`, or `other` — use `-Repo` when `other`.)
+
+Optional: `-RequirementsFile .\paste-from-clickup.txt` to fill **Requirements (verbatim)** from a file.
+
+Then paste or verify **Requirements (verbatim)** from ClickUp — do not paraphrase the first time.
+
+Agents: [ticket-changelog.mdc](../rules/ticket-changelog.mdc). Playbook: [ticket-changelog-workflow.md](../../docs/ticket-changelog-workflow.md).
+
+## 5. Work, then commit
 
 When you have changes ready:
 
@@ -43,9 +64,9 @@ git push -u origin PRDV-15263
 
 Commit message format: **`PRDV-12345: What you changed`** (imperative, short).
 
-## 5. Open the PR
+## 6. Open the PR
 
-Use your repo’s PR template. Title: **`PRDV-15263: Same short description`**.
+Use your repo’s PR template. Title: **`PRDV-15263: Same short description`**. Pull description bullets from the ticket changelog ([ticket-changelog-workflow.md](../../docs/ticket-changelog-workflow.md)).
 
 ---
 
