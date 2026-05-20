@@ -33,6 +33,46 @@
 
 _Newest first. Older debugging detail lives in **Attempt history** below._
 
+### 2026-05-20 (session 8) — atlas-front-end
+
+- **Summary:** Addressed second round of reviewer feedback (p-lana, derrickdso). (1) Replaced `:ref` callback (`setTextRef`) with direct `:ref="textRef"` binding in both `CaseFileNameCell.vue` and `ProceedingFileTableDataRow.vue` — Vue accepts `Ref<HTMLElement>` directly, no callback needed. Removed `ComponentPublicInstance` import. (2) Collapsed duplicate `<span>` blocks in both components into a single `<span>` driven by computed properties (`isClickable`/`spanClass`/`tooltipText`/`handleClick` in CaseFileNameCell; `isFileClickable`/`fileLinkClass`/`fileTooltipText`/`handleFileClick` in ProceedingFileTableDataRow). Each component now has one span for the filename instead of two/three near-identical blocks.
+- **Files:**
+  - `CaseFileNameCell.vue` — single span with computed class/tooltip/click; direct ref binding; removed `setTextRef` method and `ComponentPublicInstance` import
+  - `ProceedingFileTableDataRow.vue` — single file link span with computed class/tooltip/click; direct ref binding; removed callback
+- **Key insight:** Vue's template `:ref` accepts a `Ref` directly and auto-assigns `.value`. The callback pattern was unnecessary indirection. Collapsing conditional spans into computed properties eliminates logic duplication while preserving identical runtime behavior.
+
+### 2026-05-20 (session 7) — atlas-front-end
+
+- **Summary:** Reverted global ToolTip change (session 6 mistake) and replaced with targeted tooltip wrapping. Added `.tooltipContent` class to `CaseFileNameCell.module.scss` and `ProceedingFileTableDataRow.module.scss` with `max-width: 50vw` + word-wrap. Applied only to filename tooltip slots via `<span>` wrappers inside `<ToolTip>`. Global `ToolTip.vue` restored to exact `main` state; `ToolTip.module.scss` deleted.
+- **Files:**
+  - `globalComponents/ToolTip.vue` — reverted to `main`
+  - `globalComponents/ToolTip.module.scss` — deleted
+  - `CaseFileNameCell.module.scss` — added `.tooltipContent` class
+  - `CaseFileNameCell.vue` — wrapped filename text in tooltip slots with styled `<span>`
+  - `ProceedingFileTableDataRow.module.scss` — added `.tooltipContent` class
+  - `ProceedingFileTableDataRow.vue` — wrapped filename text in tooltip slots with styled `<span>`
+- **Key insight:** Tooltips are portaled to `<body>` by Quasar so `cqw` units won't work. `50vw` is correct for floating overlays. But changing the global `ToolTip.vue` affects every tooltip in the app — scope the fix to the filename slots only.
+
+### 2026-05-20 (session 6) — atlas-front-end (REVERTED in session 7)
+
+- **Summary:** Added word-wrap to global `ToolTip.vue` to fix long filename tooltips not wrapping at small screen sizes. **This was a mistake** — it modified a shared global component, affecting all tooltips app-wide. Reverted in session 7.
+- **Files:**
+  - `globalComponents/ToolTip.vue` — added SCSS module import and `:class` binding
+  - `globalComponents/ToolTip.module.scss` — new file with `max-width: 50vw`, word-wrap
+- **Lesson:** Do not modify global shared components for feature-specific needs. Scope changes to the consuming components.
+
+### 2026-05-20 (session 5) — atlas-front-end
+
+- **Summary:** Addressed PR review feedback. (1) Moved `.fileLink`/`.fileLinkDisabled` from `CaseFilesTable.module.scss` to new `CaseFileNameCell.module.scss` per reviewer request to co-locate styles with consuming component. (2) Extracted repeated `:ref` callback into reusable `setTextRef` method in `CaseFileNameCell.vue`. (3) Simplified `v-if`/`v-else-if`/`v-else` to two-branch `v-if`/`v-else` in `CaseFileNameCell.vue`. (4) Created `src/css/_truncation.scss` with generic `@mixin truncate-text($max-width: 40cqw)` — both SCSS modules now import the mixin instead of duplicating truncation rules. (5) Removed extraneous `flex: 1` and `min-width: 0` from `ProceedingFileTableDataRow.module.scss` that were inadvertently introduced (not present on `main`). (6) Removed `file-link-class` prop from `CaseFilesTable.vue` → `CaseFileNameCell.vue` interface.
+- **Files:**
+  - `CaseFileNameCell.module.scss` — new file; `.fileLink`/`.fileLinkDisabled` with `@include truncate-text` + `display: inline-block; vertical-align: middle`
+  - `CaseFileNameCell.vue` — imports own SCSS module, `setTextRef` method, simplified conditionals, added `ComponentPublicInstance` type import
+  - `CaseFilesTable.module.scss` — removed `.fileLink` (moved to child)
+  - `CaseFilesTable.vue` — removed `:file-link-class` prop
+  - `ProceedingFileTableDataRow.module.scss` — replaced standalone `overflow: hidden` with `@include truncate-text`; removed accidental `flex: 1`/`min-width: 0`
+  - `src/css/_truncation.scss` — new shared mixin
+- **Key insight:** `display: inline-block` + `vertical-align: middle` are required on `CaseFileNameCell` because it's a `<span>` inside a `<td>` — truncation CSS needs block-level context. `ProceedingFileTableDataRow` doesn't need these because its span is inside a flex container.
+
 ### 2026-05-20 (session 4) — atlas-front-end
 
 - **Summary:** Replaced viewport-relative `max-width: 50vw` with container-query-relative `max-width: 40cqw`. Added `container-type: inline-size` to all three table wrapper classes so `cqw` units resolve to the table container width, not the browser viewport. `40cqw` visually places the filename truncation point at approximately 50% of the table's visible width (accounting for checkbox + padding offset).
@@ -141,22 +181,24 @@ The original column classes on `main` had `width` values (e.g. `.fileName { widt
 
 ---
 
-## Current state (as of 2026-05-20, session 4)
+## Current state (as of 2026-05-20, session 8)
 
-Approach: `container-type: inline-size` on table wrappers + `max-width: 40cqw` on `.fileLink` / `.fileLinkDisabled` inner text spans. Tables use default `table-layout: auto` matching `main`.
+Approach: `container-type: inline-size` on table wrappers + `max-width: 40cqw` on `.fileLink` / `.fileLinkDisabled` inner text spans. Tables use default `table-layout: auto` matching `main`. Tooltip wrapping is scoped to filename slots only (not global).
 
 | Area | Status | Key changes |
 | ---- | ------ | ----------- |
 | **Submissions tab** | Done | `SubmissionFilesTable.module.scss` — `container-type: inline-size`; child rows use `max-width: 40cqw` via ProceedingFileTableDataRow |
 | **Client Deliverables tab** | Done | `ClientDeliverablesTable.module.scss` — `container-type: inline-size`; child rows use `max-width: 40cqw` via ProceedingFileTableDataRow |
-| **Proceeding file rows** | Done | `ProceedingFileTableDataRow.module.scss` — `max-width: 40cqw` on `.fileLink`/`.fileLinkDisabled`; `useTextTruncation` + tooltip |
-| **Case Files** | Done | `CaseFilesTable.module.scss` — `container-type: inline-size`, `max-width: 40cqw` on `.fileLink`/`.fileLinkDisabled`; `CaseFileNameCell.vue` — `useTextTruncation` + tooltip |
+| **Proceeding file rows** | Done | `ProceedingFileTableDataRow.module.scss` — `@include truncate-text` on `.fileLink`/`.fileLinkDisabled`; `.tooltipContent` for wrapping; `useTextTruncation` + tooltip |
+| **Case Files** | Done | `CaseFileNameCell.module.scss` — `@include truncate-text` on `.fileLink`/`.fileLinkDisabled`; `.tooltipContent` for wrapping; `CaseFileNameCell.vue` — `useTextTruncation` + tooltip |
+| **Global ToolTip** | Unchanged | Reverted to `main` — no global changes |
 
 ### Strategy
 
 - `container-type: inline-size` on table wrappers makes `cqw` units resolve relative to the table's own width.
 - `max-width: 40cqw` on inner `.fileLink` / `.fileLinkDisabled` text spans caps the filename at ~50% of the table container (accounting for checkbox + padding offset).
 - Tables remain `table-layout: auto` (matching `main`), preserving horizontal scroll at narrow viewports and all existing column width declarations.
+- Tooltip wrapping uses `max-width: 50vw` scoped to `.tooltipContent` class in each component's SCSS module — only filename tooltips wrap, not all tooltips app-wide.
 
 ---
 
