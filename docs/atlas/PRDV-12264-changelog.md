@@ -154,9 +154,9 @@ Approach: `container-type: inline-size` on table wrappers + `max-width: 40cqw` o
 
 ### Strategy
 
-- `table-layout: fixed` on parent `<table>` enforces column widths and enables `overflow: hidden` on the filename `<td>`.
-- `min-width` on non-filename columns (120px for Size/Type/LastModified, 60px for Actions) preserves their minimum widths and triggers horizontal scroll at narrow viewports — matching `main` behavior.
-- Filename column (`width: 40%`) absorbs remaining space and truncates with ellipsis + conditional tooltip.
+- `container-type: inline-size` on table wrappers makes `cqw` units resolve relative to the table's own width.
+- `max-width: 40cqw` on inner `.fileLink` / `.fileLinkDisabled` text spans caps the filename at ~50% of the table container (accounting for checkbox + padding offset).
+- Tables remain `table-layout: auto` (matching `main`), preserving horizontal scroll at narrow viewports and all existing column width declarations.
 
 ---
 
