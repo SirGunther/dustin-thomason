@@ -18,9 +18,41 @@
 
 ---
 
+## Plans
+
+| Added | Plan | Status | One-line approach |
+| ----- | ---- | ------ | ----------------- |
+| 2026-05-20 | _(read-only)_ `larry-adams/systems/neptune/maintenance/truncate-long-filenames/PRDV-12264-truncate-long-filenames.md` | `active` | Coworker spec — link only; changelog lives in dustin-thomason |
+| 2026-05-20 | In-session: `table-layout: fixed` on all parent tables | `superseded` | Session 2 — reverted session 3; see Attempt history |
+| 2026-05-20 | In-session: `max-width: 50vw` on inner `.fileLink` spans | `implemented` | Session 3 — current atlas approach under `table-layout: auto` |
+
+---
+
 ## Session log
 
 _Newest first. Older debugging detail lives in **Attempt history** below._
+
+### 2026-05-20 (session 3) — atlas-front-end
+
+- **Summary:** Reverted `table-layout: fixed`, `min-width`, and `overflow: hidden` on `.fileName` from session 2 — those constrained the column but did not cap the text at 50% of the viewport. Replaced with `max-width: 50vw` on the inner `.fileLink` / `.fileLinkDisabled` text elements. This viewport-relative cap truncates filenames at exactly 50% of screen width under `table-layout: auto` (the `main` default), preserving all existing column sizing and horizontal scroll behavior.
+- **Files:**
+  - `SubmissionFilesTable.module.scss` — removed `table-layout: fixed`
+  - `ClientDeliverablesTable.module.scss` — removed `table-layout: fixed`
+  - `CaseFilesTable.module.scss` — removed `table-layout: fixed`, `overflow: hidden`, `min-width`; replaced `max-width: calc(100% - 60px)` with `max-width: 50vw` on `.fileLink`/`.fileLinkDisabled`
+  - `ProceedingFileTableDataRow.module.scss` — removed `overflow: hidden` from `.fileName`, removed `min-width` from `.fileSize`/`.fileType`/`.actions`; added `max-width: 50vw` to `.fileLink`/`.fileLinkDisabled`
+- **Key insight:** The constraint belongs on the inner text span (`max-width: 50vw`), not on the `<td>` or `table-layout`. Viewport units work under any `table-layout` mode and directly express the ticket requirement.
+
+### 2026-05-20 (session 2) — atlas-front-end
+
+- **Summary:** Applied `table-layout: fixed` to all three parent tables (SubmissionFilesTable, ClientDeliverablesTable, CaseFilesTable). Added `min-width` to non-filename columns in ProceedingFileTableDataRow and CaseFilesTable so they resist collapsing and trigger horizontal scroll at narrow viewports (matching `main` behavior). Added filename truncation + `useTextTruncation` tooltip to CaseFileNameCell. Added `.fileLinkDisabled` class to CaseFilesTable SCSS and passed as prop.
+- **Files:**
+  - `SubmissionFilesTable.module.scss` — added `table-layout: fixed`
+  - `ClientDeliverablesTable.module.scss` — added `table-layout: fixed`
+  - `CaseFilesTable.module.scss` — added `table-layout: fixed`, `overflow: hidden` on `.fileName`, truncation styles on `.fileLink`/`.fileLinkDisabled`, `min-width` on non-filename columns
+  - `ProceedingFileTableDataRow.module.scss` — added `min-width` on `.fileSize`/`.fileType`/`.actions`
+  - `CaseFileNameCell.vue` — integrated `useTextTruncation`, added `textRef` binding, conditional `<ToolTip>`, new `fileLinkDisabledClass` prop
+  - `CaseFilesTable.vue` — passed `:file-link-disabled-class` prop to `CaseFileNameCell`
+- **Notes:** All column class names and width percentages unchanged from `main`. `min-width: 120px` on Size/Type/LastModified, `min-width: 60px` on Actions.
 
 ### 2026-05-20 — atlas-front-end
 
@@ -98,30 +130,22 @@ The original column classes on `main` had `width` values (e.g. `.fileName { widt
 
 ---
 
-## Current state (as of 2026-05-20)
+## Current state (as of 2026-05-20, session 3)
 
-### Narrowed scope — ProceedingFileTableDataRow only
+Approach: `max-width: 50vw` on `.fileLink` / `.fileLinkDisabled` inner text spans. All `table-layout: fixed` and `min-width` reverted. Tables use default `table-layout: auto` matching `main`.
 
-After testing, all changes outside of `ProceedingFileTableDataRow` have been **reverted to `main` state**. The current branch focuses exclusively on:
+| Area | Status | Key changes |
+| ---- | ------ | ----------- |
+| **Submissions tab** | Done | `SubmissionFilesTable.module.scss` — reverted to `main` (no table-layout change); child rows inherit `max-width: 50vw` via ProceedingFileTableDataRow |
+| **Client Deliverables tab** | Done | `ClientDeliverablesTable.module.scss` — reverted to `main`; child rows inherit `max-width: 50vw` via ProceedingFileTableDataRow |
+| **Proceeding file rows** | Done | `ProceedingFileTableDataRow.module.scss` — `max-width: 50vw` on `.fileLink`/`.fileLinkDisabled`; `useTextTruncation` + tooltip |
+| **Case Files** | Done | `CaseFilesTable.module.scss` — `max-width: 50vw` on `.fileLink`/`.fileLinkDisabled`; `CaseFileNameCell.vue` — `useTextTruncation` + tooltip |
 
-- `ProceedingFileTableDataRow.module.scss` — `overflow: hidden` on `.fileName`, truncation styles on `.fileLink`/`.fileLinkDisabled`
-- `ProceedingFileTableDataRow.vue` — `useTextTruncation` composable integration, conditional `<ToolTip>`
-- `useTextTruncation.ts` — new composable for reactive truncation detection
-- `useTextTruncation.spec.ts` — 7 unit tests
+### Strategy
 
-### Pending — future updates
-
-The following areas need the same treatment but have not been tested yet and will be addressed separately:
-
-| Area | File(s) | Status |
-| ---- | ------- | ------ |
-| **Case Files** | `CaseFilesTable.module.scss`, `CaseFilesTable.vue`, `CaseFileNameCell.vue` | Reverted to `main` — update pending |
-| **Submissions tab** | `SubmissionFilesTable.module.scss` (parent table for ProceedingFileTableDataRow) | Reverted to `main` — `table-layout: fixed` needed here for row widths to be enforced |
-| **Client Deliverables tab** | `ClientDeliverablesTable.module.scss` (parent table for ProceedingFileTableDataRow) | Reverted to `main` — `table-layout: fixed` needed here for row widths to be enforced |
-
-### Important note on parent tables
-
-`ProceedingFileTableDataRow` is a **row component** rendered inside `SubmissionFilesTable` and `ClientDeliverablesTable`. The column width percentages (`.fileName { width: 40% }`, `.fileSize { width: 20% }`, etc.) defined on the row's `<td>` elements are only enforced when the **parent table** uses `table-layout: fixed`. Without that addition on the parent tables, the widths remain hints and the original bug may persist. This dependency should be addressed when those parent tables are updated.
+- `table-layout: fixed` on parent `<table>` enforces column widths and enables `overflow: hidden` on the filename `<td>`.
+- `min-width` on non-filename columns (120px for Size/Type/LastModified, 60px for Actions) preserves their minimum widths and triggers horizontal scroll at narrow viewports — matching `main` behavior.
+- Filename column (`width: 40%`) absorbs remaining space and truncates with ellipsis + conditional tooltip.
 
 ---
 

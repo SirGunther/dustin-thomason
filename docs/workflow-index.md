@@ -97,7 +97,7 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here).
 | Path | When |
 | ---- | ---- |
 | [ticket-changelog-workflow.md](./ticket-changelog-workflow.md) | How changelogs work end-to-end |
-| `docs/<system>/PRDV-XXXXX-changelog.md` | **This ticket’s** memory — `@` every new agent thread |
+| `docs/<system>/PRDV-XXXXX-changelog.md` | **This ticket’s** memory in **dustin-thomason** only — `@` every new agent thread. `larry-adams` = read-only spec links in **Plans**, not a push target |
 | [\_templates/TICKET-changelog.template.md](./_templates/TICKET-changelog.template.md) | Rarely — use `scripts/new-ticket-changelog.ps1` instead |
 | `docs/WorkLists/` | One-off personal work lists |
 
@@ -162,7 +162,7 @@ Checks: five `alwaysApply` rules, playbooks, router links, no changelogs under `
 | Workspace includes `dustin-thomason` | All `alwaysApply` rules load automatically |
 | New agent on a ticket | `@docs/<system>/PRDV-XXXXX-changelog` ([session-start](../.cursor/docs/session-start.md) snippet) |
 | Branch + changelog | `new-branch-get-started` + script + `ticket-changelog` rule |
-| Work + agents | Changelog updated (session log on commit) |
+| Work + agents | Changelog updated; link **Plans** when a plan exists |
 | Commit | `git-commit-workflow` + `ticket-changelog` rules |
 | PR | `pull-request-workflow` (via `personal-methodology` router) |
 | Code quality | `build-implementation-guardrails` + app repo rules |

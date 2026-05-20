@@ -2,7 +2,17 @@
 
 Personal, ticket-scoped memory that travels with you across repos, sessions, and agents. One file per ticket keeps context out of chat history so you do not re-explain requirements every time you commit or open a PR.
 
-**Authoritative location:** `docs/` in this repo (`dustin-thomason`). Cursor references live under `.cursor/docs/` and `.cursor/rules/` but point here.
+**Authoritative location:** `docs/` in this repo (`dustin-thomason`) only. Cursor references live under `.cursor/docs/` and `.cursor/rules/` but point here.
+
+### Repo boundaries (important)
+
+| Repo | Role for this workflow |
+| ---- | ---------------------- |
+| **dustin-thomason** | **Home** for changelogs, **Plans** index, session logs, rules, and scripts. **Commit and push here** for ticket memory. |
+| **larry-adams** | **Read-only** when a coworker spec or plan already lives there. **Link to it** in the **Plans** table — do **not** create or push changelog/workflow files into `larry-adams`. |
+| **Atlas / Callisto / etc.** | Application code and app-repo PRs. Ticket changelog stays in **dustin-thomason**, not in the app repo. |
+
+Nothing in this workflow is “uploaded” to Larry Adams. You only **reference** his specs when they are the source of requirements or an agreed plan.
 
 ---
 
@@ -54,6 +64,7 @@ From repo root:
 | `-Title` | H1 subtitle (optional) |
 | `-Repo` | Overrides default repo for the system (required when `-System other`) |
 | `-RequirementsFile` | Path to text file → pasted into **Requirements (verbatim)** as blockquote lines |
+| `-Plan` | Path or label → first row in **Plans** table (repeat `-Plan` for multiple) |
 | `-Force` | Overwrite existing changelog (use sparingly) |
 
 Default repos: `atlas` → `atlas-front-end`, `callisto` → `callisto-back-end`, `europa` → `europa-back-end`, `triton` → `triton-back-end`.
@@ -63,9 +74,29 @@ Manual fallback: copy `docs/_templates/TICKET-changelog.template.md` → `docs/<
 ### After scaffold
 
 1. Paste or verify **Requirements (verbatim)** — **do not paraphrase** on first capture.
-2. Add **Context** only if the user supplied constraints (env, related PRs, specs in `larry-adams`, etc.).
+2. Add **Context** only if the user supplied constraints (env, related PRs, read-only spec paths, etc.).
+3. Link any existing **plan** under **Plans** in **this repo** (Cursor plan, in-session approach, or **read-only** pointer to a coworker spec in `larry-adams` if one exists).
 
 Agents always load [.cursor/rules/ticket-changelog.mdc](../.cursor/rules/ticket-changelog.mdc). Treat the changelog as the source of truth for "what we agreed the ticket means."
+
+---
+
+## Plans (reference, not repeat)
+
+Use **Plans** when:
+
+- Cursor or an agent **generates a plan** for the ticket
+- A coworker spec already exists in **`larry-adams`** (link only — do not copy or push changelog there), or a Cursor/in-session plan
+- You need to know whether an approach was **already tried** without re-reading full **Attempt history**
+
+| Status | Meaning |
+| ------ | ------- |
+| `active` | Current agreed direction — read before inventing a new plan |
+| `implemented` | Done; see session log / commits |
+| `superseded` | Replaced by a newer plan — do not retry unless user asks |
+| `abandoned` | Rejected or failed — pair with **Attempt history** |
+
+**Agent habit:** Before a new plan → read **Plans** + **Attempt history**. After generating a plan → add a **Plans** row the same day. On commit → set **Plan used** in session log; move plan to **`implemented`** when that approach shipped.
 
 ---
 
@@ -95,6 +126,7 @@ When [git-commit-workflow.mdc](../.cursor/rules/git-commit-workflow.mdc) runs (u
 
 - **Summary:** Added `useTextTruncation`; wired ProceedingFileTableDataRow tooltip when ellipsis active.
 - **Files:** `useTextTruncation.ts`, `ProceedingFileTableDataRow.vue`, …
+- **Plan used:** Plans table → `larry-adams/.../PRDV-12264-truncate-long-filenames.md` (partial)
 - **Commits:** `PRDV-12264: Add truncation composable` (pending)
 - **Notes:** Parent tables still need `table-layout: fixed` — see Current state.
 ```
@@ -117,3 +149,4 @@ When drafting a PR ([pull-request-workflow.md](../.cursor/docs/pull-request-work
 - `@` mention `docs/ticket-changelog-workflow.md` or the ticket file when starting a new agent thread.
 - One changelog per ticket, even if you touch multiple repos — use **Session log** to note which repo each slice landed in.
 - For long tickets, keep **Attempt history** so you do not retry dead ends across sessions.
+- Link **Plans** when a Cursor plan or external spec exists — future agents check there before re-proposing the same approach.

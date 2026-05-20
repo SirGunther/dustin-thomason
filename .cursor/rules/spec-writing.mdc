@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Epic and story specs (Callisto / Atlas)
 
-When the user asks you to **write, extend, or review** an **epic** or **story** spec — in **any** workspace repo (`callisto-back-end`, `atlas-front-end`, `larry-adams`, etc.) — include the sections below. You do **not** need the user to `@` this file or copy it into the app repo.
+When the user asks you to **write, extend, or review** an **epic** or **story** spec — usually in app repos or spec folders the team uses — include the sections below. If requirements come from a coworker spec in **`larry-adams`**, treat that repo as **read-only input**; ticket memory and plan index stay in **`dustin-thomason`**. You do **not** need the user to `@` this file or copy it into the app repo.
 
 If a section does not apply, add a one-line **N/A** with a short reason (e.g. "N/A — UI-only story") so reviewers know it was considered.
 

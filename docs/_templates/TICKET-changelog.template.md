@@ -25,6 +25,25 @@ _Optional: related tickets, environment, files to avoid, spec paths, team decisi
 
 ---
 
+## Plans
+
+_Lives in **dustin-thomason** only. Reference plans here so future agents do not repeat abandoned approaches. **Larry-adams** paths are **read-only links** to coworker specs — never create or push changelog/plan files there._
+
+| Added | Plan (path or link) | Status | One-line approach |
+| ----- | ------------------- | ------ | ----------------- |
+| YYYY-MM-DD | _Cursor plan, in-session label, or read-only `larry-adams/...` spec path_ | `active` \| `implemented` \| `superseded` \| `abandoned` | _What this plan proposed_ |
+
+**Status:**
+
+- **active** — current direction; check here before a new plan
+- **implemented** — shipped (link session log / commits); keep for history
+- **superseded** — replaced by a newer plan row; do not retry without user ask
+- **abandoned** — tried or rejected; see **Attempt history** for why
+
+When a Cursor/agent **plan** is generated for this ticket, add a row the same day (path, export, or short title + where it lives). If work followed a plan only loosely, say so in **Session log** → **Plan used:**.
+
+---
+
 ## Session log
 
 _Newest first. Add one block before each commit (agents) or end of work session (you)._
@@ -32,6 +51,7 @@ _Newest first. Add one block before each commit (agents) or end of work session 
 ### YYYY-MM-DD — repo-name
 
 - **Summary:**
+- **Plan used:** _(optional — link Plans row or “none / ad-hoc”)_
 - **Files:**
 - **Commits:**
 - **Notes:**

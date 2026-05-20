@@ -7,7 +7,8 @@ alwaysApply: true
 
 Cross-session memory for **`PRDV-*`** work. Full playbook: [docs/ticket-changelog-workflow.md](../../docs/ticket-changelog-workflow.md).
 
-**Path:** `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md`  
+**Path:** `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md` — **all changelog and Plans data stays in this repo.**  
+**Larry-adams:** optional **read-only** link in the **Plans** table when a coworker spec exists there. **Do not** create, edit, or push workflow/changelog files to `larry-adams`.  
 **Scaffold (human or agent):** `scripts/new-ticket-changelog.ps1` (see script help).
 
 ---
@@ -20,6 +21,8 @@ Cross-session memory for **`PRDV-*`** work. Full playbook: [docs/ticket-changelo
 | User `@` or names `docs/.../PRDV-*-changelog` or branch `PRDV-*` | **Read** existing file or scaffold; treat as active ticket for this thread |
 | User asks to **commit** / **push** / git workflow | **Session log** entry **before** `git commit` (then [git-commit-workflow.mdc](./git-commit-workflow.mdc) pre-flight + git) |
 | User opens a PR | Summarize from changelog; do not paste the whole file |
+| User or agent **generates a plan** | Add/update a row under **Plans** (path, status, one-line approach) |
+| New implementation approach | Read **Plans** + **Attempt history** first; avoid repeating **superseded** / **abandoned** plans |
 
 Skip only for trivial **`dustin-thomason`**-only edits with **no** ticket.
 
@@ -39,6 +42,17 @@ Skip only for trivial **`dustin-thomason`**-only edits with **no** ticket.
 2. Under **Requirements (verbatim)** — paste ClickUp / user text **verbatim** (blockquote). **Do not paraphrase** the initial capture.
 
 3. Fill **Ticket** metadata and **Context** if the user gave constraints.
+4. If a **plan** already exists (Cursor plan, in-session approach, or read-only coworker spec in `larry-adams`), add a **Plans** row in **dustin-thomason** with status **`active`** (link only for `larry-adams`).
+
+---
+
+## Plans (avoid duplicate approaches)
+
+- **Before** proposing a new plan or large refactor, read **Plans** and **Attempt history** on the ticket changelog.
+- **When** a plan is created in chat or saved to disk, append a **Plans** table row in **dustin-thomason**: date, path or title, status (`active` first), one-line summary. Coworker specs in `larry-adams` → **link** the path; do not write files there.
+- When an approach is **replaced**, set the old plan to **`superseded`** and add the new row — do not delete old rows.
+- When work **lands**, set plan to **`implemented`** and point to session log / commits.
+- In **Session log**, optional **Plan used:** links which plan row this session followed.
 
 ---
 
@@ -48,7 +62,7 @@ Skip only for trivial **`dustin-thomason`**-only edits with **no** ticket.
 2. Ensure `docs/<system>/PRDV-XXXXX-changelog.md` exists (scaffold if not).
 3. Append a **Session log** entry (newest first):
    - Date, repo(s), summary of **this conversation**, files/areas, intended commit message.
-4. Update **Current state** when scope changes.
+4. Update **Current state** when scope changes; update **Plans** status if the approach shipped or was abandoned.
 5. Proceed with audit → lint → tests → git per [git-commit-workflow.mdc](./git-commit-workflow.mdc).
 
 **Gate:** No `git commit` without a session log entry covering this conversation's code changes.

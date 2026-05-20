@@ -4,6 +4,7 @@ Copy-paste when you open a **new agent** on a ticket. Rules in `.cursor/rules/` 
 
 ```text
 Working on PRDV-XXXXX. Ticket log: @docs/atlas/PRDV-XXXXX-changelog
+(read Plans + Attempt history before proposing a new approach)
 ```
 
 Replace `atlas` and the filename for your system/ticket.

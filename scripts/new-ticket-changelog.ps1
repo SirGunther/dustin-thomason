@@ -25,6 +25,8 @@ param(
 
     [string]$RequirementsFile,
 
+    [string[]]$Plan,
+
     [switch]$Force
 )
 
@@ -78,6 +80,15 @@ if ($RequirementsFile) {
     $verbatim = Get-Content -LiteralPath $reqPath -Raw -Encoding UTF8
     $verbatim = ($verbatim.Trim() -split "`r?`n" | ForEach-Object { "> $_" }) -join "`n"
     $content = $content -replace '(?s)(## Requirements \(verbatim\).*?)(> \s*\r?\n)', "`$1$verbatim`n`n"
+}
+
+if ($Plan -and $Plan.Count -gt 0) {
+    $planRows = $Plan | ForEach-Object {
+        "| $today | $_ | active | _(fill approach)_ |"
+    }
+    $planTable = $planRows -join "`n"
+    $placeholder = '| YYYY-MM-DD | _Cursor plan, in-session label, or read-only `larry-adams/...` spec path_ | `active` | `implemented` | `superseded` | `abandoned` | _What this plan proposed_ |'
+    $content = $content.Replace($placeholder, $planTable)
 }
 
 if ($Force -and (Test-Path -LiteralPath $outPath)) {
