@@ -62,12 +62,42 @@ If only raw SQL qualifies, cite **why** narrowly, constrain surface area (**sing
 
 ---
 
-## 5. When shipping
+## 5. Shipping checklist (address what applies)
 
-Before calling work **done**:
+Before calling work **done**, walk every item below. If an item does not apply, state **N/A** and a one-line reason (e.g. "N/A — UI-only, no HTTP contract") in your wrap-up or changelog entry—**do not skip silently**.
 
-- Lint/test pipeline expectations for that workspace are acknowledged (respect **`npm run lint`**, **`audit` thresholds**, **`vitest`**/**`jest`** runs when those scripts apply).
-- If you shipped code without executable tests owing to unblockers, annotate **risk + follow-ups** succinctly alongside the explanation.
+### Tests & regression (§1)
+
+- **New or changed behavior** has specs per §1 (happy, failure, edge, graceful where risk exists).
+- **Shared infrastructure** you touched (filters, interceptors, routers, global clients) has neighbor/regression coverage when behavior could leak sideways.
+- Run the repo’s test command for affected suites when **`package.json`** defines one; note what you ran in the changelog session entry.
+- If tests are blocked, document **risk + follow-ups**—do not treat "no tests" as done without that callout.
+
+### Changelog / session memory
+
+Keep cross-session memory current in **`dustin-thomason`** (not in app repos, not in **`larry-adams`**).
+
+| Work context | Where to update | When |
+| ------------ | --------------- | ---- |
+| **`PRDV-*` ticket** (Atlas, Callisto, Europa, Triton, …) | `docs/<system>/PRDV-XXXXX-changelog.md` | **Before every commit** on PlanetDepos app repos — session log + **Current state**; see [ticket-changelog.mdc](./ticket-changelog.mdc) |
+| **Personal / side project** (Countdowns, WorkLists, …) | `docs/<project>/` changelog for that project (e.g. `docs/countdowns/countdowns-app-changelog.mdc`) | **End of each implementation session** or before you commit/push project code—whichever comes first |
+| **No ticket, trivial dustin-thomason-only doc tweak** | — | Changelog optional |
+
+**Personal-project session entry** (match existing file shape): newest-first **Session log** with summary, files/areas, user-visible impact, tests run; refresh **Current state** when scope shifts. If no changelog file exists yet for that project, create one under `docs/<project>/` using the same sections (Purpose, Scope, Session log, Current state).
+
+### Swagger / OpenAPI / API contract docs
+
+**Check every shipping pass**—most sessions are **N/A**, but the check is mandatory:
+
+- If the repo exposes **Swagger**, **OpenAPI**, route decorators, or **swagger helpers** (common on Callisto/Europa/Triton backends):
+  - **New or changed HTTP surface** (path, method, body, status, auth) → update helpers, decorators, DTOs, and generated/spec artifacts per **that repo’s** `.cursor/rules/` and module conventions.
+  - **No contract change** → record **N/A — no API surface change** (or equivalent) in changelog or wrap-up.
+- UI-only or non-HTTP work → **N/A — no API docs in this repo**.
+- When unsure whether Swagger applies, search the touched module for `swagger`, `@Api`, or `*swagger*` helpers before marking N/A.
+
+### Tooling gates
+
+- Respect **`npm run lint`**, **`audit`** thresholds, and serial **`vitest`**/**`jest`** runs when the repo has them ([git-commit-workflow.mdc](./git-commit-workflow.mdc)).
 
 ---
 
@@ -291,7 +321,7 @@ Heavy **rebase/merge choreography**, tagging, signatures, husky internals. This 
 | **Commit**, **push**, git workflow | [git-commit-workflow.mdc](./git-commit-workflow.mdc) + [ticket-changelog.mdc](./ticket-changelog.mdc) |
 | **New ticket**, **new branch**, start PRDV work | Read [new-branch-get-started.md](../docs/new-branch-get-started.md); update changelog in `dustin-thomason/docs/<system>/` |
 | **Open PR**, PR description, `gh pr create` | Read [pull-request-workflow.md](../docs/pull-request-workflow.md) |
-| **Implement** feature, endpoint, refactor, tests | [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) + that repo's `.cursor/rules/` |
+| **Implement** feature, endpoint, refactor, tests | [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) — §5 shipping checklist (tests, changelog, Swagger when applicable) + that repo's `.cursor/rules/` |
 | **Explore** unfamiliar code, onboard to ticket, gather multi-area context | [context-fanout.mdc](./context-fanout.mdc) — read-only subagent fanout |
 
 ## Ticket memory (`@` changelog when starting a thread)

@@ -76,7 +76,7 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 | `spec-writing` | Epic/story sections in **Callisto, Atlas, anywhere** |
 | `git-commit-workflow` | audit → lint → tests → git → paste SHA |
 | `ticket-changelog` | session log before commit |
-| `build-implementation-guardrails` | tests + architecture when shipping code |
+| `build-implementation-guardrails` | §5 shipping checklist: tests/regression, changelog (PRDV + personal projects), Swagger when applicable |
 | `context-fanout` | read-only exploration subagents for multi-area context compaction |
 
 Not always-on: `workflow-housekeeping` (only when editing workflow files here); `codex-agents-sync` (regenerate `AGENTS.md` after rule/skill edits).
