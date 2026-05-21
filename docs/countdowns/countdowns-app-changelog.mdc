@@ -1,0 +1,61 @@
+# Countdowns App — General Changelog
+
+## Purpose
+
+Shared running changelog for all notable Countdowns app changes (UI, UX, API, testing, and architecture decisions).
+
+---
+
+## Scope
+
+- **App:** `Countdowns`
+- **Primary workspace:** `C:\Users\dustin.thomason\OneDrive\Countdowns`
+- **Log location:** `C:\Users\dustin.thomason\dustin-thomason\docs\countdowns\countdowns-app-changelog.mdc`
+
+---
+
+## Session log
+
+_Newest first. Add one entry per working session or merge-worthy update._
+
+### 2026-05-21 — Countdowns
+
+- **Summary:** Completed batch action flow from UI prototype to API-backed behavior. Preserved simplified multi-select UX (header icon toggle + highlighted active state), kept floating action bar always present in multi-select for "Use all visible", switched intrusive top-drop messaging to toast notifications, and added Archive as a batch action.
+- **Backend/API:** Added batch endpoints for cadence reschedule, retag, archive/unarchive, and delete in `server/crudApi.js` with partial-success handling and skipped/no-cadence reporting.
+- **Frontend wiring:** Connected batch UI actions to live API callers in `public/actions.js` and `public/app.js`.
+- **UX behavior:** Removed top selected-count emphasis; floating action bar serves as active selection/scope indicator. Bar floats above content and does not push scroll layout.
+- **Result messaging:** Uses toast-based success/warning feedback, including explicit "not rescheduled (no cadence)" item listing on cadence reschedule.
+- **Testing:** Added/updated API tests for batch operations in `tests/api-events.test.js`; full suite passing (`95/95`).
+- **Notes:** Batch actions are no longer UI-only; they now execute real local API behavior.
+
+---
+
+## Current state (as of 2026-05-21)
+
+- Batch action feature is implemented and API-wired for:
+  - reschedule by cadence
+  - retag category
+  - archive / unarchive
+  - delete
+- Mixed outcomes are surfaced in user feedback (including no-cadence skips).
+- UI remains compatible with future service integration patterns while now using local app APIs.
+
+---
+
+## Key technical learnings
+
+1. Keeping batch scope logic centralized (`selected` vs `all visible`) reduces integration risk when switching from mock to API behavior.
+2. Toast notifications provide clearer, less intrusive feedback than top-down banners for repetitive batch workflows.
+3. Partial-success response shapes are essential for cadence workflows where some items are intentionally skipped.
+
+---
+
+## Next entries
+
+When adding updates, include:
+
+- What changed
+- Why it changed
+- Files touched
+- User-visible behavior impact
+- Test coverage or verification performed
