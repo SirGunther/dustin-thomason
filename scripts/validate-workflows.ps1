@@ -29,7 +29,8 @@ $requiredAlwaysApply = @(
     'spec-writing',
     'git-commit-workflow',
     'ticket-changelog',
-    'build-implementation-guardrails'
+    'build-implementation-guardrails',
+    'context-fanout'
 )
 
 $requiredPlaybooks = @(

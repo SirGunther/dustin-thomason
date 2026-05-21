@@ -1,0 +1,57 @@
+---
+description: Prefer read-only exploration subagents for multi-area investigation so the parent context stays compact and focused.
+alwaysApply: true
+---
+
+# Context fanout — parallel exploration subagents
+
+When a task requires understanding **multiple independent areas** of code before you can act, prefer spawning **read-only** exploration subagents in parallel over serial investigation in the parent context. The goal is **context compaction**: each subagent goes deep, distills what matters, and returns a tight result so the parent stays lean.
+
+---
+
+## When to fan out
+
+Fan out when **all** of these hold:
+
+1. The task requires reading across **two or more independent modules, repos, or layers** (e.g. backend entity + frontend composable + migration history).
+2. Serial investigation in the parent would consume **significant context** (many files, deep folder trees) that the parent does not need to carry forward verbatim.
+3. The areas are **independently explorable** — no subagent's search depends on another's result.
+
+### Typical triggers
+
+| Task shape | Fan-out example |
+| ---------- | --------------- |
+| **Ticket onboarding / new branch** | Changelog + target repo module scan + coworker specs in `larry-adams` |
+| **Spec writing** | Backend entity/service structure + frontend component conventions + migration history |
+| **Implementation planning** | Existing patterns in touched module + test conventions + related modules for cross-cutting impact |
+| **Unfamiliar code investigation** | Multiple modules or repos needed to answer a cross-cutting question |
+
+---
+
+## When NOT to fan out
+
+- **Single-file or single-module reads** — just read directly.
+- **Already-familiar code** — context from earlier in the conversation suffices.
+- **Trivial tasks** — overhead of subagent dispatch exceeds benefit.
+- **Dependent investigation** — when the second search depends on the first result, run them serially (subagent or not).
+- **Implementation / code writing** — this rule covers **exploration only**. Do not spawn subagents to write code or modify files under this rule.
+
+---
+
+## Subagent constraints
+
+- **Type:** `explore` (read-only). Never `generalPurpose` or `best-of-n-runner` under this rule.
+- **Return artifacts, not prose:** file paths, type shapes, function signatures, pattern snippets, migration names. Avoid vague summaries — the parent needs concrete references to act on.
+- **Scope each subagent narrowly:** one module, one layer, one question per subagent. Broad "explore everything" prompts defeat the purpose.
+- **Run in background** when possible so the parent can continue reasoning or dispatch additional subagents.
+
+---
+
+## Relationship to other rules
+
+This rule is **additive**. It does not override or replace:
+
+- **`build-implementation-guardrails`** — still governs how you implement and test.
+- **`spec-writing`** — still governs spec sections; fanout feeds context *into* spec drafting.
+- **`ticket-changelog`** — still governs session logs and plans; fanout feeds context *into* ticket onboarding.
+- **Existing Task tool judgment** — you may still spawn subagents for other reasons (implementation, best-of-n, etc.) outside this rule's scope. This rule only adds guidance for the **read-only exploration** case.

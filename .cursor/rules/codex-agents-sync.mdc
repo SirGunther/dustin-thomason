@@ -1,0 +1,12 @@
+---
+description: After editing Cursor rules or skills in dustin-thomason, regenerate AGENTS.md for Codex.
+globs: .cursor/rules/**/*.mdc,.cursor/skills/**/*
+alwaysApply: false
+---
+
+# Codex mirror (dustin-thomason)
+
+When you **create or edit** any file under `.cursor/rules/` or `.cursor/skills/` in this repo:
+
+1. Run **`.\scripts\sync-agents-md.ps1`** from the `dustin-thomason` repo root before you finish.
+2. If `AGENTS.md` changed, stage it with the same work (do not leave the mirror stale).

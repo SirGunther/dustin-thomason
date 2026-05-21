@@ -77,8 +77,9 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 | `git-commit-workflow` | audit → lint → tests → git → paste SHA |
 | `ticket-changelog` | session log before commit |
 | `build-implementation-guardrails` | tests + architecture when shipping code |
+| `context-fanout` | read-only exploration subagents for multi-area context compaction |
 
-Not always-on: `workflow-housekeeping` (only when editing workflow files here).
+Not always-on: `workflow-housekeeping` (only when editing workflow files here); `codex-agents-sync` (regenerate `AGENTS.md` after rule/skill edits).
 
 ---
 
@@ -138,6 +139,7 @@ Skills are **not** `alwaysApply` — the user `@`’s the skill or asks in plain
 | ------ | ------- |
 | `new-ticket-changelog.ps1` | Create `docs/<system>/PRDV-XXXXX-changelog.md` |
 | `validate-workflows.ps1` | Wiring audit — run after changing rules/docs |
+| `sync-agents-md.ps1` | Regenerate root `AGENTS.md` from `.cursor/rules/*.mdc` (Codex mirror) |
 
 ## GitHub (stubs only — never `@`)
 
@@ -166,6 +168,7 @@ Checks: five `alwaysApply` rules, playbooks, router links, no changelogs under `
 | Commit | `git-commit-workflow` + `ticket-changelog` rules |
 | PR | `pull-request-workflow` (via `personal-methodology` router) |
 | Code quality | `build-implementation-guardrails` + app repo rules |
+| Multi-area exploration | `context-fanout` — read-only subagent fanout |
 | Spec | `spec-writing` (via router) |
 
 If a new workflow type appears (e.g. release, hotfix), add **one row** above, **one** playbook, update `personal-methodology.mdc`, run `validate-workflows.ps1`.

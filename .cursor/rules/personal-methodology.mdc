@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Personal methodology (dustin-thomason)
 
-**dustin-thomason** is in the workspace so your standards apply while you work in **any** app repo. Ticket changelogs and **Plans** live **only** in `dustin-thomason/docs/`. **Larry-adams** may be linked read-only when a coworker spec exists there — never push workflow or changelog files to it. The user does **not** need to say “use dustin-thomason rules” or `@` this file. Do **not** ask them to copy these rules into `callisto-back-end`, `atlas-front-end`, etc.
+**dustin-thomason** is in the workspace so your standards apply while you work in **any** app repo. Ticket changelogs and **Plans** live **only** in `dustin-thomason/docs/`. **Larry-adams** may be linked read-only when a coworker spec exists there — never push workflow or changelog files to it. The user does **not** need to say "use dustin-thomason rules" or `@` this file. Do **not** ask them to copy these rules into `callisto-back-end`, `atlas-front-end`, etc.
 
 ## Intent → what to follow
 
@@ -15,7 +15,8 @@ alwaysApply: true
 | **Commit**, **push**, git workflow | [git-commit-workflow.mdc](./git-commit-workflow.mdc) + [ticket-changelog.mdc](./ticket-changelog.mdc) |
 | **New ticket**, **new branch**, start PRDV work | Read [new-branch-get-started.md](../docs/new-branch-get-started.md); update changelog in `dustin-thomason/docs/<system>/` |
 | **Open PR**, PR description, `gh pr create` | Read [pull-request-workflow.md](../docs/pull-request-workflow.md) |
-| **Implement** feature, endpoint, refactor, tests | [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) + that repo’s `.cursor/rules/` |
+| **Implement** feature, endpoint, refactor, tests | [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) + that repo's `.cursor/rules/` |
+| **Explore** unfamiliar code, onboard to ticket, gather multi-area context | [context-fanout.mdc](./context-fanout.mdc) — read-only subagent fanout |
 
 ## Ticket memory (`@` changelog when starting a thread)
 
@@ -23,7 +24,7 @@ Changelog **content** lives in `dustin-thomason/docs/<system>/PRDV-XXXXX-changel
 
 | User does | You do |
 | --------- | ------ |
-| `@docs/.../PRDV-XXXXX-changelog` or says “working on PRDV-XXXXX” | **Read** that file first; continue from **Current state** and **Session log** |
+| `@docs/.../PRDV-XXXXX-changelog` or says "working on PRDV-XXXXX" | **Read** that file first; continue from **Current state** and **Session log** |
 | New ticket, no file yet | Run `scripts/new-ticket-changelog.ps1` or template; **Requirements (verbatim)** on first pass |
 | **Commit** / **push** | Append **Session log** in that file **before** `git commit` ([ticket-changelog.mdc](./ticket-changelog.mdc)) |
 
