@@ -98,6 +98,9 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 | Path | When |
 | ---- | ---- |
 | [ticket-changelog-workflow.md](./ticket-changelog-workflow.md) | How changelogs work end-to-end |
+| [docs/atlas/local/callisto-local.mdc](./atlas/local/callisto-local.mdc) | Callisto backend local runbook (Docker, migrations, DBeaver) |
+| [docs/atlas/local/triton-local.mdc](./atlas/local/triton-local.mdc) | Triton backend local runbook |
+| [docs/atlas/local/europa-local.mdc](./atlas/local/europa-local.mdc) | Europa backend local runbook |
 | `docs/<system>/PRDV-XXXXX-changelog.md` | **This ticket’s** memory in **dustin-thomason** only — `@` every new agent thread. `larry-adams` = read-only spec links in **Plans**, not a push target |
 | [\_templates/TICKET-changelog.template.md](./_templates/TICKET-changelog.template.md) | Rarely — use `scripts/new-ticket-changelog.ps1` instead |
 | `docs/WorkLists/` | One-off personal work lists |

@@ -1,0 +1,100 @@
+BEGIN;
+
+-- job 1
+WITH vars AS (
+  SELECT
+    999999997::bigint AS larry_user_id,
+
+    899999996::bigint AS job_1_id,
+
+    899999969::bigint AS job_task_1_id,
+    899999968::bigint AS job_task_2_id,
+    899999967::bigint AS job_task_3_id,
+    899999966::bigint AS job_task_4_id,
+
+    2253::int AS DIGITAL_REPORT_TASK_TYPE,
+    2304::int AS DIGITAL_REPORT_COMPLIMENTARY_TASK_TYPE,
+    2264::int AS SHADOW_DIGITAL_REPORT_TASK_TYPE,
+
+    2263::int AS REMOTE_TECH_ONLY_TASK_TYPE,
+    2262::int AS REMOTE_TECH_AND_LINK_TASK_TYPE,
+
+    2260::int AS ON_SITE_TECH_AND_LINK_TASK_TYPE,
+    2261::int AS ON_SITE_TECH_ONLY_TASK_TYPE,
+
+    2266::int AS SHADOW_TECH_TASK_TYPE,
+    2258::int AS LINK_ONLY_NO_TECH_TASK_TYPE,
+    2271::int AS TRIAL_TECH_TASK_TYPE,
+
+    2267::int AS SHADOW_VIDEOGRA_TASK_TYPE,
+    2273::int AS VIDEOGRA_TASK_TYPE,
+
+    2184::int AS CAPTIONING_JOB_TYPE_ID,
+    2275::int AS MULTI_RECORD_PROCEEDING_JOB_TYPE_ID,
+    2019::int AS HEARING_MOTION_JOB_TYPE_ID,
+    2021::int AS MEETING_JOB_TYPE_ID,
+    2102::int AS MEDIATION_JOB_TYPE_ID,
+    2236::int AS REMOTE_PROCEEDING_JOB_TYPE_ID,
+    822::int  AS VIDEO_JOB_TYPE_ID,
+    821::int  AS DEPOSITION_JOB_TYPE_ID,
+    2023::int AS OTHER_JOB_TYPE_ID,
+    2020::int AS ARBITRATION_JOB_TYPE_ID,
+    2022::int AS TRIAL_JOB_TYPE_ID,
+    2054::int AS VC_OR_MVC_ONLY_JOB_TYPE_ID,
+    2237::int AS O_C_RECORD_JOB_TYPE_ID,
+    2239::int AS NEED_RETENTION_OR_DEPOSIT_JOB_TYPE_ID,
+
+    812::int AS CANCELLED_JOB_STATUS_ID,
+    801::int AS NEW_JOB_STATUS_ID
+),
+-- Insert Job 1 (side-effecting CTE to ensure job exists before tasks)
+ins_job AS (
+  INSERT INTO "callisto"."jobs"
+    ("id","case_id","job_date","start_time","time_zone_id","is_daylight_saving",
+     "status_id","job_type_id","status_changed_date","scheduled_contact_id")
+  SELECT
+    v.job_1_id,
+    NULL,
+    CURRENT_DATE + 1,
+    TIME '09:00:00',
+    1,
+    FALSE,
+    v.NEW_JOB_STATUS_ID,
+    v.REMOTE_PROCEEDING_JOB_TYPE_ID,
+    CURRENT_TIMESTAMP,
+    NULL
+  FROM vars v
+  ON CONFLICT ("id") DO NOTHING
+  RETURNING 1
+)
+INSERT INTO "callisto"."jobs_tasks"
+  ("id","job_id","resource_id","task_type_id",
+   "notified_date","order_date","due_date",
+   "acknowledged_date","turnin_date","checkin_date","cancel_date")
+SELECT * FROM (
+  SELECT v.job_task_1_id, v.job_1_id, v.larry_user_id, v.DIGITAL_REPORT_TASK_TYPE,
+         CURRENT_DATE, CURRENT_DATE, CURRENT_DATE,
+         NULL::timestamp, NULL::timestamp, NULL::timestamp, NULL::timestamp
+  FROM vars v
+
+  UNION ALL
+  SELECT v.job_task_2_id, v.job_1_id, v.larry_user_id, v.REMOTE_TECH_AND_LINK_TASK_TYPE,
+         CURRENT_DATE, CURRENT_DATE, CURRENT_DATE,
+         NULL::timestamp, NULL::timestamp, NULL::timestamp, NULL::timestamp
+  FROM vars v
+
+  UNION ALL
+  SELECT v.job_task_3_id, v.job_1_id, v.larry_user_id, v.SHADOW_VIDEOGRA_TASK_TYPE,
+         CURRENT_DATE, CURRENT_DATE, CURRENT_DATE,
+         NULL::timestamp, NULL::timestamp, NULL::timestamp, NULL::timestamp
+  FROM vars v
+
+  UNION ALL
+  SELECT v.job_task_4_id, v.job_1_id, v.larry_user_id, v.VIDEOGRA_TASK_TYPE,
+         CURRENT_DATE, CURRENT_DATE, CURRENT_DATE,
+         NULL::timestamp, NULL::timestamp, NULL::timestamp, NULL::timestamp
+  FROM vars v
+) t
+ON CONFLICT ("id") DO NOTHING;
+
+COMMIT;

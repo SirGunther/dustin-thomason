@@ -33,6 +33,19 @@
 
 _Newest first. Older debugging detail lives in **Attempt history** below._
 
+### 2026-05-21 (session 9) — atlas-front-end
+
+- **Summary:** Addressed third round of reviewer feedback (derrickdso, 2026-05-21). Three changes: (1) Fixed Case Files tooltip bug — non-PDF files on restricted cases were incorrectly showing the restriction tooltip because `tooltipText` gated on `!canActOnRestricted` without requiring `isPdfFile`. Added `isFileRestricted` computed (mirrors proceeding pattern: PDF AND missing permission). (2) Split combined `fileTooltipText` / `tooltipText` computed into two explicit `<ToolTip>` elements (`v-if="isFileRestricted"` / `v-else-if="isTruncated"`) in both components per reviewer request for clarity. (3) Moved hardcoded "You don't have permissions to view this file." string to `common.json` as `fileViewRestricted` and wired `ProceedingFileTableDataRow` to `t(...)`.
+- **Files:**
+  - `common.json` — added `fileViewRestricted` key under `caseRestrictions`
+  - `CaseFileNameCell.vue` — replaced `tooltipText` with `isFileRestricted` + two separate `<ToolTip>` elements
+  - `ProceedingFileTableDataRow.vue` — removed `fileTooltipText` computed; two separate `<ToolTip>` elements using i18n key
+  - `CaseFileNameCell.spec.ts` — new (8 tests: non-PDF restricted no tooltip, PDF restricted tooltip, canRead false tooltip, truncation tooltip, no tooltip when not truncated, restriction wins over truncation, click emits preview, non-clickable no emit)
+  - `ProceedingFileTableDataRow.spec.ts` — extended with 3 tooltip tests (restricted PDF i18n key, non-PDF restricted no filename tooltip, truncation tooltip)
+- **Tests run:** `npx vitest run` — 2 files, 13 tests passed
+- **Commits:** `131e09b` — `PRDV-12264: Fix tooltip logic and move i18n strings`
+- **N/A:** Swagger / API — UI-only
+
 ### 2026-05-20 (session 8) — atlas-front-end
 
 - **Summary:** Addressed second round of reviewer feedback (p-lana, derrickdso). (1) Replaced `:ref` callback (`setTextRef`) with direct `:ref="textRef"` binding in both `CaseFileNameCell.vue` and `ProceedingFileTableDataRow.vue` — Vue accepts `Ref<HTMLElement>` directly, no callback needed. Removed `ComponentPublicInstance` import. (2) Collapsed duplicate `<span>` blocks in both components into a single `<span>` driven by computed properties (`isClickable`/`spanClass`/`tooltipText`/`handleClick` in CaseFileNameCell; `isFileClickable`/`fileLinkClass`/`fileTooltipText`/`handleFileClick` in ProceedingFileTableDataRow). Each component now has one span for the filename instead of two/three near-identical blocks.
@@ -181,17 +194,18 @@ The original column classes on `main` had `width` values (e.g. `.fileName { widt
 
 ---
 
-## Current state (as of 2026-05-20, session 8)
+## Current state (as of 2026-05-21, session 9)
 
-Approach: `container-type: inline-size` on table wrappers + `max-width: 40cqw` on `.fileLink` / `.fileLinkDisabled` inner text spans. Tables use default `table-layout: auto` matching `main`. Tooltip wrapping is scoped to filename slots only (not global).
+Approach: `container-type: inline-size` on table wrappers + `max-width: 40cqw` on `.fileLink` / `.fileLinkDisabled` inner text spans. Tables use default `table-layout: auto` matching `main`. Tooltip wrapping is scoped to filename slots only (not global). Tooltip logic now uses two explicit `<ToolTip>` elements (`v-if` restricted, `v-else-if` truncated) instead of a combined computed string. Restriction tooltips are PDF-only in both components. Hardcoded permission string moved to `common.json`.
 
 | Area | Status | Key changes |
 | ---- | ------ | ----------- |
 | **Submissions tab** | Done | `SubmissionFilesTable.module.scss` — `container-type: inline-size`; child rows use `max-width: 40cqw` via ProceedingFileTableDataRow |
 | **Client Deliverables tab** | Done | `ClientDeliverablesTable.module.scss` — `container-type: inline-size`; child rows use `max-width: 40cqw` via ProceedingFileTableDataRow |
-| **Proceeding file rows** | Done | `ProceedingFileTableDataRow.module.scss` — `@include truncate-text` on `.fileLink`/`.fileLinkDisabled`; `.tooltipContent` for wrapping; `useTextTruncation` + tooltip |
-| **Case Files** | Done | `CaseFileNameCell.module.scss` — `@include truncate-text` on `.fileLink`/`.fileLinkDisabled`; `.tooltipContent` for wrapping; `CaseFileNameCell.vue` — `useTextTruncation` + tooltip |
+| **Proceeding file rows** | Done | `ProceedingFileTableDataRow` — two separate `<ToolTip>` (restricted via i18n / truncated); `fileTooltipText` removed |
+| **Case Files** | Done | `CaseFileNameCell` — `isFileRestricted` (PDF-only); two separate `<ToolTip>` (restricted / truncated); `tooltipText` removed |
 | **Global ToolTip** | Unchanged | Reverted to `main` — no global changes |
+| **Tests** | Done | `CaseFileNameCell.spec.ts` (8 tests, new); `ProceedingFileTableDataRow.spec.ts` (5 tests, 3 new tooltip cases) |
 
 ### Strategy
 

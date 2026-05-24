@@ -1,0 +1,252 @@
+# Callisto Backend — Local Runbook
+
+Daily local setup for **`callisto-back-end`** on **`main`**. Use this repo branch for local work; feature branches are not required once changes are on `main`.
+
+## Prerequisites
+
+- **Node.js** 22+ (24 recommended per repo README)
+- **Docker Desktop** running
+- **GitHub PAT** with `read:packages`, SSO-authorized for PlanetDepos (`GITHUB_TOKEN` env var or in `.npmrc`)
+- **AWS credentials** from [Planet Portal](https://planetportal.awsapps.com/start/#/?tab=accounts) when exercising S3/SQS (refresh session tokens often)
+- **DBeaver** (or any Postgres client) for browsing the local database
+
+## One-time setup
+
+### 1. Clone, checkout `main`, install
+
+```powershell
+cd C:\Users\dustin.thomason\callisto-back-end
+git checkout main
+git pull origin main
+npm ci
+```
+
+### 2. Local env files
+
+Nest loads **`.env.local`** when `NODE_ENV=local` (see `src/config/config.module.options.ts`).
+
+```powershell
+Copy-Item .env.sample .env
+Copy-Item .env.sample .env.local
+$env:NODE_ENV = "local"
+```
+
+Edit **`.env.local`** for your machine. Typical local values:
+
+| Variable | Local value |
+| -------- | ----------- |
+| `APP_PORT` | `3005` (or any free port) |
+| `READ_DB_HOST` / `WRITE_DB_HOST` | `localhost` |
+| `DB_PORT` | `5432` |
+| `DB_NAME` | `callisto` |
+| `DB_SCHEMA` | `callisto` |
+| `DB_USERNAME` / `DB_PASSWORD` | `postgres` / `postgres` |
+| `ENV_NAME` | `local` |
+| `MQ_BROKER_URL` | `amqp://localhost:5672` |
+| `MQ_USERNAME` / `MQ_PASSWORD` | `guest` / `guest` |
+
+Keep **`DB_*`** values aligned in **`.env`** as well — the TypeORM CLI loads `.env` via `dotenv/config`, not `.env.local`.
+
+Add fresh AWS keys to `.env.local` when you need S3/SQS. For messaging-only local runs, `OUTBOX_ENABLED=true` requires RabbitMQ (see below).
+
+## Every session — start infrastructure
+
+`docker compose up` in this repo only starts the **app** container, not PostgreSQL. Use the existing local containers instead.
+
+### PostgreSQL (required)
+
+```powershell
+docker start callisto-postgres
+docker ps --filter "name=callisto-postgres"
+```
+
+Expected: `callisto-postgres` is **Up** and maps `0.0.0.0:5432->5432/tcp`.
+
+If the container does not exist yet (first machine only):
+
+```powershell
+docker run -d --name callisto-postgres `
+  -e POSTGRES_USER=postgres `
+  -e POSTGRES_PASSWORD=postgres `
+  -e POSTGRES_DB=callisto `
+  -p 5432:5432 postgres:16
+```
+
+Create the schema once:
+
+```powershell
+docker exec callisto-postgres psql -U postgres -d callisto -c "CREATE SCHEMA IF NOT EXISTS callisto;"
+```
+
+### RabbitMQ (required when `OUTBOX_ENABLED=true`)
+
+```powershell
+docker start callisto-rabbitmq
+```
+
+If the container does not exist yet:
+
+```powershell
+docker run -d --name callisto-rabbitmq `
+  -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+```
+
+Management UI: http://localhost:15672 (default login `guest` / `guest`).
+
+Bootstrap **vhosts and exchanges** Callisto expects (`nova`, `callisto`). A plain `rabbitmq:3-management` container only has the `/` vhost; without this step you will see `Connection Failed ... broker (nova)` / `(callisto)` when `OUTBOX_ENABLED=true`:
+
+```powershell
+cd C:\Users\dustin.thomason\callisto-back-end
+npm run setup:local-rabbitmq
+```
+
+Wait ~10 seconds after starting RabbitMQ before starting the API, or **restart the API** after running the bootstrap if broker connection warnings already appeared in logs.
+
+## Migrations (Windows-safe command)
+
+`npm run migration:run` can fail on Windows because TypeORM does not resolve `src/*` path aliases. Use:
+
+```powershell
+cd C:\Users\dustin.thomason\callisto-back-end
+$env:NODE_ENV = "local"
+npx ts-node -r dotenv/config -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d ./src/typeorm/data-source.ts
+```
+
+Expected: `No migrations are pending`.
+
+Migrations also run automatically on API startup when none are pending.
+
+## Seed test data (optional)
+
+```powershell
+$env:NODE_ENV = "local"
+npm run migration:seed
+```
+
+## Start the API
+
+```powershell
+cd C:\Users\dustin.thomason\callisto-back-end
+$env:NODE_ENV = "local"
+npx nest start --watch
+```
+
+Or with formatted logs:
+
+```powershell
+npm run dev:watch:pretty
+```
+
+### Verify
+
+| Check | URL |
+| ----- | --- |
+| Health | http://localhost:3005/callisto/health |
+| Swagger | http://localhost:3005/callisto/swagger |
+
+Replace `3005` with your `APP_PORT` if different.
+
+```powershell
+curl.exe http://localhost:3005/callisto/health
+```
+
+Expected: HTTP 200, `"status":"ok"`.
+
+## DBeaver — connect to local Callisto Postgres
+
+Use these settings for a new **PostgreSQL** connection in DBeaver.
+
+| Field | Value |
+| ----- | ----- |
+| Host | `localhost` |
+| Port | `5432` |
+| Database | `callisto` |
+| Username | `postgres` |
+| Password | `postgres` |
+
+**Driver properties (optional):** none required for local Docker Postgres.
+
+### After connecting
+
+1. Open **SQL Editor** for the `callisto` connection.
+2. Set the search path so tables resolve without schema prefix:
+
+```sql
+SET search_path TO callisto, public;
+```
+
+3. Browse tables under **Schemas → callisto** in the Database Navigator.
+
+### Useful starter queries
+
+```sql
+-- Confirm schema and migration state
+SET search_path TO callisto, public;
+SELECT * FROM migrations ORDER BY id DESC LIMIT 5;
+
+-- Row counts (after seed or manual data)
+SELECT
+  (SELECT COUNT(*) FROM cases) AS cases,
+  (SELECT COUNT(*) FROM jobs) AS jobs,
+  (SELECT COUNT(*) FROM files) AS files;
+```
+
+### DBeaver tips
+
+- **Show all schemas:** Database Navigator → connection → Edit → PostgreSQL → check "Show all databases" / expand **Schemas** if tables look empty.
+- **Default schema:** In connection settings → **PostgreSQL** tab → set **Default schema** to `callisto` to avoid running `SET search_path` every session.
+- **SSL:** Off for local Docker (`localhost`).
+
+## Atlas front-end (Jerry's local workflow)
+
+Keep `atlas-front-end/.env.local` exactly as provided — do **not** uncomment backend URL lines unless you intentionally want to hit SB.
+
+| `CALLISTO_API_URL` in `.env.local` | Callisto traffic goes to |
+| ---------------------------------- | ------------------------ |
+| **Commented out** (default for local UI + local Callisto) | `localhost` (Quasar dev proxy default: `http://localhost:3003`) |
+| **Uncommented** → `https://atlas-sb.planetdepos.com` | Sandbox Callisto |
+
+Triton and Europa stay pointed at SB in `.env.local` (`TRITON_API_URL`, `EUROPA_API_URL`) so you can run UI locally while those APIs stay on sandbox — easy to verify and test against real SB data.
+
+Start Atlas:
+
+```powershell
+cd C:\Users\dustin.thomason\atlas-front-end
+npm run dev:local
+```
+
+That sets `ENV_NAME=local` and loads `.env.local`. App: http://localhost:9000
+
+**Toggle pattern:** local Callisto → leave `# CALLISTO_API_URL= ...` commented. Test UI against SB Callisto → uncomment that line.
+
+## Copy/paste — full session
+
+```powershell
+cd C:\Users\dustin.thomason\callisto-back-end
+git checkout main
+git pull origin main
+
+docker start callisto-postgres
+docker start callisto-rabbitmq
+
+$env:NODE_ENV = "local"
+npx ts-node -r dotenv/config -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d ./src/typeorm/data-source.ts
+
+npx nest start --watch
+```
+
+## Troubleshooting
+
+| Symptom | Fix |
+| ------- | --- |
+| `No such container: callisto-back-end-postgres-1` | Wrong container name — use `callisto-postgres`, not compose-derived names |
+| `ECONNREFUSED` on port 5432 | `docker start callisto-postgres` |
+| `Cannot find module 'src/shared/...'` during migration | Add `-r tsconfig-paths/register` (command above) |
+| RabbitMQ connection warnings | Start `callisto-rabbitmq`, wait, restart API |
+| API up but Atlas cannot reach Callisto | Confirm `# CALLISTO_API_URL` is commented for local; align Callisto `APP_PORT` with Quasar proxy default (`3003`) or set an explicit localhost URL |
+| S3/SQS errors on file ops | Refresh AWS credentials from Planet Portal |
+
+## Related runbooks
+
+- [triton-local.mdc](./triton-local.mdc) — reuses `callisto-postgres`, separate `triton` database
+- [europa-local.mdc](./europa-local.mdc) — Europa local setup

@@ -18,6 +18,24 @@ Shared running changelog for all notable Countdowns app changes (UI, UX, API, te
 
 _Newest first. Add one entry per working session or merge-worthy update._
 
+### 2026-05-21 — Event Type ID Migration
+
+- **Summary:** Implemented stable event-type IDs and migration tooling so event-type renames no longer break existing event links.
+- **Backend/API:** Refactored event type model to `{ id, name }` records, added shared type-model utilities, and updated event CRUD + batch-retag behavior to resolve/store type IDs while returning display labels for UI rendering.
+- **Migration tooling:** Added `server/utils/typeIdMigration.js` and CLI script `scripts/migrate-event-type-ids.js` with pre-write backups, mismatch reporting, validation, and rollback support.
+- **Backup/rollback:** Migration now writes paired backups (`event-types` then `events`) under a run-specific folder and provides explicit restore instructions; rollback command restores exact pre-migration files.
+- **Frontend wiring:** Updated selectors and category-management flows to operate on type IDs while displaying editable names across board rendering, create/edit forms, and batch retag.
+- **Contract/docs:** Updated Swagger event/event-type schema documentation and README migration/rollback guidance.
+- **Testing:** Reworked API tests for ID-based type behavior and added dedicated migration test coverage for success, mismatch blocking, backup uniqueness, and rollback restore. Full suite passing (`109/109`) via `npm test`.
+### 2026-05-21 — Category Management
+
+- **Summary:** Added dedicated category management in Settings so category upkeep is separate from countdown creation.
+- **Backend/API:** Enhanced `server/eventTypesApi.js` to support add/rename/remove operations with validation, case-insensitive duplicate protection, and reserved handling for `Other`.
+- **Frontend wiring:** Added Settings category-management UI and interactions in `public/index.html`, `public/app.js`, and `public/style.css`.
+- **Shared selector behavior:** Updated shared category loading and selector population in `public/dom.js` and `public/actions.js` so category options stay alphabetized and refresh after category changes.
+- **Contract/docs:** Updated `server/swagger.js` for the category rename endpoint and response/error shape changes.
+- **Testing:** Expanded category API coverage in `tests/api-event-types.test.js`; full suite passing (`106/106`) via `npm test`.
+
 ### 2026-05-21 — Countdowns
 
 - **Summary:** Completed batch action flow from UI prototype to API-backed behavior. Preserved simplified multi-select UX (header icon toggle + highlighted active state), kept floating action bar always present in multi-select for "Use all visible", switched intrusive top-drop messaging to toast notifications, and added Archive as a batch action.
@@ -59,3 +77,5 @@ When adding updates, include:
 - Files touched
 - User-visible behavior impact
 - Test coverage or verification performed
+
+

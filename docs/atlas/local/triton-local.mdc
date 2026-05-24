@@ -1,0 +1,60 @@
+## Triton Backend — Local Setup Runbook
+
+### Prerequisites
+
+- Docker is already running with the `callisto-postgres` container up (from the Callisto setup).
+- A GitHub PAT with `read:packages` scope, SSO-authorized for PlanetDepos.
+
+### 1. Create local env files
+
+```powershell
+Copy-Item .env.sample .env
+Copy-Item .env.sample .env.local
+$env:NODE_ENV = "local"
+```
+
+### 2. Configure env files
+
+- Copied Derrick's env files as a baseline.
+- Updated `APP_PORT` to `3005` in both `.env` and `.env.local`.
+- Added the following to each env file:
+  - `GITHUB_TOKEN`
+  - `AWS_ACCESS_KEY_ID`
+  - `AWS_SECRET_ACCESS_KEY`
+  - `AWS_SESSION_TOKEN`
+
+### 3. Set up GitHub Packages auth
+
+```powershell
+$ErrorActionPreference = 'Stop'
+$env:NODE_AUTH_TOKEN = "<your GitHub PAT>"
+
+"@planetdepos:registry=https://npm.pkg.github.com`n//npm.pkg.github.com/:_authToken=$env:NODE_AUTH_TOKEN" | Out-File -Encoding ascii .npmrc
+```
+
+### 4. Create the Triton database and schema
+
+Since `callisto-postgres` was already running from the Callisto setup, no new container was needed. Just added the Triton database to the existing Postgres instance.
+
+```powershell
+docker exec callisto-postgres psql -U postgres -c "CREATE DATABASE triton;"
+docker exec callisto-postgres psql -U postgres -d triton -c "CREATE SCHEMA IF NOT EXISTS triton;"
+```
+
+### 5. Install dependencies
+
+```powershell
+npm ci
+```
+
+### 6. Start the API
+
+```powershell
+npx nest start --watch
+```
+
+### Key differences from Callisto setup
+
+- No new Docker container needed — reused `callisto-postgres` on port 5432.
+- Just needed the `triton` database and schema created inside the existing Postgres instance.
+- Required AWS credentials added directly to the env files.
