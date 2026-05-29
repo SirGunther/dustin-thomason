@@ -1,0 +1,36 @@
+---
+description: Coherent implementation philosophy — reason in order Problem → Requirement → Solution so the line of thinking stays clear for the end user, in implementations, plans, specs, and changelog/PR narratives.
+alwaysApply: true
+---
+
+# Problem → Requirement → Solution
+
+**Philosophy (must be adhered to):** when addressing implementation, reason in a coherent, ordered line so the thinking stays clear for the end user — **Problem → Requirement → Solution.**
+
+**Why:** jumping straight to a solution hides *what* was actually being solved and *why* the chosen change is the right one. Leading with the problem and the requirement makes the work reviewable, keeps scope honest, and gives the reader (and the next agent) a traceable rationale instead of an unexplained diff.
+
+## The order
+
+1. **Problem** — state the concrete problem or pain being addressed: what is broken, missing, or asked for. This is **not** a restatement of the task title; it is the underlying need.
+2. **Requirement** — define what **must be true** for the system to resolve that problem (the condition(s) the system must deliver / satisfy). State it **independently of implementation** — the requirement should survive a change of solution.
+3. **Solution** — only **then** determine the change to integrate as a result. The solution **must** trace back to the requirement, and the requirement back to the problem.
+
+## Where it applies
+
+Use this ordering in **implementation responses, plans, spec narratives, and changelog / PR descriptions** — anywhere you explain a change to a reader. It complements, and runs ahead of, the build checklist in [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) and the spec sections in [spec-writing.mdc](./spec-writing.mdc).
+
+## Example
+
+```
+Good:
+  Problem:     Long filenames overflow the proceeding-file table cell and get visually clipped with no way to read them.
+  Requirement: Long names must stay fully readable on demand without breaking the table's fixed layout.
+  Solution:    Add a useTextTruncation composable + tooltip that reveals the full name when the text is ellipsized.
+
+Bad:
+  "Added a truncation composable and a tooltip."   (solution only — no stated problem, no requirement to verify it against)
+```
+
+## Relationship to other rules
+
+This rule is **additive**. It does **not** override repo-specific `.cursor/rules/**` technical conventions (see precedence in [personal-methodology.mdc](./personal-methodology.mdc)); it governs **how you frame and explain** the work, not the repo's architecture or contracts.

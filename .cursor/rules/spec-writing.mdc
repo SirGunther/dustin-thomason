@@ -9,6 +9,8 @@ When the user asks you to **write, extend, or review** an **epic** or **story** 
 
 If a section does not apply, add a one-line **N/A** with a short reason (e.g. "N/A — UI-only story") so reviewers know it was considered.
 
+Frame the spec narrative as **Problem → Requirement → Solution** (see [problem-requirement-solution.mdc](./problem-requirement-solution.mdc)): the problem the story solves, what must be true to resolve it, then the design below.
+
 Reference shape: `epics/set-track-and-collection/story-2-set-track-and-collection-on-drag-and-drop-upload.md`.
 
 ## 1. Folder hierarchy

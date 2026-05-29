@@ -8,6 +8,8 @@ Source: `.cursor/rules/*.mdc`. Regenerate with `.\scripts\sync-agents-md.ps1`.
 
 Read this sheet **before** substantive feature work (**new endpoints, callers, transactions, integrations, sizeable refactors**) in Atlas / Nest services / Vue apps. Prefer matching the **patterns already documented** in repo-specific **`/.cursor/rules/**`** (architecture, layering, Nest patterns).
 
+Frame every implementation as **Problem → Requirement → Solution** before writing code (see [problem-requirement-solution.mdc](./problem-requirement-solution.mdc)): state the problem, define what must be true to resolve it, then choose the change.
+
 ---
 
 ## 1. Automated tests — default obligation
@@ -21,7 +23,7 @@ Each relevant **unit suite** tied to shipped behavior must be **comprehensive ac
 - **Happy path** — success returns / side effects asserted.
 - **Failure paths** — invalid input, forbidden states, **`Promise.reject`**, mapped domain/application errors surfaced the way callers see them.
 - **Edge cases** — boundaries that plausibly break behavior (**empty**/null payloads, extremes, concurrency-safe assumptions documented with at least minimal coverage where risk exists).
-- **Graceful degradation** — not only “it throws”: assert **controlled handling** (**HTTP/status shape**, **`onError`/toast flows**, deterministic fallbacks)—no silent breakage, no leaky raw stack traces promised to callers.
+- **Graceful degradation** — not only “it throws”: assert **controlled handling**—no silent breakage, no leaky raw stack traces promised to callers. **Graceful handling is layer-specific** (see below).
 
 When you introduce or materially change behavior, **add new specs or extend existing ones** so that:
 
@@ -30,7 +32,44 @@ When you introduce or materially change behavior, **add new specs or extend exis
 
 Repos using **`__specs__/*.spec.{ts,vue,...}`**, **`vitest`**, **`jest`**—follow **existing layout and helpers** (**`createApplyMock`**, **`createComposableMock`**, etc.) rather than inventing parallel harnesses.
 
-If you truly cannot reach the target without heavy harness debt, spell out **blocked cases** plainly and propose the smallest scaffolding task—still avoid shipping **zero** tests for risky paths.
+#### Two distinct test obligations
+
+**Why:** "I ran the suite" and "I covered the change" are different duties; collapsing them lets a behavior change ship under a green-but-stale suite.
+
+- **Running tests** — **required** at the **end of the session** when the repo has applicable test gates for the touched work. Exception **only** by explicit blocker or true out-of-scope condition. "Small tweak" is **not** a valid reason to skip running applicable test gates. Report per the **Verification-gate reporting** section of [ticket-changelog.mdc](./ticket-changelog.mdc) (exact command + scope + result).
+- **Adding or updating tests** — **required** when behavior changed, a bug was fixed, or coverage for the touched behavior did not already exist. If **no** new tests were added, **name the existing suite or assertions** that already cover the changed behavior, or use the documented exception path below.
+
+```
+Good: "Tests added: useTextTruncation.spec.ts (happy/empty/overflow). Tests run: npx vitest run --maxWorkers 1 src/composables — 8 passing."
+Good: "No new tests — existing ProceedingFileTableDataRow.spec.ts already asserts tooltip-on-overflow; verified still green."
+Bad:  "Covered by existing tests" with no suite named; or skipping the run because it was a "small tweak."
+```
+
+#### Graceful degradation by layer
+
+**Why:** demanding UI-style assertions for backend-only work (or vice versa) produces noise, not safety. Assert the failure shape **the layer actually owns**:
+
+- **Backend / HTTP** — assert controlled **status codes** and **error shapes**; do not leak raw internals/stack traces.
+- **Frontend / UI** — assert **user-visible** error handling when applicable: `onError` behavior, fallback rendering, disabled states, toast/message handling.
+- **Domain / utility / mapper** — assert deterministic failure behavior or an explicit fallback **only if** the unit is supposed to provide it.
+
+Do **not** require UI-style assertions for backend-only work, or HTTP-style assertions for pure utility code.
+
+#### Valid test exceptions (narrow)
+
+**Why:** an open-ended "couldn't test" escape hatch erodes the whole obligation. A test exception is valid **only** when at least one is true:
+
+- the repo has **no runnable test harness** for that layer;
+- adding the **first meaningful test** would require **significant scaffolding unrelated** to the change;
+- the touched code is **purely wiring/config/docs** with no meaningful behavior to assert;
+- an **existing repo rule explicitly waives** tests for that category.
+
+When using an exception, record (per [ticket-changelog.mdc](./ticket-changelog.mdc) **Exception & evidence reporting**): **why** tests were blocked, **what risk** remains uncovered, and the **smallest follow-up** that would unlock coverage.
+
+```
+Good: "Tests — blocked: no jest harness wired for the CLI entrypoint layer; risk: arg parsing untested; follow-up: add jest config for bin/ (PRDV-XXXXX)."
+Bad:  "Couldn't easily test this."
+```
 
 ---
 
@@ -64,18 +103,25 @@ If only raw SQL qualifies, cite **why** narrowly, constrain surface area (**sing
 
 ## 5. Shipping checklist (address what applies)
 
-Before calling work **done**, walk every item below. If an item does not apply, state **N/A** and a one-line reason (e.g. "N/A — UI-only, no HTTP contract") in your wrap-up or changelog entry—**do not skip silently**.
+Before calling work **done**, walk the **canonical shipping checklist** defined in [ticket-changelog.mdc](./ticket-changelog.mdc) (**Shipping checklist (canonical vocabulary)** — the standardized headings, triggers, and exceptions). That rule owns the checklist structure and the **Exception & evidence reporting** standard (not-relevant vs blocked, out-of-scope, concrete-surface verification). **This section adds the build-specific evidence** each heading needs. Do **not** redefine the checklist here.
+
+**Absence of change must be verified against a concrete surface** (canonical rule in [ticket-changelog.mdc](./ticket-changelog.mdc)). "I only refactored" / "I only touched internals" is **not** sufficient — name the surface you checked and confirm it stayed unchanged. The per-heading evidence below is how you do that.
 
 ### Tests & regression (§1)
 
 - **New or changed behavior** has specs per §1 (happy, failure, edge, graceful where risk exists).
 - **Shared infrastructure** you touched (filters, interceptors, routers, global clients) has neighbor/regression coverage when behavior could leak sideways.
-- Run the repo’s test command for affected suites when **`package.json`** defines one; note what you ran in the changelog session entry.
-- If tests are blocked, document **risk + follow-ups**—do not treat "no tests" as done without that callout.
+- **Isolation exception evidence:** if you omit regression coverage because the change is **strictly isolated**, **name the boundary** that isolates it **and** why that boundary prevents effect on adjacent callers, shared infrastructure, or neighboring surfaces. "isolated" by itself is **not** sufficient.
+
+```
+Good: "Regression — isolated: change confined to a private helper with no caller-contract change; public signature and exported types unchanged."
+Good: "Regression — isolated: test-only change, no production code touched."
+Bad:  "Isolated change, no regression risk."
+```
 
 ### Changelog / session memory
 
-Keep cross-session memory current in **`dustin-thomason`** (not in app repos, not in **`larry-adams`**).
+Keep cross-session memory current in **`dustin-thomason`** (not in app repos, not in **`larry-adams`**); the changelog is the **canonical record** (see [ticket-changelog.mdc](./ticket-changelog.mdc) → **Canonical record**).
 
 | Work context | Where to update | When |
 | ------------ | --------------- | ---- |
@@ -87,17 +133,29 @@ Keep cross-session memory current in **`dustin-thomason`** (not in app repos, no
 
 ### Swagger / OpenAPI / API contract docs
 
-**Check every shipping pass**—most sessions are **N/A**, but the check is mandatory:
+**Check every shipping pass**—most sessions are **not relevant**, but the check is mandatory:
 
 - If the repo exposes **Swagger**, **OpenAPI**, route decorators, or **swagger helpers** (common on Callisto/Europa/Triton backends):
   - **New or changed HTTP surface** (path, method, body, status, auth) → update helpers, decorators, DTOs, and generated/spec artifacts per **that repo’s** `.cursor/rules/` and module conventions.
-  - **No contract change** → record **N/A — no API surface change** (or equivalent) in changelog or wrap-up.
-- UI-only or non-HTTP work → **N/A — no API docs in this repo**.
-- When unsure whether Swagger applies, search the touched module for `swagger`, `@Api`, or `*swagger*` helpers before marking N/A.
+  - **No contract change** → record it with the **checked surface named** — "no API surface change" by itself is **not** sufficient.
+- UI-only or non-HTTP work → record **not relevant — no API docs in this repo**.
+- When unsure whether Swagger applies, search the touched module for `swagger`, `@Api`, or `*swagger*` helpers before marking not relevant.
+
+```
+Good: "API docs — not relevant: internal service refactor only; route path/method, DTO shape, and status/auth decorators checked, all unchanged."
+Bad:  "No API surface change."
+```
 
 ### Tooling gates
 
 - Respect **`npm run lint`**, **`audit`** thresholds, and serial **`vitest`**/**`jest`** runs when the repo has them ([git-commit-workflow.mdc](./git-commit-workflow.mdc)).
+- **Gate exception evidence:** if a gate is recorded **not applicable / out of scope**, **name the specific gate** and **why the work was outside that gate's scope**. "Not applicable" by itself is **not** sufficient.
+
+```
+Good: "audit — not applicable: this repo has no package.json."
+Good: "lint — not applicable: touched files live outside the linted workspace (docs/ only)."
+Bad:  "Tooling gates N/A."
+```
 
 ---
 
@@ -149,6 +207,20 @@ Fan out when **all** of these hold:
 - **Scope each subagent narrowly:** one module, one layer, one question per subagent. Broad "explore everything" prompts defeat the purpose.
 - **Run in background** when possible so the parent can continue reasoning or dispatch additional subagents.
 
+## When subagents are unavailable (fallback)
+
+**Why:** the exploration is the obligation; subagents are only the *preferred mechanism* for it. Tooling limits must not become a reason to skip needed context-gathering.
+
+- If subagents **are** available → use them for qualifying read-only parallel exploration.
+- If subagents are **not** available → perform the **same exploration serially** in the parent context.
+- Lack of subagent support is **not** a reason to skip needed exploration.
+- **Return concrete artifacts either way** (paths, signatures, snippets, migration names).
+
+```
+Good: "No subagents in this environment — read the three modules serially myself and returned the entity path, composable signature, and migration name."
+Bad:  "Couldn't fan out, so I skipped checking the adjacent module."
+```
+
 ---
 
 ## Relationship to other rules
@@ -164,7 +236,9 @@ This rule is **additive**. It does not override or replace:
 
 # Git commit & push (dustin-thomason)
 
-Baseline for landing changes on **`main`** when that matches the workflow the user invokes. Team or ticket tooling can override when it conflicts.
+Baseline for landing changes on the **current working branch**. Team or ticket tooling can override when it conflicts.
+
+**Push target (default):** the **current working branch.** Feature branches are **normal and expected** when the repo or task uses them (e.g. `PRDV-XXXXX`). Use **`main`** **only** when the repo workflow is direct-to-`main` **or** the user explicitly says so. Do **not** imply `main` is preferred in branch-based workflows.
 
 **Browsing on GitHub?** [.github/git-commit-workflow.md](../../.github/git-commit-workflow.md) jumps here—we keep authoritative text **in `.cursor/rules/`** so Cursor keeps loading it automatically (**`alwaysApply`**); we do **not** relocate solely under **`.github/`**.
 
@@ -200,7 +274,39 @@ From **the repo root whose changes you intend to ship** (`package.json` at that 
 
 If tests exit non‑zero—**STOP before commit.** Fix or report failures; rerun the same command until green.
 
-Audit first, lint second, tests third—you avoid patching code only to discover **`npm audit`** or a red suite would have blocked shipment anyway.
+#### Order: audit → lint → tests
+
+Run and report in a **fixed order — audit, then lint, then tests**:
+
+- **audit first** to catch shipment blockers early, before you invest in fixes;
+- **lint second** because it **may mutate files** (`eslint --fix`);
+- **tests last**, against the **post-lint tree**.
+
+Tests **must** run after lint against the **final post-lint state.** Do **not** add pedantic rerun requirements beyond this order — require an **extra rerun only** when a gate was run **before** a later file-mutating step in a nonstandard flow.
+
+#### Use the repo-standard gate command
+
+**Why:** an ad-hoc narrower command can pass while the real gate would fail. When a repo provides a standard verification command, **use that command by default.** Do **not** substitute a weaker or narrower command unless the standard one is **unavailable or blocked**, and only when the substitute **preserves the intent** of the standard gate for the changed scope. **Convenience alone is not a valid reason to substitute.** If you substitute, record: **why** the standard command was not used, **why** the substitute still verifies the relevant scope, and **what (if anything) remains unverified.**
+
+#### Reporting verification gates
+
+**Why:** "tests passed" is unfalsifiable — a reader cannot tell what ran or over what scope. For **tests, lint, and audit**, reporting **must** be auditable (canonical format in [ticket-changelog.mdc](./ticket-changelog.mdc) → **Verification-gate reporting**):
+
+- Record the **exact gate command**, the **scope** it covered, and the **result**. "Tests passed" / "lint passed" / "audit passed" by itself is **not** sufficient.
+- **Only session-end verification** is the official compliance record; exploratory runs **may** be mentioned but **do not** replace the final result.
+- Report the **final post-change state only** — do **not** cite an earlier green run if later edits followed it.
+- Use a **markdown table** (preferred by default; **required** when **multiple gates** or **any exception** are reported):
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | callisto-back-end | pass | — |
+| lint | `npm run lint` | callisto-back-end | pass | — |
+| tests | `npm test -- --runInBand src/foo` | foo module | pass | — |
+
+```
+Good: the table above.
+Bad:  "ran lint and tests, all good."
+```
 
 ### Ticket changelog — before **`git commit`**
 
@@ -216,7 +322,7 @@ Once **§Pre-flight** is satisfied—or skipped because there is no npm workspac
 
 **5.** **`git commit -m "`** + §Commit-message subject below + **`"`**. If neither staging nor substantive working-tree changes remain, explain that **`main`** (or the current branch) already matches **`origin`** rather than forging an empty commit.
 
-**6.** **`git push`** to **`origin`** (your current branch—usually **`main`**).
+**6.** **`git push`** to **`origin`** for your **current working branch** (feature branch when the task uses one; `main` only for direct-to-`main` repos or when the user says so).
 
 **7.** Leave **no temp helper files**. Delete ephemeral commit-message scratch paths.
 
@@ -231,7 +337,7 @@ PR bodies and channel posts use the same fenced-block shape—see [pull-request-
 
 **Commit SHA block example**
 
-> Pushed **`main`** with passing audit / lint / test gates; landing SHA:
+> Pushed the current branch with passing audit / lint / test gates; landing SHA:
 
 ```
 0123456789abcdef0123456789abcdef01234567
@@ -289,7 +395,12 @@ Omit the test lines when the repo has no **`test`** script or the change is doc-
 
 ### Length & focus
 
-Roughly **five to seven words** describing **surface change**—keep implementation chatter out unless the ticket truly is infra.
+Keep the subject short for readability: **aim for five to seven words** in the **descriptive** text, describing the **surface change**, not implementation detail. **Exceed that only when absolutely necessary.** A **ticket prefix** (e.g. `PRDV-14699:`) **does not count** toward the word limit.
+
+```
+Good: "PRDV-14699: Co-locate comparator with mapper"   (prefix excluded; 5 descriptive words)
+Bad:  "PRDV-14699: Refactor the comparator so it now reads sort keys from the proceeding mapper instead of inline"
+```
 
 ### Wording starts
 
@@ -321,7 +432,7 @@ Heavy **rebase/merge choreography**, tagging, signatures, husky internals. This 
 | **Commit**, **push**, git workflow | [git-commit-workflow.mdc](./git-commit-workflow.mdc) + [ticket-changelog.mdc](./ticket-changelog.mdc) |
 | **New ticket**, **new branch**, start PRDV work | Read [new-branch-get-started.md](../docs/new-branch-get-started.md); update changelog in `dustin-thomason/docs/<system>/` |
 | **Open PR**, PR description, `gh pr create` | Read [pull-request-workflow.md](../docs/pull-request-workflow.md) |
-| **Implement** feature, endpoint, refactor, tests | [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) — §5 shipping checklist (tests, changelog, Swagger when applicable) + that repo's `.cursor/rules/` |
+| **Implement** feature, endpoint, refactor, tests | [problem-requirement-solution.mdc](./problem-requirement-solution.mdc) — frame as Problem → Requirement → Solution first; then [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) — §5 shipping checklist (tests, changelog, Swagger when applicable) + that repo's `.cursor/rules/` |
 | **Explore** unfamiliar code, onboard to ticket, gather multi-area context | [context-fanout.mdc](./context-fanout.mdc) — read-only subagent fanout |
 
 ## Ticket memory (`@` changelog when starting a thread)
@@ -343,11 +454,97 @@ Optional human opener: [.cursor/docs/session-start.md](../docs/session-start.md)
 | `grill-me` | User wants plan/design stress-tested |
 | `workflow-housekeeping` | User asks to audit/sync workflow docs after edits |
 
+## Precedence — repo rules vs personal rules
+
+**Why:** these personal rules travel into every repo, so a tie-break must be explicit or they will quietly override a repo's real conventions.
+
+- **Repo-specific `.cursor/rules/**` win** for **repo behavior and technical conventions.**
+- **`dustin-thomason` rules win** for **personal workflow habits** — but **only** when they do **not** conflict with the repo's technical conventions.
+
+| Repo `.cursor/rules/**` wins | `dustin-thomason` wins |
+| ---------------------------- | ---------------------- |
+| architecture and layering | changelog location |
+| testing harness and test placement conventions | session memory |
+| file placement and module structure | cross-repo personal workflow habits |
+| API / Swagger / DTO / contract conventions | |
+| branch / commit / PR formats required by that repo | |
+
+If a **direct conflict materially changes behavior**, note that **exception in the changelog**. Do **not** note conflicts when the rules were **compatible in practice**.
+
+```
+Good: "Conflict noted: repo mandates raw-SQL repository for this reader; followed repo rule over the personal 'avoid brittle SQL' default — recorded in changelog."
+Bad:  Noting a "conflict" when the personal habit and repo rule never actually disagreed.
+```
+
+## AGENTS.md is generated
+
+`AGENTS.md` is **generated output only** — **never edit it directly.** All behavioral changes go in the source `.mdc` files under `.cursor/rules/`; regeneration overwrites direct edits. Authoritative detail: [codex-agents-sync.mdc](./codex-agents-sync.mdc).
+
+## Rule language semantics
+
+**Why:** mixed strengths of wording make rules ambiguous. Use one vocabulary across all personal rules:
+
+- **must / required** = mandatory unless an explicit exception applies.
+- **default / normally** = expected baseline, but context may change it.
+- **may / can** = optional.
+
+Avoid soft wording in mandatory instructions.
+
+## Reporting integrity (truthfulness / evidence)
+
+**Why:** a status report is only useful if it maps to what actually happened. Agents **must not** claim a file was changed, a command was run, or a result was observed unless it **actually happened**. Status reporting **must** be grounded in observable evidence: if no file changed, do **not** imply it did; if a command was not run, do **not** present it as completed; if intended work was not completed, **say so directly.**
+
+Distinguish clearly:
+
+- **planned** = intended but not done.
+- **attempted** = tried but not completed.
+- **completed** = actually changed / performed.
+- **verified** = completed **and** confirmed by an applicable check.
+
+```
+Good: "Spec planned but not written; impl completed; verified via npm test -- --runInBand (12 passing)."
+Bad:  "Added tests and everything passes" when no test file was created or run.
+```
+
 ## Overlap with app repos
 
-- **Spec / build / commit habits** → personal rules above win for *how you work*.
+- **Spec / build / commit habits** → personal rules above win for *how you work* (subject to **Precedence** above).
 - **Commit subject on `PRDV-*` branches** → still use app repo `PRDV-X:` format when present.
 - **Vue / Nest / architecture patterns** → app repo rules still apply alongside personal guardrails.
+
+## problem-requirement-solution
+
+# Problem → Requirement → Solution
+
+**Philosophy (must be adhered to):** when addressing implementation, reason in a coherent, ordered line so the thinking stays clear for the end user — **Problem → Requirement → Solution.**
+
+**Why:** jumping straight to a solution hides *what* was actually being solved and *why* the chosen change is the right one. Leading with the problem and the requirement makes the work reviewable, keeps scope honest, and gives the reader (and the next agent) a traceable rationale instead of an unexplained diff.
+
+## The order
+
+1. **Problem** — state the concrete problem or pain being addressed: what is broken, missing, or asked for. This is **not** a restatement of the task title; it is the underlying need.
+2. **Requirement** — define what **must be true** for the system to resolve that problem (the condition(s) the system must deliver / satisfy). State it **independently of implementation** — the requirement should survive a change of solution.
+3. **Solution** — only **then** determine the change to integrate as a result. The solution **must** trace back to the requirement, and the requirement back to the problem.
+
+## Where it applies
+
+Use this ordering in **implementation responses, plans, spec narratives, and changelog / PR descriptions** — anywhere you explain a change to a reader. It complements, and runs ahead of, the build checklist in [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) and the spec sections in [spec-writing.mdc](./spec-writing.mdc).
+
+## Example
+
+```
+Good:
+  Problem:     Long filenames overflow the proceeding-file table cell and get visually clipped with no way to read them.
+  Requirement: Long names must stay fully readable on demand without breaking the table's fixed layout.
+  Solution:    Add a useTextTruncation composable + tooltip that reveals the full name when the text is ellipsized.
+
+Bad:
+  "Added a truncation composable and a tooltip."   (solution only — no stated problem, no requirement to verify it against)
+```
+
+## Relationship to other rules
+
+This rule is **additive**. It does **not** override repo-specific `.cursor/rules/**` technical conventions (see precedence in [personal-methodology.mdc](./personal-methodology.mdc)); it governs **how you frame and explain** the work, not the repo's architecture or contracts.
 
 ## spec-writing
 
@@ -356,6 +553,8 @@ Optional human opener: [.cursor/docs/session-start.md](../docs/session-start.md)
 When the user asks you to **write, extend, or review** an **epic** or **story** spec — usually in app repos or spec folders the team uses — include the sections below. If requirements come from a coworker spec in **`larry-adams`**, treat that repo as **read-only input**; ticket memory and plan index stay in **`dustin-thomason`**. You do **not** need the user to `@` this file or copy it into the app repo.
 
 If a section does not apply, add a one-line **N/A** with a short reason (e.g. "N/A — UI-only story") so reviewers know it was considered.
+
+Frame the spec narrative as **Problem → Requirement → Solution** (see [problem-requirement-solution.mdc](./problem-requirement-solution.mdc)): the problem the story solves, what must be true to resolve it, then the design below.
 
 Reference shape: `epics/set-track-and-collection/story-2-set-track-and-collection-on-drag-and-drop-upload.md`.
 
@@ -482,6 +681,113 @@ Skip only for trivial **`dustin-thomason`**-only edits with **no** ticket.
 5. Proceed with audit → lint → tests → git per [git-commit-workflow.mdc](./git-commit-workflow.mdc).
 
 **Gate:** No `git commit` without a session log entry covering this conversation's code changes.
+
+---
+
+## Canonical record (source of truth)
+
+**Why:** the reader needs one authoritative account of what shipped; a chat wrap-up scrolls away and drifts from the tree. When a changelog exists, **it is the canonical record**; a final chat wrap-up **may** summarize but is **not** the source of truth.
+
+- **PRDV work** → canonical record is `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md`.
+- **Personal-project work** → canonical record is that project's changelog under `docs/<project>/`.
+- **Trivial `dustin-thomason`-only doc tweak with no changelog** → the final wrap-up **may** be the only record.
+
+```
+Good: "Recorded in docs/atlas/PRDV-12264-changelog.md → Session log 2026-05-29T17:40:00Z; wrap-up below is a summary."
+Bad:  Reporting results only in chat when a ticket changelog exists for the work.
+```
+
+---
+
+## Shipping checklist (canonical vocabulary)
+
+**Why:** a single standardized checklist keeps every session auditable and stops "looks fine" omissions. This is the **source of truth** for the checklist; other rules (`build-implementation-guardrails.mdc`, `git-commit-workflow.mdc`) **reference** these headings rather than redefining them.
+
+**Structure rules:**
+
+- The checklist is **required** for any session that **materially changes code or behavior**.
+- Keep the **session narrative first**; **append** the checklist at the **end** of the session entry.
+- A heading **may** be omitted **only** when its trigger is absent (**not relevant**) or an explicit exception applies. An omitted heading means **not relevant**.
+- If a **triggered** heading is **not** performed, the exception **must** be recorded explicitly (see **Exception & evidence reporting**).
+- **Do not** pad entries with irrelevant noise, and **do not** allow open-ended omission based on agent preference or assumption.
+
+**Not required for:** trivial planning-only sessions, note-taking, or minor docs with no behavior impact.
+
+**Standard headings** (append in this order; omit a heading only when its trigger is absent):
+
+| Heading | Default trigger (required when…) | Valid exception |
+| ------- | -------------------------------- | --------------- |
+| **Tests run** | the repo has applicable lint/test/audit gates for the touched work | repo lacks the gate, work is truly outside its scope, or a documented blocker prevented running it |
+| **Tests added/updated** | behavior/logic changed or a bug was fixed | documented test-blocker (see `build-implementation-guardrails.mdc` §1) |
+| **Regression impact** | shared infrastructure, cross-cutting behavior, or adjacent surfaces were touched | change is strictly isolated **and** the note names the isolating boundary |
+| **API docs** | an HTTP contract or API metadata changed | no contract / API-surface change (name the checked surface) |
+| **Tooling gates** | the repo provides applicable lint/test/audit gates | repo lacks the gate, work is out of that gate's scope, or a documented blocker applies |
+| **Conflicts / exceptions** | a normal rule was skipped, blocked, or overridden | — (record whenever it happens) |
+
+**Posture:** do the check **by default**; skip **only** by explicit exception; **never** silently assume "it should be fine." Tooling gates are **verification steps, not optional confidence checks** — confidence or intuition is never a substitute for running the gate.
+
+---
+
+## Exception & evidence reporting (anti-handwave)
+
+**Why:** a bare "N/A" or "blocked" hides whether a step was irrelevant or skipped, and whether risk remains. Every exception must be auditable.
+
+**Not relevant vs blocked:**
+
+- **Not relevant** = the trigger was **absent**.
+- **Blocked / exception** = the trigger was **present**, but the action was **not** completed.
+- A **blocked** item **must never** be recorded as `N/A`. If something was not done, the record **must** say why.
+
+**Every exception must state:** (1) why the normal step was not done, (2) the exact check or action skipped, (3) the residual risk or the follow-up that resolves it. Vague notes like only "blocked" or "N/A" are **not** allowed.
+
+**Out of scope** must define the **scope boundary** and explain why the skipped check falls outside it. "Out of scope" by itself is **not** sufficient.
+
+**Absence of change must be verified against a concrete surface**, not inferred from intent. "I only refactored", "I only touched internals", and "this should not affect anything" are **not** sufficient by themselves — name the checked surface and confirm it stayed unchanged. (Layer-specific evidence examples — regression boundary, API surface, tooling gate — live in `build-implementation-guardrails.mdc`.)
+
+```
+Good: "API docs — not relevant: service-internal refactor only; route path/method, DTO shape, and auth/status decorators checked, all unchanged."
+Good: "Tests — blocked: no Vitest harness for this CLI layer; risk: arg-parse path uncovered; follow-up: scaffold harness (PRDV-XXXXX)."
+Bad:  "API docs: N/A"
+Bad:  "tests: blocked"
+```
+
+---
+
+## Verification-gate reporting
+
+**Why:** "tests passed" is unfalsifiable; a reader cannot tell what ran or over what scope. Reporting must be reproducible and reflect the shipped tree.
+
+- Record the **exact gate command**, the **scope** it covered, and the **result**. "Tests passed", "lint passed", or "audit passed" by itself is **not** sufficient. Applies to **tests**, **lint**, and **audit**.
+- **Order** matches the workflow: **audit → lint → tests** (rationale and commands in `git-commit-workflow.mdc`).
+- **Only session-end verification** counts as the official compliance record. Exploratory runs **may** be mentioned but **do not** replace the final gate result.
+- Report the **final post-change state only.** Do **not** cite an earlier green run if later edits followed it; if the final state differs from an intermediate run, report the final state.
+
+**Reporting format — markdown table.** Preferred by default; **required** when **multiple gates** or **any exception** are reported:
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | atlas-front-end | pass | — |
+| lint | `npm run lint` | atlas-front-end | pass | — |
+| tests | `npx vitest run --maxWorkers 1 src/foo` | foo composable | pass | — |
+
+```
+Good: the table above (exact command + scope + result per gate).
+Bad:  "lint passed; tests passed."
+```
+
+---
+
+## UTC timestamps for session entries
+
+**Why:** a single canonical timezone-free format keeps cross-session ordering unambiguous across agents and machines.
+
+- Session entries that record **implementation activity** **must** include a UTC timestamp.
+- Use **one** canonical format: **ISO 8601 UTC with trailing `Z`**, reflecting when the entry was recorded.
+
+```
+Good: ### 2026-05-29T21:14:00Z — atlas-front-end
+Bad:  ### 2026-05-29 — atlas-front-end   (no time, no zone, for implementation work)
+```
 
 ---
 

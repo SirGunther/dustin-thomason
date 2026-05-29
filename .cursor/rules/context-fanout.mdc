@@ -45,6 +45,20 @@ Fan out when **all** of these hold:
 - **Scope each subagent narrowly:** one module, one layer, one question per subagent. Broad "explore everything" prompts defeat the purpose.
 - **Run in background** when possible so the parent can continue reasoning or dispatch additional subagents.
 
+## When subagents are unavailable (fallback)
+
+**Why:** the exploration is the obligation; subagents are only the *preferred mechanism* for it. Tooling limits must not become a reason to skip needed context-gathering.
+
+- If subagents **are** available → use them for qualifying read-only parallel exploration.
+- If subagents are **not** available → perform the **same exploration serially** in the parent context.
+- Lack of subagent support is **not** a reason to skip needed exploration.
+- **Return concrete artifacts either way** (paths, signatures, snippets, migration names).
+
+```
+Good: "No subagents in this environment — read the three modules serially myself and returned the entity path, composable signature, and migration name."
+Bad:  "Couldn't fan out, so I skipped checking the adjacent module."
+```
+
 ---
 
 ## Relationship to other rules

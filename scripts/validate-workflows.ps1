@@ -30,7 +30,8 @@ $requiredAlwaysApply = @(
     'git-commit-workflow',
     'ticket-changelog',
     'build-implementation-guardrails',
-    'context-fanout'
+    'context-fanout',
+    'problem-requirement-solution'
 )
 
 $requiredPlaybooks = @(

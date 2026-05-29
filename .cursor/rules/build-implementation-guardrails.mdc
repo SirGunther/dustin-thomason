@@ -7,6 +7,8 @@ alwaysApply: true
 
 Read this sheet **before** substantive feature work (**new endpoints, callers, transactions, integrations, sizeable refactors**) in Atlas / Nest services / Vue apps. Prefer matching the **patterns already documented** in repo-specific **`/.cursor/rules/**`** (architecture, layering, Nest patterns).
 
+Frame every implementation as **Problem → Requirement → Solution** before writing code (see [problem-requirement-solution.mdc](./problem-requirement-solution.mdc)): state the problem, define what must be true to resolve it, then choose the change.
+
 ---
 
 ## 1. Automated tests — default obligation
@@ -20,7 +22,7 @@ Each relevant **unit suite** tied to shipped behavior must be **comprehensive ac
 - **Happy path** — success returns / side effects asserted.
 - **Failure paths** — invalid input, forbidden states, **`Promise.reject`**, mapped domain/application errors surfaced the way callers see them.
 - **Edge cases** — boundaries that plausibly break behavior (**empty**/null payloads, extremes, concurrency-safe assumptions documented with at least minimal coverage where risk exists).
-- **Graceful degradation** — not only “it throws”: assert **controlled handling** (**HTTP/status shape**, **`onError`/toast flows**, deterministic fallbacks)—no silent breakage, no leaky raw stack traces promised to callers.
+- **Graceful degradation** — not only “it throws”: assert **controlled handling**—no silent breakage, no leaky raw stack traces promised to callers. **Graceful handling is layer-specific** (see below).
 
 When you introduce or materially change behavior, **add new specs or extend existing ones** so that:
 
@@ -29,7 +31,44 @@ When you introduce or materially change behavior, **add new specs or extend exis
 
 Repos using **`__specs__/*.spec.{ts,vue,...}`**, **`vitest`**, **`jest`**—follow **existing layout and helpers** (**`createApplyMock`**, **`createComposableMock`**, etc.) rather than inventing parallel harnesses.
 
-If you truly cannot reach the target without heavy harness debt, spell out **blocked cases** plainly and propose the smallest scaffolding task—still avoid shipping **zero** tests for risky paths.
+#### Two distinct test obligations
+
+**Why:** "I ran the suite" and "I covered the change" are different duties; collapsing them lets a behavior change ship under a green-but-stale suite.
+
+- **Running tests** — **required** at the **end of the session** when the repo has applicable test gates for the touched work. Exception **only** by explicit blocker or true out-of-scope condition. "Small tweak" is **not** a valid reason to skip running applicable test gates. Report per the **Verification-gate reporting** section of [ticket-changelog.mdc](./ticket-changelog.mdc) (exact command + scope + result).
+- **Adding or updating tests** — **required** when behavior changed, a bug was fixed, or coverage for the touched behavior did not already exist. If **no** new tests were added, **name the existing suite or assertions** that already cover the changed behavior, or use the documented exception path below.
+
+```
+Good: "Tests added: useTextTruncation.spec.ts (happy/empty/overflow). Tests run: npx vitest run --maxWorkers 1 src/composables — 8 passing."
+Good: "No new tests — existing ProceedingFileTableDataRow.spec.ts already asserts tooltip-on-overflow; verified still green."
+Bad:  "Covered by existing tests" with no suite named; or skipping the run because it was a "small tweak."
+```
+
+#### Graceful degradation by layer
+
+**Why:** demanding UI-style assertions for backend-only work (or vice versa) produces noise, not safety. Assert the failure shape **the layer actually owns**:
+
+- **Backend / HTTP** — assert controlled **status codes** and **error shapes**; do not leak raw internals/stack traces.
+- **Frontend / UI** — assert **user-visible** error handling when applicable: `onError` behavior, fallback rendering, disabled states, toast/message handling.
+- **Domain / utility / mapper** — assert deterministic failure behavior or an explicit fallback **only if** the unit is supposed to provide it.
+
+Do **not** require UI-style assertions for backend-only work, or HTTP-style assertions for pure utility code.
+
+#### Valid test exceptions (narrow)
+
+**Why:** an open-ended "couldn't test" escape hatch erodes the whole obligation. A test exception is valid **only** when at least one is true:
+
+- the repo has **no runnable test harness** for that layer;
+- adding the **first meaningful test** would require **significant scaffolding unrelated** to the change;
+- the touched code is **purely wiring/config/docs** with no meaningful behavior to assert;
+- an **existing repo rule explicitly waives** tests for that category.
+
+When using an exception, record (per [ticket-changelog.mdc](./ticket-changelog.mdc) **Exception & evidence reporting**): **why** tests were blocked, **what risk** remains uncovered, and the **smallest follow-up** that would unlock coverage.
+
+```
+Good: "Tests — blocked: no jest harness wired for the CLI entrypoint layer; risk: arg parsing untested; follow-up: add jest config for bin/ (PRDV-XXXXX)."
+Bad:  "Couldn't easily test this."
+```
 
 ---
 
@@ -63,18 +102,25 @@ If only raw SQL qualifies, cite **why** narrowly, constrain surface area (**sing
 
 ## 5. Shipping checklist (address what applies)
 
-Before calling work **done**, walk every item below. If an item does not apply, state **N/A** and a one-line reason (e.g. "N/A — UI-only, no HTTP contract") in your wrap-up or changelog entry—**do not skip silently**.
+Before calling work **done**, walk the **canonical shipping checklist** defined in [ticket-changelog.mdc](./ticket-changelog.mdc) (**Shipping checklist (canonical vocabulary)** — the standardized headings, triggers, and exceptions). That rule owns the checklist structure and the **Exception & evidence reporting** standard (not-relevant vs blocked, out-of-scope, concrete-surface verification). **This section adds the build-specific evidence** each heading needs. Do **not** redefine the checklist here.
+
+**Absence of change must be verified against a concrete surface** (canonical rule in [ticket-changelog.mdc](./ticket-changelog.mdc)). "I only refactored" / "I only touched internals" is **not** sufficient — name the surface you checked and confirm it stayed unchanged. The per-heading evidence below is how you do that.
 
 ### Tests & regression (§1)
 
 - **New or changed behavior** has specs per §1 (happy, failure, edge, graceful where risk exists).
 - **Shared infrastructure** you touched (filters, interceptors, routers, global clients) has neighbor/regression coverage when behavior could leak sideways.
-- Run the repo’s test command for affected suites when **`package.json`** defines one; note what you ran in the changelog session entry.
-- If tests are blocked, document **risk + follow-ups**—do not treat "no tests" as done without that callout.
+- **Isolation exception evidence:** if you omit regression coverage because the change is **strictly isolated**, **name the boundary** that isolates it **and** why that boundary prevents effect on adjacent callers, shared infrastructure, or neighboring surfaces. "isolated" by itself is **not** sufficient.
+
+```
+Good: "Regression — isolated: change confined to a private helper with no caller-contract change; public signature and exported types unchanged."
+Good: "Regression — isolated: test-only change, no production code touched."
+Bad:  "Isolated change, no regression risk."
+```
 
 ### Changelog / session memory
 
-Keep cross-session memory current in **`dustin-thomason`** (not in app repos, not in **`larry-adams`**).
+Keep cross-session memory current in **`dustin-thomason`** (not in app repos, not in **`larry-adams`**); the changelog is the **canonical record** (see [ticket-changelog.mdc](./ticket-changelog.mdc) → **Canonical record**).
 
 | Work context | Where to update | When |
 | ------------ | --------------- | ---- |
@@ -86,17 +132,29 @@ Keep cross-session memory current in **`dustin-thomason`** (not in app repos, no
 
 ### Swagger / OpenAPI / API contract docs
 
-**Check every shipping pass**—most sessions are **N/A**, but the check is mandatory:
+**Check every shipping pass**—most sessions are **not relevant**, but the check is mandatory:
 
 - If the repo exposes **Swagger**, **OpenAPI**, route decorators, or **swagger helpers** (common on Callisto/Europa/Triton backends):
   - **New or changed HTTP surface** (path, method, body, status, auth) → update helpers, decorators, DTOs, and generated/spec artifacts per **that repo’s** `.cursor/rules/` and module conventions.
-  - **No contract change** → record **N/A — no API surface change** (or equivalent) in changelog or wrap-up.
-- UI-only or non-HTTP work → **N/A — no API docs in this repo**.
-- When unsure whether Swagger applies, search the touched module for `swagger`, `@Api`, or `*swagger*` helpers before marking N/A.
+  - **No contract change** → record it with the **checked surface named** — "no API surface change" by itself is **not** sufficient.
+- UI-only or non-HTTP work → record **not relevant — no API docs in this repo**.
+- When unsure whether Swagger applies, search the touched module for `swagger`, `@Api`, or `*swagger*` helpers before marking not relevant.
+
+```
+Good: "API docs — not relevant: internal service refactor only; route path/method, DTO shape, and status/auth decorators checked, all unchanged."
+Bad:  "No API surface change."
+```
 
 ### Tooling gates
 
 - Respect **`npm run lint`**, **`audit`** thresholds, and serial **`vitest`**/**`jest`** runs when the repo has them ([git-commit-workflow.mdc](./git-commit-workflow.mdc)).
+- **Gate exception evidence:** if a gate is recorded **not applicable / out of scope**, **name the specific gate** and **why the work was outside that gate's scope**. "Not applicable" by itself is **not** sufficient.
+
+```
+Good: "audit — not applicable: this repo has no package.json."
+Good: "lint — not applicable: touched files live outside the linted workspace (docs/ only)."
+Bad:  "Tooling gates N/A."
+```
 
 ---
 

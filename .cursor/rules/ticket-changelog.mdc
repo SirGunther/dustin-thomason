@@ -69,6 +69,113 @@ Skip only for trivial **`dustin-thomason`**-only edits with **no** ticket.
 
 ---
 
+## Canonical record (source of truth)
+
+**Why:** the reader needs one authoritative account of what shipped; a chat wrap-up scrolls away and drifts from the tree. When a changelog exists, **it is the canonical record**; a final chat wrap-up **may** summarize but is **not** the source of truth.
+
+- **PRDV work** → canonical record is `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md`.
+- **Personal-project work** → canonical record is that project's changelog under `docs/<project>/`.
+- **Trivial `dustin-thomason`-only doc tweak with no changelog** → the final wrap-up **may** be the only record.
+
+```
+Good: "Recorded in docs/atlas/PRDV-12264-changelog.md → Session log 2026-05-29T17:40:00Z; wrap-up below is a summary."
+Bad:  Reporting results only in chat when a ticket changelog exists for the work.
+```
+
+---
+
+## Shipping checklist (canonical vocabulary)
+
+**Why:** a single standardized checklist keeps every session auditable and stops "looks fine" omissions. This is the **source of truth** for the checklist; other rules (`build-implementation-guardrails.mdc`, `git-commit-workflow.mdc`) **reference** these headings rather than redefining them.
+
+**Structure rules:**
+
+- The checklist is **required** for any session that **materially changes code or behavior**.
+- Keep the **session narrative first**; **append** the checklist at the **end** of the session entry.
+- A heading **may** be omitted **only** when its trigger is absent (**not relevant**) or an explicit exception applies. An omitted heading means **not relevant**.
+- If a **triggered** heading is **not** performed, the exception **must** be recorded explicitly (see **Exception & evidence reporting**).
+- **Do not** pad entries with irrelevant noise, and **do not** allow open-ended omission based on agent preference or assumption.
+
+**Not required for:** trivial planning-only sessions, note-taking, or minor docs with no behavior impact.
+
+**Standard headings** (append in this order; omit a heading only when its trigger is absent):
+
+| Heading | Default trigger (required when…) | Valid exception |
+| ------- | -------------------------------- | --------------- |
+| **Tests run** | the repo has applicable lint/test/audit gates for the touched work | repo lacks the gate, work is truly outside its scope, or a documented blocker prevented running it |
+| **Tests added/updated** | behavior/logic changed or a bug was fixed | documented test-blocker (see `build-implementation-guardrails.mdc` §1) |
+| **Regression impact** | shared infrastructure, cross-cutting behavior, or adjacent surfaces were touched | change is strictly isolated **and** the note names the isolating boundary |
+| **API docs** | an HTTP contract or API metadata changed | no contract / API-surface change (name the checked surface) |
+| **Tooling gates** | the repo provides applicable lint/test/audit gates | repo lacks the gate, work is out of that gate's scope, or a documented blocker applies |
+| **Conflicts / exceptions** | a normal rule was skipped, blocked, or overridden | — (record whenever it happens) |
+
+**Posture:** do the check **by default**; skip **only** by explicit exception; **never** silently assume "it should be fine." Tooling gates are **verification steps, not optional confidence checks** — confidence or intuition is never a substitute for running the gate.
+
+---
+
+## Exception & evidence reporting (anti-handwave)
+
+**Why:** a bare "N/A" or "blocked" hides whether a step was irrelevant or skipped, and whether risk remains. Every exception must be auditable.
+
+**Not relevant vs blocked:**
+
+- **Not relevant** = the trigger was **absent**.
+- **Blocked / exception** = the trigger was **present**, but the action was **not** completed.
+- A **blocked** item **must never** be recorded as `N/A`. If something was not done, the record **must** say why.
+
+**Every exception must state:** (1) why the normal step was not done, (2) the exact check or action skipped, (3) the residual risk or the follow-up that resolves it. Vague notes like only "blocked" or "N/A" are **not** allowed.
+
+**Out of scope** must define the **scope boundary** and explain why the skipped check falls outside it. "Out of scope" by itself is **not** sufficient.
+
+**Absence of change must be verified against a concrete surface**, not inferred from intent. "I only refactored", "I only touched internals", and "this should not affect anything" are **not** sufficient by themselves — name the checked surface and confirm it stayed unchanged. (Layer-specific evidence examples — regression boundary, API surface, tooling gate — live in `build-implementation-guardrails.mdc`.)
+
+```
+Good: "API docs — not relevant: service-internal refactor only; route path/method, DTO shape, and auth/status decorators checked, all unchanged."
+Good: "Tests — blocked: no Vitest harness for this CLI layer; risk: arg-parse path uncovered; follow-up: scaffold harness (PRDV-XXXXX)."
+Bad:  "API docs: N/A"
+Bad:  "tests: blocked"
+```
+
+---
+
+## Verification-gate reporting
+
+**Why:** "tests passed" is unfalsifiable; a reader cannot tell what ran or over what scope. Reporting must be reproducible and reflect the shipped tree.
+
+- Record the **exact gate command**, the **scope** it covered, and the **result**. "Tests passed", "lint passed", or "audit passed" by itself is **not** sufficient. Applies to **tests**, **lint**, and **audit**.
+- **Order** matches the workflow: **audit → lint → tests** (rationale and commands in `git-commit-workflow.mdc`).
+- **Only session-end verification** counts as the official compliance record. Exploratory runs **may** be mentioned but **do not** replace the final gate result.
+- Report the **final post-change state only.** Do **not** cite an earlier green run if later edits followed it; if the final state differs from an intermediate run, report the final state.
+
+**Reporting format — markdown table.** Preferred by default; **required** when **multiple gates** or **any exception** are reported:
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | atlas-front-end | pass | — |
+| lint | `npm run lint` | atlas-front-end | pass | — |
+| tests | `npx vitest run --maxWorkers 1 src/foo` | foo composable | pass | — |
+
+```
+Good: the table above (exact command + scope + result per gate).
+Bad:  "lint passed; tests passed."
+```
+
+---
+
+## UTC timestamps for session entries
+
+**Why:** a single canonical timezone-free format keeps cross-session ordering unambiguous across agents and machines.
+
+- Session entries that record **implementation activity** **must** include a UTC timestamp.
+- Use **one** canonical format: **ISO 8601 UTC with trailing `Z`**, reflecting when the entry was recorded.
+
+```
+Good: ### 2026-05-29T21:14:00Z — atlas-front-end
+Bad:  ### 2026-05-29 — atlas-front-end   (no time, no zone, for implementation work)
+```
+
+---
+
 ## System → default repo
 
 | `<system>` | Default repo |

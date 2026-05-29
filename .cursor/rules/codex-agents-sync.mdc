@@ -6,7 +6,14 @@ alwaysApply: false
 
 # Codex mirror (dustin-thomason)
 
+**`AGENTS.md` is generated output only.** **Never edit `AGENTS.md` directly.** All behavioral changes **must** be made in the source `.mdc` files under `.cursor/rules/`; the regeneration script **overwrites** any direct edits to `AGENTS.md`.
+
 When you **create or edit** any file under `.cursor/rules/` or `.cursor/skills/` in this repo:
 
 1. Run **`.\scripts\sync-agents-md.ps1`** from the `dustin-thomason` repo root before you finish.
 2. If `AGENTS.md` changed, stage it with the same work (do not leave the mirror stale).
+
+```
+Good: edit .cursor/rules/<rule>.mdc, then run .\scripts\sync-agents-md.ps1 to regenerate AGENTS.md.
+Bad:  hand-editing AGENTS.md (the next sync silently overwrites it).
+```

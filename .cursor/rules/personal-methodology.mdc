@@ -15,7 +15,7 @@ alwaysApply: true
 | **Commit**, **push**, git workflow | [git-commit-workflow.mdc](./git-commit-workflow.mdc) + [ticket-changelog.mdc](./ticket-changelog.mdc) |
 | **New ticket**, **new branch**, start PRDV work | Read [new-branch-get-started.md](../docs/new-branch-get-started.md); update changelog in `dustin-thomason/docs/<system>/` |
 | **Open PR**, PR description, `gh pr create` | Read [pull-request-workflow.md](../docs/pull-request-workflow.md) |
-| **Implement** feature, endpoint, refactor, tests | [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) — §5 shipping checklist (tests, changelog, Swagger when applicable) + that repo's `.cursor/rules/` |
+| **Implement** feature, endpoint, refactor, tests | [problem-requirement-solution.mdc](./problem-requirement-solution.mdc) — frame as Problem → Requirement → Solution first; then [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) — §5 shipping checklist (tests, changelog, Swagger when applicable) + that repo's `.cursor/rules/` |
 | **Explore** unfamiliar code, onboard to ticket, gather multi-area context | [context-fanout.mdc](./context-fanout.mdc) — read-only subagent fanout |
 
 ## Ticket memory (`@` changelog when starting a thread)
@@ -37,8 +37,60 @@ Optional human opener: [.cursor/docs/session-start.md](../docs/session-start.md)
 | `grill-me` | User wants plan/design stress-tested |
 | `workflow-housekeeping` | User asks to audit/sync workflow docs after edits |
 
+## Precedence — repo rules vs personal rules
+
+**Why:** these personal rules travel into every repo, so a tie-break must be explicit or they will quietly override a repo's real conventions.
+
+- **Repo-specific `.cursor/rules/**` win** for **repo behavior and technical conventions.**
+- **`dustin-thomason` rules win** for **personal workflow habits** — but **only** when they do **not** conflict with the repo's technical conventions.
+
+| Repo `.cursor/rules/**` wins | `dustin-thomason` wins |
+| ---------------------------- | ---------------------- |
+| architecture and layering | changelog location |
+| testing harness and test placement conventions | session memory |
+| file placement and module structure | cross-repo personal workflow habits |
+| API / Swagger / DTO / contract conventions | |
+| branch / commit / PR formats required by that repo | |
+
+If a **direct conflict materially changes behavior**, note that **exception in the changelog**. Do **not** note conflicts when the rules were **compatible in practice**.
+
+```
+Good: "Conflict noted: repo mandates raw-SQL repository for this reader; followed repo rule over the personal 'avoid brittle SQL' default — recorded in changelog."
+Bad:  Noting a "conflict" when the personal habit and repo rule never actually disagreed.
+```
+
+## AGENTS.md is generated
+
+`AGENTS.md` is **generated output only** — **never edit it directly.** All behavioral changes go in the source `.mdc` files under `.cursor/rules/`; regeneration overwrites direct edits. Authoritative detail: [codex-agents-sync.mdc](./codex-agents-sync.mdc).
+
+## Rule language semantics
+
+**Why:** mixed strengths of wording make rules ambiguous. Use one vocabulary across all personal rules:
+
+- **must / required** = mandatory unless an explicit exception applies.
+- **default / normally** = expected baseline, but context may change it.
+- **may / can** = optional.
+
+Avoid soft wording in mandatory instructions.
+
+## Reporting integrity (truthfulness / evidence)
+
+**Why:** a status report is only useful if it maps to what actually happened. Agents **must not** claim a file was changed, a command was run, or a result was observed unless it **actually happened**. Status reporting **must** be grounded in observable evidence: if no file changed, do **not** imply it did; if a command was not run, do **not** present it as completed; if intended work was not completed, **say so directly.**
+
+Distinguish clearly:
+
+- **planned** = intended but not done.
+- **attempted** = tried but not completed.
+- **completed** = actually changed / performed.
+- **verified** = completed **and** confirmed by an applicable check.
+
+```
+Good: "Spec planned but not written; impl completed; verified via npm test -- --runInBand (12 passing)."
+Bad:  "Added tests and everything passes" when no test file was created or run.
+```
+
 ## Overlap with app repos
 
-- **Spec / build / commit habits** → personal rules above win for *how you work*.
+- **Spec / build / commit habits** → personal rules above win for *how you work* (subject to **Precedence** above).
 - **Commit subject on `PRDV-*` branches** → still use app repo `PRDV-X:` format when present.
 - **Vue / Nest / architecture patterns** → app repo rules still apply alongside personal guardrails.

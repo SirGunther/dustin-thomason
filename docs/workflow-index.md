@@ -59,7 +59,7 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 | **Start ticket / branch** | “Start branch for PRDV-…” | **No** — router reads `new-branch-get-started` |
 | **Commit or push** | “Commit” / “push using git workflow” | **No** — `git-commit-workflow` + `ticket-changelog` |
 | **Open a PR** | “Open PR for PRDV-…” | **No** — router reads `pull-request-workflow` |
-| **Implement code** | (normal implementation chat) | **No** — `build-implementation-guardrails` + app repo rules |
+| **Implement code** | (normal implementation chat) | **No** — `problem-requirement-solution` (frame first) + `build-implementation-guardrails` + app repo rules |
 | **Ticket context (new thread)** | `@docs/atlas/PRDV-XXXXX-changelog` | **Yes** — this is the ticket **data** file |
 | **Stress-test a plan** | `@grill-me` | Yes (skill) |
 | **Audit workflow docs** | “run workflow housekeeping” | Optional `@workflow-housekeeping` |
@@ -78,6 +78,7 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 | `ticket-changelog` | session log before commit |
 | `build-implementation-guardrails` | §5 shipping checklist: tests/regression, changelog (PRDV + personal projects), Swagger when applicable |
 | `context-fanout` | read-only exploration subagents for multi-area context compaction |
+| `problem-requirement-solution` | frame implementation/plans/specs as Problem → Requirement → Solution |
 
 Not always-on: `workflow-housekeeping` (only when editing workflow files here); `codex-agents-sync` (regenerate `AGENTS.md` after rule/skill edits).
 
@@ -171,6 +172,7 @@ Checks: five `alwaysApply` rules, playbooks, router links, no changelogs under `
 | Commit | `git-commit-workflow` + `ticket-changelog` rules |
 | PR | `pull-request-workflow` (via `personal-methodology` router) |
 | Code quality | `build-implementation-guardrails` + app repo rules |
+| Framing implementation | `problem-requirement-solution` — Problem → Requirement → Solution |
 | Multi-area exploration | `context-fanout` — read-only subagent fanout |
 | Spec | `spec-writing` (via router) |
 

@@ -5,7 +5,9 @@ alwaysApply: true
 
 # Git commit & push (dustin-thomason)
 
-Baseline for landing changes on **`main`** when that matches the workflow the user invokes. Team or ticket tooling can override when it conflicts.
+Baseline for landing changes on the **current working branch**. Team or ticket tooling can override when it conflicts.
+
+**Push target (default):** the **current working branch.** Feature branches are **normal and expected** when the repo or task uses them (e.g. `PRDV-XXXXX`). Use **`main`** **only** when the repo workflow is direct-to-`main` **or** the user explicitly says so. Do **not** imply `main` is preferred in branch-based workflows.
 
 **Browsing on GitHub?** [.github/git-commit-workflow.md](../../.github/git-commit-workflow.md) jumps here—we keep authoritative text **in `.cursor/rules/`** so Cursor keeps loading it automatically (**`alwaysApply`**); we do **not** relocate solely under **`.github/`**.
 
@@ -41,7 +43,39 @@ From **the repo root whose changes you intend to ship** (`package.json` at that 
 
 If tests exit non‑zero—**STOP before commit.** Fix or report failures; rerun the same command until green.
 
-Audit first, lint second, tests third—you avoid patching code only to discover **`npm audit`** or a red suite would have blocked shipment anyway.
+#### Order: audit → lint → tests
+
+Run and report in a **fixed order — audit, then lint, then tests**:
+
+- **audit first** to catch shipment blockers early, before you invest in fixes;
+- **lint second** because it **may mutate files** (`eslint --fix`);
+- **tests last**, against the **post-lint tree**.
+
+Tests **must** run after lint against the **final post-lint state.** Do **not** add pedantic rerun requirements beyond this order — require an **extra rerun only** when a gate was run **before** a later file-mutating step in a nonstandard flow.
+
+#### Use the repo-standard gate command
+
+**Why:** an ad-hoc narrower command can pass while the real gate would fail. When a repo provides a standard verification command, **use that command by default.** Do **not** substitute a weaker or narrower command unless the standard one is **unavailable or blocked**, and only when the substitute **preserves the intent** of the standard gate for the changed scope. **Convenience alone is not a valid reason to substitute.** If you substitute, record: **why** the standard command was not used, **why** the substitute still verifies the relevant scope, and **what (if anything) remains unverified.**
+
+#### Reporting verification gates
+
+**Why:** "tests passed" is unfalsifiable — a reader cannot tell what ran or over what scope. For **tests, lint, and audit**, reporting **must** be auditable (canonical format in [ticket-changelog.mdc](./ticket-changelog.mdc) → **Verification-gate reporting**):
+
+- Record the **exact gate command**, the **scope** it covered, and the **result**. "Tests passed" / "lint passed" / "audit passed" by itself is **not** sufficient.
+- **Only session-end verification** is the official compliance record; exploratory runs **may** be mentioned but **do not** replace the final result.
+- Report the **final post-change state only** — do **not** cite an earlier green run if later edits followed it.
+- Use a **markdown table** (preferred by default; **required** when **multiple gates** or **any exception** are reported):
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | callisto-back-end | pass | — |
+| lint | `npm run lint` | callisto-back-end | pass | — |
+| tests | `npm test -- --runInBand src/foo` | foo module | pass | — |
+
+```
+Good: the table above.
+Bad:  "ran lint and tests, all good."
+```
 
 ### Ticket changelog — before **`git commit`**
 
@@ -57,7 +91,7 @@ Once **§Pre-flight** is satisfied—or skipped because there is no npm workspac
 
 **5.** **`git commit -m "`** + §Commit-message subject below + **`"`**. If neither staging nor substantive working-tree changes remain, explain that **`main`** (or the current branch) already matches **`origin`** rather than forging an empty commit.
 
-**6.** **`git push`** to **`origin`** (your current branch—usually **`main`**).
+**6.** **`git push`** to **`origin`** for your **current working branch** (feature branch when the task uses one; `main` only for direct-to-`main` repos or when the user says so).
 
 **7.** Leave **no temp helper files**. Delete ephemeral commit-message scratch paths.
 
@@ -72,7 +106,7 @@ PR bodies and channel posts use the same fenced-block shape—see [pull-request-
 
 **Commit SHA block example**
 
-> Pushed **`main`** with passing audit / lint / test gates; landing SHA:
+> Pushed the current branch with passing audit / lint / test gates; landing SHA:
 
 ```
 0123456789abcdef0123456789abcdef01234567
@@ -130,7 +164,12 @@ Omit the test lines when the repo has no **`test`** script or the change is doc-
 
 ### Length & focus
 
-Roughly **five to seven words** describing **surface change**—keep implementation chatter out unless the ticket truly is infra.
+Keep the subject short for readability: **aim for five to seven words** in the **descriptive** text, describing the **surface change**, not implementation detail. **Exceed that only when absolutely necessary.** A **ticket prefix** (e.g. `PRDV-14699:`) **does not count** toward the word limit.
+
+```
+Good: "PRDV-14699: Co-locate comparator with mapper"   (prefix excluded; 5 descriptive words)
+Bad:  "PRDV-14699: Refactor the comparator so it now reads sort keys from the proceeding mapper instead of inline"
+```
 
 ### Wording starts
 
