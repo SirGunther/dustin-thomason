@@ -1,4 +1,5 @@
-# scripts/win/gitcommit.ps1
+# .\scripts\gitcommit.ps1
+# & "C:\Users\dustin.thomason\dustin-thomason\scripts\gitcommit.ps1"
 
 $ErrorActionPreference = "Stop"
 
@@ -32,34 +33,56 @@ function Invoke-GitCommand {
   }
 }
 
-$currentBranch = (& git branch --show-current).Trim()
+$startingPath = (Get-Location).ProviderPath
+$repoRoot = (& git -C $startingPath rev-parse --show-toplevel 2>$null).Trim()
 
-Write-Host "`nCurrent branch: $currentBranch" -ForegroundColor Yellow
-
-if ($currentBranch -eq "main") {
-  $targetBranch = "main"
-  Write-Host "Already on main." -ForegroundColor Yellow
-} else {
-  $useCurrentBranch = Confirm-YesNo "Commit to current branch '$currentBranch'? No = switch to main"
-
-  if ($useCurrentBranch) {
-    $targetBranch = $currentBranch
-  } else {
-    $targetBranch = "main"
-    Invoke-GitCommand @("switch", "main")
-  }
+if (-not $repoRoot) {
+  Write-Host "Not inside a Git repo. Stopping." -ForegroundColor Red
+  exit 1
 }
 
-$message = Read-Host "`nCommit message"
+Push-Location $repoRoot
 
-Invoke-GitCommand @("add", "-A")
-Invoke-GitCommand @("commit", "-m", $message)
-Invoke-GitCommand @("pull", "--rebase", "origin", $targetBranch)
-Invoke-GitCommand @("push", "-u", "origin", "HEAD")
+try {
+  Write-Host "`nRepo: $repoRoot" -ForegroundColor Yellow
 
-$commitSha = (& git rev-parse HEAD).Trim()
-$commitSha | Set-Clipboard
+  $currentBranch = (& git branch --show-current).Trim()
 
-Write-Host "`nCommitted and pushed:" -ForegroundColor Green
-Write-Host $commitSha
-Write-Host "Commit SHA copied to clipboard." -ForegroundColor Green
+  if (-not $currentBranch) {
+    Write-Host "You appear to be in detached HEAD state. Stopping." -ForegroundColor Red
+    exit 1
+  }
+
+  Write-Host "Current branch: $currentBranch" -ForegroundColor Yellow
+
+  if ($currentBranch -eq "main") {
+    $targetBranch = "main"
+    Write-Host "Already on main." -ForegroundColor Yellow
+  } else {
+    $useCurrentBranch = Confirm-YesNo "Commit to current branch '$currentBranch'? No = switch to main"
+
+    if ($useCurrentBranch) {
+      $targetBranch = $currentBranch
+    } else {
+      $targetBranch = "main"
+      Invoke-GitCommand @("switch", "main")
+    }
+  }
+
+  $message = Read-Host "`nCommit message"
+
+  Invoke-GitCommand @("add", "-A")
+  Invoke-GitCommand @("commit", "-m", $message)
+  Invoke-GitCommand @("pull", "--rebase", "origin", $targetBranch)
+  Invoke-GitCommand @("push", "-u", "origin", "HEAD")
+
+  $commitSha = (& git rev-parse HEAD).Trim()
+  $commitSha | Set-Clipboard
+
+  Write-Host "`nCommitted and pushed:" -ForegroundColor Green
+  Write-Host $commitSha
+  Write-Host "Commit SHA copied to clipboard." -ForegroundColor Green
+}
+finally {
+  Pop-Location
+}
