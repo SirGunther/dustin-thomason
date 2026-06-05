@@ -18,6 +18,20 @@ Shared running changelog for all notable Countdowns app changes (UI, UX, API, te
 
 _Newest first. Add one entry per working session or merge-worthy update._
 
+### 2026-06-05T19:17:29Z — Note Deletion Pane Stability
+
+- **Summary:** Fixed note deletion so removing an individual note no longer closes the event notes/context pane.
+- **Problem:** The custom delete-confirmation dialog sits outside the note pane, so confirming a note deletion was being treated as an outside-pane click by the global pane-dismiss handler.
+- **Requirement:** Dialog/modal interactions must not dismiss the context pane; note deletion should only remove the selected note and refresh the note list.
+- **Solution:** Updated the global outside-click handler in `public/app.js` to ignore clicks inside `.dialog-overlay` and `.modal-overlay`, while leaving explicit pane-closing flows such as event deletion unchanged.
+- **Files/areas:** `public/app.js` context-pane outside-click handling and note deletion confirmation flow.
+- **User-visible impact:** Users can delete notes from an open event pane without losing the pane context.
+- **Tests run:** `npm test` from `C:\Users\dustin.thomason\OneDrive\Countdowns` — pass (`109/109`).
+- **Tests added/updated:** No new tests; existing API and helper suites do not exercise browser-level outside-click/dialog interaction. Manual UI behavior was addressed by isolating the global click-dismiss guard from modal/dialog targets.
+- **Regression impact:** Isolated to the pane outside-click boundary; card-click pane toggling and explicit `closePane()` callers remain unchanged.
+- **API docs:** Not relevant: no HTTP path, method, request/response body, status, or auth contract changed.
+- **Tooling gates:** `npm test` applicable and passed; no lint/audit scripts are required by this session's app-change request.
+
 ### 2026-05-21 — Event Type ID Migration
 
 - **Summary:** Implemented stable event-type IDs and migration tooling so event-type renames no longer break existing event links.
