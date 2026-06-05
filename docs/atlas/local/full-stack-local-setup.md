@@ -35,13 +35,16 @@ Consolidated guide for running **Atlas front-end + Callisto + Triton** locally o
 
 ### 5. Credentials
 
-- [ ] Are AWS credentials fresh? (Triton needs them for S3. Tokens from Planet Portal expire every 1-4 hours.)
-- [ ] Is `GITHUB_TOKEN` set in `.npmrc` or env? (`npm ci` will fail on `@planetdepos` packages without it.)
+- [ ] Are AWS credentials fresh? (Triton needs them for S3; Callisto needs them for Cognito token verification. Tokens from Planet Portal expire every 1-4 hours.)
+- [ ] Is a GitHub PAT available **and not expired**? (`npm ci` fails on `@planetdepos` packages without it.)
+- [ ] Is the PAT **SSO-authorized for the PlanetDepos org** with `read:packages`, so it can install from the private GitHub Packages registry? (A valid-but-unauthorized token still 401s.)
+- [ ] Will the token be exported **in the same shell** before `npm ci`? `.npmrc` resolves `_authToken=${GITHUB_TOKEN}`; a bare `npm ci` with the var unset sends an empty token → `401`. Run `$env:GITHUB_TOKEN = "<pat>"` first (PowerShell) or `export GITHUB_TOKEN=<pat>` (Git Bash).
 
 ### 6. Database state
 
 - [ ] Do the `callisto` and `triton` databases exist in the Postgres container?
 - [ ] Has the `callisto` schema been created inside the `callisto` database?
+- [ ] Are the `uuid-ossp` and `pgcrypto` extensions installed in the `callisto` DB? (Required by the `notifications` migrations — `uuid_generate_v4()` — which run automatically on Callisto startup. Missing extensions crash boot. See Step 0.)
 - [ ] Does a resource row exist for the user in `callisto.resources`? (Needed for job task assignments — see the DBeaver section.)
 
 ### Order of operations
@@ -139,6 +142,12 @@ docker run -d --name callisto-postgres `
 docker exec callisto-postgres psql -U postgres -d callisto -c "CREATE SCHEMA IF NOT EXISTS callisto;"
 docker exec callisto-postgres psql -U postgres -c "CREATE DATABASE triton;"
 docker exec callisto-postgres psql -U postgres -d triton -c "CREATE SCHEMA IF NOT EXISTS triton;"
+
+# Required Postgres extensions for the callisto DB (notifications migrations call uuid_generate_v4()).
+# Install into the public schema so the default search_path ("$user", public) resolves the unqualified call.
+docker exec callisto-postgres psql -U postgres -d callisto -c "CREATE SCHEMA IF NOT EXISTS public;"
+docker exec callisto-postgres psql -U postgres -d callisto -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\" WITH SCHEMA public;"
+docker exec callisto-postgres psql -U postgres -d callisto -c "CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;"
 
 # RabbitMQ
 docker run -d --name callisto-rabbitmq `
@@ -413,6 +422,38 @@ Then restart the Callisto API. Alternatively, set `OUTBOX_ENABLED=false` in `.en
 - `3_seed`: Added missing jobs `112233`-`112236` that proceedings reference
 - `9_seed`: Renamed `accounts_id`→`account_id`, `persons_id`→`person_id`, `contact_types_id`→`contact_type_id`, `sales_rep_resources_id`→`sales_rep_resource_id`
 
+### Callisto crashes on startup: `function uuid_generate_v4() does not exist`
+
+**Cause:** The `notifications` table migrations (which run automatically on API startup) call `uuid_generate_v4()`, provided by the `uuid-ossp` extension. A fresh local Postgres doesn't have it.
+
+**Fix:** Install the extension into the `public` schema (so the default `search_path` `"$user", public` resolves the unqualified call):
+
+```powershell
+docker exec callisto-postgres psql -U postgres -d callisto -c "CREATE SCHEMA IF NOT EXISTS public;"
+docker exec callisto-postgres psql -U postgres -d callisto -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\" WITH SCHEMA public;"
+docker exec callisto-postgres psql -U postgres -d callisto -c "CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;"
+```
+
+If you hit `ERROR: no schema has been selected to create in`, it's because the `postgres` role's `search_path` had no valid schema — creating `public` first (as above) resolves it.
+
+### `npm ci` in callisto-back-end fails with `401 Unauthorized` from `npm.pkg.github.com`
+
+**Cause:** `.npmrc` resolves the registry auth token from `_authToken=${GITHUB_TOKEN}`. If `GITHUB_TOKEN` is unset in the shell, npm sends an empty token and GitHub Packages rejects `@planetdepos/*` installs with `401`. A token that is **expired** or **not SSO-authorized for the PlanetDepos org** fails the same way.
+
+**Fix:** Export a valid, non-expired, SSO-authorized PAT (`read:packages`) in the **same shell** before installing:
+
+```powershell
+$env:GITHUB_TOKEN = "<your-pat>"   # PowerShell
+npm ci
+```
+
+```bash
+export GITHUB_TOKEN=<your-pat>      # Git Bash
+npm ci
+```
+
+Note: `.env.local` may hold only a placeholder (`GITHUB_TOKEN=X`) — that does not populate the shell env that `npm`/`.npmrc` reads.
+
 ### Token expired errors in Triton logs
 
 **Cause:** AWS session tokens from Planet Portal expire (typically 1-4 hours).
@@ -616,6 +657,84 @@ Then refresh Atlas in your browser. The "Highly Confidential (H)" drive should n
 
 You can use this same pattern to grant or revoke access to any drive by changing `resource_keys_id` in the queries above.
 
+## Callisto resource-key permissions (spoofing roles for auth testing)
+
+Callisto authorizes API actions the same data-driven way Triton does, but against the **`callisto`** schema's `permissions`/`roles`/`resource_keys` tables. This is how you reproduce role-specific scenarios locally (e.g. "Facilities can rename client deliverables but not submission files") without a real Cognito account for that role.
+
+### How it resolves
+
+On **every request**, Callisto reads the role names from the id-token `custom:roles` claim, looks them up in `roles`, and selects the `permissions` rows with `effect='ALLOW'` joined to `resource_keys`. Two consequences:
+
+- Your **role** is fixed by the token (can't change without a different login), but the **permissions a role maps to are DB-editable** and re-read each request — edit the table and the next request picks it up, no re-login.
+- Actions are stored lowercase (`update`, `create`, `read`, `delete`); effects uppercase (`ALLOW`/`DENY`). Token verification uses Cognito public keys, not AWS creds.
+
+### Find your role and the relevant resource keys
+
+```sql
+SET search_path TO callisto, public;
+
+-- your logged-in role appears in the Callisto server log on login (`authorized roles:`)
+SELECT id, type FROM roles ORDER BY id;
+
+-- resource keys for the client-deliverable vs submission file lanes
+SELECT id, key FROM resource_keys
+WHERE key LIKE '%PROCEEDING_FILES_TRANSCRIPT' ORDER BY key;
+```
+
+### Spoof a specific role's permission
+
+```sql
+-- grant: deliverable transcript update
+UPDATE permissions SET effect = 'ALLOW'
+WHERE roles_id = <your role id>
+  AND resource_keys_id = (SELECT id FROM resource_keys WHERE key = 'CLIENT_DELIVERABLE_PROCEEDING_FILES_TRANSCRIPT')
+  AND action = 'update';
+
+-- deny: submission transcript update
+UPDATE permissions SET effect = 'DENY'
+WHERE roles_id = <your role id>
+  AND resource_keys_id = (SELECT id FROM resource_keys WHERE key = 'SUBMISSION_PROCEEDING_FILES_TRANSCRIPT')
+  AND action = 'update';
+```
+
+### Blanket spoof (copy a known role's full profile onto everyone)
+
+When you don't want to track which role your Cognito user maps to, copy a reference role's entire permission set onto all roles. Example: reproduce the `Neptune_Facilities` (role id 14) profile so any login behaves like Facilities. **Always back up first** — this is reversible:
+
+```sql
+-- backup
+DROP TABLE IF EXISTS callisto.permissions_backup;
+CREATE TABLE callisto.permissions_backup AS SELECT * FROM callisto.permissions;
+
+-- copy role 14's permissions onto every other role
+DELETE FROM callisto.permissions WHERE roles_id <> 14;
+INSERT INTO callisto.permissions (roles_id, resource_keys_id, action, effect, created_at, updated_at)
+SELECT r.id, p.resource_keys_id, p.action, p.effect, now(), now()
+FROM callisto.roles r
+CROSS JOIN callisto.permissions p
+WHERE p.roles_id = 14 AND r.id <> 14;
+
+-- restore when finished
+TRUNCATE callisto.permissions;
+INSERT INTO callisto.permissions SELECT * FROM callisto.permissions_backup;
+DROP TABLE callisto.permissions_backup;
+```
+
+### Verify the spoof
+
+```sql
+SELECT r.type AS role, rk.key AS resource_key, p.action, p.effect
+FROM callisto.permissions p
+JOIN callisto.roles r          ON r.id  = p.roles_id
+JOIN callisto.resource_keys rk ON rk.id = p.resource_keys_id
+WHERE r.type = '<your role>'
+  AND rk.key IN ('CLIENT_DELIVERABLE_PROCEEDING_FILES_TRANSCRIPT', 'SUBMISSION_PROCEEDING_FILES_TRANSCRIPT')
+  AND p.action = 'update'
+ORDER BY rk.key;
+```
+
+> A fuller worked example (with browser-console evidence capture and the matching success/403 calls) lives in the PRDV-15776 changelog's **Manual Reproduction Steps** (`docs/atlas/PRDV-15776-changelog.md`).
+
 ## Quick-reference: the working commands
 
 ```powershell
@@ -680,6 +799,7 @@ Specific pages referenced in this guide:
 
 ### Local runbooks (this folder)
 
+- [`dev-testing-prerequisites.md`](./dev-testing-prerequisites.md) — pre-flight checklist + AI-agent execution / manual-reproduction requirements (run this gate first)
 - [`callisto-local.mdc`](./callisto-local.mdc) — detailed Callisto-only setup and troubleshooting
 - [`triton-local.mdc`](./triton-local.mdc) — Triton-only setup (reuses Callisto Postgres container)
 - [`europa-local.mdc`](./europa-local.mdc) — Europa local setup
