@@ -16,7 +16,7 @@ One map for **dustin-thomason** personal workflows. When `@` shows too many matc
 | Kind | Loads automatically? | You must `@`? |
 | ---- | -------------------- | ------------- |
 | **Personal rules** (`alwaysApply: true` in dustin-thomason) | **Yes** — if `dustin-thomason` is in the workspace | **No** — say “write a spec” / “commit” / “open a PR” and [personal-methodology](../.cursor/rules/personal-methodology.mdc) routes to the right rule or playbook |
-| **Ticket changelog** (data for one PRDV) | No — it is a file, not a rule | **Yes** on a **new agent thread**: `@docs/atlas/PRDV-XXXXX-changelog` |
+| **Ticket changelog** (data for one PRDV) | **Partially** — agents resolve + read at **task start** per `ticket-changelog` | **Optional** on new threads — `@` still helps when multiple tickets/repos are open |
 | **Playbooks** (branch steps, PR template) | Yes when you use those **words** (router reads the `.md`) | No — unless the agent ignored you |
 
 **You do not copy** `spec-writing.mdc` (or any personal rule) into Callisto. Keep one copy in dustin-thomason only.
@@ -44,7 +44,7 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 | **Rules** | `.cursor/rules/*.mdc` | **Automatic** when `dustin-thomason` is in workspace (`alwaysApply: true`) |
 | **Router** | `personal-methodology.mdc` | **Automatic** — maps “write spec” / “commit” / “open PR” to the right rule or playbook |
 | **Playbooks** | `.cursor/docs/*.md` | **Automatic** when you name the task (router); not via `@` |
-| **Artifacts** | `docs/**/PRDV-*-changelog.md` | **`@` the ticket file** on new agent threads |
+| **Artifacts** | `docs/**/PRDV-*-changelog.md`, `docs/<project>/*-changelog*` | Agents **read at task start** when substantive work begins; **`@`** optional pointer on new threads |
 
 **Authoritative long content** lives in `docs/`. `.cursor/docs/` holds short, task-oriented playbooks that link into `docs/`. `.github/*.md` files are **stubs for GitHub browsing only** — do not `@` them.
 
@@ -59,8 +59,9 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 | **Start ticket / branch** | “Start branch for PRDV-…” | **No** — router reads `new-branch-get-started` |
 | **Commit or push** | “Commit” / “push using git workflow” | **No** — `git-commit-workflow` + `ticket-changelog` |
 | **Open a PR** | “Open PR for PRDV-…” | **No** — router reads `pull-request-workflow` |
-| **Implement code** | (normal implementation chat) | **No** — `problem-requirement-solution` (frame first) + `build-implementation-guardrails` + app repo rules |
-| **Ticket context (new thread)** | `@docs/atlas/PRDV-XXXXX-changelog` | **Yes** — this is the ticket **data** file |
+| **Implement code** | (normal implementation chat) | **No** — agent resolves changelog at **task start**; then `problem-requirement-solution` + `build-implementation-guardrails` + app repo rules |
+| **Fix bug / regression** | (normal fix chat) | **No** — same **task-start** changelog alignment when a ticket or project log exists |
+| **Ticket context (new thread)** | `@docs/atlas/PRDV-XXXXX-changelog` | **Optional** — explicit pointer; agent should still resolve changelog from branch/ticket id |
 | **Stress-test a plan** | `@grill-me` | Yes (skill) |
 | **Audit workflow docs** | “run workflow housekeeping” | Optional `@workflow-housekeeping` |
 
@@ -75,7 +76,7 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 | `personal-methodology` | Routes intent → spec / commit / PR / branch (no copy into app repos) |
 | `spec-writing` | Epic/story sections in **Callisto, Atlas, anywhere** |
 | `git-commit-workflow` | audit → lint → tests → git → paste SHA |
-| `ticket-changelog` | session log before commit |
+| `ticket-changelog` | task-start alignment + session log before commit |
 | `build-implementation-guardrails` | §5 shipping checklist: tests/regression, changelog (PRDV + personal projects), Swagger when applicable |
 | `context-fanout` | read-only exploration subagents for multi-area context compaction |
 | `problem-requirement-solution` | frame implementation/plans/specs as Problem → Requirement → Solution |

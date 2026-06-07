@@ -126,7 +126,7 @@ Keep cross-session memory current in **`dustin-thomason`** (not in app repos, no
 | Work context | Where to update | When |
 | ------------ | --------------- | ---- |
 | **`PRDV-*` ticket** (Atlas, Callisto, Europa, Triton, …) | `docs/<system>/PRDV-XXXXX-changelog.md` | **Before every commit** on PlanetDepos app repos — session log + **Current state**; see [ticket-changelog.mdc](./ticket-changelog.mdc) |
-| **Personal / side project** (Countdowns, WorkLists, …) | `docs/<project>/` changelog for that project (e.g. `docs/countdowns/countdowns-app-changelog.mdc`) | **End of each implementation session** or before you commit/push project code—whichever comes first |
+| **Personal / side project** (Countdowns, WorkLists, …) | `docs/<project>/` changelog for that project (e.g. `docs/countdowns/countdowns-app-changelog.mdc`) | **Task start** — read for alignment; **end of session** or before commit/push — session log |
 | **No ticket, trivial dustin-thomason-only doc tweak** | — | Changelog optional |
 
 **Personal-project session entry** (match existing file shape): newest-first **Session log** with summary, files/areas, user-visible impact, tests run; refresh **Current state** when scope shifts. If no changelog file exists yet for that project, create one under `docs/<project>/` using the same sections (Purpose, Scope, Session log, Current state).
@@ -432,20 +432,22 @@ Heavy **rebase/merge choreography**, tagging, signatures, husky internals. This 
 | **Commit**, **push**, git workflow | [git-commit-workflow.mdc](./git-commit-workflow.mdc) + [ticket-changelog.mdc](./ticket-changelog.mdc) |
 | **New ticket**, **new branch**, start PRDV work | Read [new-branch-get-started.md](../docs/new-branch-get-started.md); update changelog in `dustin-thomason/docs/<system>/` |
 | **Open PR**, PR description, `gh pr create` | Read [pull-request-workflow.md](../docs/pull-request-workflow.md) |
-| **Implement** feature, endpoint, refactor, tests | [problem-requirement-solution.mdc](./problem-requirement-solution.mdc) — frame as Problem → Requirement → Solution first; then [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) — §5 shipping checklist (tests, changelog, Swagger when applicable) + that repo's `.cursor/rules/` |
+| **Implement** feature, endpoint, refactor, tests | [ticket-changelog.mdc](./ticket-changelog.mdc) — **task start**: resolve + read canonical changelog (**Current state**, **Plans**, **Attempt history**); then [problem-requirement-solution.mdc](./problem-requirement-solution.mdc) — frame as Problem → Requirement → Solution; then [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) — §5 shipping checklist + that repo's `.cursor/rules/` |
+| **Fix** bug or regression (substantive) | Same as **Implement** — changelog alignment first when a ticket or project log exists |
 | **Explore** unfamiliar code, onboard to ticket, gather multi-area context | [context-fanout.mdc](./context-fanout.mdc) — read-only subagent fanout |
 
-## Ticket memory (`@` changelog when starting a thread)
+## Changelog memory (task start + commit)
 
-Changelog **content** lives in `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md`.
+Canonical changelog paths and **task-start alignment** live in [ticket-changelog.mdc](./ticket-changelog.mdc) (**Task start — changelog alignment**). Agents **must** resolve and read the relevant log **once at the start of each new substantive task** — not only when the user `@` mentions it.
 
 | User does | You do |
 | --------- | ------ |
-| `@docs/.../PRDV-XXXXX-changelog` or says "working on PRDV-XXXXX" | **Read** that file first; continue from **Current state** and **Session log** |
+| Starts implement / fix / refactor / spec / ticket work | **Resolve** canonical changelog (PRDV → `docs/<system>/`; personal project → `docs/<project>/`); read **Current state**, **Plans**, **Attempt history**, latest **Session log**; align before planning or coding |
+| `@docs/.../PRDV-XXXXX-changelog` or says "working on PRDV-XXXXX" | Same — treat as explicit pointer; continue from **Current state** and **Session log** |
 | New ticket, no file yet | Run `scripts/new-ticket-changelog.ps1` or template; **Requirements (verbatim)** on first pass |
 | **Commit** / **push** | Append **Session log** in that file **before** `git commit` ([ticket-changelog.mdc](./ticket-changelog.mdc)) |
 
-Optional human opener: [.cursor/docs/session-start.md](../docs/session-start.md).
+Optional human opener (still helps on new threads): [.cursor/docs/session-start.md](../docs/session-start.md).
 
 ## Skills (not automatic — user invokes)
 
@@ -632,14 +634,54 @@ Cross-session memory for **`PRDV-*`** work. Full playbook: [docs/ticket-changelo
 
 | Trigger | Action |
 | ------- | ------ |
+| User starts a **new substantive task** (implement, fix, refactor, spec, ticket onboarding) | **Resolve** canonical changelog (below); **read** **Current state**, **Plans**, **Attempt history**, latest **Session log**; align before planning or coding |
 | User starts a ticket / new branch | Scaffold changelog if missing; **first pass** verbatim requirements |
-| User `@` or names `docs/.../PRDV-*-changelog` or branch `PRDV-*` | **Read** existing file or scaffold; treat as active ticket for this thread |
+| User `@` or names `docs/.../PRDV-*-changelog`, branch `PRDV-*`, or ticket id in message | **Read** existing file or scaffold; treat as active ticket for this thread |
 | User asks to **commit** / **push** / git workflow | **Session log** entry **before** `git commit` (then [git-commit-workflow.mdc](./git-commit-workflow.mdc) pre-flight + git) |
 | User opens a PR | Summarize from changelog; do not paste the whole file |
 | User or agent **generates a plan** | Add/update a row under **Plans** (path, status, one-line approach) |
 | New implementation approach | Read **Plans** + **Attempt history** first; avoid repeating **superseded** / **abandoned** plans |
 
-Skip only for trivial **`dustin-thomason`**-only edits with **no** ticket.
+Skip only for trivial **`dustin-thomason`**-only edits with **no** ticket, pure Q&A with no implementation intent, or workflow/doc housekeeping that does not touch product code.
+
+---
+
+## Task start — changelog alignment (read before substantive work)
+
+**Why:** the changelog is the cross-session **story** — requirements, chosen approach, what shipped, and what was abandoned. Reading it once at task start keeps new work aligned without re-reading it on every agent step.
+
+**When (once per new task or agent thread, before planning or coding):**
+
+- User asks to **implement**, **fix**, **refactor**, **write/extend a spec**, **onboard to a ticket**, or otherwise start substantive work — including when rules such as `personal-methodology`, `build-implementation-guardrails`, or generated **`AGENTS.md`** route you there.
+- **Not** on every follow-up message, tool call, or micro-step within the same task.
+
+**Resolve the canonical changelog** (same path you would **write** session log entries to):
+
+| Work context | Where to read |
+| ------------ | ------------- |
+| **`PRDV-*` ticket** (Atlas, Callisto, Europa, Triton, …) | `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md` |
+| **Personal / side project** (Countdowns, WorkLists, OtterCopy, …) | `dustin-thomason/docs/<project>/` — project changelog (e.g. `*-app-changelog.mdc`) |
+| **Changelog lives in the app repo** (rare; only when that repo is already the established home) | That repo's changelog path — **only** when prior session logs or project docs already use it |
+
+**How to resolve it (in priority order — `@` is not required):**
+
+1. **Explicit** — path or `@` in the user message wins.
+2. **`PRDV-` id** — from user message, open files, or **`git branch --show-current`** in the app repo; then glob `dustin-thomason/docs/**/PRDV-XXXXX-changelog.md`.
+3. **Personal project** — from workspace folder, app name, or `docs/<project>/` in dustin-thomason; read the project changelog there.
+4. **Missing file** — scaffold (ticket: `new-ticket-changelog.ps1`; personal: create under `docs/<project>/` per [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc)) before deep work.
+
+**What to read (minimum):**
+
+- **Current state** — what is true now; do not contradict it without noting why.
+- **Requirements (verbatim)** — scope boundary for the ticket or project.
+- **Plans** — prefer **`active`** / **`implemented`** rows; do **not** repeat **`superseded`** / **`abandoned`** approaches.
+- **Attempt history** — failures and dead ends to avoid.
+- **Latest Session log** entry — most recent shipped direction.
+
+**After reading — align before acting:**
+
+- State briefly (in thinking or first reply when useful) which changelog you used and which **active Plan** or **Current state** line governs this task.
+- If the user's new request **conflicts** with **Current state** or an **active Plan**, say so and confirm direction before a large refactor or new plan.
 
 ---
 

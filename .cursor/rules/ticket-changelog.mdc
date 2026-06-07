@@ -1,5 +1,5 @@
 ---
-description: Ticket changelog in dustin-thomason—scaffold on branch start, verbatim requirements on first pass, session log before every PlanetDepos commit.
+description: Changelog alignment at task start; scaffold on branch start; verbatim requirements on first pass; session log before every PlanetDepos commit.
 alwaysApply: true
 ---
 
@@ -17,14 +17,54 @@ Cross-session memory for **`PRDV-*`** work. Full playbook: [docs/ticket-changelo
 
 | Trigger | Action |
 | ------- | ------ |
+| User starts a **new substantive task** (implement, fix, refactor, spec, ticket onboarding) | **Resolve** canonical changelog (below); **read** **Current state**, **Plans**, **Attempt history**, latest **Session log**; align before planning or coding |
 | User starts a ticket / new branch | Scaffold changelog if missing; **first pass** verbatim requirements |
-| User `@` or names `docs/.../PRDV-*-changelog` or branch `PRDV-*` | **Read** existing file or scaffold; treat as active ticket for this thread |
+| User `@` or names `docs/.../PRDV-*-changelog`, branch `PRDV-*`, or ticket id in message | **Read** existing file or scaffold; treat as active ticket for this thread |
 | User asks to **commit** / **push** / git workflow | **Session log** entry **before** `git commit` (then [git-commit-workflow.mdc](./git-commit-workflow.mdc) pre-flight + git) |
 | User opens a PR | Summarize from changelog; do not paste the whole file |
 | User or agent **generates a plan** | Add/update a row under **Plans** (path, status, one-line approach) |
 | New implementation approach | Read **Plans** + **Attempt history** first; avoid repeating **superseded** / **abandoned** plans |
 
-Skip only for trivial **`dustin-thomason`**-only edits with **no** ticket.
+Skip only for trivial **`dustin-thomason`**-only edits with **no** ticket, pure Q&A with no implementation intent, or workflow/doc housekeeping that does not touch product code.
+
+---
+
+## Task start — changelog alignment (read before substantive work)
+
+**Why:** the changelog is the cross-session **story** — requirements, chosen approach, what shipped, and what was abandoned. Reading it once at task start keeps new work aligned without re-reading it on every agent step.
+
+**When (once per new task or agent thread, before planning or coding):**
+
+- User asks to **implement**, **fix**, **refactor**, **write/extend a spec**, **onboard to a ticket**, or otherwise start substantive work — including when rules such as `personal-methodology`, `build-implementation-guardrails`, or generated **`AGENTS.md`** route you there.
+- **Not** on every follow-up message, tool call, or micro-step within the same task.
+
+**Resolve the canonical changelog** (same path you would **write** session log entries to):
+
+| Work context | Where to read |
+| ------------ | ------------- |
+| **`PRDV-*` ticket** (Atlas, Callisto, Europa, Triton, …) | `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md` |
+| **Personal / side project** (Countdowns, WorkLists, OtterCopy, …) | `dustin-thomason/docs/<project>/` — project changelog (e.g. `*-app-changelog.mdc`) |
+| **Changelog lives in the app repo** (rare; only when that repo is already the established home) | That repo's changelog path — **only** when prior session logs or project docs already use it |
+
+**How to resolve it (in priority order — `@` is not required):**
+
+1. **Explicit** — path or `@` in the user message wins.
+2. **`PRDV-` id** — from user message, open files, or **`git branch --show-current`** in the app repo; then glob `dustin-thomason/docs/**/PRDV-XXXXX-changelog.md`.
+3. **Personal project** — from workspace folder, app name, or `docs/<project>/` in dustin-thomason; read the project changelog there.
+4. **Missing file** — scaffold (ticket: `new-ticket-changelog.ps1`; personal: create under `docs/<project>/` per [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc)) before deep work.
+
+**What to read (minimum):**
+
+- **Current state** — what is true now; do not contradict it without noting why.
+- **Requirements (verbatim)** — scope boundary for the ticket or project.
+- **Plans** — prefer **`active`** / **`implemented`** rows; do **not** repeat **`superseded`** / **`abandoned`** approaches.
+- **Attempt history** — failures and dead ends to avoid.
+- **Latest Session log** entry — most recent shipped direction.
+
+**After reading — align before acting:**
+
+- State briefly (in thinking or first reply when useful) which changelog you used and which **active Plan** or **Current state** line governs this task.
+- If the user's new request **conflicts** with **Current state** or an **active Plan**, say so and confirm direction before a large refactor or new plan.
 
 ---
 

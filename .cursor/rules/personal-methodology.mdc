@@ -15,20 +15,22 @@ alwaysApply: true
 | **Commit**, **push**, git workflow | [git-commit-workflow.mdc](./git-commit-workflow.mdc) + [ticket-changelog.mdc](./ticket-changelog.mdc) |
 | **New ticket**, **new branch**, start PRDV work | Read [new-branch-get-started.md](../docs/new-branch-get-started.md); update changelog in `dustin-thomason/docs/<system>/` |
 | **Open PR**, PR description, `gh pr create` | Read [pull-request-workflow.md](../docs/pull-request-workflow.md) |
-| **Implement** feature, endpoint, refactor, tests | [problem-requirement-solution.mdc](./problem-requirement-solution.mdc) — frame as Problem → Requirement → Solution first; then [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) — §5 shipping checklist (tests, changelog, Swagger when applicable) + that repo's `.cursor/rules/` |
+| **Implement** feature, endpoint, refactor, tests | [ticket-changelog.mdc](./ticket-changelog.mdc) — **task start**: resolve + read canonical changelog (**Current state**, **Plans**, **Attempt history**); then [problem-requirement-solution.mdc](./problem-requirement-solution.mdc) — frame as Problem → Requirement → Solution; then [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) — §5 shipping checklist + that repo's `.cursor/rules/` |
+| **Fix** bug or regression (substantive) | Same as **Implement** — changelog alignment first when a ticket or project log exists |
 | **Explore** unfamiliar code, onboard to ticket, gather multi-area context | [context-fanout.mdc](./context-fanout.mdc) — read-only subagent fanout |
 
-## Ticket memory (`@` changelog when starting a thread)
+## Changelog memory (task start + commit)
 
-Changelog **content** lives in `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md`.
+Canonical changelog paths and **task-start alignment** live in [ticket-changelog.mdc](./ticket-changelog.mdc) (**Task start — changelog alignment**). Agents **must** resolve and read the relevant log **once at the start of each new substantive task** — not only when the user `@` mentions it.
 
 | User does | You do |
 | --------- | ------ |
-| `@docs/.../PRDV-XXXXX-changelog` or says "working on PRDV-XXXXX" | **Read** that file first; continue from **Current state** and **Session log** |
+| Starts implement / fix / refactor / spec / ticket work | **Resolve** canonical changelog (PRDV → `docs/<system>/`; personal project → `docs/<project>/`); read **Current state**, **Plans**, **Attempt history**, latest **Session log**; align before planning or coding |
+| `@docs/.../PRDV-XXXXX-changelog` or says "working on PRDV-XXXXX" | Same — treat as explicit pointer; continue from **Current state** and **Session log** |
 | New ticket, no file yet | Run `scripts/new-ticket-changelog.ps1` or template; **Requirements (verbatim)** on first pass |
 | **Commit** / **push** | Append **Session log** in that file **before** `git commit` ([ticket-changelog.mdc](./ticket-changelog.mdc)) |
 
-Optional human opener: [.cursor/docs/session-start.md](../docs/session-start.md).
+Optional human opener (still helps on new threads): [.cursor/docs/session-start.md](../docs/session-start.md).
 
 ## Skills (not automatic — user invokes)
 

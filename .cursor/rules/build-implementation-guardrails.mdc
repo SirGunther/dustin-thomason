@@ -125,7 +125,7 @@ Keep cross-session memory current in **`dustin-thomason`** (not in app repos, no
 | Work context | Where to update | When |
 | ------------ | --------------- | ---- |
 | **`PRDV-*` ticket** (Atlas, Callisto, Europa, Triton, …) | `docs/<system>/PRDV-XXXXX-changelog.md` | **Before every commit** on PlanetDepos app repos — session log + **Current state**; see [ticket-changelog.mdc](./ticket-changelog.mdc) |
-| **Personal / side project** (Countdowns, WorkLists, …) | `docs/<project>/` changelog for that project (e.g. `docs/countdowns/countdowns-app-changelog.mdc`) | **End of each implementation session** or before you commit/push project code—whichever comes first |
+| **Personal / side project** (Countdowns, WorkLists, …) | `docs/<project>/` changelog for that project (e.g. `docs/countdowns/countdowns-app-changelog.mdc`) | **Task start** — read for alignment; **end of session** or before commit/push — session log |
 | **No ticket, trivial dustin-thomason-only doc tweak** | — | Changelog optional |
 
 **Personal-project session entry** (match existing file shape): newest-first **Session log** with summary, files/areas, user-visible impact, tests run; refresh **Current state** when scope shifts. If no changelog file exists yet for that project, create one under `docs/<project>/` using the same sections (Purpose, Scope, Session log, Current state).
