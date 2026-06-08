@@ -36,6 +36,91 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-06-08T06:00:47Z — WorkLists
+
+- Summary: Documented WorkLists AI refinement prompt locations and model-call integration.
+- Problem: AI refinement behavior had accumulated across prompt files, hard-coded directives, async job routing, note-specific constraints, tagging context, and final-review result shaping, making it hard to remember whether refinement currently uses two model calls or an intended third verifier pass.
+- Requirement: Keep a durable WorkLists reference in the Dustin Thomason repo that identifies prompt files, hard-coded prompt text, current call counts, card-vs-note differences, and the gap between current `finalReview` response shaping and any future third model call.
+- Solution:
+  - Added `docs/WorkLists/worklists-ai-refinement-integration.md` as the reference for AI refinement prompt inventory and call flow.
+  - Captured current model-call counts for direct normalize, add-task, card refine, note create, note refine, and source-changed skips.
+  - Documented which prompt pieces are file-based versus hard-coded in `gemmaNormalize.js`, including classification, tagging, note context, and `User text:` assembly.
+  - Recorded that current `finalReview` is server-side result shaping, not a third model call, and named the future abstraction path for a verifier pass if that behavior is restored.
+- Files/areas: `docs/WorkLists/worklists-ai-refinement-integration.md`, `docs/WorkLists/worklists-app-changelog.md`.
+- User-visible impact: No app UI changes; future WorkLists AI/refinement work now has a canonical prompt and call-flow map.
+- Tests run: Not run; docs-only Dustin repo update with no executable WorkLists app code changed in this documentation step.
+- Tests added/updated: Not relevant; documentation-only update.
+- Regression impact: Not relevant; no app code or behavior changed in this documentation step.
+- API docs: Not affected; no HTTP route, method, request body, response shape, status, auth contract, or OpenAPI metadata changed.
+- Tooling gates: Not run; Dustin repo documentation-only update, outside app package tooling scope.
+- Conflicts / exceptions: WorkLists app repo already had active uncommitted app/test changes from the prompt-trace investigation; this documentation step did not modify those app files.
+
+### 2026-06-08T05:25:51Z — WorkLists
+
+- Summary: Added active-edit discard confirmation for notes pane dismissal.
+- Problem: The outside-click notes pane closer could dismiss or transition away from an active notes-pane edit surface without treating that active edit state as confirm-worthy unless text had already changed.
+- Requirement: Any active notes-pane edit surface must prompt before dismissal or card-to-card notes switching; choosing Cancel must leave the user in the edit state, and choosing Discard must close/switch while preserving the one-click outside action flow.
+- Solution:
+  - Extended notes-pane draft detection with `includeActiveState` so card-text and saved-note inline editors are guarded even before text changes.
+  - Routed pane close and notes-pane re-open/switch paths through active-state discard confirmation while leaving internal cancel controls on the existing changed-text-only guard.
+  - Updated outside-click dismissal to pause actionable outside clicks when confirmation is required, then replay the clicked action after the user chooses Discard.
+  - Expanded browser smoke coverage to assert Cancel keeps the active edit open and Discard closes the pane then opens the outside card action menu.
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`, `tests/browser-notes-smoke.js`.
+- User-visible impact:
+  - Active note/card edit surfaces in the notes pane now ask before being discarded by outside clicks, Escape/context dismissal, close, or switching to another card's notes.
+  - Cancel returns the user to the active edit state.
+  - Discard closes the pane and continues the originally clicked outside action without needing another click.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists dependencies | pass | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | format | `npx prettier --write public/todolist2.js tests/context-windows.test.js tests/browser-notes-smoke.js` | Touched UI/test files | pass | — |
+  | lint | `npm run lint` | Repo Prettier check | pass | — |
+  | tests | `npm test -- tests\context-windows.test.js` | Focused context-window source coverage | pass, 17 tests | — |
+  | tests | `npm run test:browser` | Notes pane browser smoke | pass, 1 test | — |
+  | tests | `npm test` | Full unit suite | pass, 368 tests | — |
+
+- Tests added/updated: Updated context-window source assertions for active-state discard detection and outside-action replay; expanded the notes browser smoke test for Cancel and Discard behavior while an edit surface is active.
+- Regression impact: Notes-pane dismissal, active edit guard behavior, card action menu click sequencing, and note-to-note switching were touched; regression is bounded to notes pane context-window behavior and verified by focused source tests, browser smoke coverage, and the full suite.
+- API docs: Not affected; UI-only event handling, with no HTTP route, method, request body, response shape, status, auth contract, or OpenAPI metadata changed.
+- Tooling gates: Audit threshold, syntax check, formatting, repo-wide lint, focused tests, browser smoke, and full tests passed.
+- Conflicts / exceptions: No unrelated app-repo worktree changes were present. Audit still reports existing moderate advisories below the configured high/critical gate.
+
+### 2026-06-08T05:16:21Z — WorkLists
+
+- Summary: Fixed notes pane blur dismissal and note-to-note switching.
+- Problem: The notes pane stayed open after outside clicks, and switching from one card's notes to another did not explicitly close the current context pane first.
+- Requirement: Outside clicks must dismiss the notes pane without swallowing the clicked outside action, and clicking another notes opener must immediately show that card's notes in the same click sequence.
+- Solution:
+  - Added a capture-phase notes-pane outside-click listener that closes the pane with `restoreFocus: false` while letting the original click continue to its target.
+  - Exempted notes-opening targets from the global outside-click closer so note icons and the card action menu's `Edit Notes` item route through `openTaskNotesPane` without an async close race.
+  - Updated `openTaskNotesPane` to close an already-open pane before opening another card's notes, preserving draft-discard confirmation.
+  - Extended source and browser smoke coverage for outside-click dismissal, first-click card menu action, and note-to-note pane switching.
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`, `tests/browser-notes-smoke.js`.
+- User-visible impact:
+  - Clicking outside the notes pane now closes it.
+  - Clicking a visible outside card/menu control acts on the first click while also dismissing the notes pane.
+  - Clicking a different notes icon now transitions directly to the new card's notes with clear updated content.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists dependencies | pass | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | format | `npx prettier --write public/todolist2.js tests/context-windows.test.js tests/browser-notes-smoke.js` | Touched UI/test files | pass | — |
+  | lint | `npm run lint` | Repo Prettier check | pass | — |
+  | tests | `npm test -- tests\context-windows.test.js` | Focused context-window source coverage | pass, 17 tests | — |
+  | tests | `npm run test:browser` | Notes pane browser smoke | pass, 1 test | — |
+  | tests | `npm test` | Full unit suite | pass, 368 tests | — |
+
+- Tests added/updated: Added context-window source assertions for outside-click dismissal and close-before-switch behavior; expanded the notes browser smoke test with a second noted card, first-click card-menu dismissal, and note-to-note switching.
+- Regression impact: Notes-pane context-window behavior and card action menu interaction were touched; regression is bounded to notes pane open/close sequencing and verified by focused source tests, browser smoke coverage, and the full suite.
+- API docs: Not affected; UI-only event handling, with no HTTP route, method, request body, response shape, status, auth contract, or OpenAPI metadata changed.
+- Tooling gates: Audit threshold, syntax check, formatting, repo-wide lint, focused tests, browser smoke, and full tests passed.
+- Conflicts / exceptions: No unrelated worktree changes were present. Audit still reports existing moderate advisories below the configured high/critical gate.
+
 ### 2026-06-07T16:51:54Z — WorkLists
 
 - Summary: Standardized reset/filter/scheduler header controls around compact icon buttons.
@@ -1207,3 +1292,5 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Gemma add-task and card refine execution now runs through server-side background jobs with client polling so work continues through page refreshes.
 - Card move supports same-board and cross-board destinations using board-aware validation.
 - API contract includes board-aware card move request/response metadata (`sourceBoardId`, `destinationBoardId`, `sourceBoard`, `destinationBoard`).
+
+
