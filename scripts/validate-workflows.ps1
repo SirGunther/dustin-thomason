@@ -25,6 +25,7 @@ $scaffoldPath = Join-Path $repoRoot 'scripts\new-ticket-changelog.ps1'
 $routerPath = Join-Path $rulesDir 'personal-methodology.mdc'
 
 $requiredAlwaysApply = @(
+    'agent-completion-notification',
     'personal-methodology',
     'spec-writing',
     'git-commit-workflow',
@@ -32,6 +33,13 @@ $requiredAlwaysApply = @(
     'build-implementation-guardrails',
     'context-fanout',
     'problem-requirement-solution'
+)
+
+$expectedScripts = @(
+    'new-ticket-changelog.ps1',
+    'notify-agent-complete.ps1',
+    'sync-agents-md.ps1',
+    'validate-workflows.ps1'
 )
 
 $requiredPlaybooks = @(
@@ -47,6 +55,21 @@ $expectedSkills = @(
 foreach ($path in @($indexPath, $templatePath, $scaffoldPath, $routerPath)) {
     if (-not (Test-Path -LiteralPath $path)) {
         Add-Issue "Missing required file: $path" 'ERROR'
+    }
+}
+
+$scriptsDir = Join-Path $repoRoot 'scripts'
+foreach ($scriptName in $expectedScripts) {
+    $scriptPath = Join-Path $scriptsDir $scriptName
+    if (-not (Test-Path -LiteralPath $scriptPath)) {
+        Add-Issue "Missing expected script: scripts/$scriptName" 'ERROR'
+        continue
+    }
+    if (Test-Path $indexPath) {
+        $indexText = Get-Content -LiteralPath $indexPath -Raw
+        if ($indexText -notmatch [regex]::Escape($scriptName)) {
+            Add-Issue "Script not listed in workflow-index: $scriptName" 'WARN'
+        }
     }
 }
 

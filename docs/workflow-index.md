@@ -80,6 +80,7 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 | `build-implementation-guardrails` | §5 shipping checklist: tests/regression, changelog (PRDV + personal projects), Swagger when applicable |
 | `context-fanout` | read-only exploration subagents for multi-area context compaction |
 | `problem-requirement-solution` | frame implementation/plans/specs as Problem → Requirement → Solution |
+| `agent-completion-notification` | end of substantive sessions — `notify-agent-complete.ps1` → Power Automate |
 
 Not always-on: `workflow-housekeeping` (only when editing workflow files here); `codex-agents-sync` (regenerate `AGENTS.md` after rule/skill edits).
 
@@ -143,6 +144,7 @@ Skills are **not** `alwaysApply` — the user `@`’s the skill or asks in plain
 | Script | Purpose |
 | ------ | ------- |
 | `new-ticket-changelog.ps1` | Create `docs/<system>/PRDV-XXXXX-changelog.md` |
+| `notify-agent-complete.ps1` | Post session completion to Power Automate (`agent-completion-notification` rule) |
 | `validate-workflows.ps1` | Wiring audit — run after changing rules/docs |
 | `sync-agents-md.ps1` | Regenerate root `AGENTS.md` from `.cursor/rules/*.mdc` (Codex mirror) |
 
@@ -160,7 +162,7 @@ cd C:\Users\dustin.thomason\dustin-thomason
 .\scripts\validate-workflows.ps1
 ```
 
-Checks: five `alwaysApply` rules, playbooks, router links, no changelogs under `.cursor/docs/`, skills listed, index links.
+Checks: required `alwaysApply` rules, expected scripts, playbooks, router links, no changelogs under `.cursor/docs/`, skills listed, index links.
 
 ## Consistency checklist (nothing missing)
 
@@ -176,5 +178,6 @@ Checks: five `alwaysApply` rules, playbooks, router links, no changelogs under `
 | Framing implementation | `problem-requirement-solution` — Problem → Requirement → Solution |
 | Multi-area exploration | `context-fanout` — read-only subagent fanout |
 | Spec | `spec-writing` (via router) |
+| Agent finished substantive work | `agent-completion-notification` → `notify-agent-complete.ps1` |
 
 If a new workflow type appears (e.g. release, hotfix), add **one row** above, **one** playbook, update `personal-methodology.mdc`, run `validate-workflows.ps1`.

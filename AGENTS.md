@@ -2,6 +2,31 @@
 
 Source: `.cursor/rules/*.mdc`. Regenerate with `.\scripts\sync-agents-md.ps1`.
 
+## agent-completion-notification
+
+# Agent completion notification
+
+At the end of **substantive** agent work, invoke `scripts/notify-agent-complete.ps1` in **dustin-thomason** (works from any cwd when you use the script’s full path).
+
+**Skip** for pure Q&A, trivial doc-only housekeeping with no behavior change, or when the session produced no actionable outcome.
+
+From **dustin-thomason** repo root:
+
+    .\scripts\notify-agent-complete.ps1 -Status "Completed" -Message "<5–9 word result summary>"
+
+From an **app repo** in a multi-root workspace (resolve dustin-thomason in the workspace):
+
+    & "<dustin-thomason>\scripts\notify-agent-complete.ps1" -Status "Completed" -Message "<5–9 word result summary>"
+
+Parameters:
+
+- `Status` — always `Completed`
+- `Message` — short result summary (about 5–9 words)
+
+Example:
+
+    .\scripts\notify-agent-complete.ps1 -Status "Completed" -Message "Work finished; all tests passed."
+
 ## build-implementation-guardrails
 
 # Build guardrails — implementation & tests

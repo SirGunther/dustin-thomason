@@ -1,6 +1,6 @@
 # WorkLists AI Refinement Integration
 
-Last updated: 2026-06-08T06:00:47Z
+Last updated: 2026-06-08T14:59:24Z
 
 ## Purpose
 
@@ -22,34 +22,35 @@ Relevant history from the changelog:
 - Tagging work: Primary/secondary tag determination was folded into the existing Gemma create/refine workflow, specifically avoiding a dedicated extra tagging model pass.
 - Final-review work: `finalReview` was standardized so direct normalize and refine-card responses resolve an output from either the updated result or original fallback. The changelog and current code show this as response shaping, not a third model call.
 - 2026-06-08: Refinement prompt tracing was added for card and note refinement. The trace reports prompt count and model-send stages.
+- 2026-06-08: Classification context, tagging context, note context, and the user-text marker were moved out of `gemmaNormalize.js` into prompt-folder templates.
 
 ## Current Model Call Counts
 
 These counts are for successful paths without SDK retries. Retries in `normalizeTextWithGemma` can add additional normalization send attempts.
 
-| Surface | Client entry | Server path | Current model calls | Stages |
-| --- | --- | --- | --- | --- |
-| Direct normalize API | `ApiService.normalizeWithGemma(input)` | `POST /api/gemma-normalize` | 1 | normalization only |
-| Add task from UI | `runGemmaNormalizationForInput` | `add-task` background job | 2 | classification, normalization |
-| Add task job without full `input` | Non-UI/custom payload with candidates only | `add-task` background job | `1 + candidate count` | one classification, one normalization per candidate |
-| Card refine | `refineCardWithGemma` | `refine-card` background job | 2 | classification, normalization |
-| Card refine skipped | source text changed before job runs | `refine-card` background job | 0 | no model call |
-| Note create | `createNoteWithAiFromPane` | `add-note` background job | 2 | classification, note normalization |
-| Note refine | `refineNoteWithAi` | `refine-note` background job | 2 | classification, note normalization |
-| Note refine skipped | source text changed before job runs | `refine-note` background job | 0 | no model call |
+| Surface                           | Client entry                               | Server path                  | Current model calls   | Stages                                              |
+| --------------------------------- | ------------------------------------------ | ---------------------------- | --------------------- | --------------------------------------------------- |
+| Direct normalize API              | `ApiService.normalizeWithGemma(input)`     | `POST /api/gemma-normalize`  | 1                     | normalization only                                  |
+| Add task from UI                  | `runGemmaNormalizationForInput`            | `add-task` background job    | 2                     | classification, normalization                       |
+| Add task job without full `input` | Non-UI/custom payload with candidates only | `add-task` background job    | `1 + candidate count` | one classification, one normalization per candidate |
+| Card refine                       | `refineCardWithGemma`                      | `refine-card` background job | 2                     | classification, normalization                       |
+| Card refine skipped               | source text changed before job runs        | `refine-card` background job | 0                     | no model call                                       |
+| Note create                       | `createNoteWithAiFromPane`                 | `add-note` background job    | 2                     | classification, note normalization                  |
+| Note refine                       | `refineNoteWithAi`                         | `refine-note` background job | 2                     | classification, note normalization                  |
+| Note refine skipped               | source text changed before job runs        | `refine-note` background job | 0                     | no model call                                       |
 
 ## Prompt Inventory
 
-| Prompt or directive | Location | Abstracted? | Used by | Notes |
-| --- | --- | --- | --- | --- |
-| Classification instructions | `WorkLists/prompts/gemma-classify-instructions.md` | Yes, file-based | `createGemmaClassificationPrompt` | Produces `card_count`, `markdown`, and `markdown_hint`. |
-| Normalization instructions | `WorkLists/prompts/gemma-normalize-instructions.md` | Yes, file-based | `createGemmaNormalizationPrompt` | Main response-shaping instructions and JSON schema. |
-| Classification context directive | `gemmaNormalize.js` -> `buildClassificationDirective` | No, hard-coded | normalization prompt | Converts classification output into dynamic constraints such as exact card count and Markdown policy. |
-| Tagging context directive | `gemmaNormalize.js` -> `buildTaggingDirective` | No, hard-coded | normalization prompt when tag context exists | Adds current/existing primary and secondary tags and tagging output schema. |
-| Note context directive | `gemmaNormalize.js` -> `buildNoteDirective` | No, hard-coded | note create/refine normalization | Forces one note body, preserves Markdown/lists/details, and changes create vs refine wording. |
-| User text marker | `gemmaNormalize.js` | No, hard-coded | classification and normalization prompts | Appends `User text:` before the user-provided input. |
-| Final review payload | `server.js` -> `createGemmaFinalReviewPayload`, `withGemmaRefineFinalReviewPayload` | Not a prompt | direct normalize and refine-card responses | Deterministic server response shaping. It does not call the model. |
-| Prompt trace log | `server.js` -> `createGemmaPromptTrace`, `recordGemmaPromptTrace`, `writeGemmaPromptTrace` | Not a prompt | refine-card and refine-note jobs | Logs `[gemma-trace]` with `promptCount`, stage, model, and prompt length. |
+| Prompt or directive              | Location                                                                                   | Abstracted?              | Used by                                      | Notes                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------ | -------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Classification instructions      | `WorkLists/prompts/gemma-classify-instructions.md`                                         | Yes, file-based          | `createGemmaClassificationPrompt`            | Produces `card_count`, `markdown`, and `markdown_hint`.                            |
+| Normalization instructions       | `WorkLists/prompts/gemma-normalize-instructions.md`                                        | Yes, file-based          | `createGemmaNormalizationPrompt`             | Main response-shaping instructions and JSON schema.                                |
+| Classification context directive | `WorkLists/prompts/gemma-classification-directive-template.md`                             | Yes, file-based template | normalization prompt                         | Rendered by `buildClassificationDirective` with card count and Markdown variables. |
+| Tagging context directive        | `WorkLists/prompts/gemma-tagging-directive-template.md`                                    | Yes, file-based template | normalization prompt when tag context exists | Rendered by `buildTaggingDirective` with tag inventory variables.                  |
+| Note context directive           | `WorkLists/prompts/gemma-note-directive-template.md`                                       | Yes, file-based template | note create/refine normalization             | Rendered by `buildNoteDirective` with create/refine mode variables.                |
+| User text marker                 | `WorkLists/prompts/gemma-user-text-label.md`                                               | Yes, file-based          | classification and normalization prompts     | Appended before the user-provided input.                                           |
+| Final review payload             | `server.js` -> `createGemmaFinalReviewPayload`, `withGemmaRefineFinalReviewPayload`        | Not a prompt             | direct normalize and refine-card responses   | Deterministic server response shaping. It does not call the model.                 |
+| Prompt trace log                 | `server.js` -> `createGemmaPromptTrace`, `recordGemmaPromptTrace`, `writeGemmaPromptTrace` | Not a prompt             | refine-card and refine-note jobs             | Logs `[gemma-trace]` with `promptCount`, stage, model, and prompt length.          |
 
 ## Prompt Assembly Order
 
@@ -103,6 +104,7 @@ Model send helpers:
 - `classifyGemmaJobInput` creates and sends the classification prompt.
 - `normalizeGemmaJobInput` creates and sends the normalization prompt.
 - `createModelGenerateContent` routes through the active model config and optional test override.
+- `renderGemmaPromptTemplate` reads prompt-folder templates and substitutes data-only variables; instruction copy should not be embedded in infrastructure code.
 
 ## Cards vs Notes
 
@@ -134,14 +136,18 @@ If the third verifier pass is restored or added, give it a separate prompt file,
 
 ## Abstraction Targets
 
-Eventually abstract all prompt text into files or prompt templates:
+Current completed abstraction:
 
-1. Move `buildClassificationDirective` text into a prompt template with variables for card count and Markdown hint.
-2. Move `buildTaggingDirective` text into a prompt template with variables for workflow mode and current/existing tag inventories.
-3. Move `buildNoteDirective` text into a prompt template with variables for note mode (`create` or `refine`).
-4. Consider adding a final-review/verifier prompt file only if WorkLists should make a third model call.
-5. Add a prompt registry or manifest that records prompt id, file path, purpose, expected response shape, and call stage.
-6. Extend prompt tracing beyond refine jobs if add-task and direct normalize prompt counts need the same visibility.
+1. File-backed base prompts: `gemma-classify-instructions.md` and `gemma-normalize-instructions.md`.
+2. File-backed dynamic directive templates: classification context, tagging context, note context, and user-text marker.
+3. Source-level regression coverage now checks that these directive strings remain in prompt files instead of `gemmaNormalize.js`.
+
+Remaining prompt-work targets:
+
+1. Consider adding a final-review/verifier prompt file only if WorkLists should make a third model call.
+2. Add a prompt registry or manifest that records prompt id, file path, purpose, expected response shape, call stage, and template variables.
+3. Extend prompt tracing beyond refine jobs if add-task and direct normalize prompt counts need the same visibility.
+4. Keep future AI-facing copy out of `server.js`, `gemmaNormalize.js`, and UI infrastructure; add a prompt/template file first, then render it with data variables.
 
 ## Quick Verification Points
 

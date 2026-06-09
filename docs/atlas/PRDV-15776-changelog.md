@@ -69,6 +69,26 @@ When a Cursor/agent **plan** is generated for this ticket, add a row the same da
 
 _Newest first. Add one block before each commit (agents) or end of work session (you)._
 
+### 2026-06-08T17:39:07Z — callisto-back-end PR review fixes
+
+- **Summary:** Addressed the three Callisto PR #340 review comments from `midnjerry`: replaced the hand-rolled deliverable auth guard mock with `createApplyMock`, exported and reused a typed `ProceedingFileRenameProjection` test helper instead of `as never`, and added the missing `ProceedingFileMustBeDeliverableValidator` spec covering file-not-found, wrong-lane, and right-lane cases.
+- **Plan used:** `C:\Users\dustin.thomason\.cursor\plans\prdv-15776_pr_review_fixes_1b54ce42.plan.md`
+- **Files/areas:** `src/granting-client-access/application/guards/__specs__/update-deliverable-file-auth.guard.spec.ts`, `src/proceedings/infrastructure/repositories/proceeding-file.repository.ts`, `src/test-utils/test-utils.ts`, `src/proceedings/validators/__specs__/proceeding-file-must-be-submission.validator.spec.ts`, `src/granting-client-access/validators/__specs__/proceeding-file-must-be-deliverable.validator.spec.ts`.
+- **Intended commit message:** `PRDV-15776: Address review test feedback`
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | `callisto-back-end` | pass | Existing low/moderate dependency findings only; high threshold passed. |
+| lint | `npm run lint` | `callisto-back-end` | pass | ESLint `--fix` completed; no unrelated tracked files changed. |
+| tests | `npx jest --config jest-e2e.json "src/granting-client-access/application/guards/__specs__/update-deliverable-file-auth.guard.spec.ts" "src/proceedings/validators/__specs__/proceeding-file-must-be-submission.validator.spec.ts" "src/granting-client-access/validators/__specs__/proceeding-file-must-be-deliverable.validator.spec.ts" --runInBand` | targeted review-fix specs | pass | 3 suites / 8 tests. |
+| tests | `npm run test:conventions` | Callisto architecture/naming/type/migration/no-util gates | pass | Fitness-function scripts emitted known Windows path noise but exited 0 with no violations. |
+| tests | `npm test -- --runInBand` | full Callisto unit suite | pass | 296 suites / 1489 tests. |
+
+- **Tests added/updated:** Added `ProceedingFileMustBeDeliverableValidator` spec and updated two existing specs to use typed mock helpers.
+- **Regression impact:** isolated to test utilities/specs plus exporting an existing repository projection type; no runtime logic changed.
+- **API docs:** not relevant: no HTTP route, DTO, Swagger, auth/status decorator, or API contract changed.
+- **Conflicts / exceptions:** pre-existing untracked `callisto-back-end/scripts/` folder left untouched and excluded from the commit.
+
 ### 2026-06-05T15:00:00Z — evidence capture + final verdict (validation session)
 
 - **Summary:** Captured reproducible, screenshot-grade evidence for the E2E pass and finalized the verdict (**PASS**, with the nested-original item flagged). No app code changed.
