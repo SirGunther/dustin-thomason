@@ -307,7 +307,6 @@ try {
     exit 1
   }
 
-  Invoke-GitCommand @("add", "-A")
   Invoke-GitCommand @("commit", "-m", $message)
 
   if ($remoteAvailable) {
