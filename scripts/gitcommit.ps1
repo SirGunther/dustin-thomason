@@ -33,6 +33,60 @@ function Invoke-GitCommand {
   }
 }
 
+function Invoke-PrettierWrite {
+  $repoPath = (Get-Location).ProviderPath
+  $prettierCmd = Join-Path $repoPath "node_modules\.bin\prettier.cmd"
+
+  if (-not (Test-Path $prettierCmd)) {
+    Write-Host "`nSkipping Prettier because local Prettier was not found." -ForegroundColor Yellow
+    Write-Host "Expected: $prettierCmd" -ForegroundColor DarkYellow
+    return
+  }
+
+  Write-Host "`n> prettier --list-different . --ignore-unknown" -ForegroundColor Cyan
+
+  $changedFiles = & $prettierCmd --list-different . --ignore-unknown
+  $prettierExitCode = $LASTEXITCODE
+
+  $changedFiles = @(
+    $changedFiles |
+      Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+      ForEach-Object { ([string]$_).Trim() }
+  )
+
+  if ($prettierExitCode -eq 0) {
+    Write-Host "No Prettier changes needed." -ForegroundColor Green
+    return
+  }
+
+  if ($prettierExitCode -ne 1) {
+    Write-Host "`nStopped because Prettier returned an error." -ForegroundColor Red
+    exit $prettierExitCode
+  }
+
+  if ($changedFiles.Count -eq 0) {
+    Write-Host "`nPrettier reported changes, but no changed files were captured." -ForegroundColor Red
+    exit 1
+  }
+
+  Write-Host "`nPrettier will format:" -ForegroundColor Yellow
+
+  foreach ($file in $changedFiles) {
+    Write-Host "  $file"
+  }
+
+  Write-Host "`n> prettier --write --log-level warn --ignore-unknown <changed files>" -ForegroundColor Cyan
+
+  & $prettierCmd --write --log-level warn --ignore-unknown @changedFiles
+
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "`nStopped because Prettier returned an error." -ForegroundColor Red
+    exit $LASTEXITCODE
+  }
+
+  Write-Host "`nPrettier formatted $($changedFiles.Count) file(s)." -ForegroundColor Green
+}
+
 function Get-TrimmedFirstLine {
   param(
     [object]$Value
@@ -160,12 +214,14 @@ try {
   if ($currentBranch -eq "main") {
     $targetBranch = "main"
     Write-Host "Already on main." -ForegroundColor Yellow
-  } else {
+  }
+  else {
     $useCurrentBranch = Confirm-YesNo "Commit to current branch '$currentBranch'? No = switch to main"
 
     if ($useCurrentBranch) {
       $targetBranch = $currentBranch
-    } else {
+    }
+    else {
       $targetBranch = "main"
       Invoke-GitCommand @("switch", "main")
     }
@@ -183,7 +239,8 @@ try {
     if (Test-GitHubRemoteUrl $originUrl) {
       Write-Host "Origin remote: $originUrl" -ForegroundColor Yellow
       $remoteAvailable = $true
-    } else {
+    }
+    else {
       Write-Host "`nThe existing origin remote is not a valid GitHub repository URL:" -ForegroundColor Red
       Write-Host $originUrl
 
@@ -195,33 +252,54 @@ try {
         if ($remoteUrl) {
           Invoke-GitCommand @("remote", "set-url", "origin", $remoteUrl)
           $remoteAvailable = $true
-        } else {
+        }
+        else {
           Invoke-GitCommand @("remote", "remove", "origin")
           Write-Host "`nRemoved invalid origin. This commit will remain local." -ForegroundColor Yellow
         }
-      } else {
+      }
+      else {
         $removeOrigin = Confirm-YesNo "Remove invalid origin and continue local-only?" $true
 
         if ($removeOrigin) {
           Invoke-GitCommand @("remote", "remove", "origin")
           Write-Host "`nRemoved invalid origin. This commit will remain local." -ForegroundColor Yellow
-        } else {
+        }
+        else {
           Write-Host "`nStopped. Origin is invalid and was not changed." -ForegroundColor Red
           exit 1
         }
       }
     }
-  } else {
+  }
+  else {
     $remoteUrl = Read-GitHubRemoteUrl
 
     if ($remoteUrl) {
       Invoke-GitCommand @("remote", "add", "origin", $remoteUrl)
       $remoteAvailable = $true
-    } else {
+    }
+    else {
       Write-Host "`nNo origin remote configured. This commit will remain local." -ForegroundColor Yellow
     }
   }
 
+  Invoke-PrettierWrite
+  Invoke-GitCommand @("add", "-A")
+  
+  & git diff --cached --quiet --exit-code
+  $stagedDiffExitCode = $LASTEXITCODE
+  
+  if ($stagedDiffExitCode -eq 0) {
+    Write-Host "`nNo changes to commit after formatting." -ForegroundColor Yellow
+    return
+  }
+  
+  if ($stagedDiffExitCode -ne 1) {
+    Write-Host "`nStopped because staged changes could not be checked." -ForegroundColor Red
+    exit $stagedDiffExitCode
+  }
+  
   $message = Read-Host "`nCommit message"
 
   if ([string]::IsNullOrWhiteSpace($message)) {
@@ -229,6 +307,7 @@ try {
     exit 1
   }
 
+  Invoke-PrettierWrite
   Invoke-GitCommand @("add", "-A")
   Invoke-GitCommand @("commit", "-m", $message)
 
@@ -238,15 +317,18 @@ try {
 
     if ($lsRemoteExitCode -eq 0) {
       Invoke-GitCommand @("pull", "--rebase", "origin", $targetBranch)
-    } elseif ($lsRemoteExitCode -eq 2) {
+    }
+    elseif ($lsRemoteExitCode -eq 2) {
       Write-Host "`nRemote branch origin/$targetBranch does not exist. Skipping pull/rebase for first push." -ForegroundColor Yellow
-    } else {
+    }
+    else {
       Write-Host "`nStopped because the origin remote could not be checked." -ForegroundColor Red
       exit $lsRemoteExitCode
     }
 
     Invoke-GitCommand @("push", "-u", "origin", "HEAD")
-  } else {
+  }
+  else {
     Write-Host "`nSkipping pull and push because no origin remote is configured." -ForegroundColor Yellow
   }
 
@@ -256,7 +338,8 @@ try {
 
   if ($remoteAvailable) {
     Write-Host "`nCommitted and pushed:" -ForegroundColor Green
-  } else {
+  }
+  else {
     Write-Host "`nCommitted locally:" -ForegroundColor Green
   }
 

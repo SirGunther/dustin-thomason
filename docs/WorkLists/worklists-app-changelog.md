@@ -36,6 +36,277 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-06-10T18:16:40Z — WorkLists
+
+- Summary: Hid notes-pane action icons until hover.
+- Problem: Card-text and saved-note action icons in the notes pane were always visible, adding visual noise around note content.
+- Requirement: Notes-pane action icons should stay hidden by default and reveal only when the user hovers or keyboard-focuses the relevant card-text preview or note item.
+- Solution:
+  - Added CSS that hides notes-pane card-preview icon buttons and saved-note action groups by default.
+  - Revealed card-text actions on `.notes-pane-card-preview:hover` / `:focus-within` and note actions on `.notes-pane-note:hover` / `:focus-within`.
+  - Added focused source coverage for the hover/focus reveal contract.
+- Files/areas: `public/todoliststyles2.css`, `tests/context-windows.test.js`.
+- User-visible impact: Notes pane content now reads cleaner; card-text and note-specific actions appear only when interacting with that specific element.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists dependencies | pass | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
+  | format | `npx prettier --write public\todoliststyles2.css tests\context-windows.test.js` | Touched CSS/test files | pass | — |
+  | syntax | `node --check tests\context-windows.test.js` | Focused context-window test file | pass | — |
+  | tests | `node --test tests\context-windows.test.js` | Focused notes-pane/context source coverage | pass, 19 tests | — |
+  | lint | `npm run lint` | WorkLists formatting gate | fail | Unrelated dirty `tests/task-clipboard.test.js` is not Prettier-formatted; not touched for this notes icon visibility change. |
+  | tests | `npm test` | Full WorkLists suite | fail | Unrelated dirty failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
+
+- Tests added/updated: Extended `tests/context-windows.test.js` to assert notes-pane card-preview and saved-note action icons are hidden by default and revealed by their own hover/focus context.
+- Regression impact: UI-only CSS visibility change isolated to notes-pane card-preview buttons and saved-note action groups; existing click handlers and button DOM remain unchanged.
+- API docs: Not affected; checked touched surface is notes-pane CSS/source coverage only, with no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Audit, formatting, syntax, and focused context-window tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
+- Conflicts / exceptions: Preserved unrelated dirty WorkLists changes already present in `public/todoliststyles2.css`, `tests/context-windows.test.js`, and other files; did not format or alter unrelated failing test files.
+
+### 2026-06-10T17:55:44Z — WorkLists
+
+- Summary: Streamlined notes-pane inline editing.
+- Problem: Editing existing note and card text inside the notes pane required explicit edit/save/cancel steps and reused discard confirmation prompts intended for unsaved drafts.
+- Requirement: Existing notes-pane content should click directly into editing, save automatically when focus leaves or the pane closes, confirm with a toast, and reserve discard confirmation for new unsaved notes.
+- Solution:
+  - Added click-to-edit behavior for rendered notes-pane card text and saved note bodies.
+  - Added autosave-on-focus-exit for notes-pane card and note inline editors.
+  - Added shared existing-edit autosave handling before pane close, outside-click dismissal, card switching, and note-refine/edit transitions.
+  - Limited discard confirmation detection to the new-note composer and kept existing edit cancellation local/no-prompt.
+  - Added success toasts for saved card-text and note edits.
+  - Extended focused context-window source coverage for click-to-edit, autosave, existing-edit save helpers, and new-note-only discard prompts.
+- Files/areas: public/todolist2.js, 	ests/context-windows.test.js.
+- User-visible impact: In the notes pane, clicking existing card text or a saved note opens the inline editor immediately; clicking away saves edits automatically and shows a confirmation toast. Discard prompts now remain for new unsaved notes only.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | 
+pm audit --audit-level=high | WorkLists dependencies | pass | Existing 3 moderate qs/ody-parser/xpress advisories remain with no fix available; high/critical gate passes. |
+  | format | 
+px prettier --write public\\todolist2.js tests\\context-windows.test.js | Touched UI/test files | pass | — |
+  | syntax | 
+ode --check public\\todolist2.js | Board UI script | pass | — |
+  | syntax | 
+ode --check tests\\context-windows.test.js | Focused context-window test file | pass | — |
+  | tests | 
+ode --test tests\\context-windows.test.js | Focused notes-pane/context source coverage | pass, 18 tests | — |
+  | lint | 
+pm run lint | WorkLists formatting gate | fail | Unrelated dirty 	ests/task-clipboard.test.js is not Prettier-formatted; not touched for this notes editing change. |
+  | tests | 
+pm test | Full WorkLists suite | fail | Same unrelated dirty failures remain: active-card CSS/test mismatch in 	ests/card-actions.test.js and legacy commented 	oggleTodoFromUI text matched by 	ests/column-actions.test.js. |
+
+- Tests added/updated: Updated 	ests/context-windows.test.js coverage for new-note-only discard prompts, existing-edit autosave helpers, click-to-edit card/note content, and save toasts.
+- Regression impact: UI-only notes-pane editing behavior; risk is bounded to notes-pane card and saved-note inline editors, with failed autosaves preventing pane close/switch so unsaved existing edits are not silently discarded.
+- API docs: Not affected; no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Audit, touched-file formatting, syntax, and focused context-window tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
+- Conflicts / exceptions: Preserved unrelated dirty WorkLists changes in public/todolist2.js and other files; did not format or alter 	ests/task-clipboard.test.js, active-card CSS expectations, or legacy commented column-action text.
+
+### 2026-06-10T17:41:18Z — WorkLists
+
+- Summary: Collapsed inactive add-note composer.
+- Problem: The notes-pane add-note composer still consumed multi-line space while inactive because the textarea kept its multi-row height and the action row remained visible even though markdown controls were collapsed.
+- Requirement: The add-note input should default to a single-line field and expand only after note text entry begins, revealing the editing tools and create actions when they are useful.
+- Solution:
+  - Added an expansion-state callback to the shared markdown editor controller.
+  - Wired the notes-pane create form to mirror that state with collapsed/expanded form classes.
+  - Hid the add-note action row while collapsed and pinned the collapsed textarea to a true 42px single-line height.
+  - Extended focused markdown editor source coverage for the collapsed composer contract.
+- Files/areas: `public/markdownEditor.js`, `public/index.html`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/markdown-editor.test.js`.
+- User-visible impact: Opening a card's notes pane now shows a compact one-line "Add a note" field by default; typing note text expands the composer to show markdown modes, toolbar controls, voice/AI actions, and the submit button.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists dependencies | pass | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
+  | format | `npx prettier --write public/markdownEditor.js public/index.html public/todolist2.js public/todoliststyles2.css tests/markdown-editor.test.js` | Touched UI/test files | pass | — |
+  | syntax | `node --check public\markdownEditor.js` | Shared markdown editor script | pass | — |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | tests | `node --test tests\markdown-editor.test.js` | Focused markdown editor/source coverage | pass, 7 tests | — |
+  | lint | `npm run lint` | WorkLists formatting gate | fail | Unrelated dirty `tests/task-clipboard.test.js` is not Prettier-formatted; not touched for this notes composer change. |
+  | tests | `npm test` | Full WorkLists suite | fail | Same unrelated dirty failures remain: active-card CSS/test mismatch in `tests/card-actions.test.js` and legacy commented `toggleTodoFromUI` text matched by `tests/column-actions.test.js`. |
+
+- Tests added/updated: Extended `tests/markdown-editor.test.js` source coverage for the collapsed notes-pane form class, expansion-state wiring, hidden collapsed actions, and single-line collapsed textarea height.
+- Regression impact: UI-only notes create composer behavior; change is isolated to the shared editor expansion notification and the notes-pane create form classes/CSS. Inline note and card editors continue using the same markdown editor without the form-class callback.
+- API docs: Not affected; no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Audit, touched-file formatting, syntax, and focused markdown editor tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
+- Conflicts / exceptions: Preserved unrelated dirty WorkLists changes and did not format or alter `tests/task-clipboard.test.js`, active-card CSS expectations, or legacy commented column-action text.
+
+### 2026-06-10T17:14:37Z — WorkLists
+
+- Summary: Opened notes for new-card child notes.
+- Problem: Notes-pane reveal worked for explicit AI note jobs and card refinement, but not for a new AI-created card that also generated a child note.
+- Requirement: When add-task AI creates a parent card plus a generated child note, the newly created parent card's notes pane should open after the board refresh.
+- Solution:
+  - Updated `handleCompletedGemmaAddTaskJob` to detect `createdNoteIds` on add-task results.
+  - Resolved the target card id from `childNote.eventId` / `childNote.parentTodoId`, with a fallback to the first `createdTodoIds` entry.
+  - Reused `revealAiUpdatedNotesPane` after `loadInitialBoardData()` so the newly rendered card exists before the pane opens.
+  - Extended focused Gemma UI coverage to assert the add-task child-note reveal path.
+- Files/areas: `public/todolist2.js`, `tests/gemma-ui.test.js`.
+- User-visible impact: AI-created new cards with generated child notes now automatically open the new card's notes pane when the background job completes.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists dependencies | pass | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
+  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js` | Touched UI/test files | pass | — |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | syntax | `node --check tests\gemma-ui.test.js` | Focused Gemma UI test file | pass | — |
+  | tests | `node --test tests\gemma-ui.test.js` | Focused Gemma UI source coverage | pass, 28 tests | — |
+  | lint | `npm run lint` | WorkLists formatting gate | fail | Unrelated dirty `tests/task-clipboard.test.js` is not Prettier-formatted; not touched for this add-task reveal fix. |
+  | tests | `npm test` | Full WorkLists suite | fail | Same unrelated dirty failures remain: active-card CSS/test mismatch in `tests/card-actions.test.js` and legacy commented `toggleTodoFromUI` text matched by `tests/column-actions.test.js`. |
+
+- Tests added/updated: Extended `tests/gemma-ui.test.js` source coverage for add-task results with generated child notes opening the parent card's notes pane.
+- Regression impact: UI-only add-task completion behavior; reveal only runs when the add-task result reports created notes, and it waits until the board has reloaded so the new card can be found.
+- API docs: Not affected; no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Audit, touched-file formatting, syntax, and focused UI tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
+- Conflicts / exceptions: Preserved unrelated dirty WorkLists changes and did not format or alter `tests/task-clipboard.test.js`, active-card CSS expectations, or legacy commented column-action text.
+
+### 2026-06-10T17:10:18Z — WorkLists
+
+- Summary: Preserved AI note reveal after reloads.
+- Problem: The notes pane auto-open behavior worked during a fresh in-memory session, but could fail after browser reload or server restart because restored note-refine jobs lost their card id and missing in-memory server job results skipped the reveal path.
+- Requirement: AI note reveal targets must survive local pending-job restore, and a restarted server/missing job result should still refresh/open the relevant notes pane when persisted note data may already exist.
+- Solution:
+  - Persisted `eventId` for `refine-note` pending jobs during creation and localStorage restore.
+  - Added missing-job recovery reveals for `add-note`, `refine-note`, and `refine-card` pending jobs using their local card/task context.
+  - Extended focused Gemma UI source coverage for reload persistence and missing server job-result recovery.
+- Files/areas: `public/todolist2.js`, `tests/gemma-ui.test.js`.
+- User-visible impact: After reloading the browser or restarting the server, pending AI note/card-refine jobs retain enough local context to open or refresh the relevant notes pane when note updates may have landed.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists dependencies | pass | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
+  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js` | Touched UI/test files | pass | — |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | syntax | `node --check tests\gemma-ui.test.js` | Focused Gemma UI test file | pass | — |
+  | tests | `node --test tests\gemma-ui.test.js` | Focused Gemma UI source coverage | pass, 28 tests | — |
+  | lint | `npm run lint` | WorkLists formatting gate | fail | Unrelated dirty `tests/task-clipboard.test.js` is not Prettier-formatted; not touched for this persistence fix. |
+  | tests | `npm test` | Full WorkLists suite | fail | Same unrelated dirty failures remain: active-card CSS/test mismatch in `tests/card-actions.test.js` and legacy commented `toggleTodoFromUI` text matched by `tests/column-actions.test.js`. |
+
+- Tests added/updated: Added `tests/gemma-ui.test.js` source coverage for persisted `eventId` on restored `refine-note` jobs and notes-pane reveal recovery when server job polling returns 404.
+- Regression impact: UI-only pending-job restore and recovery behavior; risk is bounded to note-capable Gemma jobs and uses existing card/task ids already persisted for the job indicators.
+- API docs: Not affected; no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Audit, touched-file formatting, syntax, and focused UI tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
+- Conflicts / exceptions: Preserved unrelated dirty WorkLists changes and did not format or alter `tests/task-clipboard.test.js`, active-card CSS expectations, or legacy commented column-action text.
+
+### 2026-06-10T16:56:43Z — WorkLists
+
+- Summary: Auto-opened notes after AI note updates.
+- Problem: AI-created or AI-refined notes could complete in the background while the notes pane stayed closed or focused elsewhere, hiding the generated note content from the user.
+- Requirement: Successful AI note creation/refinement and generated child-note creation from card refinement should make the card notes pane visible immediately.
+- Solution:
+  - Added a shared `revealAiUpdatedNotesPane` helper that refreshes the active notes pane when it is already on the target card, or opens the target card's notes pane when it is closed or inactive.
+  - Called the helper after successful `add-note` and changed `refine-note` job completions.
+  - Called the helper after card-refine completions that report generated `createdNoteIds`, covering the parent-card plus generated child-note flow.
+  - Left skipped and unchanged note jobs as toast-only so focus is not moved when there is no new note content to inspect.
+- Files/areas: `public/todolist2.js`, `tests/gemma-ui.test.js`.
+- User-visible impact: When AI creates/appends a note or successfully refines a note, the relevant card's notes pane opens or refreshes so the generated update is immediately visible.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists dependencies | pass | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
+  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js` | Touched UI/test files | pass | — |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | syntax | `node --check tests\gemma-ui.test.js` | Focused Gemma UI test file | pass | — |
+  | tests | `node --test tests\gemma-ui.test.js` | Focused Gemma UI source coverage | pass, 27 tests | — |
+  | lint | `npm run lint` | WorkLists formatting gate | fail | Unrelated dirty `tests/task-clipboard.test.js` is not Prettier-formatted; not touched for this notes-pane change. |
+  | tests | `npm test` | Full WorkLists suite | fail | Same unrelated dirty failures remain: active-card CSS/test mismatch in `tests/card-actions.test.js` and legacy commented `toggleTodoFromUI` text matched by `tests/column-actions.test.js`. |
+
+- Tests added/updated: Added `tests/gemma-ui.test.js` source coverage for the notes-pane reveal helper and the successful AI note/card-refine child-note completion triggers.
+- Regression impact: UI-only job-completion behavior; regression is bounded to successful note-affecting completions by early returns for skipped/unchanged jobs and by checking `createdNoteIds` before opening the pane from card refinement.
+- API docs: Not affected; no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Audit, touched-file formatting, syntax, and focused UI tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
+- Conflicts / exceptions: Preserved unrelated dirty WorkLists changes and did not format or alter `tests/task-clipboard.test.js`, active-card CSS expectations, or legacy commented column-action text.
+
+### 2026-06-10T16:41:40Z — WorkLists
+
+- Summary: Added a global voice-to-text keyboard shortcut.
+- Problem: Starting voice-to-text required mouse interaction across task entry, card editing, and notes-pane editing surfaces.
+- Requirement: `Ctrl+Shift+\` should start the existing voice-to-text flow only when a supported edit/input surface is active, and the shortcut should be centralized for future configurability.
+- Solution:
+  - Added a configurable `GLOBAL_VOICE_INPUT_SHORTCUT` binding and one document-level keydown listener.
+  - Added context routing for task-entry textareas, inline card edit textareas, notes-pane note create/edit surfaces, and the notes-pane card-text editor.
+  - Reused the existing `startVoiceInputForElement`, note voice, and card voice paths instead of creating a separate speech-recognition flow.
+  - Accounted for browser `Shift+\` key reporting by matching `KeyboardEvent.code === "Backslash"` with a key fallback.
+- Files/areas: `public/todolist2.js`, `tests/gemma-ui.test.js`.
+- User-visible impact: With focus in a card edit box, task input, or notes-pane editor, pressing `Ctrl+Shift+\` immediately starts voice-to-text for that field.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists dependencies | pass | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
+  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js` | Touched UI/test files | pass | — |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | tests | `node --test tests\gemma-ui.test.js` | Focused voice/Gemma UI source coverage | pass, 26 tests | — |
+  | lint | `npm run lint` | WorkLists formatting gate | fail | Unrelated dirty `tests/task-clipboard.test.js` is not Prettier-formatted; not touched for this shortcut change. |
+  | tests | `npm test` | Full WorkLists suite | fail | Same unrelated dirty failures remain: active-card CSS/test mismatch in `tests/card-actions.test.js` and legacy commented `toggleTodoFromUI` text matched by `tests/column-actions.test.js`. |
+
+- Tests added/updated: Added `tests/gemma-ui.test.js` source coverage for the configurable shortcut binding, global listener, and context routing across task, card, and notes-pane voice targets.
+- Regression impact: UI-only keyboard shortcut layer; regression is bounded by reusing existing voice-input start functions and by focused source coverage for each supported active-editor context. No shared speech-recognition internals were changed.
+- API docs: Not affected; no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Audit, touched-file formatting, syntax, and focused UI tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
+- Conflicts / exceptions: Preserved unrelated dirty WorkLists changes and did not format or alter `tests/task-clipboard.test.js`, active-card CSS expectations, or legacy commented column-action text.
+
+### 2026-06-10T16:07:37Z — WorkLists
+
+- Summary: Kept the card notes icon visible for zero-note cards.
+- Problem: Cards without saved notes hid the notes affordance, blocking direct access to the notes pane and its editing flow.
+- Requirement: Every card must show the notes icon, anchored in the right-side action cluster next to the completion control without overlapping completion dates or other card metadata.
+- Solution:
+  - Removed the zero-count hidden state from `createTaskNotesIndicatorElement`, so every rendered card keeps an actionable notes button.
+  - Assigned explicit action-grid columns so completion dates sit left of the notes button and the completion circle remains the far-right control.
+  - Updated card-action source coverage to reject the hidden zero-note state and assert the right-side grid placement.
+- Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/card-actions.test.js`.
+- User-visible impact: Users can open the notes pane from any card, even before a sub-note exists; zero-note cards now show the notes icon beside the completion button.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/card-actions.test.js` | Touched UI/test files | pass | — |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | — |
+  | tests | `node --test tests\card-actions.test.js` | Focused card actions/source coverage | fail, 14 of 15 pass | Existing dirty active-card CSS/test mismatch remains: `tests/card-actions.test.js` expects `.card.notes-pane-active-card::after` border `2px`, while dirty `public/todoliststyles2.css` currently has `3px`. The new notes-icon assertions were added before that existing failing assertion. |
+  | tests | `npm test` | Full WorkLists suite | fail | Same two known dirty failures remain: the active-card `2px` vs `3px` CSS/test mismatch and `tests/column-actions.test.js` matching legacy commented `toggleTodoFromUI` text. |
+
+- Tests added/updated: Updated `tests/card-actions.test.js` to prove the notes indicator is no longer hidden at zero count and that notes/date/completion controls use distinct right-side grid columns.
+- Regression impact: UI-only card action-row behavior; change is isolated to the notes indicator render path and card action CSS columns, with focused source coverage for the placement contract. Existing active-card highlight mismatch remains unrelated and unmodified.
+- API docs: Not affected; no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Syntax, formatting, and repo lint passed; focused and full test runs remain blocked by pre-existing dirty UI/source-regression assertions.
+- Conflicts / exceptions: Preserved the existing dirty WorkLists files and did not change the unrelated active-card border mismatch.
+### 2026-06-09T16:29:38Z — WorkLists
+
+- Summary: Removed generated child-note title headings before persistence.
+- Problem: The nested child-note prompt was close, but Gemma could still start the note with a renamed `#` title such as `# Enable Cross-Board Column Data Association` before the actual `## Problem` body.
+- Requirement: Child notes should start with the detailed body content, not a duplicate or paraphrased parent-card title, even when the model ignores the prompt.
+- Solution:
+  - Tightened `gemma-child-note-directive-template.md` to require the first non-empty line to be a body section/body paragraph and to omit generated title lines entirely.
+  - Added a child-note-only sanitizer in `server.js` that strips a leading generated title when it resembles the parent card title or appears before body sections such as `## Problem`.
+  - Left fallback note capture untouched so a failed child-note generation still preserves the full original user text.
+  - Updated the refine-card nested-note test to reproduce the reported `# Enable Cross-Board Column Data Association` output and assert the persisted note starts at `## Problem`.
+- Files/areas: `server.js`, `prompts/gemma-child-note-directive-template.md`, `tests/gemma-normalize.test.js`.
+- User-visible impact: Nested child notes generated from card refinement should no longer show a duplicate/renamed title above the note body; the note body should begin with useful content like `## Problem`.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check server.js` | Server job pipeline and child-note sanitizer | pass | — |
+  | syntax | `node --check tests\gemma-normalize.test.js` | Focused Gemma test file | pass | — |
+  | format | `npx prettier --write server.js tests/gemma-normalize.test.js prompts/gemma-child-note-directive-template.md` | Touched server/test/prompt files | pass | — |
+  | tests | `node --test tests\gemma-normalize.test.js` | Focused Gemma nested-note prompt and persistence flow | pass, 49 tests | — |
+  | audit | `npm audit --audit-level=high` | WorkLists dependencies | pass | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
+  | lint | `npm run lint` | Repo Prettier check | pass | — |
+  | tests | `npm test` | Full WorkLists suite | fail | Same unrelated dirty UI/source-regression failures remain: `tests/card-actions.test.js` expects `.card.notes-pane-active-card::after` CSS absent from dirty `public/todoliststyles2.css`; `tests/column-actions.test.js` still sees commented legacy `toggleTodoFromUI` text in dirty `public/todolist2.js`. |
+
+- Tests added/updated: Updated the refine-card nested-note regression to include a generated leading `#` title and assert the stored child note strips it while retaining `## Problem`, `## Requirement`, and `## Proposed Solution` body sections.
+- Regression impact: The sanitizer is scoped to generated nested child notes only; ordinary note create/refine and fallback detail capture are not sanitized. Focused Gemma coverage verifies body section headings are preserved and generated title headings are removed.
+- API docs: Not affected; no route, request, response schema, status, auth, or OpenAPI metadata changed in this follow-up.
+- Tooling gates: Syntax, formatting, focused Gemma tests, audit threshold, and lint passed; full suite remains blocked by unrelated dirty UI/source-regression failures.
+- Conflicts / exceptions: Pre-existing dirty UI/test files were preserved and not reverted; their unrelated failures are still present in the full suite.
+
 ### 2026-06-09T15:20:27Z — WorkLists
 
 - Summary: Tightened v1 nested-note prompts and extended the split-card flow to AI card refinement.
@@ -1480,6 +1751,9 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Gemma add-task and card refine execution now runs through server-side background jobs with client polling so work continues through page refreshes.
 - Card move supports same-board and cross-board destinations using board-aware validation.
 - API contract includes board-aware card move request/response metadata (`sourceBoardId`, `destinationBoardId`, `sourceBoard`, `destinationBoard`).
+
+
+
 
 
 
