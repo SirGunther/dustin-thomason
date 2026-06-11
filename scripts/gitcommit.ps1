@@ -38,7 +38,7 @@ function Invoke-PrettierWrite {
   $prettierCmd = Join-Path $repoPath "node_modules\.bin\prettier.cmd"
 
   if (-not (Test-Path $prettierCmd)) {
-    Write-Host "`nSkipping Prettier because local Prettier was not found." -ForegroundColor Yellow
+    Write-Host "`nSkipping Prettier because this repo does not have local Prettier installed." -ForegroundColor Yellow
     Write-Host "Expected: $prettierCmd" -ForegroundColor DarkYellow
     return
   }
