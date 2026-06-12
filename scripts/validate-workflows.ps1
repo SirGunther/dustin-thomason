@@ -49,6 +49,7 @@ $requiredPlaybooks = @(
 
 $expectedSkills = @(
     'grill-me',
+    'write-spec',
     'workflow-housekeeping'
 )
 

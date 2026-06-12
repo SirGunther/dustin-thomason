@@ -36,6 +36,240 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-06-12T16:20:00Z — WorkLists
+
+- Summary: Stopped voice capture on card/note commands.
+- Problem: Active voice-to-text could keep listening after notes-pane create/save paths or card creation/refine commands executed.
+- Requirement: Executing a create-card/create-note/refine-card command must immediately terminate the active voice recording session.
+- Solution:
+  - Added hard-stop voice termination at `submitTaskEntryInput` so add-card button and `Ctrl/Cmd+Enter` routes share the stop behavior.
+  - Added hard-stop voice termination at `createNoteFromPaneForm` for notes-pane note creation.
+  - Added hard-stop voice termination at central `refineCardWithGemma` so top-card and notes-pane card refine routes stop recording through one command boundary.
+  - Added focused source assertions for the card-create, note-create, and card-refine command boundaries.
+- Files/areas: `public/todolist2.js`, `tests/add-task-entry.test.js`, `tests/gemma-ui.test.js`.
+- User-visible impact: Voice-to-text recording stops as soon as the user creates a card/note or starts card AI refinement, including notes-pane command routes.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\add-task-entry.test.js tests\gemma-ui.test.js` | Touched UI/test files | pass | — |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | syntax | `node --check tests\add-task-entry.test.js` | Add-task test file | pass | — |
+  | syntax | `node --check tests\gemma-ui.test.js` | Gemma UI test file | pass | — |
+  | tests | `node --test tests\add-task-entry.test.js tests\gemma-ui.test.js` | Focused voice/create/refine coverage | pass, 37 tests | — |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | — |
+  | audit | `npm audit --audit-level=high` | WorkLists dependencies | pass | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
+  | tests | `npm test` | Full WorkLists suite | fail | Unrelated existing failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
+
+- Tests added/updated: Extended `tests/add-task-entry.test.js` and `tests/gemma-ui.test.js` source assertions for voice-stop command boundaries.
+- Regression impact: Shared command boundaries touched; focused coverage proves add-card create, notes-pane note create, and central card refine all hard-stop active voice capture. Existing AI note create/refine stop assertions remain intact.
+- API docs: Not affected; checked surface is client-side keyboard/button command dispatch only, with no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Formatting, syntax, focused tests, lint, and high audit passed; full suite remains blocked by known unrelated assertion failures.
+- Conflicts / exceptions: Preserved pre-existing dirty WorkLists changes in `public/markdownRenderer.js`, `public/todolist2.js`, `tests/context-windows.test.js`, `tests/gemma-ui.test.js`, `tests/markdown-renderer.test.js`, `tests/search-shortcuts.test.js`, and `tests/task-clipboard.test.js`.
+
+### 2026-06-12T15:58:14Z — WorkLists
+
+- Summary: Expanded AI shortcuts into notes pane.
+- Problem: `Ctrl/Cmd+Shift+Enter` AI commands were scoped to task entry/card edit flows and notes-pane `Ctrl+Enter` handlers could intercept the AI chord as ordinary create/save.
+- Requirement: The same AI chord must work from focused note creation, existing note editing, notes-pane card editing, add-task entry, and inline card editing.
+- Solution:
+  - Added a capture-phase global AI shortcut resolver for `Ctrl/Cmd+Shift+Enter`.
+  - Routed notes-pane create focus to AI note creation.
+  - Routed inline saved-note edit focus through save-then-AI-refine for that note.
+  - Routed notes-pane card edit focus through save-then-card-refine.
+  - Kept task-entry and inline-card contexts mapped to existing AI flows.
+  - Added focused source coverage for the notes-pane shortcut routes and capture-phase binding.
+- Files/areas: `public/todolist2.js`, `tests/gemma-ui.test.js`.
+- User-visible impact: AI note creation/refinement shortcuts now work while typing in the Notes pane, without converting the AI chord into a plain note create/save.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists dependencies | pass | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
+  | format | `npx prettier --write public\todolist2.js tests\gemma-ui.test.js` | Touched UI/test files | pass, unchanged | — |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | syntax | `node --check tests\gemma-ui.test.js` | Gemma UI test file | pass | — |
+  | tests | `node --test tests\gemma-ui.test.js tests\add-task-entry.test.js tests\edit-session.test.js` | Focused AI shortcut/add-task/card-edit coverage | pass, 43 tests | — |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | — |
+  | tests | `npm test` | Full WorkLists suite | fail | Unrelated existing failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
+
+- Tests added/updated: Extended `tests/gemma-ui.test.js` for global AI shortcut notes-pane create/refine/card-edit routing.
+- Regression impact: Shared AI shortcut dispatch touched; focused tests cover notes-pane create/edit routes plus existing task-entry and inline-card shortcut suites. Ordinary `Ctrl+Enter` note create/save remains local because only `Ctrl/Cmd+Shift+Enter` is captured globally.
+- API docs: Not affected; checked surface is client-side keyboard dispatch only, with no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Audit, formatting, syntax, focused tests, and lint passed; full suite remains blocked by known unrelated source/CSS assertion failures.
+- Conflicts / exceptions: Preserved pre-existing dirty WorkLists changes in `public/markdownRenderer.js`, `public/todolist2.js`, `tests/context-windows.test.js`, `tests/markdown-renderer.test.js`, `tests/search-shortcuts.test.js`, and `tests/task-clipboard.test.js`.
+### 2026-06-11T22:00:41Z — WorkLists
+
+- Summary: Stopped notes checklist clicks from editing.
+- Problem: Clicking rendered markdown checklist controls in the notes pane bubbled into the note/card click-to-edit handlers.
+- Requirement: Notes-pane markdown controls must behave like card markdown controls: checkbox/code-copy clicks update or copy without opening inline edit.
+- Solution:
+  - Added the existing rendered-markdown interactive-target guard before notes-pane card text enters edit.
+  - Added the same guard before saved note content enters edit.
+  - Added focused source coverage proving markdown controls return before discard/autosave/edit transitions.
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`.
+- User-visible impact: Clicking a checklist checkbox in the notes pane toggles/persists it instead of opening the editor.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js` | Touched UI/test files | pass, unchanged | — |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | syntax | `node --check tests\context-windows.test.js` | Context-window test file | pass | — |
+  | tests | `node --test tests\context-windows.test.js tests\markdown-renderer.test.js tests\task-clipboard.test.js` | Focused notes-pane markdown/control coverage | pass, 55 tests | — |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | — |
+
+- Tests added/updated: Extended `tests/context-windows.test.js` to assert notes-pane markdown controls are guarded before inline edit flows.
+- Regression impact: Isolated to notes-pane click handling for rendered markdown controls; ordinary note/card content clicks still enter existing inline editors.
+- API docs: Not affected; checked surface is client-side notes-pane click behavior only, with no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Formatting, syntax, focused tests, and lint passed.
+- Conflicts / exceptions: Preserved pre-existing dirty WorkLists changes and known unrelated full-suite failures; did not rerun full suite for this click-guard-only follow-up after focused gates passed.
+
+### 2026-06-11T21:42:54Z — WorkLists
+
+- Summary: Fixed nested markdown lists and notes checkboxes.
+- Problem: Rendered markdown flattened indented bullet lists, and markdown task checkboxes inside the notes pane did not persist when clicked.
+- Requirement: Multi-level bullet/ordered/task lists must preserve indentation in note-card rendering, and rendered checkboxes must work consistently for card text, notes-pane card text, and saved notes.
+- Solution:
+  - Replaced the single-list markdown renderer state with an indentation-aware list stack that emits nested `<ul>` / `<ol>` structures and keeps task-checkbox source line indexes intact.
+  - Generalized rendered markdown interaction binding so each surface supplies its own checkbox persistence callback.
+  - Wired notes-pane card preview checkboxes through the existing card text save path.
+  - Added saved-note checkbox persistence through `ApiService.updateNote`, with rollback/toast handling on failure.
+  - Added focused source/renderer tests for nested list output and notes-pane checkbox wiring.
+- Files/areas: `public/markdownRenderer.js`, `public/todolist2.js`, `tests/markdown-renderer.test.js`, `tests/task-clipboard.test.js`.
+- User-visible impact: Nested markdown lists now render as real nested lists in cards/notes, and clicking markdown checkboxes in the notes pane updates the underlying card text or saved note instead of acting as a dead control.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists dependencies | pass | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
+  | format | `npx prettier --write public\markdownRenderer.js public\todolist2.js tests\markdown-renderer.test.js tests\task-clipboard.test.js` | Touched renderer/UI/test files | pass | — |
+  | syntax | `node --check public\markdownRenderer.js` | Markdown renderer | pass | — |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | syntax | `node --check tests\markdown-renderer.test.js` | Markdown renderer tests | pass | — |
+  | syntax | `node --check tests\task-clipboard.test.js` | Clipboard source tests | pass | — |
+  | tests | `node --test tests\markdown-renderer.test.js tests\task-clipboard.test.js tests\context-windows.test.js` | Focused markdown, notes-pane, clipboard/context coverage | pass, 54 tests | — |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | — |
+  | tests | `npm test` | Full WorkLists suite | fail | Unrelated existing failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
+
+- Tests added/updated: Extended `tests/markdown-renderer.test.js` for nested unordered/ordered/task lists and notes-pane checkbox wiring; updated `tests/task-clipboard.test.js` for notes-pane checkbox persistence binding.
+- Regression impact: Shared markdown renderer touched; focused tests cover existing inline formatting, blank lines, tables, task checkboxes, code blocks, links, nested lists, and notes-pane/card checkbox binding. Interaction binding is isolated by explicit per-surface checkbox callbacks.
+- API docs: Not affected; checked surface is client-side markdown rendering and notes-pane note update usage only, with no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Audit, formatting, syntax, focused tests, and lint passed; full suite remains blocked by unrelated existing source assertion failures noted above.
+- Conflicts / exceptions: Preserved pre-existing dirty WorkLists changes in `public/todolist2.js`, `tests/context-windows.test.js`, and `tests/search-shortcuts.test.js`; did not alter unrelated full-suite failures.
+
+### 2026-06-12T00:38:00Z — WorkLists
+
+- Summary: Hardened global Escape search dismissal.
+- Problem: Escape could close a focused context surface, such as Filters, without also canceling an active Ctrl+K search, leaving the search bar/results stuck open after focus moved through filter controls.
+- Requirement: Escape must stay globally reliable for active context/search dismissal while preserving focused editor Escape behavior for add-task, card edit, and notes-pane discard/cancel flows.
+- Solution:
+  - Moved search cancellation into the capture-phase global Escape resolver after context-window dismissal.
+  - Added focused-editor ownership checks so task inputs, inline card edits, column rename, and notes-pane editors keep their local Escape cancel/discard behavior.
+  - Added `window.__escapeKeyDiagnostics` ring-buffer logging plus opt-in `window.__WORKLISTS_ESCAPE_DEBUG__` console output for blocked/handled Escape tracing.
+  - Added focused source coverage for global Escape search cancellation, diagnostics, and editor deferral.
+- Files/areas: `public/todolist2.js`, `tests/search-shortcuts.test.js`, `tests/context-windows.test.js`.
+- User-visible impact: Pressing Escape while search is active now closes open context surfaces and cancels search from the shared global handler instead of leaving search open after filter/menu focus changes. Escape in active task/card/note editors still runs the local discard/cancel path.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists dependencies | pass | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
+  | format | `npx prettier --write public\todolist2.js tests\search-shortcuts.test.js tests\context-windows.test.js` | Touched UI/test files | pass | — |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | syntax | `node --check tests\search-shortcuts.test.js` | Search shortcut test file | pass | — |
+  | syntax | `node --check tests\context-windows.test.js` | Context-window test file | pass | — |
+  | tests | `node --test tests\search-shortcuts.test.js tests\context-windows.test.js tests\filter-menu.test.js tests\add-task-entry.test.js tests\edit-session.test.js` | Focused Escape/search/context/editor coverage | pass, 56 tests | — |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | — |
+  | tests | `npm test` | Full WorkLists suite | fail | Unrelated existing failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
+
+- Tests added/updated: Extended `tests/search-shortcuts.test.js` and `tests/context-windows.test.js` for global Escape search cancel, diagnostics, and focused-editor deferral.
+- Regression impact: Shared Escape infrastructure touched; focused tests cover search, filters, context windows, add-task Escape, inline card edit Escape, and notes-pane editor deferral. Local editor Escape paths remain isolated by `shouldFocusedElementOwnEscape`.
+- API docs: Not affected; checked surface is client-side keyboard/context behavior only, with no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Audit, formatting, syntax, focused tests, and lint passed; full suite remains blocked by unrelated existing source assertion failures noted above.
+- Conflicts / exceptions: Preserved pre-existing dirty notes-pane changes in `public/todolist2.js` and `tests/context-windows.test.js`; did not alter unrelated full-suite failures.
+
+### 2026-06-11T20:12:32Z — WorkLists
+
+- Summary: Kept note undo actions pane-local.
+- Problem: Clicking the AI note refine Undo toast while a card notes pane was open counted as an outside click and closed the notes context window.
+- Requirement: Note undo must restore note data without changing notes-pane visibility.
+- Solution:
+  - Marked AI note refine Undo toast actions with a notes-pane-preserving flag.
+  - Propagated that flag to toast action buttons as `data-preserve-notes-pane`.
+  - Expanded the notes-pane outside-click guard so marked note undo actions do not dismiss the pane.
+  - Added focused context-window source coverage for the preserve marker and note Undo wiring.
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`.
+- User-visible impact: Undoing an AI note refinement from the toast now keeps the notes pane open and reloads the restored note content when it belongs to the active card.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js` | Touched UI/test files | pass, unchanged | — |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | syntax | `node --check tests\context-windows.test.js` | Focused context-window test file | pass | — |
+  | tests | `node --test tests\context-windows.test.js` | Focused notes-pane/context source coverage | pass, 22 tests | — |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | — |
+  | tests | `npm test` | Full WorkLists suite | fail | Unrelated existing failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
+
+- Tests added/updated: Extended `tests/context-windows.test.js` to assert note Undo toast actions preserve notes-pane visibility.
+- Regression impact: Isolated to AI note refine Undo toast actions and notes-pane outside-click target classification; ordinary outside clicks and unmarked toast actions still use existing dismissal behavior.
+- API docs: Not affected; checked surface is client-side notes-pane/toast behavior only, with no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Formatting, syntax, focused context-window tests, and lint passed; full suite remains blocked by unrelated existing source assertion failures noted above.
+- Conflicts / exceptions: Preserved pre-existing dirty same-card notes-pane toggle changes in `public/todolist2.js` and `tests/context-windows.test.js`; did not alter unrelated failing assertions or CSS.
+### 2026-06-11T19:11:47Z — WorkLists
+
+- Summary: Restored notes-pane icon toggle close.
+- Problem: Clicking a card's notes icon while that same card's notes pane was already open re-entered the open/load flow instead of closing the pane.
+- Requirement: The notes icon must toggle same-card pane visibility while preserving existing discard-confirm and autosave safeguards.
+- Solution:
+  - Added a same-card open-state branch in `openTaskNotesPane` that routes through `closeNotesPane()`.
+  - Updated the return-focus target before same-card close so the clicked notes action remains the focus destination.
+  - Added focused context-window source coverage for the same-card toggle path and card action wiring.
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`.
+- User-visible impact: Clicking the notes icon a second time now closes the open notes pane for that card.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js` | Touched UI/test files | pass, unchanged | — |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | syntax | `node --check tests\context-windows.test.js` | Focused context-window test file | pass | — |
+  | tests | `node --test tests\context-windows.test.js` | Focused notes-pane/context source coverage | pass, 21 tests | — |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | — |
+  | tests | `npm test` | Full WorkLists suite | fail | Unrelated existing failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
+
+- Tests added/updated: Extended `tests/context-windows.test.js` to assert same-card notes icon activation closes the already-open pane.
+- Regression impact: UI-only notes-pane opener path; same-card activation now uses the established `closeNotesPane()` path, while different-card switching still uses the existing close-before-switch branch.
+- API docs: Not affected; checked surface is client-side notes-pane/card action behavior only, with no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Focused syntax/context-window tests and lint passed; full suite remains blocked by unrelated existing source assertion failures noted above.
+- Conflicts / exceptions: Preserved unrelated dirty-state failures; did not change `tests/card-actions.test.js`, `tests/column-actions.test.js`, or CSS unrelated to the toggle bug.
+
+### 2026-06-11T19:05:48Z — WorkLists
+
+- Summary: Prevented notes-pane link clicks from editing.
+- Problem: Clicking rendered hyperlinks in notes-pane card text or saved notes could trigger the notes-pane click-to-edit handlers instead of leaving the link navigation alone.
+- Requirement: Hyperlinks inside notes-pane rendered markdown must remain clickable without starting inline card or note editing.
+- Solution:
+  - Added a rendered-markdown link target guard scoped to the clicked markdown container.
+  - Applied the guard before notes-pane card-preview and saved-note content enter discard-confirm/autosave/editor flows.
+  - Added focused source coverage proving link guards run before inline editor creation.
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`.
+- User-visible impact: Clicking a hyperlink in the notes pane now follows the link normally and does not open the card or note edit interface.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check public\todolist2.js` | Board UI script | pass | — |
+  | syntax | `node --check tests\context-windows.test.js` | Focused context-window test file | pass | — |
+  | tests | `node --test tests\context-windows.test.js` | Focused notes-pane/context source coverage | pass, 20 tests | — |
+  | lint | `npm run lint` | WorkLists lint gate | exception | Skipped by explicit user directive; residual risk is formatting/lint issues outside the focused syntax and source tests. |
+
+- Tests added/updated: Extended `tests/context-windows.test.js` to assert notes-pane markdown link clicks are guarded before discard prompts and inline editor creation.
+- Regression impact: UI-only notes-pane click handling isolated to rendered card-preview and saved-note markdown content; action buttons, code-copy controls, and editor save flows are unchanged.
+- API docs: Not affected; checked touched surface is client-side notes-pane click handling only, with no route, request, response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Focused syntax and context-window tests passed; lint skipped by explicit directive.
+- Conflicts / exceptions: Skipped linting per user directive. Preserved unrelated dirty WorkLists state and did not run full-suite gates.
 ### 2026-06-10T18:16:40Z — WorkLists
 
 - Summary: Hid notes-pane action icons until hover.
@@ -1751,6 +1985,7 @@ pm test | Full WorkLists suite | fail | Same unrelated dirty failures remain: ac
 - Gemma add-task and card refine execution now runs through server-side background jobs with client polling so work continues through page refreshes.
 - Card move supports same-board and cross-board destinations using board-aware validation.
 - API contract includes board-aware card move request/response metadata (`sourceBoardId`, `destinationBoardId`, `sourceBoard`, `destinationBoard`).
+
 
 
 

@@ -453,7 +453,7 @@ Heavy **rebase/merge choreography**, tagging, signatures, husky internals. This 
 
 | User says or means | Apply automatically |
 | ------------------ | ------------------- |
-| Write / extend / review an **epic** or **story** **spec** | [spec-writing.mdc](./spec-writing.mdc) — all required sections, any repo path |
+| Write / extend / review an **epic** or **story** **spec** | [spec-writing.mdc](./spec-writing.mdc) — all required sections; wiki naming/Obsidian/dev notes: [wiki-spec-authoring.md](../../docs/wiki-spec-authoring.md); guided flow: [write-spec](../skills/write-spec/SKILL.md) |
 | **Commit**, **push**, git workflow | [git-commit-workflow.mdc](./git-commit-workflow.mdc) + [ticket-changelog.mdc](./ticket-changelog.mdc) |
 | **New ticket**, **new branch**, start PRDV work | Read [new-branch-get-started.md](../docs/new-branch-get-started.md); update changelog in `dustin-thomason/docs/<system>/` |
 | **Open PR**, PR description, `gh pr create` | Read [pull-request-workflow.md](../docs/pull-request-workflow.md) |
@@ -478,6 +478,7 @@ Optional human opener (still helps on new threads): [.cursor/docs/session-start.
 
 | Skill | When |
 | ----- | ---- |
+| `write-spec` | Author or update PRDV specs and dev notes (wiki or app-repo paths) |
 | `grill-me` | User wants plan/design stress-tested |
 | `workflow-housekeeping` | User asks to audit/sync workflow docs after edits |
 

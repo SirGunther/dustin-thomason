@@ -55,7 +55,7 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 | I want to… | What you say or do | `@` needed? |
 | ---------- | ------------------ | ----------- |
 | **Pick a workflow** (unsure) | `@workflow-index` | Optional |
-| **Write epic/story spec** (any repo) | “Write the story spec …” | **No** — `spec-writing` + `personal-methodology` |
+| **Write epic/story spec** (any repo) | “Write the story spec …” | **No** — `spec-writing` + `wiki-spec-authoring`; `@write-spec` for guided workflow |
 | **Start ticket / branch** | “Start branch for PRDV-…” | **No** — router reads `new-branch-get-started` |
 | **Commit or push** | “Commit” / “push using git workflow” | **No** — `git-commit-workflow` + `ticket-changelog` |
 | **Open a PR** | “Open PR for PRDV-…” | **No** — router reads `pull-request-workflow` |
@@ -101,6 +101,7 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 | Path | When |
 | ---- | ---- |
 | [ticket-changelog-workflow.md](./ticket-changelog-workflow.md) | How changelogs work end-to-end |
+| [wiki-spec-authoring.md](./wiki-spec-authoring.md) | PRDV wiki naming, Obsidian wiring, dev notes, author checklist |
 | [docs/atlas/local/callisto-local.mdc](./atlas/local/callisto-local.mdc) | Callisto backend local runbook (Docker, migrations, DBeaver) |
 | [docs/atlas/local/triton-local.mdc](./atlas/local/triton-local.mdc) | Triton backend local runbook |
 | [docs/atlas/local/europa-local.mdc](./atlas/local/europa-local.mdc) | Europa backend local runbook |
@@ -136,6 +137,7 @@ Skills are **not** `alwaysApply` — the user `@`’s the skill or asks in plain
 
 | Skill | Invoke when |
 | ----- | ----------- |
+| `write-spec` | Author/update PRDV specs or dev notes (see [wiki-spec-authoring.md](./wiki-spec-authoring.md)) |
 | `grill-me` | Stress-test a plan or design |
 | `workflow-housekeeping` | Audit rules/playbooks/index after you change workflow files |
 
@@ -177,7 +179,7 @@ Checks: required `alwaysApply` rules, expected scripts, playbooks, router links,
 | Code quality | `build-implementation-guardrails` + app repo rules |
 | Framing implementation | `problem-requirement-solution` — Problem → Requirement → Solution |
 | Multi-area exploration | `context-fanout` — read-only subagent fanout |
-| Spec | `spec-writing` (via router) |
+| Spec | `spec-writing` + `wiki-spec-authoring`; `@write-spec` for guided flow |
 | Agent finished substantive work | `agent-completion-notification` → `notify-agent-complete.ps1` |
 
 If a new workflow type appears (e.g. release, hotfix), add **one row** above, **one** playbook, update `personal-methodology.mdc`, run `validate-workflows.ps1`.
