@@ -65,6 +65,13 @@ Skip only for trivial **`dustin-thomason`**-only edits with **no** ticket, pure 
 
 - State briefly (in thinking or first reply when useful) which changelog you used and which **active Plan** or **Current state** line governs this task.
 - If the user's new request **conflicts** with **Current state** or an **active Plan**, say so and confirm direction before a large refactor or new plan.
+- **Use the changelog as user context, not only ticket state.** When possible, pull out prior session logs, **Attempt history**, and superseded plans that resemble the current ask (same surface, problem class, or repeated iteration). Infer what the user has **consistently** wanted, how they **redirected** after follow-ups, what they **rejected** or pushed back on, and which risks or regressions already surfaced. Let that shape how you interpret a brief or ambiguous request — and what problems to anticipate before you plan or code.
+
+```
+Good: "Changelog shows two prior redirects toward minimal diff and explicit regression notes; this ask matches that pattern — I'll keep scope narrow and name the checked boundary."
+Good: "Attempt history documents an abandoned raw-SQL approach; I won't propose that again without new evidence."
+Bad:  Read Current state only and treat the user's latest message in isolation when the changelog already records repeated follow-ups on the same concern.
+```
 
 ---
 
