@@ -46,6 +46,31 @@
 
 ## Session log
 
+### 2026-06-16T21:55:00Z — atlas-front-end (implementation)
+
+- **Summary:** Implemented the button approach (frontend-only). Added a refresh icon to the AJSF step-5 proceedings panel that refetches only the job-level proceedings list and surfaces feedback. Fixed the error-swallowing in `fetchJobProceedings` so a failed fetch preserves the cached list instead of blanking it. To avoid the manual refresh hanging on the query's `retryDelay: 2min`, the button uses a new **fail-fast** one-shot `manualRefreshProceedings` (single `apiClient.get` → `queryClient.setQueryData(['jobProceedings', jobId])`) instead of `query.refetch`; the query's automatic retry config is left unchanged (per user decision). Precise "N new" count computed via proceeding-ID diff (per user decision). Never touches the `['jobSubmissionForm', jobTaskId]` query.
+- **Plan used:** `larry-adams/systems/neptune/refresh-proceedings/PRDV-15619-button-refresh`
+- **Files:**
+  - `atlas-front-end/src/callisto/pages/JobSubmissionPages/composables/useJobSubmissionJobProceedings.ts` (stop swallowing errors; add fail-fast `manualRefreshProceedings`)
+  - `atlas-front-end/src/callisto/pages/JobSubmissionPages/sections/FileUploadSection/components/RefreshProceedingsButton.vue` (new)
+  - `atlas-front-end/src/callisto/pages/JobSubmissionPages/sections/FileUploadSection/FileUploadSectionCore.vue` (stable header + button + `handleRefresh` + toasts)
+  - `atlas-front-end/src/i18n/en-US/common.json` (refresh label + 3 toast strings)
+  - `.../components/__specs__/RefreshProceedingsButton.spec.ts` (new), `.../composables/__specs__/useJobSubmissionJobProceedings.spec.ts` (new), `.../FileUploadSection/__specs__/FileUploadSectionCore.spec.ts` (extended)
+- **Notes:** Deviation from spec's literal "wire `refetchProceedings`" — used a dedicated fail-fast fetch to dodge the 2-minute retry trap on a failed manual refresh; `refetchProceedings` is still used by the add-proceeding and upload-complete flows. No commit performed in this session.
+
+#### Shipping checklist
+
+- **Tests run** — see verification table below; 10 passing across 3 specs.
+- **Tests added/updated** — added `RefreshProceedingsButton.spec.ts` (renders/emits/disabled-while-refreshing), `useJobSubmissionJobProceedings.spec.ts` (manual-refresh success writes cache; failure propagates and does not write); extended `FileUploadSectionCore.spec.ts` (new-found count toast, up-to-date toast, error toast + list preserved).
+- **Regression impact** — touched the shared `useJobSubmissionJobProceedings` query fn (removed error swallow). The add-proceeding and upload-complete flows still call `refetchProceedings`; `FileUploadSectionCore` specs (add 409/non-409/success paths) still pass, confirming no regression to those callers. Error now surfaces via `proceedingsError` rather than a silent `[]`.
+- **API docs** — not relevant: no HTTP contract change; reuses `GET /callisto/proceeding-job-submission/job-detail/{jobId}/proceedings` (path, method, response shape unchanged).
+- **Tooling gates** — lint (scoped eslint --fix, clean) + vitest (3 specs) run; see table.
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| lint | `npx eslint --fix <6 changed files> --max-warnings 0` | changed files | pass | full-repo `npm run lint` not run this session (pre-commit deferred) |
+| tests | `npx vitest run --no-file-parallelism <3 specs>` | refresh button/composable/core | pass (10) | `--maxWorkers 1` conflicts with repo vitest pool config; used `--no-file-parallelism` to serialize |
+
 ### 2026-06-12T21:03:00Z — larry-adams (specs)
 
 - **Summary:** Grilled the design (scope, button feedback, failure handling, polling conditions, surfacing, Quasar-migration posture) and authored four spec docs in the larry-adams Obsidian wiki under `systems/neptune/refresh-proceedings/`: overview + recommendation, button approach, polling approach, and a dev note. Wired all four into `systems/README.md`. Frontend-only; both approaches reuse the existing job-proceedings query and `GET .../job-detail/{jobId}/proceedings` endpoint. Opening a PR for Larry's review.
@@ -70,6 +95,6 @@
 
 ---
 
-## Current state (as of 2026-06-12)
+## Current state (as of 2026-06-16)
 
-Specs authored on larry-adams branch `PRDV-15619` and indexed; PR pending. No implementation started in `atlas-front-end`. Recommendation on record: ship the button as v1, polling as a fast-follow.
+Button approach implemented in `atlas-front-end` (uncommitted): `RefreshProceedingsButton.vue` + fail-fast `manualRefreshProceedings`, error-swallow fix, toasts, i18n, and specs (10 passing). Not yet committed/pushed; full-repo `npm run lint` and broader test sweep still to run before a commit. Polling alternative remains deferred to a future websockets effort.

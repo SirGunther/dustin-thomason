@@ -8,6 +8,16 @@ Personal project changelog for extension behavior, prompt workflow changes, noti
 
 ## Session log
 
+### 2026-06-15T21:12:00Z — OtterCopy
+- **Summary:** Added an optional "Direction" steering input that is injected into every agent across the refinement, extended refinement, and engineering handoff pipelines.
+- **Files/Areas:** `popup.html`, `popup.css`, `popup.js`, `background.js`
+- **User-visible impact:** The popup now shows an optional "Direction (optional)" textarea above the action buttons. When the user types steering text and runs Refine and copy, Extended refine and copy, or Engineering handoff, that text is threaded through the background job and injected as a labeled, guard-railed block into every model call: the semantic-block preflight, each primary/secondary persona pass, final synthesis, objective insertion, and the single-pass refine prompt. The injected block instructs agents to use the direction to focus/prioritize topics when a transcript spans multiple subjects, while still grounding all claims in the transcript and preferring the transcript on conflict. Empty direction preserves prior behavior exactly. The direction is recorded on the saved result and the extended debug log (provided flag, character count, preview) for inspection. Direction is captured per run from the popup and is not persisted across popup sessions.
+- **Tests run:** `node --check background.js` and `node --check popup.js` — syntax checks passed. Mocked Node VM run of `runExtendedRefinementJob(...)` with fake Chrome/fetch/model clients — verified a direction marker reached all 17 model calls in the no-repair refinement path (1 semantic block + 14 persona + 1 final synthesis + 1 objective insertion) and that the steering label is absent from all calls on an empty-direction run.
+- **Tests added/updated:** No persistent automated tests added; this repo still has no package/test harness. The verification harness was a temporary Node VM script, run then removed. Residual risk: live provider steering quality (how strongly models honor the direction without fabricating support) should be checked with a real multi-topic Otter transcript.
+- **Regression impact:** Direction defaults to empty and the injected block is omitted when empty, so single-pass refine, extended refine, and handoff outputs are unchanged for runs without direction (verified: no steering label leaks into empty-direction calls). Copy exact transcript, transcript extraction, model/prompt orchestration, saved-result polling, cancellation, repair calls, and provider adapters remain unchanged.
+- **API docs:** Not relevant: browser extension only; no HTTP API contract or Swagger/OpenAPI surface exists in this repo. The internal Chrome message payloads gained an optional `direction` field on the refine/extended/handoff actions; no external contract.
+- **Tooling gates:** No package-level lint/test/audit gates apply because the repo has no `package.json`; direct syntax checks and a mocked orchestration check were run with Node.
+
 ### 2026-06-08T03:00:52Z — OtterCopy
 - **Summary:** Migrated the legacy in-repo OtterCopy changelog into this canonical dustin-thomason changelog.
 - **Files/Areas:** `docs/OtterCopy/OtterCopy-app-changelog.md`; `OtterCopy/docs/ottercopy/ottercopy-changelog.md`
@@ -573,11 +583,14 @@ Tooling gates:
 ## Current state
 Extended refinement uses a final-pass-model semantic-block preflight, then a seven-section paired persona pipeline with claim-ledger discipline before the final synthesis and Objective insertion passes. The same semantic block is appended to downstream prompts for single-pass refinement, extended refinement, and engineering handoff.
 
+An optional user "Direction" textarea in the popup lets the user steer a run. When provided, the direction is injected as a labeled, guard-railed steering block into every model call (semantic block, each persona pass, final synthesis, objective insertion, and the single-pass refine prompt) so the agents can be nudged toward the intended topic when a transcript spans multiple subjects, without treating the direction as new transcript facts. Empty direction preserves prior behavior; the direction is captured per run and not persisted across popup sessions.
+
 Extended refinement and engineering handoff run as background jobs, save their latest result/debug state, and send best-effort Power Automate notifications on success or failure using a `{ status, message }` payload.
 
 Legacy in-repo changelog content from C:\Users\dustin.thomason\OneDrive\PDProjects\Browser Extensions\OtterCopy\docs\ottercopy\ottercopy-changelog.md was migrated into this canonical file on 2026-06-08T03:00:52Z without removing historical session text.
 
 ## Plans
+- [2026-06-15] Optional Direction steering input injected into all pipeline agents. Status: implemented.
 - [2026-06-08] Migrate legacy in-repo changelog into canonical dustin-thomason OtterCopy changelog. Status: implemented.
 - [2026-06-08] Power Automate success/failure notifications for extended jobs. Status: implemented.
 - [2026-06-03] initial commit and push to main. Status: implemented.
