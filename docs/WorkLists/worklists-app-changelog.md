@@ -36,6 +36,124 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-06-22T20:40:07Z - WorkLists
+
+- Summary: Restored durable multi-board linking from the Link Boards dialog.
+- Problem: The dialog submitted only currently rendered checked rows, so filtering or staged selection could drop previously linked boards and make a one-to-many link behave like one-to-one replacement.
+- Requirement: A parent column can remain linked to multiple boards simultaneously while adding another board association.
+- Solution: Changed Link Boards to keep `selectedBoardIds` in a durable `Set` seeded from existing associations. Checkbox changes update that set, and submit sends the full set rather than visible DOM rows. Expanded API coverage to assert one column linked across parent, child, and extra boards.
+- Files/areas: `public/todolist2.js`, `tests/column-move-ui.test.js`, `tests/api.test.js`, canonical changelog.
+- User-visible impact: Adding a second or third board link no longer drops earlier board links from the same parent column.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check public\todolist2.js` | Touched JS file | pass | - |
+  | format | `npx prettier --write public\todolist2.js tests\column-move-ui.test.js tests\api.test.js` | Touched source/test files | pass | - |
+  | tests | `node --test tests\column-move-ui.test.js tests\api.test.js` | Link Boards durable selection and multi-board API association | pass, 92 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 446 tests | - |
+
+- Tests added/updated: Added source coverage proving Link Boards submits durable selection state, not visible checked rows only. Expanded API coverage to keep one shared column linked across three boards.
+- Regression impact: Touched only board-link selection submission and association tests; unlink/delete semantics and OpenAPI route shape unchanged.
+- API docs: Not changed in this pass; no route, method, schema, or status contract changed.
+- Tooling gates: Syntax check, Prettier, focused tests, lint, and full `npm test` passed.
+- Conflicts / exceptions: Worktree still includes prior uncommitted linked-column feature/regression files. Pre-existing local edit in `tests/markdown-renderer.test.js` remains untouched.
+
+### 2026-06-22T20:27:19Z - WorkLists
+
+- Summary: Reframed linked child-column deletion as Unlink in the column action menu.
+- Problem: Linked child columns still presented the destructive `Delete` menu label, making a safe child-board unlink look and feel like data deletion.
+- Requirement: Parent columns retain delete semantics; non-parent linked columns expose only an unlink action in the dropdown.
+- Solution: Added per-column action-state overrides so linked child boards render the shared delete handler as `Unlink` with `fa-unlink`, no danger styling, and `This board` status text. Updated unlink success feedback to say `Column unlinked from this board.` Parent linked delete still blocks with explicit unlink-first guidance.
+- Files/areas: `public/columnActions.js`, `public/todolist2.js`, `tests/column-actions.test.js`, canonical changelog.
+- User-visible impact: Opening the column ellipsis on a non-parent linked column now shows `Unlink`, not `Delete`; the operation removes only that board association.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check public\columnActions.js`; `node --check public\todolist2.js` | Touched JS files | pass | - |
+  | format | `npx prettier --write public\columnActions.js public\todolist2.js tests\column-actions.test.js` | Touched source/test files | pass | - |
+  | tests | `node --test tests\column-actions.test.js tests\column-move-ui.test.js` | Column action rendering and linked UI source contracts | pass, 34 tests | - |
+  | tests | `node --test tests\api.test.js` | Column delete/unlink API regression coverage | pass, 80 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 445 tests | - |
+
+- Tests added/updated: Added menu-unit coverage for dynamic delete-action overrides and board-script source coverage for linked child `Unlink` state.
+- Regression impact: Touched menu rendering, linked column action-state resolution, and linked delete feedback only. Backend route/schema unchanged; existing unlink API behavior preserved.
+- API docs: Not changed in this pass; no route, method, schema, or status contract changed.
+- Tooling gates: Syntax checks, Prettier, focused UI tests, focused API tests, lint, and full `npm test` passed.
+- Conflicts / exceptions: Worktree still includes prior uncommitted linked-column feature/regression files. Pre-existing local edit in `tests/markdown-renderer.test.js` remains untouched.
+
+### 2026-06-22T19:50:39Z - WorkLists
+
+- Summary: Fixed board-menu create/delete refresh, compacted linked-column status, alphabetized Link boards, and protected linked columns during board deletion.
+- Problem: Board create/delete could succeed server-side without immediately refreshing the left board menu. Linked/parent labels consumed header height. Link Boards ordering followed contextual board order. Board deletion still used pre-link destructive semantics for shared columns.
+- Requirement: Create/delete updates appear without refresh; linked status remains visible but icon-only in the header control row; Link Boards list is always alphabetical; recent board/link behavior regresses no existing pin, drag, or link capability.
+- Solution: Added forced board-data application after board create/delete, touched board metadata for global navigation changes, moved linked status into an icon-only absolute header slot, sorted the association picker by title, and made board deletion unlink shared columns while deleting only orphaned columns/tasks/notes and promoting parentBoardId when needed.
+- Files/areas: `dal.js`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/api.test.js`, `tests/board-refresh.test.js`, `tests/column-actions.test.js`, `tests/column-move-ui.test.js`, canonical changelog.
+- User-visible impact: New/deleted boards appear or disappear in the left menu immediately; parent/linked status no longer pushes column header content down; Link Boards is easier to scan; deleting a board no longer destroys linked columns that still belong to another board.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check dal.js`; `node --check public\todolist2.js` | Touched JS files | pass | - |
+  | format | `npx prettier --write dal.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\board-refresh.test.js tests\column-actions.test.js tests\column-move-ui.test.js` | Touched source/test files | pass | - |
+  | tests | `node --test tests\api.test.js tests\board-refresh.test.js tests\column-move-ui.test.js tests\column-actions.test.js` | Board menu refresh, linked deletion, icon layout, alphabetical picker | pass, 124 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 443 tests | - |
+
+- Tests added/updated: Added board-refresh source coverage for forced create/delete refresh, API coverage for preserving linked columns on board delete, column header CSS contract updates, and Link Boards alphabetical/icon-only source contracts.
+- Regression impact: Touched board create/delete refresh paths, linked column parent promotion, side-menu refresh metadata, column header spacing, and board association picker ordering. Full suite passed.
+- API docs: Not changed in this pass; no route, method, schema, or status contract changed.
+- Tooling gates: Syntax checks, Prettier, focused tests, lint, and full `npm test` passed.
+- Conflicts / exceptions: Worktree still includes prior uncommitted linked-column feature files. Pre-existing local edit in `tests/markdown-renderer.test.js` remains untouched; `public/todoliststyles2.css` had prior edits and was intentionally extended again for compact linked-column status.
+
+### 2026-06-22T19:21:36Z - WorkLists
+
+- Summary: Added cross-board linked columns with parent-board anchoring.
+- Problem: A column had no reusable board association model, so shared workflow columns could not appear across boards with synchronized membership.
+- Requirement: Column menu supports multi-board selection; parent board remains authoritative; child boards can unlink; linked state is visible; API docs and tests stay current.
+- Solution: Added `parentBoardId`, board-link mutation API, scoped child-board delete, parent delete/move guards, searchable Link boards picker, parent/linked indicators, OpenAPI schemas, and regression coverage.
+- Files/areas: `dal.js`, `server.js`, `openapi.js`, `public/apiService.js`, `public/columnActions.js`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/api.test.js`, `tests/openapi.test.js`, `tests/column-actions.test.js`, `tests/column-move-ui.test.js`, canonical changelog.
+- User-visible impact: Column ellipsis > Link boards opens a searchable multi-select; parent board is locked; linked child boards can remove the column view without deleting cards; parent/linked badges show association state.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\todolist2.js` | Touched JS files | pass | - |
+  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\columnActions.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\column-actions.test.js tests\column-move-ui.test.js` | Touched source/test files | pass | - |
+  | tests | `node --test tests\api.test.js tests\openapi.test.js tests\column-actions.test.js tests\column-move-ui.test.js` | Column association API/OpenAPI/menu/UI contracts | pass, 112 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 439 tests | - |
+
+- Tests added/updated: Added API coverage for board-link updates, parent preservation, parent destructive-action blocking, and child-board unlink behavior. Updated OpenAPI and column action/move UI source-contract tests for the new association control.
+- Regression impact: Touched shared board/column membership, delete/move semantics, board refresh metadata, context-window closing, and documented API contracts. Full suite passed.
+- API docs: Updated OpenAPI for `PUT /columns/{id}/boards`, scoped `DELETE /columns/{id}?boardId=...`, `Column.parentBoardId`, association request/response schemas, and delete response schema.
+- Tooling gates: Syntax checks, Prettier, focused tests, lint, and full `npm test` passed.
+- Conflicts / exceptions: Pre-existing local edits in `public/todoliststyles2.css` and `tests/markdown-renderer.test.js`; CSS was intentionally extended for linked-column styles, while markdown renderer test edits were left intact.
+
+### 2026-06-22T18:58:16Z - WorkLists
+
+- Summary: Aligned markdown checklist indentation with standard list spacing.
+- Problem: Markdown task-checkbox rows rendered deeper than adjacent bullet and numbered lists because marker styling hid the list marker while preserving list padding.
+- Requirement: Bulleted, numbered, and checklist markdown rows should share the same left rhythm in card read mode and notes-pane markdown surfaces.
+- Solution: Offset `.markdown-task-list-item` into the list marker column for cards and notes, and added notes-pane checkbox label/input styles to match the card markdown surface.
+- Files/areas: `public/todoliststyles2.css`, `tests/markdown-renderer.test.js`, canonical changelog.
+- User-visible impact: Checklist rows now use horizontal space consistently with bullet and numbered markdown lists in cards and notes.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | tests | `node --test tests\markdown-renderer.test.js` | Markdown renderer/list CSS source contracts | pass, 22 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 435 tests | - |
+
+- Tests added/updated: Updated `tests/markdown-renderer.test.js` to assert card checklist offset and notes-pane checklist styling contracts.
+- Regression impact: Isolated to rendered markdown checklist CSS under `.task-content` and `.notes-pane .md-body`; renderer output, checkbox persistence handlers, API routes, and stored markdown format unchanged.
+- API docs: Not relevant: CSS-only rendered markdown layout change; no route, method, request/response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: `npm run lint`, focused markdown renderer test, and full `npm test` passed.
+- Conflicts / exceptions: Pre-existing local edit in `public/todoliststyles2.css` around completed-card background comments was left intact.
 ### 2026-06-16T22:48:56Z - WorkLists
 
 - Summary: Corrected tag color behavior and added secondary-tag settings management.
@@ -2385,4 +2503,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Gemma add-task and card refine execution now runs through server-side background jobs with client polling so work continues through page refreshes.
 - Card move supports same-board and cross-board destinations using board-aware validation.
 - API contract includes board-aware card move request/response metadata (`sourceBoardId`, `destinationBoardId`, `sourceBoard`, `destinationBoard`).
+
+
+
 
