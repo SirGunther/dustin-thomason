@@ -36,6 +36,199 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-06-24T16:21:44Z - WorkLists
+
+- Summary: Fixed voice-session note save shortcut.
+- Problem: Active voice-to-text replaced editor shortcut scopes with `voice-session`, so `Ctrl+Enter` could stop recording paths but did not reach notes save/update commands.
+- Requirement: `Ctrl+Enter` during active voice input must stop dictation and persist the focused new note, notes-pane card edit, or inline note edit.
+- Solution: Added global `editor.save` fallback for active voice scope, routed it through `getGlobalSaveShortcutContext`, and reused existing note/card/task save handlers after hard-stopping voice input.
+- Files/areas: `public/todolist2.js`, `tests/shortcut-registry.test.js`, `tests/gemma-ui.test.js`, canonical changelog.
+- User-visible impact: While dictating in the notes pane, `Ctrl+Enter` now stops recording and saves/updates the active note editor.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\shortcut-registry.test.js tests\gemma-ui.test.js` | Touched source/test files | pass | - |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\shortcut-registry.test.js`; `node --check tests\gemma-ui.test.js` | Touched JS files | pass | - |
+  | tests | `node --test tests\shortcut-registry.test.js tests\gemma-ui.test.js` | Voice-session shortcut and notes AI/source contracts | pass, 50 tests | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 460 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+
+- Tests added/updated: Added shortcut-registry coverage for active voice + `Ctrl+Enter` across notes create, notes card edit, and inline note edit; added Gemma UI source-contract coverage for `editor.save` and `getGlobalSaveShortcutContext`.
+- Regression impact: Touched shortcut registration/context routing only. Normal non-voice priority still resolves to scope-specific `notes.create`; AI voice fallback remains on `Ctrl+Shift+Enter`. Full suite passed.
+- API docs: Not relevant: keyboard routing/UI-only change; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Prettier, syntax checks, focused tests, full `npm test`, and `npm run lint` passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Existing uncommitted WorkLists status-related files were present before this task and were not reverted.
+
+### 2026-06-24T16:13:09Z - WorkLists
+
+- Summary: Enforced save-first note AI refinement shortcut.
+- Problem: Notes-pane AI shortcut from a draft note could process text before the note existed in persisted storage.
+- Requirement: Voice/draft note text must commit to `/api/notes` before `refine-note` starts, matching card edit save-then-refine order.
+- Solution: Added `saveNotesPaneDraftNote`, queued create-note form saves, changed create-editor AI shortcut to save the draft note first, and passed the committed note id/text/event id into note refinement.
+- Files/areas: `public/todolist2.js`, `tests/gemma-ui.test.js`, canonical changelog.
+- User-visible impact: Ctrl/Cmd+Shift+Enter in the notes create editor now creates the note first, then refines the saved note; duplicate save attempts are blocked while the note create request is active.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\gemma-ui.test.js` | Touched source/test files | pass, unchanged | - |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\gemma-ui.test.js` | Touched JS files | pass | - |
+  | tests | `node --test tests\gemma-ui.test.js`; `node --test tests\shortcut-registry.test.js tests\gemma-ui.test.js` | Notes AI source contract and shortcut registry | pass, 29 tests; pass, 48 tests | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 458 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+
+- Tests added/updated: Updated Gemma UI source-contract assertions for the draft-note save helper, save-before-refine shortcut path, and committed note id/text handoff into `refine-note`.
+- Regression impact: Touched notes-pane draft save and notes AI shortcut only; card edit AI, inline note edit AI, button-based AI note creation, and notes API route behavior remain on existing paths. Full suite passed.
+- API docs: Not relevant: reused existing `POST /api/notes` and `/api/gemma-normalize/jobs` `refine-note` payload; no route path/method, request/response schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Prettier, syntax checks, focused tests, full `npm test`, and `npm run lint` passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Existing uncommitted WorkLists status-related files were present before this task and were not reverted.
+
+### 2026-06-23T04:33:38Z - WorkLists
+
+- Summary: Layered completion display over persistent workflow status.
+- Problem: Completing a card needed to read as completed without overwriting the card's manual project status.
+- Requirement: Checkbox completion remains boolean-only; workflow status persists invisibly; reopening reveals the prior status; no official `Completed` status is added.
+- Solution: Added a `task-completion-status` display badge that appears in the status slot only while `todo.completed` is true, hides the status selector without changing its value, keeps `data-status` bound to the persistent workflow status, and keeps completion API payloads separate from status updates.
+- Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/api.test.js`, `tests/project-status.test.js`, canonical changelog.
+- User-visible impact: Checking a card now visually shows `Completed`; unchecking immediately restores the original status such as `In Progress` or `Blocked`.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\project-status.test.js`; `npx prettier --write tests\project-status.test.js` | Touched source/test files | pass | - |
+  | syntax | `node --check public\todolist2.js`; `node --check public\apiService.js` | Touched/related frontend scripts | pass | - |
+  | tests | `node --test tests\project-status.test.js` | Completion/status UI source contract | pass, 4 tests | - |
+  | tests | `node --test tests\api.test.js tests\project-status.test.js` | Completion/status API and UI source contracts | pass, 89 tests | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 458 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+
+- Tests added/updated: Added API regression coverage proving completion PATCH preserves `todo.status`; added UI source-contract coverage proving completion display is separate from `ApiService.updateTaskStatus`, status records, and status selector value.
+- Regression impact: Touched card status rendering and completion DOM sync only. Status CRUD, status visibility, filters keyed to `data-status`, and backend status validation remain on the existing status field. Full suite passed.
+- API docs: Not relevant: reused existing `PATCH /todos/{id}` completion fields and `PATCH /todos/{id}/status`; route path/method, request body shapes, response shapes, status codes, and OpenAPI metadata checked unchanged.
+- Tooling gates: Prettier, syntax checks, focused tests, full `npm test`, and final `npm run lint` passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Existing uncommitted WorkLists changes remain in the working set.
+
+### 2026-06-23T03:58:41Z - WorkLists
+
+- Summary: Simplified status visibility to one global tag gate.
+- Problem: The previous pass made status visibility configurable per status, which was more granular than needed and added Settings noise.
+- Requirement: Configure one global set of color tags that makes the status selector/status updates available as a whole; statuses themselves remain simple CRUD records.
+- Solution: Removed per-status visibility fields, added a persisted `statusVisibility` array, added `/statuses/visibility` for global updates, changed Settings to one global visibility control, hid the card status selector when a card lacks a matching color tag, and kept server validation aligned with the same global gate.
+- Files/areas: `dal.js`, `server.js`, `openapi.js`, `public/apiService.js`, `public/boardData.js`, `public/todolist2.js`, `public/todoliststyles2.css`, `data/statuses.json`, `data/statusVisibility.json`, `data/statuses.example.json`, `data/statusVisibility.example.json`, `tests/api.test.js`, `tests/openapi.test.js`, `tests/project-status.test.js`, `tests/board-refresh.test.js`, canonical changelog.
+- User-visible impact: Settings now controls status availability globally by color tag. If the configured tag list is empty, statuses are available everywhere; if populated, cards need at least one matching color tag to show/use statuses.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\boardData.js`; `node --check public\todolist2.js`; `node --check openapi.js` | Touched JS entry points | pass | - |
+  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\boardData.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\project-status.test.js tests\board-refresh.test.js data\statuses.json data\statuses.example.json data\statusVisibility.json data\statusVisibility.example.json` | Touched source/test/data files | pass | - |
+  | tests | `node --test tests\api.test.js tests\openapi.test.js tests\project-status.test.js tests\board-refresh.test.js` | Status visibility API/OpenAPI/settings/refresh contracts | pass, 103 tests | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 456 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+
+- Tests added/updated: Updated API coverage for global status visibility, OpenAPI coverage for `/statuses/visibility` and `statusVisibility`, source-contract coverage for global Settings controls and hidden status selectors, and board refresh coverage for carrying status visibility through snapshots.
+- Regression impact: Touched status persistence, data hydration, card status selector rendering, status validation, Settings status tab, and OpenAPI. Full suite passed.
+- API docs: Added `/statuses/visibility`, `StatusVisibility*` schemas, and `DataStore.statusVisibility`; removed per-status visibility schema fields.
+- Tooling gates: Syntax checks, Prettier, focused tests, full `npm test`, and final `npm run lint` passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Existing uncommitted WorkLists changes remain in the same working set.
+
+### 2026-06-23T03:29:29Z - WorkLists
+
+- Summary: Added tag-scoped status visibility controls.
+- Problem: Status options remained globally visible, adding workflow noise to cards whose color tags did not use those states.
+- Requirement: Let Settings map statuses to color tags; show and accept scoped statuses only on cards with matching color tags; keep unmapped statuses globally available.
+- Solution: Added `visibleTagIds` to status records, DAL normalization and assignment validation, tag-change status fallback handling, Settings visibility checkboxes, per-card dropdown filtering, OpenAPI schema coverage, and focused regression tests.
+- Files/areas: `dal.js`, `openapi.js`, `public/todolist2.js`, `public/todoliststyles2.css`, `data/statuses.example.json`, `tests/api.test.js`, `tests/openapi.test.js`, `tests/project-status.test.js`, canonical changelog.
+- User-visible impact: Statuses can now be scoped to color tags in Settings; card status dropdowns hide scoped statuses unless the card has a matching color tag.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check dal.js`; `node --check public\todolist2.js`; `node --check openapi.js` | Touched JS entry points | pass | - |
+  | format | `npx prettier --write dal.js openapi.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\project-status.test.js data\statuses.example.json` | Touched source/test/data files | pass, unchanged | - |
+  | tests | `node --test tests\api.test.js tests\openapi.test.js tests\project-status.test.js` | Status API/OpenAPI/settings source contracts | pass, 90 tests | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 456 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+
+- Tests added/updated: Added API coverage for tag-scoped status assignment and rejection; updated OpenAPI assertions for `visibleTagIds`; updated settings/source-contract coverage for visibility controls and per-card status filtering.
+- Regression impact: Touched status persistence, status validation, card dropdown rendering, color-tag change handling, Settings UI, and OpenAPI schema. Full suite passed.
+- API docs: Updated OpenAPI `Status` and `StatusRequest` schemas with `visibleTagIds`; no route/path/method changes.
+- Tooling gates: Syntax checks, Prettier, focused tests, full `npm test`, and final `npm run lint` passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Existing uncommitted status/dropdown work remains in the same working set.
+
+### 2026-06-23T03:02:14Z - WorkLists
+
+- Summary: Added Settings-based custom status management CRUD.
+- Problem: Project status labels were hard-coded in card UI/API validation, so users had no central place to define workflow statuses.
+- Requirement: Add a Settings status-management view; support create/read/update/delete; persist status metadata; keep card status updates data-driven; document API changes.
+- Solution: Added a persisted `statuses` section with default lifecycle records, DAL CRUD with duplicate/default validation, card reassignment on rename/delete, `/statuses` API endpoints, OpenAPI schemas, API client helpers, Settings `Statuses` tab with list/editor controls, board-data hydration for status records, and source/API regression tests.
+- Files/areas: `dal.js`, `server.js`, `openapi.js`, `public/apiService.js`, `public/boardData.js`, `public/todolist2.js`, `data/statuses.example.json`, `tests/api.test.js`, `tests/openapi.test.js`, `tests/project-status.test.js`, canonical changelog.
+- User-visible impact: Settings now includes a Statuses tab where users can add, edit, default, and delete project statuses; card status dropdowns use the configured statuses and remain persisted.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\todolist2.js` | Touched JS entry points | pass | - |
+  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\boardData.js public\todolist2.js tests\api.test.js tests\openapi.test.js tests\project-status.test.js data\statuses.example.json` | Touched source/test/data files | pass | - |
+  | tests | `node --test tests\api.test.js tests\openapi.test.js tests\project-status.test.js`; `node --test tests\board-refresh.test.js` | Status API/OpenAPI/settings and refresh metadata | pass, 102 tests | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 455 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+
+- Tests added/updated: Added API coverage for status CRUD, duplicate validation, status rename/delete reassignment, and custom status validation. Updated OpenAPI/source-contract coverage for dynamic status schemas, `/statuses` paths, Settings status tab, and API client helpers.
+- Regression impact: Touched status persistence, `/data` hydration, card status validation/dropdowns, board refresh metadata, Settings dialog, and OpenAPI contract. Full suite passed.
+- API docs: Updated OpenAPI for `/statuses`, `/statuses/{id}`, `Status*` schemas, dynamic `TodoStatus`, and `DataStore.statuses`.
+- Tooling gates: Syntax checks, Prettier, focused tests, full `npm test`, and final `npm run lint` passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Existing uncommitted status-bar/tag layout files remain in the working tree and were not reverted.
+
+### 2026-06-22T22:31:20Z - WorkLists
+
+- Summary: Expanded the card toolbar into a two-row metadata tray.
+- Problem: The new status dropdown made the existing single-row card toolbar too narrow for tags, dates, notes, and completion controls.
+- Requirement: Give the toolbar more vertical/horizontal capacity; keep status and notes at the top right; keep date and completion controls at the bottom right; move tag metadata across the bottom-left area.
+- Solution: Reworked `.card .actions` to a two-row grid with fixed top metadata slots and bottom utility/tag slots. Status stays fixed-width and centered in the top-right area, note count spans the top-right end, primary/secondary tags move to the bottom-left row, and date/completion controls sit on the bottom-right row. Completed cards move the created date one slot left so the completed date remains adjacent to the toggle.
+- Files/areas: `public/todoliststyles2.css`, `tests/project-status.test.js`, `tests/secondary-tags.test.js`, `tests/card-actions.test.js`, canonical changelog.
+- User-visible impact: Card toolbar metadata no longer competes for one narrow row; tags, status, notes, dates, and completion toggle have separated positions.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check public\todolist2.js` | Existing card renderer script | pass | - |
+  | format | `npx prettier --write public\todoliststyles2.css tests\project-status.test.js tests\secondary-tags.test.js tests\card-actions.test.js` | Touched CSS/test files | pass | - |
+  | tests | `node --test tests\project-status.test.js tests\secondary-tags.test.js tests\card-actions.test.js` | Toolbar/status/tags/notes layout source contracts | pass, 32 tests | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 450 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+
+- Tests added/updated: Updated source-contract assertions for the expanded toolbar rows, top-right status/notes placement, bottom-left tag placement, and bottom-right date/toggle placement.
+- Regression impact: CSS-only layout change for card action rows; no API, persistence, tag save, status save, notes, or completion behavior changed. Full suite passed.
+- API docs: Not relevant: no route, method, request/response schema, status, auth, or OpenAPI metadata changed in this toolbar-only pass.
+- Tooling gates: Syntax check, Prettier, focused layout tests, full `npm test`, and final `npm run lint` passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; this entry was written to the canonical personal WorkLists changelog. Existing uncommitted status-dropdown implementation files remain in the same working set.
+
+### 2026-06-22T22:19:40Z - WorkLists
+
+- Summary: Added card project status dropdown with persisted lifecycle state.
+- Problem: Cards only had tags and notes, so software lifecycle state was mixed into tagging or left implicit.
+- Requirement: Show a fixed-size status dropdown in the card header area, left of the notes button, using the documented workflow order; persist status through card payload/API data.
+- Solution: Added the `status` field with the ordered values Icebox, Unrefined, Ready, In Progress, In Review, Blocked, Done. New cards default to `Unrefined`; legacy/missing statuses render as `Unrefined` locally. Added optimistic UI updates, rollback on save failure, `PATCH /todos/:id/status`, DAL validation, API client support, OpenAPI docs, and regression/source-contract coverage.
+- Files/areas: `dal.js`, `server.js`, `openapi.js`, `public/apiService.js`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/api.test.js`, `tests/openapi.test.js`, `tests/card-actions.test.js`, `tests/project-status.test.js`, canonical changelog.
+- User-visible impact: Every card now shows a centered project status selector before the notes count button, and status changes persist to the card record.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\todolist2.js` | Touched JS files | pass | - |
+  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\project-status.test.js` | Touched source/test files | pass | - |
+  | tests | `node --test tests\api.test.js tests\openapi.test.js tests\project-status.test.js` | Status API, OpenAPI, and dropdown source contract | pass, 87 tests | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 450 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+
+- Tests added/updated: Added API coverage for new-card default status, status update, and invalid status rejection. Added OpenAPI assertions for status path/schema. Added dropdown source/CSS coverage and updated card action grid contract for shifted notes/checkbox columns.
+- Regression impact: Touched card action-row layout, todo payload mutation, and Todo API schema. Existing tag, notes, completion, and card action behavior remain covered by full suite.
+- API docs: Updated OpenAPI for `PATCH /todos/{id}/status`, `Todo.status`, `TodoPatch.status`, `TodoStatus`, and `TodoStatusRequest`.
+- Tooling gates: Syntax checks, Prettier, focused status tests, full `npm test`, and final `npm run lint` passed.
+- Conflicts / exceptions: App repo changelog is a pointer; this entry was written to the canonical personal WorkLists changelog. Existing uncommitted WorkLists files are part of this task only.
+
 ### 2026-06-22T20:40:07Z - WorkLists
 
 - Summary: Restored durable multi-board linking from the Link Boards dialog.
@@ -2506,4 +2699,83 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 
 
+
+
+
+
+### 2026-06-22T22:48:00Z - WorkLists
+
+- Summary: Refined card status bar spacing, color, and tag wrapping.
+- Problem: The expanded card action bar stayed too tall, too bold, clipped tags, used light native select options, and kept created date near bottom-right date controls.
+- Requirement: Compact the bar, harmonize colors with notes counter styling, keep status dropdown options dark, show tags fully, and place created date top-left.
+- Solution: Reduced row height, padding, and min-height; softened `.card .actions`; added dark select option styling; moved `.creation-date` to the top-left grid cells; changed primary and secondary tag chips to wrap with visible overflow.
+- Files/areas: `public/todoliststyles2.css`, `tests/project-status.test.js`, `tests/secondary-tags.test.js`, `tests/card-actions.test.js`, canonical changelog.
+- User-visible impact: Status bar is shorter and softer; created date is top-left; status dropdown options stay dark; tags wrap instead of truncating.
+- Tests run: `node --check public\todolist2.js` passed; `npx prettier --write public\todoliststyles2.css tests\project-status.test.js tests\secondary-tags.test.js tests\card-actions.test.js` passed; `node --test tests\project-status.test.js tests\secondary-tags.test.js tests\card-actions.test.js` passed, 32 tests; `npm test` passed, 450 tests; `npm run lint` passed.
+- Tests added/updated: Updated source-contract assertions for compact rows, soft bar color, dark select options, top-left created date, and non-truncating tag wrapping.
+- Regression impact: CSS-only card status-bar layout refinement; no API, persistence, or event behavior changed. Full suite passed.
+- API docs: Not relevant; no HTTP route, schema, or contract changes.
+- Tooling gates: syntax, Prettier, focused tests, full test, and lint passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Existing status-dropdown implementation files remain in the same working set.
+
+### 2026-06-22T22:53:55Z - WorkLists
+
+- Summary: Removed unintended status-bar visual highlighting.
+- Problem: The prior status-bar refinement over-applied color/highlight styling to the action bar, dates, status selector, and tag chips.
+- Requirement: Preserve compact layout and wrapping while keeping the bar minimal: no new action-bar color override, no highlighted date pills, and no boxed status selector.
+- Solution: Removed the `.card .actions` color/border override, flattened created date/status/tag surfaces to transparent backgrounds with no radius, kept dark dropdown options, and retained the compact grid/wrapping layout.
+- Files/areas: `public/todoliststyles2.css`, `tests/project-status.test.js`, `tests/secondary-tags.test.js`, `tests/card-actions.test.js`, canonical changelog.
+- User-visible impact: Status bar keeps the improved layout without extra boxes, lines, or distracting metadata highlights.
+- Tests run: `node --check public\todolist2.js` passed; `npx prettier --write public\todoliststyles2.css tests\project-status.test.js tests\secondary-tags.test.js tests\card-actions.test.js` passed; `node --test tests\project-status.test.js tests\secondary-tags.test.js tests\card-actions.test.js` passed, 32 tests; `npm test` passed, 450 tests; `npm run lint` passed.
+- Tests added/updated: Added source-contract checks preventing action-bar color overrides and metadata pill styling from returning.
+- Regression impact: CSS-only visual correction; API, persistence, and event behavior unchanged.
+- API docs: Not relevant; no HTTP route, schema, or contract changes.
+- Tooling gates: syntax, Prettier, focused tests, full test, and lint passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog.
+
+### 2026-06-22T22:57:08Z - WorkLists
+
+- Summary: Finalized minimal compact status-bar treatment.
+- Problem: The status dropdown menu was too black for the app scheme, and multiple tags could expand the action bar too tall.
+- Requirement: Keep the status bar compact and minimal; avoid added highlights, avoid black dropdown menus, and prevent tag count from increasing bar height.
+- Solution: Kept status/select/date/tag surfaces transparent, set status dropdown options to app gray `#626262`, removed forced dark native menu mode, fixed action rows at `22px 18px`, and changed primary/secondary tags to single-line horizontal scroll rails with hidden scrollbars.
+- Files/areas: `public/todoliststyles2.css`, `tests/project-status.test.js`, `tests/secondary-tags.test.js`, `tests/card-actions.test.js`, canonical changelog.
+- User-visible impact: Action bar stays compact with many tags; status dropdown menu fits the gray scheme; metadata remains visually quiet.
+- Tests run: `node --check public\todolist2.js` passed; `npx prettier --write public\todoliststyles2.css tests\project-status.test.js tests\secondary-tags.test.js tests\card-actions.test.js` passed; `node --test tests\project-status.test.js tests\secondary-tags.test.js tests\card-actions.test.js` passed, 32 tests; `npm test` passed, 450 tests; `npm run lint` passed.
+- Tests added/updated: Updated source-contract checks for fixed action-bar rows, gray dropdown options, transparent metadata surfaces, and bounded tag rails.
+- Regression impact: CSS-only visual/layout correction; API, persistence, and event behavior unchanged.
+- API docs: Not relevant; no HTTP route, schema, or contract changes.
+- Tooling gates: syntax, Prettier, focused tests, full test, and lint passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog.
+
+### 2026-06-22T23:03:20Z - WorkLists
+
+- Summary: Fixed delayed secondary-tag display and status menu color.
+- Problem: Secondary tags could stay hidden until a later card drag/re-render, and the status dropdown option surface matched the toolbar gray too closely.
+- Requirement: Show secondary tags on initial/render refresh paths without requiring drag, and make the dropdown menu darker but not black.
+- Solution: Included primary/secondary tag records in board refresh metadata, hydrated secondary tag inventory before search card rendering, repainted secondary tag displays after board data application, and changed status dropdown options to medium dark gray `#3d3d3d`.
+- Files/areas: `public/boardData.js`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/board-refresh.test.js`, `tests/secondary-tags.test.js`, `tests/project-status.test.js`, canonical changelog.
+- User-visible impact: Secondary tags render immediately from fresh data; dragging is no longer needed to reveal them. Status dropdown menu now fits the darker app/menu scheme.
+- Tests run: `node --check public\todolist2.js` passed; `node --check public\boardData.js` passed; `npx prettier --write public\boardData.js public\todolist2.js public\todoliststyles2.css tests\board-refresh.test.js tests\secondary-tags.test.js tests\project-status.test.js` passed; `node --test tests\board-refresh.test.js tests\secondary-tags.test.js tests\project-status.test.js` passed, 30 tests; `npm test` passed, 452 tests; `npm run lint` passed.
+- Tests added/updated: Added refresh metadata coverage for tag records and source-contract coverage for tag inventory hydration before card repaint.
+- Regression impact: Refresh/display/CSS-only correction; no API route or persistence schema changes.
+- API docs: Not relevant; no HTTP route, schema, or contract changes.
+- Tooling gates: syntax, Prettier, focused tests, full test, and lint passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Existing status-dropdown work remains in the same uncommitted working set.
+
+### 2026-06-23T02:23:20Z - WorkLists
+
+- Summary: Fixed secondary tag IDs being stripped during data hydration.
+- Problem: Cards with saved secondary tags rendered without visible tags and opened the tag chooser with nothing checked until a later drag/re-render path rebuilt state.
+- Root cause: `createFullBoardDataSnapshot()` normalized todo `secondaryTagIds` against the stale global `secondaryTags` array before assigning the fetched `secondaryTags` payload, so valid IDs could be dropped during load.
+- Requirement: Preserve todo secondary tag IDs from the database during initial/API/local hydration and keep card display plus chooser checkmarks connected to persisted data.
+- Solution: Added snapshot-local secondary tag inventory in `createFullBoardDataSnapshot()`, updated `normalizeTaskSecondaryTagIds()` to accept an explicit valid tag inventory, and reordered local-storage fallback hydration so stored tags are available before stored todos are normalized.
+- Files/areas: `public/todolist2.js`, `tests/secondary-tags.test.js`, canonical changelog.
+- User-visible impact: Cards with secondary tags render those tags immediately, and opening their tag menu shows the saved secondary tags checked without requiring a drag attempt.
+- Tests run: `node --check public\todolist2.js` passed; `npx prettier --write public\todolist2.js tests\secondary-tags.test.js` passed; `node --test tests\secondary-tags.test.js tests\board-refresh.test.js tests\project-status.test.js` passed, 31 tests; `npm test` passed, 453 tests; `npm run lint` passed.
+- Tests added/updated: Added regression coverage ensuring fetched todo secondary tag IDs are preserved while hydrating fetched tag inventory.
+- Regression impact: Data hydration fix only; no API route or persistence schema changes.
+- API docs: Not relevant; no HTTP route, schema, or contract changes.
+- Tooling gates: syntax, Prettier, focused tests, full test, and lint passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Earlier status-dropdown/action-bar edits remain in the same uncommitted working set.
 
