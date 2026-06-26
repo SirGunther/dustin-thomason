@@ -36,6 +36,321 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-06-27T00:10:00Z - WorkLists
+
+- Summary: Synced board reserve motion with context-pane pop-out animation.
+- Problem: When a context window (notes pane) pops out, the pane CSS-transitions over 0.24s but the board's right reserve padding was applied instantly in JS — columns snapped while the pane glided, reading as two disjointed motions at different cadence/speed. Left side-panel used a slightly different 0.25s duration.
+- Requirement: Board "make room" motion must animate simultaneously, at the same speed and easing, as the pane sliding out; the deliberate held-reserve close behavior (columns stationary during close) must be preserved.
+- Solution: Added `transition: padding-right 0.24s ease` to `#board` so the right reserve glides on the same curve as the notes pane on open. Forced the close reserve drop instant in `finishNotesPaneCloseReserve` (suppress + restore the board transition) so the held-then-drop close is unchanged. Unified the left side-panel transition from 0.25s to 0.24s so left/right panes move at one speed.
+- Files/areas: `public/todoliststyles2.css`, `public/todolist2.js`, `tests/context-windows.test.js`, canonical changelog.
+- User-visible impact: Opening the notes pane now glides the columns aside in lockstep with the pane, one continuous motion instead of a snap-then-slide; left and right panes animate at the same speed.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/context-windows.test.js` | Touched source/CSS/test | pass | - |
+  | syntax | `node --check public/todolist2.js` | Touched runtime file | pass | - |
+  | tests | `node --test tests/context-windows.test.js` | Notes-pane reserve/motion source+CSS contract | pass, 25 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | browser | `npm run test:browser` | Notes-pane open/close reserve + scroll stability | pass, 3 tests | - |
+
+- Tests added/updated: `tests/context-windows.test.js` now asserts `#board` carries `transition: padding-right 0.24s ease` and that `finishNotesPaneCloseReserve` suppresses the transition for the instant close drop.
+- Regression impact: Held-reserve close geometry (closing/closed padding + scroll) unchanged — guarded by the existing passing browser smoke; only the open-side reserve gains the synced glide. Left-panel overlay padding-left stays instant (stationary-content design untouched). Full suite + browser smoke green.
+- Known residual: The conditional active-card reveal scroll (only when the active card sits behind the pane) still repositions via rAF + 220ms rather than gliding; the common already-visible case is fully synced.
+- API docs: Not relevant: UI-only animation timing; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+
+### 2026-06-26T23:30:00Z - WorkLists
+
+- Summary: Decoupled left side-panel collapse animation from board scroll state.
+- Problem: Collapse forked on scroll-derived mode (origin -> push reflow; offset -> overlay unless protected content forced push). Collapsing while scrolled right could hit the push branch, reflowing columns ~240px = jarring scroll/column "bump" and an animation that looked inconsistent vs the stable overlay slide.
+- Requirement: Collapse must be a pure function of board offset, not the compound scroll + protected-content mode; an offset collapse must never reflow-bump the board; protected-content push on open stays intact.
+- Solution: `closeSidePanelWithoutLayoutBump` now branches on `isBoardScrolledAwayFromLeft` — origin keeps the push collapse, any offset always collapses via the proven-stable overlay slide. Added `convertSidePanelPushToOverlayInPlace` to switch an offset push-mode panel to overlay using measure-and-restore (anchor first board item, cancel residual drift with one scroll correction) so columns hold position through the transition. Open-time mode decision (incl. protected-content push) unchanged.
+- Files/areas: `public/todolist2.js`, `tests/search-shortcuts.test.js`, canonical changelog.
+- User-visible impact: Collapsing the menu while scrolled right no longer jumps the columns or horizontal scroll; the collapse animation is consistent regardless of scroll position.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public/todolist2.js tests/search-shortcuts.test.js` | Touched source/test files | pass | - |
+  | syntax | `node --check public/todolist2.js` | Touched runtime file | pass | - |
+  | tests | `node --test tests/search-shortcuts.test.js` | Side-panel collapse source contract | pass, 16 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | browser | `npm run test:browser` | Side-panel overlay open/close stability | pass, 3 tests | - |
+
+- Tests added/updated: Source-contract coverage in `tests/search-shortcuts.test.js` asserts the decoupled collapse (offset-driven branch via `isBoardScrolledAwayFromLeft`, `!boardOffset && !alreadyOverlay` origin guard, and `convertSidePanelPushToOverlayInPlace` in-place conversion). Behavioral overlay-close stability remains guarded by the existing passing browser smoke ("overlays the side panel unless protected content would be covered").
+- Regression impact: Tested paths (origin push at `scrollLeft 0`, offset overlay open/close) are byte-for-byte identical; only the previously-untested push-while-offset close gains the stable overlay conversion. Full suite + browser smoke green.
+- API docs: Not relevant: UI-only layout/scroll/animation behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+
+### 2026-06-26T22:04:14Z - WorkLists
+
+- Summary: Balanced left/right pane scroll reserves and softened notes-pane motion.
+- Problem: Left overlay mode could still cover the first board item at the far-left scroll limit; right notes-pane reserve was applied to both wrapper and board, creating excessive right over-scroll; notes-pane slide animation felt too abrupt.
+- Requirement: Left menu overlay must allow the leftmost column/add-column area to be fully uncovered; right reserve must be single-sided and not scroll far past the add-column area; notes-pane transition should be slightly slower.
+- Solution: Added left overlay reserve on `#board` with scroll compensation, moved notes-pane reserve to `#board` only, stored the computed right reserve through close to avoid rounding drift, and changed notes-pane transform duration from `0.18s` to `0.24s` with a matching close fallback.
+- Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/context-windows.test.js`, `tests/search-shortcuts.test.js`, `tests/browser-notes-smoke.js`, canonical changelog.
+- User-visible impact: While the left menu overlays a scrolled board, users can scroll fully left and still see the first board item; right-side over-scroll is reduced; notes-pane open/close feels less abrupt.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\search-shortcuts.test.js tests\browser-notes-smoke.js` | Touched source/CSS/test files | pass | - |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\browser-notes-smoke.js` | Touched runtime/browser files | pass | - |
+  | tests | `node --test tests\context-windows.test.js tests\search-shortcuts.test.js tests\board-scroll.test.js` | Pane reserves, side-panel overlay, board scroll contracts | pass, 47 tests | - |
+  | browser | `npm run test:browser` | Left overlay reveal, exact overlay close geometry, right reserve, notes-pane smoke | pass, 3 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+
+- Tests added/updated: Browser smoke now verifies the leftmost board item clears the open overlay menu at `scrollLeft = 0`, right reserve lives on `#board` only, and notes-pane close keeps the stored reserve stable; source-contract coverage asserts left overlay reserve helpers and the slower notes-pane transition.
+- Regression impact: Isolated to horizontal board reserve math and notes-pane transform timing; full suite and browser smoke passed.
+- API docs: Not relevant: UI-only layout/scroll/animation behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Focused tests, browser smoke, lint, and full `npm test` passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+### 2026-06-26T21:51:24Z - WorkLists
+
+- Summary: Removed one-pixel side-panel overlay close shift.
+- Problem: Closing the left menu from scrolled overlay mode caused a visible one-pixel board shift after the overlay close finished.
+- Diagnosis: The collapsed static side panel was `240px` wide plus a `1px` right border, but its collapsed offset was only `-240px`, leaving a one-pixel flex footprint when overlay mode was removed.
+- Requirement: Overlay close must preserve board wrapper and board content left positions exactly during and after close.
+- Solution: Made `.side-panel` use `box-sizing: border-box` so width includes the border and the existing `-240px` collapsed margin fully removes the panel footprint; tightened browser assertions to exact final-close geometry.
+- Files/areas: `public/todoliststyles2.css`, `tests/search-shortcuts.test.js`, `tests/browser-notes-smoke.js`, canonical changelog.
+- User-visible impact: No one-pixel board nudge when closing the left menu from a scrolled overlay state.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todoliststyles2.css tests\search-shortcuts.test.js tests\browser-notes-smoke.js` | Touched CSS/test files | pass, unchanged | - |
+  | tests | `node --test tests\search-shortcuts.test.js tests\board-scroll.test.js` | Side-panel CSS contract and board scroll contracts | pass, 22 tests | - |
+  | browser | `npm run test:browser` | Exact overlay close geometry, notes-pane smoke | pass, 3 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+
+- Tests added/updated: Browser smoke now asserts wrapper/content left positions remain within `0.01px` during and after overlay close; source-contract coverage asserts side-panel border-box sizing.
+- Regression impact: Isolated to side-panel box sizing and browser geometry assertions; left-edge push and overlay mode remain covered.
+- API docs: Not relevant: UI-only CSS/layout behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Focused tests, browser smoke, lint, and full `npm test` passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+### 2026-06-26T21:42:19Z - WorkLists
+
+- Summary: Aligned notes-pane close behavior with the side-panel viewport rule.
+- Problem: The notes pane already scrolled right-edge active cards out from under the pane, but close cleared reserved board space immediately while the pane transform was still retracting.
+- Requirement: Notes pane must keep active-card visibility while open and avoid board scroll/location bumps during close animation; reserve may clear only after the pane finishes retracting.
+- Solution: Added a notes-pane close reserve guard using `notes-pane-closing`, `transitionend`, and a fallback timer; opening a new notes pane clears any stale close guard before recalculating width and reserve.
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`, `tests/browser-notes-smoke.js`, canonical changelog.
+- User-visible impact: Closing the contextual notes pane no longer clamps or shifts the board while the pane retracts after auto-revealing a right-edge card.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js tests\browser-notes-smoke.js` | Touched source/test files | pass, unchanged | - |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\browser-notes-smoke.js` | Touched runtime/browser files | pass | - |
+  | tests | `node --test tests\context-windows.test.js tests\board-scroll.test.js` | Notes-pane reserve guard and board scroll contracts | pass, 31 tests | - |
+  | browser | `npm run test:browser` | Notes-pane reveal and stable close, side-panel smoke | pass, 3 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+
+- Tests added/updated: Browser smoke now asserts notes-pane close keeps board padding and scroll position stable mid-retract, then clears reserve after close; source-contract coverage asserts close guard helpers and transition/fallback release path.
+- Regression impact: Isolated to notes-pane close timing and board reserve release; existing active-card reveal behavior remains covered.
+- API docs: Not relevant: UI-only layout/scroll behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Focused tests, browser smoke, lint, and full `npm test` passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+
+### 2026-06-26T21:07:45Z - WorkLists
+
+- Summary: Restored left-edge side-panel push and stable overlay close.
+- Problem: The side panel correctly overlaid scrolled board content, but left-edge opening no longer proved the previous full-screen push behavior, and overlay-mode closing could remove layout isolation before the retract animation finished.
+- Requirement: At `scrollLeft = 0`, opening the board library must push the board after the existing margin animation settles; when the board is scrolled right, opening/closing must remain overlay-only and keep the board position static during retract.
+- Solution: Kept scroll-left-aware side-panel mode selection, held overlay mode through close transition via `side-panel-overlay-closing`, and updated browser coverage to wait on computed margin state before asserting left-edge push.
+- Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/search-shortcuts.test.js`, `tests/browser-notes-smoke.js`, canonical changelog.
+- User-visible impact: Left-edge menu open preserves the expected screen push; scrolled-board overlay open/close no longer causes a board-location bump.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\search-shortcuts.test.js tests\browser-notes-smoke.js` | Touched source/test files | pass, unchanged | - |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\browser-notes-smoke.js` | Touched runtime/browser files | pass | - |
+  | tests | `node --test tests\search-shortcuts.test.js tests\context-windows.test.js tests\board-scroll.test.js` | Side-panel contracts, notes viewport reserve, board scroll | pass, 47 tests | - |
+  | browser | `npm run test:browser` | Left-edge push, scrolled overlay close stability, notes reveal | pass, 3 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+
+- Tests added/updated: Browser smoke now asserts left-edge push after margin animation, scrolled overlay mode, and static board position during overlay close; source-contract coverage asserts scroll-left-aware side-panel gating and overlay close guards.
+- Regression impact: Isolated to side-panel layout-mode timing/closing behavior and notes-pane overlap coverage already in the same smoke file.
+- API docs: Not relevant: UI-only layout/scroll behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Focused tests, browser smoke, lint, and full `npm test` passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+
+### 2026-06-26T20:46:51Z - WorkLists
+
+- Summary: Corrected pane/menu viewport behavior after UI repro.
+- Problem: The first implementation still let the right notes pane cover cards during its animation/final position, and the left side panel still treated generic overflow as a reason to bump the board.
+- Requirement: Notes-pane visibility must calculate against the pane's final fixed position and reserve real board scroll space; side-panel bumping must be based on protected content coverage, not overflow alone.
+- Solution: Moved notes-pane reserve onto both board wrapper and board, calculated safe right edge from final pane width/viewport, scheduled a post-transition correction, removed overflow-only side-panel push logic, tracked last protected board focus through the toggle click, and corrected protected column selectors to the real `.column` class.
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`, `tests/search-shortcuts.test.js`, `tests/browser-notes-smoke.js`, canonical changelog.
+- User-visible impact: Right-edge active cards scroll out from under the notes pane; the left board library overlays instead of bumping for overflow-only/whitespace states.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\search-shortcuts.test.js tests\browser-notes-smoke.js` | Touched source/test files | pass | - |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js`; `node --check tests\search-shortcuts.test.js`; `node --check tests\browser-notes-smoke.js` | Touched JS files | pass | - |
+  | tests | `node --test tests\context-windows.test.js tests\search-shortcuts.test.js tests\board-scroll.test.js` | Notes-pane reserve, side-panel bump gating, board scroll contracts | pass, 47 tests | - |
+  | browser | `npm run test:browser` | Playwright notes-pane viewport, right-edge reveal, and side-panel overlay smoke | pass, 3 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+
+- Tests added/updated: Added browser coverage for right-edge active-card reveal under the notes pane and changed side-panel browser coverage to assert overflow-only overlay behavior; updated source-contract coverage for final-pane-position math, board-level reserve, post-transition correction, protected-focus tracking, and `.column` protected selectors.
+- Regression impact: Isolated to notes-pane horizontal reserve/scroll correction and side-panel layout-mode selection; full unit suite plus browser smoke passed.
+- API docs: Not relevant: UI-only layout/scroll behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Focused tests, browser smoke, lint, and full `npm test` passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+
+### 2026-06-26T20:15:04Z - WorkLists
+
+- Summary: Browser-verified notes and side-panel layout.
+- Problem: Unit/source checks covered the overlap and bump fixes, but the real browser path still needed proof and the existing smoke test had stale assumptions around hidden title text and notes-pane autosave behavior.
+- Requirement: Browser smoke must verify notes-pane viewport behavior plus side-panel overlay/push behavior against actual DOM/CSS interactions.
+- Solution: Updated the Playwright smoke to read hidden title text via `textContent`, use hover before hidden note action controls, align the card-edit outside-click path with existing autosave behavior, and add a side-panel browser case for overlay-without-overflow and push-with-overflow.
+- Files/areas: `tests/browser-notes-smoke.js`, canonical changelog.
+- User-visible impact: No production UI change in this pass; browser coverage now exercises the shipped notes-pane and side-panel layout behavior.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write tests\browser-notes-smoke.js` | Browser smoke test | pass, unchanged | - |
+  | syntax | `node --check tests\browser-notes-smoke.js` | Browser smoke test | pass | - |
+  | browser | `npm run test:browser` | Playwright notes-pane viewport and side-panel overlay/push smoke | pass, 2 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+
+- Tests added/updated: Updated Playwright smoke coverage for hidden title text, hover-revealed notes-pane actions, existing-edit autosave behavior, side-panel overlay mode, and side-panel push mode under overflow.
+- Regression impact: Test-only browser coverage update; production behavior unchanged from the prior implementation pass. Full suite and browser smoke passed.
+- API docs: Not relevant: browser test update only; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Browser smoke, lint, and full `npm test` passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+
+### 2026-06-26T15:17:05Z - WorkLists
+
+- Summary: Gated side-panel layout bumps.
+- Problem: The side-panel toggle could shift the board even when no horizontal overflow existed, creating visual bumping without protecting clipped content.
+- Requirement: Side-panel opening must distinguish overflow/protected-content states from non-overflow states and only push the board when overlaying the menu would hide accessible work content.
+- Solution: Added side-panel layout helpers that detect board horizontal overflow and focused/active protected content, switch the content area into overlay mode when no push is needed, and resync that decision on toggle, startup, resize, and board render.
+- Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/search-shortcuts.test.js`, canonical changelog.
+- User-visible impact: Opening the board library no longer bumps the board in non-overflow states; existing pushed layout remains available when overflow or protected content needs it.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\search-shortcuts.test.js` | Touched source/test files | pass | - |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js`; `node --check tests\search-shortcuts.test.js` | Touched JS files | pass | - |
+  | tests | `node --test tests\search-shortcuts.test.js tests\context-windows.test.js tests\board-scroll.test.js` | Side-panel bump gating, notes-pane reserve, board scroll contracts | pass, 47 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+
+- Tests added/updated: Updated shortcut integration coverage for side-panel overflow detection, protected-content detection, overlay-mode class toggling, toggle/render/resize sync, and CSS overlay positioning.
+- Regression impact: Isolated to side-panel layout mode selection and the content-area overlay class; existing push behavior remains when the board overflows or protected content would be covered. Full suite passed.
+- API docs: Not relevant: UI-only layout/scroll behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Prettier, syntax checks, focused tests, final `npm run lint`, and final `npm test` passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+
+### 2026-06-26T15:06:05Z - WorkLists
+
+- Summary: Protected active cards from notes-pane overlap.
+- Problem: Three-part issue: (1) expanded notes pane obscured active cards, (2) right-scrolled board views did not auto-correct cards hidden under the pane, (3) side-panel menu shifts still need overflow-aware gating.
+- Requirement: When the notes pane opens or resizes, the active card must remain visible; if the pane would cover it, the board must gain enough right-side scroll reserve and nudge horizontal scroll to reveal the card.
+- Solution: Added notes-pane viewport reserve and active-card visibility helpers, wired them to pane open, close, resize, window resize, and active-card sync; kept side-panel overflow gating as the next untouched part.
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`, canonical changelog.
+- User-visible impact: Opening or resizing the notes pane now reserves board viewport space and auto-scrolls the active card out from under the pane.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js` | Touched source/test files | pass | - |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js` | Touched JS files | pass | - |
+  | tests | `node --test tests\context-windows.test.js tests\board-scroll.test.js` | Notes-pane viewport reserve and board scroll contracts | pass, 31 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 466 tests | - |
+
+- Tests added/updated: Updated context-window source-contract coverage for notes-pane board reserve, active-card auto-scroll, close cleanup, open scheduling, resize handling, and requestAnimationFrame scheduling.
+- Regression impact: Isolated to notes-pane viewport reservation and horizontal scroll correction; board scroll state is recaptured after auto-scroll, notes-pane close clears the reserve, and full suite passed.
+- API docs: Not relevant: UI-only layout/scroll behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Prettier, syntax checks, focused tests, final `npm run lint`, and final `npm test` passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted. Part 3, side-panel overflow-aware bump gating, remains intentionally untouched.
+
+
+### 2026-06-26T14:54:01Z - WorkLists
+
+- Summary: Fixed notes-pane action menu visibility.
+- Problem: The notes-pane ellipsis trigger was present, but its dropdown did not appear because the shared card action menu rendered below the notes pane stacking layer.
+- Requirement: Clicking the notes-pane ellipsis must show the active card action menu above the pane.
+- Solution: Added a notes-pane-specific menu class after opening/toggling the shared `CardActions` menu and raised that menu layer above the notes pane.
+- Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/context-windows.test.js`, canonical changelog.
+- User-visible impact: Clicking the notes-pane ellipsis now reveals the card action dropdown instead of hiding it behind the pane.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js` | Touched source/test files | pass, unchanged | - |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js` | Touched JS files | pass | - |
+  | tests | `node --test tests\context-windows.test.js tests\card-actions.test.js tests\task-clipboard.test.js tests\card-move-ui.test.js` | Notes-pane/card action menu visibility and adjacent action wiring | pass, 59 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 465 tests | - |
+
+- Tests added/updated: Updated notes-pane source-contract coverage to assert the pane menu receives the elevated class and z-index.
+- Regression impact: Isolated to menus opened from the notes-pane header; regular card menus keep the existing base stacking layer. Full suite passed.
+- API docs: Not relevant: CSS/UI stacking fix only; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Prettier, syntax checks, focused tests, final `npm run lint`, and final `npm test` passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+
+### 2026-06-26T14:37:35Z - WorkLists
+
+- Summary: Added notes-pane card action menu.
+- Problem: The notes pane exposed card management through scattered preview controls and lacked one active-card action hub.
+- Requirement: Add a header ellipsis menu for the active notes card with card-level parity: Copy, Copy All, Refine, Voice, Move, Edit Notes, and Delete.
+- Solution: Added a disabled-until-active header trigger, bound it to the existing `CardActions` menu at click/keyboard time, resolved handlers from `activeNotesTaskId`, copied card+notes through the existing clipboard path, routed Move/Delete through existing card move and notes-pane delete flows, and styled the header actions as compact icon controls.
+- Files/areas: `public/index.html`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/context-windows.test.js`, `tests/task-clipboard.test.js`, `tests/card-move-ui.test.js`, canonical changelog.
+- User-visible impact: When the notes pane is open, the header ellipsis exposes the active card's standard actions, including Copy All for the pane contents, Move, and Delete-with-notes behavior.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\index.html public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\task-clipboard.test.js tests\card-move-ui.test.js`; `npx prettier --write tests\context-windows.test.js` | Touched source/test files | pass, unchanged | - |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js`; `node --check tests\task-clipboard.test.js`; `node --check tests\card-move-ui.test.js` | Touched JS files | pass | - |
+  | tests | `node --test tests\context-windows.test.js tests\task-clipboard.test.js tests\card-actions.test.js tests\card-move-ui.test.js` | Notes-pane context, clipboard, card actions, move wiring | pass, 59 tests | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 465 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+
+- Tests added/updated: Updated source-contract coverage for the notes-pane header action trigger, active-card handler mapping, Copy All content source, Move routing, Delete routing, and header action accessibility.
+- Regression impact: Reused existing `CardActions`, clipboard, card move, AI/voice, and notes-pane delete paths; isolated new behavior to notes-pane header trigger binding and active-task handler resolution. Full suite passed.
+- API docs: Not relevant: UI-only notes-pane action surface; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Prettier, syntax checks, focused tests, full `npm test`, and final `npm run lint` passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Existing uncommitted edits in `public/markdownAuthoring.js`, `tests/markdown-authoring.test.js`, `tests/markdown-renderer.test.js`, and unrelated prior edits inside `public/todolist2.js`, `public/todoliststyles2.css`, `tests/context-windows.test.js`, and `tests/task-clipboard.test.js` were present in the working tree and were not reverted.
+
+### 2026-06-26T14:16:15Z - WorkLists
+
+- Summary: Enabled checklist Enter continuation.
+- Problem: Markdown authoring continued bullet and numbered lists, but checklist lines like `- [ ] Task` fell through as plain unordered list text and generated `- ` instead of the next checklist item.
+- Requirement: Card descriptions and notes textareas must continue and cancel nested checklist items with the same Enter/Backspace behavior as existing list types.
+- Solution: Extended `public/markdownAuthoring.js` list parsing to recognize task-list markers, continue them as unchecked checklist items, preserve indentation, and reuse existing cancel-on-empty logic.
+- Files/areas: `public/markdownAuthoring.js`, `tests/markdown-authoring.test.js`, canonical changelog.
+- User-visible impact: Pressing Enter after `- [ ] Task` or `- [x] Task` now inserts the next `- [ ] ` item in new-card, card-edit, and notes textareas; Enter/Backspace on an empty generated checklist marker cancels back to the current indent.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\markdownAuthoring.js tests\markdown-authoring.test.js` | Touched markdown authoring files | pass, unchanged | - |
+  | syntax | `node --check public\markdownAuthoring.js`; `node --check tests\markdown-authoring.test.js` | Touched JS files | pass | - |
+  | tests | `node --test tests\markdown-authoring.test.js` | Markdown authoring helper and wiring | pass, 12 tests | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 465 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+
+- Tests added/updated: Added focused coverage for unchecked checklist continuation, checked-to-unchecked continuation, nested checklist indentation, Enter cancellation, and Backspace cancellation.
+- Regression impact: Isolated to `MarkdownAuthoring.getListItemParts()` parsing and existing Enter/Backspace authoring flows; wiring across new-card, card-edit, notes create, notes card edit, and note edit remains unchanged and covered by the existing integration assertions.
+- API docs: Not relevant: UI textarea authoring behavior only; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Prettier, syntax checks, focused markdown-authoring test, full `npm test`, and final `npm run lint` passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Existing uncommitted changes in `public/todolist2.js`, `public/todoliststyles2.css`, `tests/context-windows.test.js`, `tests/markdown-renderer.test.js`, and `tests/task-clipboard.test.js` were present before this task and were not touched.
+
 ### 2026-06-25T15:14:32Z - WorkLists
 
 - Summary: Pinned General above Settings tabs.

@@ -1,25 +1,26 @@
 # Development / Testing Prerequisites
 
-Complete this checklist **before** beginning any Atlas-related testing or development work. It exists to prevent the recurring class of failures we keep hitting: environment setup gaps, package-install (token) issues, missing Postgres extensions, and credential/permission blockers.
-
-The goal is not just to get work done, but to leave behind enough documentation that the work can be **understood, audited, repeated, and debugged manually** — without an AI agent.
-
-> Related docs: the end-to-end runbook is [`full-stack-local-setup.md`](./full-stack-local-setup.md); per-service runbooks are [`callisto-local.mdc`](./callisto-local.mdc), [`triton-local.mdc`](./triton-local.mdc), [`europa-local.mdc`](./europa-local.mdc). This file is the pre-flight gate that sits in front of all of them.
+Run through this checklist **before** starting any Atlas local work. Full startup commands: [`full-stack-local-setup.md`](./full-stack-local-setup.md).
 
 ---
 
-## Atlas Testing Setup
+## Pre-flight checklist
 
-Before testing with Atlas, ensure the following prerequisites are complete:
+- [ ] **Start Docker Desktop**
+- [ ] **Start the Postgres container** — `docker start callisto-postgres`
+- [ ] **Start the RabbitMQ container** — `docker start callisto-rabbitmq`
+- [ ] **Open DBeaver** and confirm the `callisto` connection is live
+- [ ] **Get fresh AWS credentials** from [Planet Portal](https://planetportal.awsapps.com/start/#/?tab=accounts) → Neptune SB *(expire every 1–4h)*
+- [ ] **Export your GitHub PAT** in the shell you'll run `npm ci` from:
+  ```powershell
+  $env:GITHUB_TOKEN = "<your-pat>"   # PowerShell
+  ```
+  ```bash
+  export GITHUB_TOKEN=<your-pat>     # Git Bash
+  ```
+  PAT must have `read:packages` **and** be SSO-authorized for the PlanetDepos org.
 
-- [ ] **Start the required Docker containers.** `callisto-postgres` (Postgres) and `callisto-rabbitmq` (RabbitMQ). Verify with `docker ps`. If they don't exist yet, follow Step 0 of `full-stack-local-setup.md`.
-- [ ] **Start your database client (DBeaver).** Connections for the `callisto` and `triton` databases (both on the same `callisto-postgres` container, port `5432`).
-- [ ] **Confirm the database is running and accessible.** `docker exec callisto-postgres psql -U postgres -d callisto -c "SELECT 1;"` returns a row. The `callisto` schema is seeded (roles, resource_keys, permissions).
-- [ ] **Confirm required Postgres extensions exist.** `uuid-ossp` and `pgcrypto` in the `callisto` DB's `public` schema — the `notifications` migrations call `uuid_generate_v4()` on startup and the app crashes without them. See `full-stack-local-setup.md` → Step 0 / Common issues.
-- [ ] **Verify cloud credentials are configured.** This stack runs on **AWS** (Neptune SB), not Azure: Callisto verifies Cognito tokens and Triton uses S3/SQS. Pull fresh session creds from [Planet Portal](https://planetportal.awsapps.com/start/#/?tab=accounts) — they expire every 1-4 hours. (If a task additionally involves Azure/Foundry tooling, configure those separately; they are not part of the Atlas local stack.)
-- [ ] **Confirm all required GitHub tokens are available.** A PAT is needed for `npm ci` to install `@planetdepos/*` packages from GitHub Packages.
-- [ ] **Check that the GitHub token is not expired.** An expired PAT 401s exactly like a missing one.
-- [ ] **Confirm the token has access to install packages from the private/org repositories.** It must have `read:packages` **and** be SSO-authorized for the PlanetDepos org. Export it in the **same shell** before installing (`$env:GITHUB_TOKEN` in PowerShell / `export GITHUB_TOKEN` in Git Bash), because `.npmrc` resolves `_authToken=${GITHUB_TOKEN}` from the shell env, not from `.env.local`.
+> First time? Containers don't exist yet? → Follow **Step 0** in `full-stack-local-setup.md`.
 
 ---
 

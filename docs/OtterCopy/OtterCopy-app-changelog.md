@@ -8,6 +8,61 @@ Personal project changelog for extension behavior, prompt workflow changes, noti
 
 ## Session log
 
+### 2026-06-26T05:30:02Z — OtterCopy
+- **Summary:** Added popup terminal-status announcement for watched refinement jobs.
+- **Files/Areas:** `popup.js`
+- **User-visible impact:** If the popup remains open after starting Refine, Extended refinement, or Engineering handoff, the main status now updates when the watched latest-result run leaves `running`: completed runs say the refinement is ready and point to `Copy latest result`; failed and cancelled runs surface their terminal state.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| syntax | `node --check popup.js` | popup script | pass | — |
+| syntax | `node --check background.js` | background service worker regression surface | pass | — |
+| syntax | `node --check content.js` | content script regression surface | pass | — |
+| manifest | `node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('manifest ok')"` | extension manifest | pass | — |
+
+- **Tests added/updated:** No persistent automated tests added; this repo has no package/test harness. Residual risk: the live popup polling transition should be verified in Chrome with a real refinement run.
+- **Regression impact:** Latest-result polling still stops on terminal states. Manual `Copy latest result` suppresses the ready announcement so it does not overwrite `Latest result copied.` Exact transcript copy and background job execution are unchanged.
+- **API docs:** Not relevant: browser extension only; no HTTP API contract or Swagger/OpenAPI surface exists. This changes popup presentation only.
+- **Tooling gates:** No package-level lint/test/audit gates apply because the repo has no `package.json`; direct syntax and manifest checks were run with Node.
+
+### 2026-06-26T05:21:31Z — OtterCopy
+- **Summary:** Removed background clipboard auto-copy and fixed manual latest-result copy fallback.
+- **Files/Areas:** `background.js`, `popup.js`, `manifest.json`
+- **User-visible impact:** `Refine and copy` now completes by saving the refined artifact and sending the notification; it does not attempt to write to the clipboard after the user leaves the page. `Copy latest result` now catches popup async clipboard failures and falls back to a focused textarea copy path.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| syntax | `node --check background.js` | background service worker | pass | — |
+| syntax | `node --check popup.js` | popup script | pass | — |
+| syntax | `node --check content.js` | content script regression surface | pass | — |
+| manifest | `node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('manifest ok')"` | extension manifest | pass | — |
+
+- **Tests added/updated:** No persistent automated tests added; this repo has no package/test harness. Residual risk: manual copy should still be verified in a loaded Chrome extension popup because clipboard permission behavior can vary by browser focus state.
+- **Regression impact:** Standard Refine no longer depends on clipboard success to mark the job completed. Exact transcript copy remains content-script based. Extended refinement/handoff continue to save and notify without auto-copy. `Copy latest result` and debug-log copy share the hardened popup copy fallback.
+- **API docs:** Not relevant: browser extension only; no HTTP API contract or Swagger/OpenAPI surface exists. Internal `refineTranscript` still starts a background job; terminal success now means saved, not copied.
+- **Tooling gates:** No package-level lint/test/audit gates apply because the repo has no `package.json`; direct syntax and manifest checks were run with Node.
+
+### 2026-06-26T05:01:35Z — OtterCopy
+- **Summary:** Moved standard Refine copy completion into the background clipboard flow.
+- **Files/Areas:** `background.js`, `popup.js`, `manifest.json`, `offscreen.html`, `offscreen.js`
+- **User-visible impact:** `Refine and copy` now starts a background refinement job and releases the popup immediately. When the job completes, the service worker writes the refined text through an offscreen extension clipboard page, saves the output as the latest result, sends the existing Power Automate success/failure notification, and only uses the page toast when the original tab is still reachable.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| syntax | `node --check background.js` | background service worker | pass | — |
+| syntax | `node --check popup.js` | popup script | pass | — |
+| syntax | `node --check content.js` | content script regression surface | pass | — |
+| syntax | `node --check offscreen.js` | offscreen clipboard writer | pass | — |
+| manifest | `node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('manifest ok')"` | extension manifest | pass | — |
+
+- **Tests added/updated:** No persistent automated tests added; this repo has no package/test harness. Residual risk: live Chrome offscreen clipboard permission behavior should be checked with the loaded extension against a real Otter transcript.
+- **Regression impact:** Exact transcript copy remains content-script based. `Copy latest result` and debug-log copy still use popup clipboard writes. Extended refinement/handoff background storage, polling, cancellation, and notification behavior remain on the existing extended path; standard Refine now shares the same latest-result/notification lifecycle and adds an offscreen clipboard completion step.
+- **API docs:** Not relevant: browser extension only; no HTTP API contract or Swagger/OpenAPI surface exists. Internal Chrome message behavior for `refineTranscript` now starts a background job instead of returning refined text synchronously.
+- **Tooling gates:** No package-level lint/test/audit gates apply because the repo has no `package.json`; direct syntax and manifest checks were run with Node.
+
 ### 2026-06-24T16:58:14Z — OtterCopy
 - **Summary:** Added a session-only prompt override toggle for the existing Direction input and made single-pass AI refinement save as the latest copyable result.
 - **Files/Areas:** `popup.html`, `popup.css`, `popup.js`, `background.js`
@@ -601,7 +656,7 @@ Extended refinement uses a final-pass-model semantic-block preflight, then a sev
 
 An optional user "Direction" textarea in the popup lets the user steer a run. When provided, the direction is injected as a labeled, guard-railed steering block into every model call (semantic block, each persona pass, final synthesis, objective insertion, and the single-pass refine prompt) so the agents can be nudged toward the intended topic when a transcript spans multiple subjects, without treating the direction as new transcript facts. Empty direction preserves prior behavior; the direction is captured per run and not persisted across popup sessions.
 
-The Direction input also supports a session-only override toggle: when enabled with text present, that text replaces the active/file governing prompt for single-pass refinement, extended refinement, and engineering handoff. Single-pass AI refinement now saves its output as the latest result so `Copy latest result` can copy the most recent refinement artifact.
+The Direction input also supports a session-only override toggle: when enabled with text present, that text replaces the active/file governing prompt for single-pass refinement, extended refinement, and engineering handoff. Single-pass AI refinement now starts as a background job, saves its output as the latest result, and sends a best-effort Power Automate notification on terminal success/failure without attempting automatic clipboard writes; `Copy latest result` remains the manual copy path.
 
 Extended refinement and engineering handoff run as background jobs, save their latest result/debug state, and send best-effort Power Automate notifications on success or failure using a `{ status, message }` payload.
 
@@ -612,5 +667,14 @@ Legacy in-repo changelog content from C:\Users\dustin.thomason\OneDrive\PDProjec
 - [2026-06-08] Migrate legacy in-repo changelog into canonical dustin-thomason OtterCopy changelog. Status: implemented.
 - [2026-06-08] Power Automate success/failure notifications for extended jobs. Status: implemented.
 - [2026-06-03] initial commit and push to main. Status: implemented.
+
+
+
+
+
+
+
+
+
 
 

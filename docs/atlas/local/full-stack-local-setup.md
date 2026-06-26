@@ -1,64 +1,46 @@
 # Atlas Full-Stack Local Setup
 
-Consolidated guide for running **Atlas front-end + Callisto + Triton** locally on Windows. Written after a painful group setup session (May 2026) — captures every pitfall we hit and the exact commands that work.
+Full runbook for running Atlas front-end + Callisto + Triton locally on Windows. First time? Start at **Step 0**. Returning session? Start at **Start here**.
 
-## For AI agents: pre-flight checklist
+---
 
-**Do not start spinning up services until you have answered every question below.** Ask the user and wait for confirmation before proceeding to the setup steps.
+## Start here (returning session)
 
-### 1. Confirm the goal
+Pre-flight: run through [`dev-testing-prerequisites.md`](./dev-testing-prerequisites.md) first (Docker, DBeaver, AWS creds, GitHub PAT).
 
-- [ ] What does the user need running? (All three — Atlas + Callisto + Triton? Just the front-end pointed at sandbox? Just one backend?)
-- [ ] Is this a **first-time setup** or a **returning session** (containers and databases already exist)?
+```powershell
+# Terminal 1 — Callisto
+docker start callisto-postgres
+docker start callisto-rabbitmq
+cd C:\Users\dustin.thomason\callisto-back-end
+$env:NODE_ENV = "local"
+npm run dev:watch:pretty
+# verify: curl http://localhost:3003/callisto/health
 
-### 2. Branch safety
+# Terminal 2 — Triton
+cd C:\Users\dustin.thomason\triton-back-end
+$env:NODE_ENV = "local"
+npx nest start --watch
+# verify: curl http://localhost:3001/triton/health
 
-- [ ] For each repo (`atlas-front-end`, `callisto-back-end`, `triton-back-end`), run `git branch --show-current` and report the current branch to the user.
-- [ ] Ask: **Should I pull `main` for the backends?** (Typical answer: yes for Callisto and Triton, unless the user is actively developing on a feature branch there.)
-- [ ] Ask: **Should I pull `main` for Atlas front-end, or stay on your current branch?** (Typical answer: stay on the feature branch if actively developing UI.)
-- [ ] After any branch switch or pull, run `npm ci` before starting the service.
+# Terminal 3 — Atlas
+cd C:\Users\dustin.thomason\atlas-front-end
+npm run dev:local
+# opens http://localhost:9000
+```
 
-### 3. Docker state
+Start backends before the front-end or the Vite console will flood with ECONNREFUSED noise.
 
-- [ ] Is Docker Desktop running? (`docker ps` — if it errors, Docker isn't started.)
-- [ ] Do the containers exist? (`docker ps -a --filter "name=callisto-postgres" --filter "name=callisto-rabbitmq"`)
-  - If containers **don't exist** → follow Step 0 (one-time Docker setup).
-  - If containers **exist but are stopped** → `docker start callisto-postgres && docker start callisto-rabbitmq`.
-  - If containers **are already running** → skip to Step 1.
+---
 
-### 4. Environment files
+## For AI agents: pre-flight questions
 
-- [ ] Does `callisto-back-end/.env.local` exist? Does `callisto-back-end/.env` exist? (Both are needed.)
-- [ ] Does `triton-back-end/.env` exist?
-- [ ] Does `atlas-front-end/.env.local` exist?
-- [ ] **Port alignment check** — verify `APP_PORT` in each backend env matches the quasar proxy defaults (Callisto=3003, Triton=3001). See the Port Alignment Checklist section below.
+Before spinning up services, confirm:
 
-### 5. Credentials
-
-- [ ] Are AWS credentials fresh? (Triton needs them for S3; Callisto needs them for Cognito token verification. Tokens from Planet Portal expire every 1-4 hours.)
-- [ ] Is a GitHub PAT available **and not expired**? (`npm ci` fails on `@planetdepos` packages without it.)
-- [ ] Is the PAT **SSO-authorized for the PlanetDepos org** with `read:packages`, so it can install from the private GitHub Packages registry? (A valid-but-unauthorized token still 401s.)
-- [ ] Will the token be exported **in the same shell** before `npm ci`? `.npmrc` resolves `_authToken=${GITHUB_TOKEN}`; a bare `npm ci` with the var unset sends an empty token → `401`. Run `$env:GITHUB_TOKEN = "<pat>"` first (PowerShell) or `export GITHUB_TOKEN=<pat>` (Git Bash).
-
-### 6. Database state
-
-- [ ] Do the `callisto` and `triton` databases exist in the Postgres container?
-- [ ] Has the `callisto` schema been created inside the `callisto` database?
-- [ ] Are the `uuid-ossp` and `pgcrypto` extensions installed in the `callisto` DB? (Required by the `notifications` migrations — `uuid_generate_v4()` — which run automatically on Callisto startup. Missing extensions crash boot. See Step 0.)
-- [ ] Does a resource row exist for the user in `callisto.resources`? (Needed for job task assignments — see the DBeaver section.)
-
-### Order of operations
-
-Once all questions are answered:
-
-1. Docker containers (start or create)
-2. Pull code / install deps (per branch answers above)
-3. AWS credentials (export in Git Bash or update env files — from Neptune SB in the AWS Start Portal)
-4. Callisto back-end (start, verify health on `:3003`)
-5. Triton back-end (start, verify health on `:3001`)
-6. Atlas front-end (start, verify `:9000` loads in browser)
-
-**Do not start Step 5 until Steps 3 and 4 show healthy responses**, or the front-end console will flood with ECONNREFUSED noise.
+1. What needs to run? (All three — Atlas + Callisto + Triton? Just one backend?)
+2. First-time setup or returning session?
+3. For each repo, run `git branch --show-current`. Stay on the feature branch for active UI work; use `main` for backends.
+4. After any pull or branch switch, run `npm ci` before starting.
 
 ---
 
