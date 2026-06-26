@@ -36,6 +36,78 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-06-25T15:14:32Z - WorkLists
+
+- Summary: Pinned General above Settings tabs.
+- Problem: Fully alphabetical Settings tabs buried the primary General entry inside the list.
+- Requirement: Keep General at the top, add a separator line, then render the remaining Settings tabs alphabetically.
+- Solution: Added `getModelSettingsTabsWithGeneralFirst()`, inserted a non-interactive `.model-settings-tab-separator` after General, and kept the remaining tab sort using the existing label sorter.
+- Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/gemma-ui.test.js`, canonical changelog.
+- User-visible impact: Settings left toolbar now shows General first, a divider, then APIs, Prompts, Secondary Tags, Shortcuts, Statuses, and Tag Colors.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\gemma-ui.test.js` | Touched source/test files | pass | - |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\gemma-ui.test.js` | Touched JS files | pass | - |
+  | tests | `node --test tests\gemma-ui.test.js` | Settings UI source-contract coverage | pass, 30 tests | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 460 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+
+- Tests added/updated: Updated `tests/gemma-ui.test.js` to assert General-first tab ordering, separator insertion, and separator styling.
+- Regression impact: Isolated to Settings tab list rendering and separator CSS; tab IDs, panels, click handlers, active tab fallback, prompt sorting, and Settings data flows remain unchanged. Full suite passed.
+- API docs: Not relevant: UI-only Settings toolbar layout; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Prettier, syntax checks, focused test, full `npm test`, and final `npm run lint` passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Existing broad uncommitted WorkLists edits were present before this task and were not reverted.
+
+### 2026-06-25T15:00:47Z - WorkLists
+
+- Summary: Alphabetized Settings prompt titles.
+- Problem: The Settings Prompts list rendered prompt titles in stored/API order, making prompts harder to scan.
+- Requirement: Prompt titles must render A-Z every time the Settings prompt list is rendered or refreshed.
+- Solution: Added `getAlphabetizedClassificationPrompts()` and routed `renderPromptList()` through the sorted copy, preserving underlying prompt data and selection behavior; added source-contract coverage.
+- Files/areas: `public/todolist2.js`, `tests/gemma-ui.test.js`, canonical changelog.
+- User-visible impact: Settings > Prompts now displays prompt rows in ascending alphabetical order by prompt title, falling back to ID when needed.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\gemma-ui.test.js` | Touched source/test files | pass | - |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\gemma-ui.test.js` | Touched JS files | pass | - |
+  | tests | `node --test tests\gemma-ui.test.js` | Settings prompt UI source-contract coverage | pass, 30 tests | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 460 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+
+- Tests added/updated: Updated `tests/gemma-ui.test.js` to assert prompt-list rendering uses `getAlphabetizedClassificationPrompts()` and sorts by `name || id` with case-insensitive comparison.
+- Regression impact: Isolated to Settings prompt-list render order; prompt CRUD, selected prompt IDs, API fetch/update paths, prompt payload shape, and active prompt behavior remain unchanged. Full suite passed.
+- API docs: Not relevant: UI-only prompt-list ordering; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Prettier, syntax checks, focused test, full `npm test`, and final `npm run lint` passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Existing broad uncommitted WorkLists edits were present before this task and were not reverted.
+
+### 2026-06-25T14:56:27Z - WorkLists
+
+- Summary: Alphabetized Settings toolbar tabs.
+- Problem: Settings left toolbar tab order was hardcoded in a non-alphabetical sequence.
+- Requirement: Render every Settings toolbar instance from consistently alphabetized tab metadata and preserve order across reload/rerender.
+- Solution: Added `sortModelSettingsTabsByLabel()` and routed the Settings tab button render through the sorted metadata array; added source-contract coverage for the sorter and render path.
+- Files/areas: `public/todolist2.js`, `tests/gemma-ui.test.js`, canonical changelog.
+- User-visible impact: Settings tabs now render alphabetically: APIs, General, Prompts, Secondary Tags, Shortcuts, Statuses, Tag Colors.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\gemma-ui.test.js` | Touched source/test files | pass | - |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\gemma-ui.test.js` | Touched JS files | pass | - |
+  | tests | `node --test tests\gemma-ui.test.js` | Settings UI source-contract coverage | pass, 30 tests | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 460 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+
+- Tests added/updated: Updated `tests/gemma-ui.test.js` to assert the Settings toolbar uses `sortModelSettingsTabsByLabel()` and sorted tab metadata for rendering.
+- Regression impact: Isolated to Settings tab button render order; tab IDs, panel IDs, click handlers, active tab fallback, data fetches, and Settings panel contents remain unchanged. Full suite passed.
+- API docs: Not relevant: UI-only toolbar ordering; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Prettier, syntax checks, focused test, full `npm test`, and final `npm run lint` passed.
+- Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Existing broad uncommitted WorkLists edits were present before this task and were not reverted.
+
 ### 2026-06-24T16:21:44Z - WorkLists
 
 - Summary: Fixed voice-session note save shortcut.

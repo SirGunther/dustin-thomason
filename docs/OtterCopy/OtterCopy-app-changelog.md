@@ -8,6 +8,22 @@ Personal project changelog for extension behavior, prompt workflow changes, noti
 
 ## Session log
 
+### 2026-06-24T16:58:14Z — OtterCopy
+- **Summary:** Added a session-only prompt override toggle for the existing Direction input and made single-pass AI refinement save as the latest copyable result.
+- **Files/Areas:** `popup.html`, `popup.css`, `popup.js`, `background.js`
+- **User-visible impact:** The popup now has `Use direction as the only prompt` under the Direction box. When checked and Direction has text, Refine and copy, Extended refine and copy, and Engineering handoff use that text as the governing prompt instead of the active/file prompt. The text is not also injected as steering guidance, avoiding duplicate prompt pressure. Single-pass Refine and copy now updates `Copy latest result` with the generated output.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| syntax | `node --check popup.js` | popup script | pass | — |
+| syntax | `node --check background.js` | background service worker | pass | — |
+
+- **Tests added/updated:** No persistent automated tests added; this repo has no package/test harness. Residual risk: live Chrome popup/provider behavior should be checked with an installed extension run against a real Otter transcript.
+- **Regression impact:** Override is gated by a new unchecked checkbox plus non-empty Direction text; unchecked runs keep the existing active/file prompt and direction-steering behavior. Exact transcript copy, transcript extraction, prompt storage, provider adapters, cancellation, and extended saved-result polling remain unchanged.
+- **API docs:** Not relevant: browser extension only; no HTTP API contract or Swagger/OpenAPI surface exists. Internal Chrome message payloads gained optional `useDirectionAsPrompt` metadata only.
+- **Tooling gates:** No package-level lint/test/audit gates apply because the repo has no `package.json`; 
+
 ### 2026-06-15T21:12:00Z — OtterCopy
 - **Summary:** Added an optional "Direction" steering input that is injected into every agent across the refinement, extended refinement, and engineering handoff pipelines.
 - **Files/Areas:** `popup.html`, `popup.css`, `popup.js`, `background.js`
@@ -585,6 +601,8 @@ Extended refinement uses a final-pass-model semantic-block preflight, then a sev
 
 An optional user "Direction" textarea in the popup lets the user steer a run. When provided, the direction is injected as a labeled, guard-railed steering block into every model call (semantic block, each persona pass, final synthesis, objective insertion, and the single-pass refine prompt) so the agents can be nudged toward the intended topic when a transcript spans multiple subjects, without treating the direction as new transcript facts. Empty direction preserves prior behavior; the direction is captured per run and not persisted across popup sessions.
 
+The Direction input also supports a session-only override toggle: when enabled with text present, that text replaces the active/file governing prompt for single-pass refinement, extended refinement, and engineering handoff. Single-pass AI refinement now saves its output as the latest result so `Copy latest result` can copy the most recent refinement artifact.
+
 Extended refinement and engineering handoff run as background jobs, save their latest result/debug state, and send best-effort Power Automate notifications on success or failure using a `{ status, message }` payload.
 
 Legacy in-repo changelog content from C:\Users\dustin.thomason\OneDrive\PDProjects\Browser Extensions\OtterCopy\docs\ottercopy\ottercopy-changelog.md was migrated into this canonical file on 2026-06-08T03:00:52Z without removing historical session text.
@@ -594,3 +612,5 @@ Legacy in-repo changelog content from C:\Users\dustin.thomason\OneDrive\PDProjec
 - [2026-06-08] Migrate legacy in-repo changelog into canonical dustin-thomason OtterCopy changelog. Status: implemented.
 - [2026-06-08] Power Automate success/failure notifications for extended jobs. Status: implemented.
 - [2026-06-03] initial commit and push to main. Status: implemented.
+
+
