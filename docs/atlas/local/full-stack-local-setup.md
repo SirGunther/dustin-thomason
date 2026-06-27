@@ -782,6 +782,7 @@ Specific pages referenced in this guide:
 ### Local runbooks (this folder)
 
 - [`dev-testing-prerequisites.md`](./dev-testing-prerequisites.md) — pre-flight checklist + AI-agent execution / manual-reproduction requirements (run this gate first)
+- [`refresh-proceedings-demo.md`](./refresh-proceedings-demo.md) — end-to-end demo runbook for the PRDV-15619 "Refresh proceedings" button (Callisto + Atlas only, with the exact DB seeds and demo steps)
 - [`callisto-local.mdc`](./callisto-local.mdc) — detailed Callisto-only setup and troubleshooting
 - [`triton-local.mdc`](./triton-local.mdc) — Triton-only setup (reuses Callisto Postgres container)
 - [`europa-local.mdc`](./europa-local.mdc) — Europa local setup

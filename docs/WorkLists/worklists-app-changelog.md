@@ -36,6 +36,288 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-06-27T21:14:10Z - WorkLists
+
+- Summary: Cleared search icon focus after dismiss.
+- Problem: Clicking the search opener saved that same icon as the return-focus target, so closing search restored focus to it and left the hover/focus highlight visually stuck.
+- Requirement: After search is cancelled by X or Escape, the opener should return visually neutral; click-origin transient highlights should not persist after a dismissed UI interaction.
+- Solution: Excluded `#search-open-btn` from search return-focus capture so cancel falls back to the board instead of refocusing the opener. Kept keyboard/search behavior otherwise unchanged.
+- UI/UX preference note: Dismissed transient controls should clear their click/focus highlight instead of looking selected. If this interaction polish repeats, consider extracting a small dedicated UI interaction helper file for focus-return and transient-control dismissal rules.
+- Files/areas: `public/todolist2.js`, `tests/search-shortcuts.test.js`, canonical changelog.
+- User-visible impact: Closing expanded search no longer leaves the search icon highlighted.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\search-shortcuts.test.js` | Touched JS/test files | pass | - |
+  | syntax | `node --check public\todolist2.js` | Touched runtime file | pass | - |
+  | tests | `node --test tests\search-shortcuts.test.js` | Search shortcut/source contracts | pass, 17 tests | - |
+  | browser | Playwright ad hoc check against `http://localhost:3010` | X/Escape close leaves opener unfocused | pass | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 468 tests | - |
+
+- Tests added/updated: Search source-contract coverage now asserts the search opener is excluded from return-focus capture.
+- Regression impact: Isolated to search cancel focus restoration; search expansion, query handling, Filters, and Scheduler paths unchanged.
+- API docs: Not relevant: UI-only focus behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Format, syntax, focused search contracts, browser interaction check, lint, and full test suite passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remained present and were not reverted (`tests/browser-notes-smoke.js`, `tests/context-windows.test.js`, `.claude/`, and prior notes-pane/search work in `public/todolist2.js`).
+### 2026-06-27T21:01:53Z - WorkLists
+
+- Summary: Hid the search opener during expanded search.
+- Problem: After search expanded, the opener icon remained beside the input and the collapsed input's tiny box plus field gap made search sit farther from Filters than the other toolbar icons.
+- Requirement: Hide the search icon while the search field is open until Escape/X cancel, and normalize the resting icon-to-icon spacing.
+- Solution: Set the search-field gap to zero, made the collapsed input truly zero-footprint (`border: 0`, width `0`), restored the input border only while expanded, and hid `.search-open-btn` whenever search is expanded or has a value.
+- Files/areas: `public/todoliststyles2.css`, `tests/search-shortcuts.test.js`, canonical changelog.
+- User-visible impact: Search rests at the same spacing as the adjacent toolbar icons; once opened, only the search field and cancel X remain visible until search is cancelled.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todoliststyles2.css tests\search-shortcuts.test.js` | Touched CSS/test files | pass | - |
+  | tests | `node --test tests\search-shortcuts.test.js` | Search shortcut/source contracts | pass, 17 tests | - |
+  | browser | Playwright ad hoc check against `http://localhost:3010` | Search rest gap/opener hide/cancel restore | pass | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 468 tests | - |
+
+- Tests added/updated: Search shortcut source-contract coverage now asserts zero internal search-field gap, zero-footprint collapsed input, expanded input border restoration, and hidden opener while expanded.
+- Regression impact: CSS-only refinement isolated to the search toolbar shell; search query handling, shortcut registration, Filters, and Scheduler paths unchanged.
+- API docs: Not relevant: UI-only toolbar styling; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Format, focused search contracts, browser interaction check, lint, and full test suite passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remained present and were not reverted (`tests/browser-notes-smoke.js`, `tests/context-windows.test.js`, `.claude/`, and prior notes-pane/search work in `public/todolist2.js`).
+### 2026-06-27T20:46:55Z - WorkLists
+
+- Summary: Converted top-right search to an expandable icon control.
+- Problem: The always-visible search input consumed persistent toolbar space and added visual weight beside Filters and Scheduler.
+- Requirement: Keep search in the same top-right toolbar position, collapse its resting footprint to a magnifying-glass control, expand the input on click and Ctrl+K, and preserve cancel/search behavior.
+- Solution: Added `#search-open-btn`, introduced `searchExpanded` state plus shared expansion helpers, wired click and keyboard open paths through `openSearchFromKeyboard()`, collapsed on cancel/Escape, kept empty backspace edits open, and moved the width animation into `.search-expanded` CSS.
+- Files/areas: `public/index.html`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/search-shortcuts.test.js`, canonical changelog.
+- User-visible impact: Search now rests as a compact icon in the top-right toolbar; clicking it or pressing Ctrl+K expands and focuses the field with the same search behavior as before.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\index.html public\todolist2.js public\todoliststyles2.css tests\search-shortcuts.test.js` | Touched UI/source-contract files | pass | - |
+  | syntax | `node --check public\todolist2.js` | Touched runtime file | pass | - |
+  | tests | `node --test tests\search-shortcuts.test.js tests\filter-menu.test.js` | Search shortcut/filter toolbar contracts | pass, 21 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 468 tests | - |
+  | browser | Playwright ad hoc check against `http://localhost:3010` | Search collapse/click expand/cancel collapse/Ctrl+K expand | pass | - |
+
+- Tests added/updated: `tests/search-shortcuts.test.js` now asserts the expandable search icon markup, shared click/keyboard open wiring, collapsed/expanded CSS contract, and cancel icon placement.
+- Regression impact: Isolated to the top-right search shell; query debounce, result rendering, Filters, and Scheduler controls remain on existing paths.
+- API docs: Not relevant: UI-only toolbar interaction; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Format, syntax, focused contracts, full test suite, lint, and browser interaction check passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remained present and were not reverted (`public/todolist2.js` notes-pane changes, `tests/browser-notes-smoke.js`, `tests/context-windows.test.js`, `.claude/`).
+### 2026-06-27T20:16:47Z - WorkLists
+
+- Summary: Scoped notes-pane reveal nudge to scrollbar columns only.
+- Problem: `NOTES_PANE_REVEAL_RIGHT_EDGE_NUDGE` was applied to `safeRight`, so changing it affected both scrollbar and non-scrollbar columns and fought with `NOTES_PANE_BOARD_GAP`.
+- Requirement: Keep `NOTES_PANE_BOARD_GAP` as the universal reveal gap; apply the nudge only when a layout-consuming `.tasks-container` scrollbar is detected.
+- Solution: Moved the nudge into `getActiveCardRevealRightEdge()`, subtracting it only from the scrollbar-aware scroller-right edge path. Non-scrollbar columns now use the card right edge and the base gap only.
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`, canonical changelog.
+- User-visible impact: Tuning the nudge changes only scrollable-column reveal placement; non-scrollbar columns remain governed by `NOTES_PANE_BOARD_GAP`.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js` | Touched source/test files | pass | - |
+  | syntax | `node --check public\todolist2.js` | Touched runtime file | pass | - |
+  | tests | `node --test tests\context-windows.test.js` | Notes-pane reveal source contract | pass, 25 tests | - |
+  | browser | `npm run test:browser` | Notes/side-pane smoke | pass, 4 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+
+- Tests added/updated: Source-contract coverage now asserts `safeRight` uses only `NOTES_PANE_BOARD_GAP`, and the nudge is applied in the layout-scrollbar branch of `getActiveCardRevealRightEdge()`.
+- Regression impact: Isolated to notes-pane active-card reveal math; current tuned constants were preserved.
+- API docs: Not relevant: UI-only layout tuning; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Focused test, browser smoke, lint, and full `npm test` passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+### 2026-06-27T19:57:28Z - WorkLists
+
+- Summary: Added a notes-pane reveal calibration knob.
+- Problem: The scrollbar-aware active-card reveal math is structurally correct but may need a few pixels of local tuning on the user's Windows scrollbar/rendering setup.
+- Requirement: Provide one clearly named variable near the existing pane sizing constants to nudge the calculated active-card reveal position left or right without changing the base gap constant or scrollbar detection logic.
+- Solution: Added `NOTES_PANE_REVEAL_RIGHT_EDGE_NUDGE = 0` next to `NOTES_PANE_BOARD_GAP` and applied it to the scrollbar-aware `safeRight` calculation; positive values move the revealed right edge right/closer to the pane, negative values move it left/farther from the pane. Also aligned the browser smoke close-inset assertion with the existing closed `10px` board margin contract.
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`, `tests/browser-notes-smoke.js`, canonical changelog.
+- User-visible impact: Default behavior is unchanged at `0`; the reveal placement can now be tuned by editing a single constant.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js tests\browser-notes-smoke.js` | Touched source/test files | pass | - |
+  | syntax | `node --check public\todolist2.js` | Touched runtime file | pass | - |
+  | tests | `node --test tests\context-windows.test.js` | Notes-pane reveal source contract | pass, 25 tests | - |
+  | browser | `npm run test:browser` | Notes/side-pane smoke | pass, 4 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+
+- Tests added/updated: Source-contract coverage asserts the new nudge constant and its use in `safeRight`; browser smoke now waits for the documented closed board margin instead of an impossible zero margin.
+- Regression impact: Default nudge is zero, so runtime reveal behavior is unchanged until the constant is edited.
+- API docs: Not relevant: UI-only layout tuning; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Focused test, browser smoke, lint, and full `npm test` passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+### 2026-06-27T05:45:00Z - WorkLists
+
+- Summary: Removed the notes-pane open scroll "catch-up" by making the reveal's right boundary stable across the whole open.
+- Problem: The reveal scroll's right boundary was `Math.min(wrapperRect.right, finalPaneLeft) - margin`, but `wrapperRect.right` shrinks as the margin-right inset glides in. So the first frame computed the target one way and the 300ms settle pass (after the pane reached full size) recomputed it ~16px further left - the scroll "tried to catch up" to the second location. (User: "adjusting for the scroll when the window bumps in, then once the window gets to full size, the scroll... tries to catch up.")
+- Requirement: The reveal target must be identical at the first open frame and at the settle pass so the glide lands once with no secondary adjustment.
+- Solution: Compute `safeRight = finalPaneLeft - NOTES_PANE_ACTIVE_CARD_MARGIN` (the pane's final left edge, which is fixed because pane width is set before open and constant during the slide) instead of using the gliding `wrapperRect.right`. The reveal target is now stable throughout the open; combined with the prior final-max clamp, the glide lands exactly and the settle pass is a no-op (no catch-up).
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`, canonical changelog.
+- User-visible impact: Opening notes on a covered card now glides the board to reveal it in a single synced motion with the pane - no second "catch-up" scroll after the pane finishes opening.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public/todolist2.js tests/context-windows.test.js` | runtime/test | pass | - |
+  | syntax | `node --check public/todolist2.js` | runtime file | pass | - |
+  | tests | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts | pass, 41 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | browser | `npm run test:browser` | inset geometry + reveal + static close + smoke | pass, 4 tests | - |
+
+- Tests added/updated: `tests/context-windows.test.js` now asserts the stable boundary `const safeRight = finalPaneLeft - NOTES_PANE_ACTIVE_CARD_MARGIN;` (replacing the old `Math.min(wrapperRect.right, finalPaneLeft)` assertion).
+- Regression impact: Only the reveal-scroll right-boundary computation changed (open path); inset/scrollbar, close-static, final-max clamp, and side-panel behavior unchanged. Full suite + 4 browser tests green.
+- API docs: Not relevant: UI-only scroll/animation behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+
+### 2026-06-27T05:10:00Z - WorkLists
+
+- Summary: Fixed the notes-pane open "bump in" - reveal scroll now aims at the final (post-inset) max so it glides smoothly instead of snapping.
+- Problem: With the scroll-container inset (margin-right) gliding in over 0.24s, the live max scroll grows gradually. The reveal scroll clamped its target to the CURRENT (not-yet-inset) max, so it aimed at the smaller "first location," then the 300ms settle snapped it to the final position once the inset finished. A user-resized (wider) pane made it worse - the reveal needs more of the still-growing room. (User's own diagnosis: "snapping to the second location.") Scrollbar position and close glide were already correct.
+- Requirement: The open reveal scroll must glide directly to its settled position in sync with the pane/inset, with no mid-open snap, for default and resized pane widths.
+- Solution: In `keepActiveCardVisibleBesideNotesPane`, clamp the reveal target to the FINAL max - `getBoardWrapperMaxScrollLeft + pendingInset`, where `pendingInset = reserveValue - currentMarginRight` (the inset not yet applied). Removed the live-max clamp inside `animateBoardScrollLeft` (the browser still clamps each assigned scrollLeft to the live range, so a momentarily-ahead target is safe). Because the reveal glide and the margin inset share the same 0.24s cubic-bezier easing and `scrollDelta <= the inset width`, the scroll stays within range every frame - no per-frame clamp, no undershoot, no settle-snap.
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`, canonical changelog.
+- User-visible impact: Opening notes on a covered card now glides the board to reveal it as one smooth motion with the pane, including when the pane has been resized wider.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public/todolist2.js` | runtime file | pass | - |
+  | syntax | `node --check public/todolist2.js` | runtime file | pass | - |
+  | tests | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts | pass, 41 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | browser | `npm run test:browser` | inset geometry + reveal + static close + smoke | pass, 4 tests | - |
+
+- Tests added/updated: `tests/context-windows.test.js` asserts the final-max clamp (`pendingInset = reserveValue - currentMarginRight`, `maxScrollLeft = getBoardWrapperMaxScrollLeft(boardWrapper) + pendingInset`) so the smooth-reveal fix is locked.
+- Regression impact: Only the reveal-scroll target clamp changed (open path); inset/scrollbar fix, close-static, and side-panel behavior unchanged. Full suite + 4 browser tests green.
+- API docs: Not relevant: UI-only scroll/animation behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+
+### 2026-06-27T04:30:00Z - WorkLists
+
+- Summary: Inset the board scroll container to the notes pane edge (margin-right) instead of stretching #board padding-right - fixes the hidden scrollbar and the scroll stutter.
+- Problem: User clue - the horizontal scrollbar disappeared behind the notes pane when scrolling right. Root cause: the scroll container (`.board-wrapper`) ran full-width *under* the fixed pane; the `padding-right` reserve only stretched `#board`'s content (gliding `scrollWidth`), so the scrollbar/last columns sat under the pane and the changing `scrollWidth` made scrolling/the scrollbar stutter.
+- Requirement: The scroll container and its scrollbar must stop at the pane's left edge; `scrollWidth` must stay stable so scrolling is smooth; open still reveals the active card, close stays static.
+- Solution: Replaced the `#board` `padding-right` reserve with a `.board-wrapper` `margin-right` inset equal to pane width + margin, transitioned (`margin-right 0.24s ease`) so it glides in/out in sync with the pane. `#board` `scrollWidth` is now stable (no padding reserve) - smooth scroll, stable scrollbar, scrollbar ends at the pane edge. Removed the now-unneeded held-reserve close machinery (`releaseNotesPaneReserveAfterClose`, `finishNotesPaneCloseReserve`, `clearNotesPaneCloseReserveTimer`, `notesPaneCloseReserveTimer`, `NOTES_PANE_CLOSE_RESERVE_MS`, the `notes-pane-closing` class): close now simply clears the inset via `syncNotesPaneBoardViewportReserve`, gliding it back while scroll stays static. The open reveal-scroll glide (cubic-bezier 0.24s) is retained.
+- Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/context-windows.test.js`, `tests/browser-notes-smoke.js`, canonical changelog.
+- User-visible impact: The board scrollbar now ends at the notes pane's left edge (never hidden behind it); horizontal scrolling while the pane is open is smooth (stable scroll width); open reveals the card and close leaves scroll static.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write` (touched files) | source/CSS/test | pass | - |
+  | syntax | `node --check public/todolist2.js`; `node --check tests/browser-notes-smoke.js` | runtime/browser files | pass | - |
+  | tests | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts | pass, 41 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | browser | `npm run test:browser` | inset geometry + static close + side-panel + smoke | pass, 4 tests | - |
+
+- Tests added/updated: `tests/context-windows.test.js` rewritten to the margin-right model (`.board-wrapper` margin-right transition, `boardWrapper.style.marginRight` set/clear, `shouldReserve` on `.open` only) and asserts the held-reserve machinery is gone (`doesNotMatch` for the removed symbols and `#board` padding-right transition). `tests/browser-notes-smoke.js` now asserts the wrapper's right edge sits at/left of the pane's left edge (scrollbar not under pane), the margin-right reserves the pane width, close releases the inset, and scroll stays static.
+- Regression impact: Notes-pane reserve mechanism changed (padding-right -> margin-right inset); close simplified (no held reserve); open reveal-scroll glide unchanged; side-panel left behavior untouched. Full suite + 4 browser tests green.
+- API docs: Not relevant: UI-only layout/scroll behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+
+### 2026-06-27T03:25:00Z - WorkLists
+
+- Summary: Notes pane open reveal-scroll now glides in sync with the pane; close-static behavior locked in tests.
+- Problem: On open, the board's reveal scroll (moving a covered card out from under the pane) was applied instantly and fired twice (rAF + 220ms) while the pane glided over 0.24s - the columns stuttered/snapped instead of following the pane. The prior close-static fix also needed regression coverage.
+- Requirement: The reveal scroll must follow the pane as one smooth motion on the same 0.24s curve; the second (settle) pass must not cause a mid-glide stutter. Close must remain static (no scroll change) and be guarded by tests.
+- Solution: Re-introduced a scroll tween (`animateBoardScrollLeft` + `easeBoardScrollProgress` = exact `cubic-bezier(0.25,0.1,0.25,1)`, with reduced-motion / no-rAF fallback) and wired it to the OPEN reveal only: `keepActiveCardVisibleBesideNotesPane({ animate })` glides when animating, instant otherwise (resize still instant). `scheduleActiveCardVisibilityForNotesPane` now starts the glide on the rAF frame the pane transition begins and moves the safety re-check to a single post-tween settle at 300ms (no-op unless layout shifted) - eliminating the old 220ms mid-glide double-jump. `closeNotesPane` cancels any in-flight glide and still never restores scroll (stays static).
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`, `tests/browser-notes-smoke.js` (close-static assertions from prior session retained), canonical changelog.
+- User-visible impact: Opening notes on a covered card now glides the columns aside in lockstep with the pane (no stutter/snap); closing still leaves the board static.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write` (touched files) | source/test | pass | - |
+  | syntax | `node --check public/todolist2.js` | runtime file | pass | - |
+  | tests | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts | pass, 41 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | browser | `npm run test:browser` | reveal glide + static close + side-panel + smoke | pass, 4 tests | - |
+
+- Tests added/updated: `tests/context-windows.test.js` now asserts the tween helpers (`animateBoardScrollLeft`, `easeBoardScrollProgress`, `cancelNotesPaneScrollAnimation`), the `animate: true` open path / `animate: false` settle, the `keepActiveCardVisibleBesideNotesPane(options = {})` signature, the rAF(animateRun) + setTimeout(settleRun, 300) schedule, and (scoped to `closeNotesPane`) that close cancels the glide but never restores/animates scroll (close-static lock). `tests/browser-notes-smoke.js` continues to assert the close scroll stays static (closing and settled both equal the revealed position).
+- Regression impact: Reveal scroll changed from instant double-fire to a single synced glide + no-op settle; close-static unchanged and now test-locked; side-panel left glide and notes-pane reserve untouched. Full suite + 4 browser tests green.
+- Known residual: When the active card sits at the far-right edge (reveal needs the full right reserve while it is still gliding in), the glide can clamp short and the 300ms settle snaps the remainder; the neutral case (reported) is fully smooth.
+- API docs: Not relevant: UI-only animation timing; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+
+### 2026-06-27T02:40:00Z - WorkLists
+
+- Summary: Notes pane close now leaves board scroll static (reverted the pre-open scroll-restore).
+- Problem: The prior session's "glide back to pre-open scroll on close" was wrong on reflection. When the board is in a neutral position (not scrolled to the edge) and the pane only nudged the scroll to reveal a covered card, restoring the scroll on close is unnecessary motion - the card is already fully visible once the pane slides away. The screen should stay static; it should only adjust on close when the scroll is at an edge and the reserve removal forces a clamp.
+- Requirement: Open still nudges to reveal the active card. Close must not move the scroll in the neutral case (stay static at the revealed position). Edge cases where the reserve drop clamps the scroll remain acceptable.
+- Solution: Removed the proactive restore-to-pre-open behavior added last session - the `notesPanePreOpenScrollLeft` capture, the `skipScrollRestore` option, and the `animateBoardScrollLeft` / `easeBoardScrollProgress` / `cancelNotesPaneScrollAnimation` scroll-tween helpers. `closeNotesPane` now just releases the reserve and leaves scroll untouched; the natural reserve-drop clamp handles the edge case with no position math. (Net: notes-pane close returns to the static behavior; the left side-panel far-left glide from the prior sessions is unaffected.)
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`, `tests/browser-notes-smoke.js`, canonical changelog.
+- User-visible impact: Closing the notes pane in a neutral scroll position no longer shifts the board - the columns stay exactly where the open nudge revealed them.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write` (3 touched files) | source/test | pass | - |
+  | syntax | `node --check public/todolist2.js`; `node --check tests/browser-notes-smoke.js` | runtime/browser files | pass | - |
+  | tests | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts | pass, 41 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | browser | `npm run test:browser` | notes-pane static-close + side-panel + smoke | pass, 4 tests | - |
+
+- Tests added/updated: `tests/context-windows.test.js` now asserts the absence of the scroll-restore (`doesNotMatch animateBoardScrollLeft` / `notesPanePreOpenScrollLeft`) and reverts the switch-close regex to `{ restoreFocus: false }`. `tests/browser-notes-smoke.js` "scrolls a right-edge active card" asserts the scroll stays static through close (closing and settled scroll both equal the revealed position).
+- Regression impact: Open-side reveal unchanged; close reverts to static. Side-panel left-reserve glide untouched. Full suite + 4 browser tests green.
+- API docs: Not relevant: UI-only scroll behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+
+### 2026-06-27T01:55:00Z - WorkLists
+
+- Summary: Notes pane close now glides the board back to its pre-open scroll in sync with the pane.
+- Problem: Opening notes on a card near the right edge nudges the board scroll left (so the card sits beside the fixed pane). On close the pane slid out but the board stayed in the nudged position - the columns never returned, reading as "off / out of sync."
+- Requirement: On close, the board must glide back to the scroll position it had before the pane opened, in lockstep with the pane sliding out (one motion). Task-switching must keep the original baseline so the eventual close still returns to the true pre-open position.
+- Solution: Capture `notesPanePreOpenScrollLeft` on a fresh open (guarded by `wasOpenAtEntry`, before the open nudge). On close, glide `boardWrapper.scrollLeft` back to that baseline via a new `animateBoardScrollLeft` rAF tween whose easing (`easeBoardScrollProgress`) is the exact `cubic-bezier(0.25,0.1,0.25,1)` "ease" used by the pane's 0.24s transition - so scroll and pane share one curve. Falls back to an instant set under reduced-motion / no-rAF. Task switch passes `skipScrollRestore: true` (keeps baseline, cancels any in-flight tween); the toggle-same-card close restores normally.
+- Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`, `tests/browser-notes-smoke.js`, canonical changelog. Plan: `~/.claude/plans/still-not-in-sync-elegant-spindle.md` (prior turn; this builds on it).
+- User-visible impact: Closing the notes pane after it nudged the board now glides the columns back to where they were before opening, in time with the pane sliding away.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write` (3 touched files) | source/test | pass | - |
+  | syntax | `node --check public/todolist2.js`; `node --check tests/browser-notes-smoke.js` | runtime/browser files | pass | - |
+  | tests | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts | pass, 41 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | browser | `npm run test:browser` | notes-pane close-restore glide + side-panel + smoke | pass, 4 tests | - |
+
+- Tests added/updated: `tests/context-windows.test.js` source contract for `notesPanePreOpenScrollLeft`, `easeBoardScrollProgress`, `animateBoardScrollLeft`, the close restore call, `skipScrollRestore: true` on switch, and the capture-on-open line (also updated the switch-close regex to the new args). `tests/browser-notes-smoke.js` "scrolls a right-edge active card" now captures the pre-open scroll, asserts the close is mid-glide back toward it (no longer pinned), and settles exactly at the pre-open scroll.
+- Regression impact: Open-side scroll nudge unchanged (still instant via `keepActiveCardVisibleBesideNotesPane`); only the close adds the synced glide-back. `padding-right` reserve hold/instant-drop unchanged. Full suite + 4 browser tests green.
+- API docs: Not relevant: UI-only animation timing; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+
+### 2026-06-27T01:05:00Z - WorkLists
+
+- Summary: Glided the left side-panel overlay reserve in sync with the panel collapse at far-left.
+- Problem: Open the left panel while offset (overlay mode adds a `padding-left` reserve), then scroll to far-left and close. The panel slid out (0.24s) but the reserve was held during the slide and dropped instantly at `transitionend`; at far-left no scroll could absorb it, so the columns snapped left *after* the menu was gone - "disjointed menu first, then columns snap."
+- Requirement: At/near far-left, the columns must glide into the vacated space in one continuous motion with the menu. Deeply-offset close must stay stationary (no content motion), preserving the no-bump behavior from the first ticket.
+- Solution: Added a scoped CSS rule `#board.side-panel-reserve-gliding` that transitions `padding-left` on the same `0.24s ease` curve as the panel. New `glideSidePanelOverlayReserveToZero` adds the class, flushes layout (`void offsetWidth`), then clears the reserve so `padding-left` glides `R->0` with `scrollLeft` untouched (lands at the natural closed position). `closeSidePanelWithoutLayoutBump` chooses the glide only when `reserve > 0 && scrollLeft <= reserve`; otherwise it keeps the existing hold-then-instant-drop (stationary). `finishSidePanelOverlayClose` retires the glide class so future open/offset reserve writes stay instant.
+- Files/areas: `public/todoliststyles2.css`, `public/todolist2.js`, `tests/search-shortcuts.test.js`, `tests/browser-notes-smoke.js`, canonical changelog. Plan: `~/.claude/plans/still-not-in-sync-elegant-spindle.md`.
+- User-visible impact: Closing the left menu after scrolling to the far-left now glides the columns left in lockstep with the menu instead of snapping them after it. Deeply-offset close behavior is unchanged.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write` (4 touched files) | source/CSS/test | pass | - |
+  | syntax | `node --check public/todolist2.js`; `node --check tests/browser-notes-smoke.js` | runtime/browser files | pass | - |
+  | tests | `node --test tests/search-shortcuts.test.js tests/context-windows.test.js` | side-panel + context-window contracts | pass, 41 tests | - |
+  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | browser | `npm run test:browser` | overlay open/close + new far-left glide | pass, 4 tests | - |
+
+- Tests added/updated: Source/CSS contract in `tests/search-shortcuts.test.js` (glide helper, `scrollLeft <= reserve` branch, `#board.side-panel-reserve-gliding` rule, finish cleanup). New browser test asserts the far-left close engages the glide class, `padding-left` is mid-transition (`0 < pad < reserve`, i.e. animating not snapping), `scrollLeft` stays 0, and settles to `padding-left: 0px`.
+- Regression impact: `padding-left` stays instant for open and deeply-offset close (glide is opt-in via class only during the far-left close window); the existing "overlays the side panel" browser test closes at `scrollLeft > reserve` -> hold branch -> unchanged. `padding-right` notes-pane glide untouched. Full suite + 4 browser tests green.
+- API docs: Not relevant: UI-only animation timing; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+
 ### 2026-06-27T00:10:00Z - WorkLists
 
 - Summary: Synced board reserve motion with context-pane pop-out animation.

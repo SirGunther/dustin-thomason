@@ -1,6 +1,6 @@
 # Development / Testing Prerequisites
 
-Run through this checklist **before** starting any Atlas local work. Full startup commands: [`full-stack-local-setup.md`](./full-stack-local-setup.md).
+Run through this checklist **before** starting any Atlas local work. Full startup commands: [`full-stack-local-setup.md`](./full-stack-local-setup.md). Demoing the PRDV-15619 refresh button specifically? Use [`refresh-proceedings-demo.md`](./refresh-proceedings-demo.md).
 
 ---
 

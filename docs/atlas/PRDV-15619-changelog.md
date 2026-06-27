@@ -5,7 +5,8 @@
 - **ClickUp:** [PRDV-15619](https://app.clickup.com/t/43227262/PRDV-15619)
 - **Repo:** `atlas-front-end` (implementation, future) · `larry-adams` (specs)
 - **Branch:** `PRDV-15619` (larry-adams, specs)
-- **PR:** [larry-adams#8](https://github.com/planetdepos/larry-adams/pull/8) (specs for review)
+- **PR (implementation):** [atlas-front-end#524](https://github.com/planetdepos/atlas-front-end/pull/524) — commit `aa942a0575ec118084dfccb662ab35bd3d2d9d1d`
+- **PR (specs):** [larry-adams#8](https://github.com/planetdepos/larry-adams/pull/8) (specs for review)
 
 ---
 
@@ -45,6 +46,63 @@
 ---
 
 ## Session log
+
+### 2026-06-27T02:30:00Z — dustin-thomason (demo runbook) + screenshot re-validation
+
+- **Summary:** Re-ran the live validation against the still-running local stack to capture PR screenshots (all four toasts: 1-new, 3-new, error, up-to-date), then authored a standalone solo-demo runbook so the session can be reproduced without agent help. No app code touched.
+- **Doc added:** `dustin-thomason/docs/atlas/local/refresh-proceedings-demo.md` — prerequisites, terminal types, the DEV-pool env values that fix login, Callisto-on-3004 + Windows `dev:watch` workaround, the three one-time DB seeds (`resources`/`SQLScript`, `video_transcodes`, `AJSF_PROCEEDINGS` ALLOW), baseline reset, the four demo scenarios with exact `proceedings` INSERTs + permission DENY/ALLOW toggles, cleanup, a "tables touched" table, and troubleshooting. Linked from `full-stack-local-setup.md` and `dev-testing-prerequisites.md`.
+- **DB during this session (local only, all reverted to demo-ready):** reset `proceedings` for job `899999996` to a single baseline; inserted 1 then 3 demo proceedings; toggled `AJSF_PROCEEDINGS` DENY→ALLOW for the error shot; restored ALLOW and reset proceedings to baseline at the end.
+- **Stack state confirmed:** Docker (`callisto-postgres`, `callisto-rabbitmq`) up; Atlas `:9000` and Callisto `:3004` healthy; the Atlas-console `/triton` `/europa` ECONNREFUSED lines are harmless (services not running, not needed).
+
+#### Shipping checklist
+
+- **Tests run** — not relevant: docs-only change in `dustin-thomason`; no code/lint/test gates in that repo. (Feature gates already green in the prior entry.)
+- **Tests added/updated** — not relevant: no production code changed.
+- **Regression impact** — isolated: one new markdown runbook + two additive cross-links; no existing doc content altered beyond the link lines. App code untouched.
+- **API docs** — not relevant: no HTTP contract change.
+- **Tooling gates** — not relevant: `dustin-thomason` docs have no package.json/lint/test gates.
+
+### 2026-06-27T02:05:00Z — atlas-front-end (pre-PR gate sweep + audit waiver)
+
+- **Summary:** Ran the full pre-commit gate sweep on branch `PRDV-15619` in order (audit → lint → tests) to prep the PR. Lint and the full-repo test suite pass clean. `npm audit` fails on **pre-existing** transitive-dependency advisories that are **not** introduced by this branch (no `package.json`/dependency changes in the feature); user **waived** the audit gate for this PR.
+- **Feature code:** untouched this session — verification only.
+- **Audit detail:** 15 vulns (3 critical, 5 high, 7 moderate) in `vite`, `vitest`/`@vitest/ui`/`@vitest/coverage-v8`, `undici`, `dompurify`, `form-data`, `js-cookie`, `qs`, `tar`, `ws`, `brace-expansion`, `@sigstore/core`, bundled `npm`. Same baseline present on `main`; the local `package-lock.json` diff is from the earlier rebase `npm install`, not new deps. `npm audit fix` deliberately **not** run (out of scope for this ticket; would change the lockfile and warrant its own validation).
+
+#### Shipping checklist
+
+- **Tests run** — see verification table below.
+- **Tests added/updated** — not relevant: no production code changed this session (gate run only).
+- **Regression impact** — not relevant: no code edits.
+- **API docs** — not relevant: no HTTP contract change.
+- **Tooling gates** — full sweep run; audit waived (see table + risk note).
+- **Conflicts / exceptions** — **audit waived by user.** Trigger present (high/critical findings → normal STOP-before-commit), action not taken: findings are pre-existing deps unrelated to PRDV-15619 (zero dependency changes on the branch). Residual risk: branch inherits the repo's existing dependency advisories; follow-up: dependency remediation tracked separately, outside this ticket.
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | atlas-front-end | **fail (exit 1)** — 15 vulns (3 crit / 5 high / 7 mod) | **waived**: all pre-existing transitive deps, none from this branch; remediation out of scope |
+| lint | `npm run lint` (`eslint . --max-warnings 0`) | atlas-front-end (full repo) | pass | — |
+| tests | `npx vitest run --no-file-parallelism` | atlas-front-end (full repo) | pass — 98 files, 846 passed / 4 skipped | `--maxWorkers 1` conflicts with repo vitest pool config; used `--no-file-parallelism` to serialize |
+
+### 2026-06-27T01:56:00Z — atlas-front-end + callisto-back-end (local validation)
+
+- **Summary:** Brought up the full local stack (Atlas dev server `:9000`, Callisto `:3004`, Postgres/RabbitMQ via Docker) on the Cognito **DEV** pool and manually validated the refresh button end-to-end against the running AJSF step-5 panel for job `899999996`. All three scenarios pass:
+  - **Test 1 (1 new):** inserted 1 proceeding via DB → clicked Refresh → toast **"1 new proceeding(s) found"** → row appeared; proceeding then selectable for upload.
+  - **Test 2 (3 new):** inserted 3 proceedings → Refresh → toast **"3 new proceeding(s) found"** → all 3 rows rendered (4 total); ID-diff count correct (excluded the existing 1).
+  - **Test 3 (error path):** revoked `AJSF_PROCEEDINGS` read in DB so the fetch returns 403 → Refresh → **"Couldn't refresh, try again"** error toast, cached list **stayed intact** (no blanking). Permission restored to ALLOW; recovery Refresh returns **"Proceedings up to date"**.
+- **Feature code:** untouched this session — validation only.
+- **Local-env seed gaps closed (NOT part of PRDV-15619; local DB only, no repo changes):**
+  - Seeded the empty `callisto.video_transcodes` reference table (6 rows incl. empty-string `NONE`). It was blocking `fetch-or-create-job-submission-form` (500 → null `jobId` → `/job-detail/NaN/proceedings`).
+  - Granted `AJSF_PROCEEDINGS` permissions (flipped 96 rows DENY→ALLOW, mirroring `PROCEEDINGS`). The resource key existed but had zero ALLOW grants, so every proceedings read 403'd regardless of role.
+  - Assigned `job_id 5001` to `resource_id 999999997` via a `jobs_tasks` insert (alternate test job with a pre-existing form).
+- **Notes:** Both seed gaps are pre-existing local-environment issues, unrelated to the refresh-button change; they are documented here so the next local setup can seed them up front. Still uncommitted; full-repo lint + broader test sweep remain before a commit.
+
+#### Shipping checklist
+
+- **Tests run** — manual end-to-end browser validation of the 3 scenarios against the live stack (results above); confirmed server-side via Callisto request logs (200 on success refresh, 403 on the simulated failure). Automated unit specs (10 passing) unchanged from the implementation session; not re-run this session.
+- **Tests added/updated** — not relevant: no production code changed this session.
+- **Regression impact** — not relevant: validation-only session; no code edits. DB changes were local seed data, reverted where temporary (permission restored to ALLOW).
+- **API docs** — not relevant: no HTTP contract change; exercised existing `GET /callisto/proceeding-job-submission/job-detail/{jobId}/proceedings`.
+- **Tooling gates** — not relevant this session: no code change to lint/test; pre-commit gate sweep still deferred per Current state.
 
 ### 2026-06-16T21:55:00Z — atlas-front-end (implementation)
 
@@ -95,6 +153,8 @@
 
 ---
 
-## Current state (as of 2026-06-16)
+## Current state (as of 2026-06-27)
 
-Button approach implemented in `atlas-front-end` (uncommitted): `RefreshProceedingsButton.vue` + fail-fast `manualRefreshProceedings`, error-swallow fix, toasts, i18n, and specs (10 passing). Not yet committed/pushed; full-repo `npm run lint` and broader test sweep still to run before a commit. Polling alternative remains deferred to a future websockets effort.
+Button approach implemented in `atlas-front-end` (uncommitted) and **validated locally end-to-end** — all three scenarios (1 new / 3 new / fetch-error preserves list) pass against the running DEV-pool stack. Code: `RefreshProceedingsButton.vue` + fail-fast `manualRefreshProceedings`, error-swallow fix, toasts, i18n, and specs (10 passing). **Pre-PR gate sweep complete:** full-repo `npm run lint` pass, full vitest suite pass (98 files / 846 tests), `npm audit` **waived** (pre-existing deps, not from this branch). **Committed (`aa942a0`) and pushed; PR opened: [atlas-front-end#524](https://github.com/planetdepos/atlas-front-end/pull/524)** (base `main`). Awaiting review; screenshots still to be attached to the PR. Polling alternative remains deferred to a future websockets effort.
+
+**Local setup note:** running the AJSF locally requires two reference seeds that were missing in a fresh local DB (not part of this ticket): a populated `callisto.video_transcodes` table (incl. empty-string `NONE`), and `AJSF_PROCEEDINGS` ALLOW grants in `permissions`. Full solo-demo runbook (env, commands, seeds, scenario SQL, cleanup): `docs/atlas/local/refresh-proceedings-demo.md`.
