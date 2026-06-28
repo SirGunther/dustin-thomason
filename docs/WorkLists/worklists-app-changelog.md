@@ -36,6 +36,33 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-06-28T07:49:31Z - WorkLists
+
+- Summary: Made the notes editor expand to fit the pane, with an adjustable card-text splitter.
+- Problem: Inline note editing was locked to a small ~5-6 line box. Naive fixes then introduced their own regressions across iterations: filling the pane fought sibling notes for space and broke list scrolling; a fixed-px cap ignored editor chrome so the tabs/toolbar scrolled out of view while typing; focusing a bottom note triggered a browser auto-scroll to a half-revealed position; and the card-text preview at the top of the pane took too much fixed room and could not be tuned per the user's content.
+- Requirement: Inline note editing must size dynamically to its content and grow up to a cap that keeps the whole editor (tabs, toolbar, action row) inside the visible pane so controls never disappear; multiple notes must stay individually visible and the list scrollable; entering edit mode must land the note at a predictable, consistent scroll position; and the card-text area must collapse for short cards yet be user-resizable up to a max when content is long — without changing the pane's existing spacing.
+- Solution:
+  - Inline editor sizing (`bindNoteEditAutosize` + `noteEditSurfaceBudget` in `public/todolist2.js`): the active surface (markdown textarea via `autoResizeTextarea`, and the visual contenteditable) grows with content up to `min(list.clientHeight, min(70vh, 640px)) - fitMargin - chrome`, then scrolls internally. Because the whole editor fits the visible pane, the list never auto-scrolls to chase the caret and the top controls stay put. Recomputed on `input` and `focus` (focus covers Visual/Preview->Markdown tab return). CSS backstops: textarea `max-height: min(70vh, 640px)`; visual/preview `min(calc(70vh - 150px), 490px)` at raised specificity to beat the base 320px cap.
+  - List scroll preserved: each `.notes-pane-note` is `flex: 0 0 auto` (natural height, never compressed); the editing note is `display:flex; column` but not flex-grow, so siblings stay visible and `.notes-pane-list` keeps scrolling.
+  - Edit-entry alignment (`alignNoteToEditViewport`): on entering edit mode the note's top is pinned to the pane viewport top via rect-based delta, gated on the list actually overflowing (full/short list left untouched). Focus uses `{ preventScroll: true }` to suppress the browser jump. Tunable `NOTE_EDIT_SCROLL_NUDGE` (px) shifts the resting spot.
+  - Card-text splitter: halved the preview's default cap (`max-height: min(38vh, 360px)` -> `min(19vh, 180px)`) so short cards stay compact. Added a `row-resize` handle (`#notes-pane-card-preview-resize`) whose 12px box sits inside the pane's existing 12px row gap via `-12px` margins (no added spacing) with a grip that is transparent until hover. Dragging writes `max-height` only (never a fixed height) via `applyCardPreviewHeight`, clamped `[74, min(60vh, 600)]`, persisted to `localStorage: notesPaneCardPreviewHeight`; double-click resets. Short cards still collapse to content; the cap only bites once content is tall enough to scroll.
+- UI/UX preference note: User strongly preferred minimal, hover-revealed chrome that preserves prior spacing exactly, and "content-sized up to a threshold" semantics over fixed sizing. Repeated redirects favored: never let controls leave the viewport, keep multi-note scrolling intact, and make resize affordances near-invisible until needed.
+- Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `public/index.html`, `tests/markdown-editor.test.js`, canonical changelog.
+- User-visible impact: Editing a note now opens a roomy editor that grows with what you type, stops at the pane edge with tabs/toolbar always visible and the text scrolling inside; other notes remain visible and scrollable; the note snaps to the top of the pane when you start editing; the card-text area at the top is compact by default but can be dragged taller (and double-clicked to reset), with the boundary invisible until hovered.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css public/index.html tests/markdown-editor.test.js` | Touched files | pass | - |
+  | lint | `npm run lint` | WorkLists formatting gate (`prettier --check .`) | pass | - |
+  | tests | `node --test` | Full WorkLists suite | pass, 468 tests | - |
+
+- Tests added/updated: Updated `tests/markdown-editor.test.js` to assert the new card-preview cap `max-height: min(19vh, 180px)`. No new behavioral test was added for the JS sizing/splitter logic — the existing suite covers source/CSS contracts and pinned the changed CSS value; the live drag/fit-to-pane geometry depends on real layout measurement (`clientHeight`/`offsetHeight`) not exercised by the jsdom/source-contract harness. Risk: drag clamp and fit-to-pane math are validated by manual browser check, not an automated assertion. Follow-up: add a Playwright case under `tests/browser-notes-smoke.js` for editor fit-to-pane and splitter persistence.
+- Regression impact: Scoped to the notes-pane inline editor and card-text preview. `.notes-pane-note { flex: 0 0 auto }` is a new base rule affecting all notes' flex behavior in the list; verified read view, multi-note layout, and list scrolling are intact via the full suite and manual check. Card-text edit (`.notes-pane-task-edit`), the new-note form, search, and scheduler paths untouched.
+- API docs: Not relevant: UI-only editor/layout behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Format, lint (`prettier --check .`), and full `node --test` suite passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Pre-existing unrelated uncommitted WorkLists edits remain present and were not reverted (`tests/browser-notes-smoke.js`, `tests/context-windows.test.js`, `tests/card-move-ui.test.js`, `.claude/`, and prior notes-pane/markdown work in `public/markdownAuthoring.js`).
+
 ### 2026-06-27T21:14:10Z - WorkLists
 
 - Summary: Cleared search icon focus after dismiss.
