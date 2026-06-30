@@ -3,6 +3,15 @@
 
 $ErrorActionPreference = "Stop"
 
+
+$scriptModulesPath = Join-Path $PSScriptRoot "gitcommit.d"
+
+$maintenanceScript = Join-Path $scriptModulesPath "git-maintenance.ps1"
+
+if (Test-Path -LiteralPath $maintenanceScript) {
+  . $maintenanceScript
+}
+
 function Confirm-YesNo {
   param(
     [string]$Question,
@@ -201,6 +210,10 @@ Push-Location $repoRoot
 try {
   Write-Host "`nRepo: $repoRoot" -ForegroundColor Yellow
 
+  if (Get-Command Invoke-GitCommitMaintenance -ErrorAction SilentlyContinue) {
+    Invoke-GitCommitMaintenance
+  }
+  
   $currentBranchOutput = & git branch --show-current
   $currentBranch = Get-TrimmedFirstLine $currentBranchOutput
 

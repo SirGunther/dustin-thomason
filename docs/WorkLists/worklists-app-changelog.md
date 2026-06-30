@@ -36,6 +36,34 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-06-30T06:26:07Z - WorkLists
+
+- Summary: Added a multi-select batch mode with a floating action bar (set status, color tag, secondary tag, completion across many cards at once).
+- Problem: Cards could only be retagged/restatused/completed one at a time; routine bulk edits (e.g. retag a dozen cards, mark a set done) meant repetitive per-card work.
+- Requirement: A toggleable "batch mode" (icon to the right of Search, exit via Escape like other modes) that reveals a per-card selection affordance and a floating bar; from the bar, apply status / color (primary) tag / secondary tags / completion on-off to all selected cards in one shot; existing API contracts must not regress; new behavior unit-tested and the batch endpoint contract regression-tested.
+- Solution:
+  - New pure module `public/batchMode.js` (UMD, DOM-free, mirrors the `secondaryTags.js`/`cardActions.js` dual-export pattern): owns `{ active, selected:Set }` state, mode toggle, selection ops, and replace-semantics payload builders (`statusPatch`/`primaryTagPatch`/`secondaryTagPatch`/`completionPatch`, `buildBatchUpdates`). Kept DOM-free for unit-testability.
+  - Reused the existing live batch endpoint — `PATCH /todos` → `ApiService.updateMultipleTodos([{ id, updateData }])` → `dal.updateMultipleTodos` (one atomic `writeDB`, validates `status` + `secondaryTagIds`). No new server contract, DAL function, or OpenAPI entry. All four ops are `updateData` field merges: `{status}`, `{tag}`, `{secondaryTagIds}`, `{completed, completedDate}`.
+  - DOM glue in `public/todolist2.js`: toolbar toggle `#batch-mode-btn` (one icon right of Search, mirrors `#scheduler-open-btn`); `.batch-check` affordance appended in `createTask`, revealed only under `body.batch-mode`; a capture-phase `#board` click handler turns a card into a select target and suppresses its normal click (edit/checkbox/tag) while in mode; bar populated from `statusRecords`/`globalTags`/`secondaryTags`; apply-on-change pickers + Complete/Incomplete/Clear buttons; bulk-apply merges the response todos into local `todos`/`schedulerAllTodos`, clears selection, `updateAndRenderUI()`, re-syncs.
+  - Escape via the app's native shortcut registry (not a raw keydown): a `batch-mode` context provider (`allowGlobal:false, replaceScopes:true`) isolates the mode, and a `batch.exit` Escape shortcut does the 2-stage clear-then-exit (matches Countdowns behavior, app-native mechanism).
+  - Look-and-feel: ported the Countdowns multi-select pattern (icon, Escape, selection model, floating-bar geometry) and restyled to the WorkLists dark palette (`#303030`/`#4a4a4a`, hover `#6a786d`; fixed/centered/bottom bar).
+  - Scope (confirmed with user): cards-only selection; replace semantics; card/column **moves deferred** to a follow-up (no batch-move endpoint exists and whole-file `writeDB` makes client fan-out unsafe — a future atomic endpoint).
+- Files/areas: `public/batchMode.js` (new), `public/todolist2.js`, `public/index.html`, `public/todoliststyles2.css`, `.gitignore` (ignore `data-test-batch/`), `tests/batch-mode.test.js` (new), `tests/batch-todos.test.js` (new), canonical changelog.
+- User-visible impact: A new check-double icon sits just right of Search. Clicking it enters batch mode — cards show a selection marker and a floating bar appears; pick cards, then set their status / color tag / secondary tag, or mark them complete/incomplete in one action. Escape clears the selection, then exits; the toggle and Clear also exit/clear.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public/batchMode.js public/todolist2.js public/index.html public/todoliststyles2.css tests/batch-mode.test.js tests/batch-todos.test.js` | Touched files | pass | - |
+  | lint | `npm run lint` (`prettier --check .`) | Whole project | pass | - |
+  | tests | `node --test` | Full WorkLists suite | pass, 506 tests | - |
+
+- Tests added/updated: `tests/batch-mode.test.js` (23 unit cases — mode toggle, selection add/remove/clear/normalize, payload builders for all four ops with replace semantics, two-stage Escape) and `tests/batch-todos.test.js` (API contract regression — `PATCH /todos` batch status/tag/secondaryTagIds/completion across multiple todos, mixed updates in one request, persistence via `GET /data`, unknown-id skip). Both green under the full run.
+- Regression impact: New feature is additive. `batchMode.js` is a standalone module; `todolist2.js` changes are additive (one `createTask` append, one init call, one capture-phase listener, two shortcut/provider additions, a new function block) and gated behind `body.batch-mode` / `BatchMode.isActive()` so default board behavior is unchanged. Reused `PATCH /todos` unchanged. Full 506-test suite (prior 468 + pre-existing untracked suites + new 23) passes with 0 failures.
+- API docs: Not relevant — no HTTP surface change. The feature reuses the existing `PATCH /todos` (path, method, `BatchTodoUpdate` body, `TodosMutationResponse`) already documented in `openapi.js`; `tests/openapi.test.js` still green (no new path).
+- Tooling gates: format, lint (`prettier --check .`), and full `node --test` suite passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Pre-existing unrelated uncommitted WorkLists edits remain present and were not touched (`tests/project-status.test.js`, untracked `tests/action-bar-consolidation.test.js`, `tests/active-tags-summary.test.js`). Card/column batch **move** is intentionally out of scope this slice (deferred per user); risk: none introduced — moves still use the existing single-item dialogs unchanged.
+
 ### 2026-06-28T07:49:31Z - WorkLists
 
 - Summary: Made the notes editor expand to fit the pane, with an adjustable card-text splitter.
