@@ -47,6 +47,21 @@
 
 ## Session log
 
+### 2026-06-30T16:33:00Z — atlas-front-end + dustin-thomason (PR #524 review responses)
+
+- **Summary:** Addressed the three review comments on PR #524 from p-lana. Two were change requests (move `console.error` string to `common.json`; readability refactor of `handleRefresh`) and one was a question (why the `fetchJobProceedings` try/catch was removed). The prior pass had already applied the code edits but left **two Prettier `--max-warnings 0` violations** in `FileUploadSectionCore.vue` that would fail the Atlas lint gate — auto-fixed them this session. No deeper refactor needed.
+- **Refactor verdict:** edits are behaviorally correct. try/catch removal is intentional — errors now propagate to Vue Query (preserves last-good cache, exposes `proceedingsError`) and to `handleRefresh`'s catch (error toast), instead of being swallowed into `[]` which blanked the list. `Set<number>` (not the reviewer's `Set<string>`) is correct since `ProceedingData.id` is numeric.
+- **Doc added:** `docs/atlas/PRDV-15619-pr-review-responses.md` — paste-ready PR replies for each comment + rationale + the i18n console.error nuance (sibling `addProceedingsFailed` exists but its console.error still hardcodes the string).
+- **Files touched:** `useJobSubmissionJobProceedings.ts` (comment), `FileUploadSectionCore.vue` (refactor + i18n + prettier), `common.json` (`refreshProceedingsFailed`), `FileUploadSectionCore.spec.ts` (i18n mock key).
+
+#### Shipping checklist
+
+- **Tests run** — `npx vitest run --no-file-parallelism FileUploadSectionCore.spec.ts` → 6/6 pass; `npx eslint <4 changed files>` → 0 errors/0 warnings. Full-repo audit→lint→tests sweep to be re-run at commit time.
+- **Tests added/updated** — i18n mock key added to `FileUploadSectionCore.spec.ts` to cover the new `refreshProceedingsFailed` usage; existing refresh-scenario specs (new/up-to-date/error) still pass.
+- **Regression impact** — isolated: changes confined to the refresh path in one composable + one section component and their i18n keys; sibling `handleAddProceedings` and the `useQuery` contract unchanged.
+- **API docs** — not relevant: front-end only, no HTTP contract change.
+- **Tooling gates** — lint + targeted tests run (above); not yet committed, so full gate sweep pending commit.
+
 ### 2026-06-27T02:30:00Z — dustin-thomason (demo runbook) + screenshot re-validation
 
 - **Summary:** Re-ran the live validation against the still-running local stack to capture PR screenshots (all four toasts: 1-new, 3-new, error, up-to-date), then authored a standalone solo-demo runbook so the session can be reproduced without agent help. No app code touched.
