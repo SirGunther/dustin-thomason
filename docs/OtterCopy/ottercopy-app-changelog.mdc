@@ -65,6 +65,28 @@
 
 <!-- newest first -->
 
+### 2026-06-30T16:42:38Z — OtterCopy — Type dropdown now lists all prompts, Extended gated
+
+**Summary.** Follow-up to the declutter work below: the Type dropdown was hardcoded to Task/Handoff, which dropped primary-UI access to the `Summary` and `Variables` prompts (previously reachable via the active-prompt setting on the Basic path). Reworked the dropdown to list the **entire prompt library** (built-ins + user custom) from `promptStore.getPrompts()`, value = prompt id. The **Extended review** toggle is now enabled only for prompts that have an extended pipeline (`prompt-refinement`, `prompt-handoff`) and is disabled + unchecked for all others (single-pass prompts).
+
+**Files/areas.**
+- `popup.html` — `#refineType` emptied of hardcoded options (populated dynamically).
+- `popup.js` — `EXTENDED_PIPELINE_BY_PROMPT_ID` map; `populateRefineTypes()` (built from `promptConfigs`, preserves selection, called in `initializeSettings` + `renderPromptList`); `updateExtendedGating()` enables/clears the toggle; `runRefine()` sends the selected `promptId` on the Basic path and routes the two chain prompts to their extended actions; prefs now persist `promptId` + `extended`; init reordered to `initializeSettings().then(loadUiPrefs)` so the dropdown exists before prefs restore.
+- `background.js` — short path takes `promptId` (replacing the earlier `type` map); selects that prompt, falling back to the active prompt when absent.
+
+**User-visible impact.** All prompts (Refinement, Summary, Variables, Handoff, + any custom) selectable from the primary view. Extended toggle greys out for prompts with no chain, removing a meaningless control state. No reachability regression.
+
+#### Shipping checklist
+
+- **Tests run** — not relevant: no JS harness / no `package.json` gates; `node --check popup.js background.js` passes (syntax only).
+- **Tests added/updated** — blocked: no runnable harness for the popup/background layer; risk = dropdown population + toggle gating + prompt-routing uncovered; follow-up = add jsdom/vitest harness. Mitigated by manual verification.
+- **Regression impact** — Basic path still falls back to active prompt when `promptId` absent (legacy-safe); extended paths untouched.
+- **API docs** — not relevant: no HTTP contract change.
+- **Tooling gates** — not applicable: repo has no lint/test/audit scripts.
+- **Conflicts / exceptions** — none.
+
+**Verification (manual, pending user run).** Confirm dropdown lists all 4 built-ins + custom; toggle enabled only for Refinement/Handoff; Summary/Variables run single-pass with their own prompt; selection persists. Not yet run by the agent.
+
 ### 2026-06-30T16:42:38Z — OtterCopy (popup + background)
 
 **Summary.** Decluttered the popup: collapsed the 4 mode buttons into a **Type dropdown** (Task refinement / Engineering handoff) + an **Extended review** toggle + one primary **Refine and copy** button, keeping **Copy exact transcript** standalone. Re-routed the resulting 2×2 onto the existing two backend paths (no builder rewrite). Moved **Copy latest debug log** into the Settings panel; compacted **Latest result** + **Stop** into a single iconified row.
