@@ -327,7 +327,31 @@ try {
     $lsRemoteExitCode = $LASTEXITCODE
 
     if ($lsRemoteExitCode -eq 0) {
-      Invoke-GitCommand @("pull", "--rebase", "origin", $targetBranch)
+      Write-Host "`n> git pull --rebase origin $targetBranch" -ForegroundColor Cyan
+      & git pull --rebase origin $targetBranch
+      $pullExitCode = $LASTEXITCODE
+
+      if ($pullExitCode -ne 0) {
+        $rebaseInProgress = Test-Path -LiteralPath (Join-Path $repoRoot ".git\rebase-merge")
+
+        if ($rebaseInProgress) {
+          Write-Host "`nThe rebase hit a conflict, so your commit was NOT pushed." -ForegroundColor Yellow
+          Write-Host "Nothing was lost and nothing on origin was overwritten." -ForegroundColor Yellow
+          Write-Host "`nThe remote had changes to the same lines you edited. To finish:" -ForegroundColor Yellow
+          Write-Host "  1. git status                  # see which files conflict"
+          Write-Host "  2. Edit each file and resolve the <<<<<<< / >>>>>>> markers"
+          Write-Host "  3. git add <resolved files>"
+          Write-Host "  4. git rebase --continue       # repeat 1-4 if more conflicts appear"
+          Write-Host "  5. Re-run this script to push"
+          Write-Host "`nOr to abandon the rebase and return to your pre-pull state:" -ForegroundColor DarkYellow
+          Write-Host "  git rebase --abort"
+        }
+        else {
+          Write-Host "`nStopped because 'git pull --rebase' failed. Nothing was pushed." -ForegroundColor Red
+        }
+
+        exit $pullExitCode
+      }
     }
     elseif ($lsRemoteExitCode -eq 2) {
       Write-Host "`nRemote branch origin/$targetBranch does not exist. Skipping pull/rebase for first push." -ForegroundColor Yellow

@@ -36,6 +36,59 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-06-30T16:44:55Z - WorkLists
+
+- Summary: Resolved the Notes pane Ctrl+O action-menu shortcut conflict.
+- Problem: When focus was inside the Notes pane and the notes card action menu was open, Ctrl+O could fall through to the global board-library/open command path instead of closing the active menu.
+- Requirement: Ctrl+O must prioritize closing the active Notes pane menu while that menu is open, without enabling the board-library toggle from ordinary Notes pane editor focus.
+- Solution:
+  - Added `isNotesPaneCardActionMenuOpen()` and `closeNotesPaneCardActionMenuFromShortcut()` in `public/todolist2.js`.
+  - Registered `notes.actionMenu.close` in the `notes-pane` shortcut scope with the same Ctrl+O binding, enabled only while `.card-action-menu--notes-pane` exists.
+  - Kept `board.panel.toggle` global behavior unchanged and still blocked from normal notes-pane focus by `canUseBoardGlobalShortcut()`.
+  - Updated the shortcut contract test helper and WorkLists shortcut contract assertions so closed-menu Ctrl+O stays blocked in notes focus, while open-menu Ctrl+O dispatches `notes.actionMenu.close`.
+- Files/areas: `public/todolist2.js`, `tests/shortcut-registry.test.js`, canonical changelog.
+- User-visible impact: Pressing Ctrl+O while the Notes pane card action menu is open now closes that menu instead of opening/toggling the board library; Ctrl+O remains inert for normal Notes pane editing focus when no such menu is open.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | tests | `node --test tests\shortcut-registry.test.js` | Shortcut registry/controller/source contract | pass, 20 tests | - |
+  | tests | `node --test tests\context-windows.test.js` | Notes/context-window source contracts | pass, 25 tests | - |
+  | tests | `node --test tests\card-actions.test.js` | Card action menu contracts | pass, 16 tests | - |
+  | tests | `node --test tests\search-shortcuts.test.js` | Search and Ctrl+O side-panel contracts | pass, 18 tests | - |
+
+- Tests added/updated: Updated `tests/shortcut-registry.test.js` to register `notes.actionMenu.close`, assert normal Notes pane Ctrl+O remains blocked when the menu is closed, and assert Ctrl+O dispatches the notes-menu closer when `notesActionMenuOpen` is true.
+- Regression impact: Scoped to the Notes pane card action menu shortcut path. The new command is in `notes-pane` scope and enabled only by `.card-action-menu--notes-pane`, so board-level Ctrl+O and search/side-panel behavior remain on existing paths; focused shortcut, context-window, card-action, and search shortcut suites are green.
+- API docs: Not relevant: UI-only keyboard shortcut behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Focused applicable test gates passed. Full `npm run lint` / full `node --test` were not rerun in this follow-up; risk is limited to formatting/full-suite coverage outside the touched shortcut/context/card/search surfaces. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Initial wrap-up missed the canonical changelog and notification workflow because the first AGENTS path supplied did not exist; corrected after reading `C:\dustin-thomason\AGENTS.md`. Pre-existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+### 2026-06-30T19:40:00Z - WorkLists
+
+- Summary: Added a pinned "Active tags" summary at the top of the card tag chooser, then segmented it into distinct primary/secondary category groups.
+- Problem: Applied tags were only legible by scanning each option row's checkbox or reading the hover tooltip; in long lists, selected state was invisible at a glance. A first pass surfaced them as a flat chip row, but with no category grouping the primary↔secondary association stayed ambiguous (only a color swatch hinted at kind).
+- Requirement: Applied primary + secondary tags must be visible at the chooser top without scanning; the region must reflect add/remove live; categories must be visually delineated with headers/containers; and the structure must stay extensible for future tag types.
+- Solution:
+  - New pinned section (`createActiveTagsSection` / `renderActiveTagSummary` in `public/todolist2.js`), appended as the first chooser child so it occupies the first grid row at full width (`.active-tag-section { grid-column: 1 / -1 }`).
+  - Category model is declarative: `getActiveTagGroups(task)` returns one descriptor per kind (`primary` → "Color" with `getPrimaryTagColor` swatch; `secondary` → "Secondary"). `renderActiveTagSummary` renders each populated group as its own labeled, bordered cluster (`.active-tag-group` + `.active-tag-group-title` + `.active-tag-group-chips`), with a kind-specific left accent border. Adding a future tag type is a single descriptor entry — no render/refresh-plumbing change.
+  - Each chip carries an inline remove (×) that toggles the tag off via the existing `updateTaskTag` / `updateTaskSecondaryTags` (`deferSortReapply: true`) paths, then re-renders the matching option list through `rerenderTagOptionList`.
+  - Live sync without event plumbing: `renderPrimaryTagRows` / `renderSecondaryTagRows` call `refreshActiveTagSummaryForList(list, taskId)` on their first line. Every applied-tag mutation (checkbox toggle, chip removal, delete, rename) already ends by re-rendering an option list, so the pinned summary stays in sync from one place. At construction the list isn't yet in the menu (`closest` returns null → no-op); the section renders itself initially.
+- UI/UX preference note: Matches prior WorkLists tagging work — keep applied state legible at a glance, prefer minimal chrome, and make categories self-evident rather than inferred from color alone.
+- Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/active-tags-summary.test.js` (new), canonical changelog.
+- User-visible impact: Opening a card's tag chooser now shows an "Active tags" strip at the top listing the tags already applied, split into a "Color" group and a "Secondary" group (each in its own bordered box with an accent edge); chips have an × to remove a tag, and the strip updates instantly as tags are toggled, removed, renamed, or deleted.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/active-tags-summary.test.js` | Touched files | pass | - |
+  | lint | `npm run lint` | WorkLists formatting gate (`prettier --check .`) | pass | - |
+  | tests | `node --test` | Full WorkLists suite | pass, 515 tests | - |
+
+- Tests added/updated: New `tests/active-tags-summary.test.js` (8 cases) asserts the source/CSS contract — pinned-first placement, removable chips, declarative `getActiveTagGroups` category split, deferred-sort removal paths, single-point summary refresh, full-width strip styling, and the per-category bordered/labeled group styling. Follows the repo's established source-contract harness (the chooser is covered this way in `tests/secondary-tags.test.js`); live DOM geometry (chip wrap, group reflow) is left to manual/Playwright check, consistent with prior chooser work. Risk: interaction wiring is asserted by source contract, not a jsdom event simulation.
+- Regression impact: Scoped to the tag-chooser overlay. `renderPrimaryTagRows` / `renderSecondaryTagRows` gained a leading summary-refresh call that is a no-op when the list is detached (initial construction) or outside a chooser; the search-input rerender path (no data change) re-renders a cheap chip strip. Card rendering, filters, scheduler, and the live batch endpoint paths untouched; full suite (515) green.
+- API docs: Not relevant: UI-only chooser overlay; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Format, lint (`prettier --check .`), and full `node --test` suite passed. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Pre-existing unrelated uncommitted WorkLists edits remain present and were not reverted (notably the in-flight batch-mode work — `public/batchMode.js`, `tests/batch-*.js`, `tests/action-bar-consolidation.test.js` — and prior notes-pane/search edits).
+
 ### 2026-06-30T06:26:07Z - WorkLists
 
 - Summary: Added a multi-select batch mode with a floating action bar (set status, color tag, secondary tag, completion across many cards at once).

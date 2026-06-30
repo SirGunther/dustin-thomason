@@ -8,6 +8,28 @@ Personal project changelog for extension behavior, prompt workflow changes, noti
 
 ## Session log
 
+### 2026-06-30T15:09:58Z — OtterCopy
+- **Summary:** Migrated standard-refine prompts to a code-versioned, sync-backed library.
+- **Files/Areas:** `promptStore.js` (core refactor), `background.js`, `popup.js`, `prompts/custom/index.json` (new), `prompts/custom/handoff.md` (moved from `prompts/handoff.md`), `prompts/_archive/refinement-objective-preamble.md` (new); deleted `prompts/refinement.md` and `prompts/handoff.md`.
+- **User-visible impact:** The prompt list now seeds four code-versioned built-ins from packaged files — Refinement, Summary, Variables, Handoff — identical on every install (was: a single `Refinement` built-in plus browser-cache-only user prompts). Edits and the active selection persist in `chrome.storage.sync`, so they travel across signed-in browsers/machines instead of being siloed in one browser's `chrome.storage.local`. Reset restores the packaged file content. Handoff is now a selectable prompt and the same file (`prompts/custom/handoff.md`) still drives the extended-handoff pipeline. The `# Objective:` preamble from the retired top-level refinement prompt is parked, unused, under `prompts/_archive/`.
+- **Storage model:** `promptStore.js` no longer stores one `ottercopyPrompts` array in `storage.local`. Built-in content is hydrated from packaged files (never synced); `chrome.storage.sync` holds only lightweight per-prompt items — `ottercopy:activePromptId`, `ottercopy:override:<id>` (edited built-ins), `ottercopy:custom:<id>` (user prompts) — one item each to respect `QUOTA_BYTES_PER_ITEM`. A one-shot `ottercopy:migratedV2` migration folds the legacy local array into the new keys (built-in edits → overrides only when they differ from the packaged file; user prompts → custom keys; active selection preserved). Public store API unchanged.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| syntax | `node --check promptStore.js` | prompt store refactor | pass | — |
+| syntax | `node --check background.js` | handoff path repoint + regression surface | pass | — |
+| syntax | `node --check popup.js` | prompt UI meta label | pass | — |
+| syntax | `node --check content.js` | content script regression surface | pass | — |
+| manifest | `node -e "JSON.parse(fs.readFileSync('manifest.json'))"` | extension manifest | pass | — |
+| data | `node -e "JSON.parse(.../index.json)"` (4 entries) | library index | pass | — |
+| behavior | mocked Node-VM harness for `promptStore.js` (5 scenarios, 24 assertions) | seed, edit+reset, custom CRUD, quota guard, legacy migration | pass | — |
+
+- **Tests added/updated:** No persistent automated tests added; this repo has no `package.json`/test harness (consistent with prior sessions). Verification used `node --check`, JSON parse, and a temporary mocked Node-VM harness (run, then left only in the session scratchpad outside the repo). Residual risk: live Chrome `chrome.storage.sync` propagation across a second signed-in profile, and the one-shot legacy migration against real cached `ottercopyPrompts` data, should be confirmed in a loaded extension.
+- **Regression impact:** Standard `ai-refine` and `extended-refine` still read the active prompt via the unchanged `getPrompts`/`getActivePrompt` API (background.js call sites untouched). The extended-handoff pipeline still sources its governing prompt from a file (`governingPromptSource:"file"`), now `prompts/custom/handoff.md`; handoff prompt text was moved verbatim. Semantic-block, personas, extended section directives, model orchestration, polling, cancellation, and notifications are unchanged.
+- **API docs:** Not relevant: browser extension only; no HTTP API contract or Swagger/OpenAPI surface. Internal change is the prompt-storage layer and one packaged-file path constant.
+- **Tooling gates:** No package-level lint/test/audit gates apply because the repo has no `package.json`; direct syntax, manifest, JSON, and mocked-behavior checks were run with Node.
+
 ### 2026-06-26T05:30:02Z — OtterCopy
 - **Summary:** Added popup terminal-status announcement for watched refinement jobs.
 - **Files/Areas:** `popup.js`
@@ -652,6 +674,8 @@ Tooling gates:
 - No package-level lint/test/audit gates found because the repo has no `package.json`; syntax check was run for the touched JavaScript file.
 
 ## Current state
+Standard-refine prompts are a code-versioned library. `prompts/custom/index.json` enumerates four packaged built-ins (Refinement, Summary, Variables, Handoff); `promptStore.js` seeds their content from the packaged `.md` files on load and stores only user state in `chrome.storage.sync` — active selection (`ottercopy:activePromptId`), edited-built-in overrides (`ottercopy:override:<id>`), and user-created prompts (`ottercopy:custom:<id>`), one sync item each. Reset deletes an override to restore packaged content; built-ins cannot be deleted; oversized prompts are rejected against the per-item sync quota. A one-shot `ottercopy:migratedV2` migration imports the legacy `chrome.storage.local` `ottercopyPrompts` array. The handoff prompt lives at `prompts/custom/handoff.md` and serves both the selectable Handoff prompt and the extended-handoff pipeline's file-sourced governing prompt. The retired top-level `prompts/refinement.md` `# Objective:` preamble is parked, unused, in `prompts/_archive/`.
+
 Extended refinement uses a final-pass-model semantic-block preflight, then a seven-section paired persona pipeline with claim-ledger discipline before the final synthesis and Objective insertion passes. The same semantic block is appended to downstream prompts for single-pass refinement, extended refinement, and engineering handoff.
 
 An optional user "Direction" textarea in the popup lets the user steer a run. When provided, the direction is injected as a labeled, guard-railed steering block into every model call (semantic block, each persona pass, final synthesis, objective insertion, and the single-pass refine prompt) so the agents can be nudged toward the intended topic when a transcript spans multiple subjects, without treating the direction as new transcript facts. Empty direction preserves prior behavior; the direction is captured per run and not persisted across popup sessions.
@@ -663,6 +687,7 @@ Extended refinement and engineering handoff run as background jobs, save their l
 Legacy in-repo changelog content from C:\Users\dustin.thomason\OneDrive\PDProjects\Browser Extensions\OtterCopy\docs\ottercopy\ottercopy-changelog.md was migrated into this canonical file on 2026-06-08T03:00:52Z without removing historical session text.
 
 ## Plans
+- [2026-06-30] Migrate autocopy prompts to a code-versioned, sync-backed library (index.json seed + per-key sync overrides; promote handoff; archive Objective preamble). Plan: `C:\Users\dktho\.claude\plans\dustin-thomason-agents-md-do-not-pull-refactored-snowglobe.md`. Status: implemented.
 - [2026-06-15] Optional Direction steering input injected into all pipeline agents. Status: implemented.
 - [2026-06-08] Migrate legacy in-repo changelog into canonical dustin-thomason OtterCopy changelog. Status: implemented.
 - [2026-06-08] Power Automate success/failure notifications for extended jobs. Status: implemented.

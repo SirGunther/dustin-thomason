@@ -1,0 +1,93 @@
+# OtterCopy — App changelog
+
+**Purpose.** Cross-session memory for the OtterCopy browser extension (transcript copy + AI refinement). Canonical record of what shipped, current state, and plans.
+
+**Scope.** Extension under `OneDrive/PDProjects/Browser Extensions/OtterCopy` (popup UI, background orchestration, prompt library, model/prompt stores).
+
+---
+
+## Requirements (verbatim)
+
+> # Reconfigure Extension UI for Improved Navigation
+>
+> ## Problem
+> The current extension UI is cluttered with a large number of buttons, resulting in a disorganized experience that is difficult to navigate and visually overwhelming.
+>
+> ## Requirement
+> Transition the interface to a cleaner layout that supports specific task types and reduces visual noise. Users need to categorize refinements (Task vs. Engineering Handoff) and select complexity levels (Extended vs. Basic).
+>
+> ## Proposed Solution
+> - **Dropdown Menus:** Replace high-volume buttons with a dropdown to select refinement types and tiers.
+> - **UI Scaling:** Reduce the size of remaining functional buttons.
+> - **Iconography:** Integrate icons for secondary actions like copying to save space.
+> - **Settings Migration:** Move secondary tools, such as the latest debug log, into a dedicated settings menu to declutter the primary view.
+>
+> **Estimation:** 5 Sprint Points.
+
+> # Unify Prompting Logic and Interface Architecture
+>
+> ### Problem
+> The current system separates "short" and "extended" prompting workflows into distinct markdown-based logic. The extended workflow creates a chain of independent refinements, while the short workflow is a single-step process. This redundancy makes managing prompt behavior difficult and creates unnecessary friction when switching between modes.
+>
+> ### Requirement
+> - Create a unified prompt structure that supports both short and extended workflows using the same interface.
+> - Implement a "Chain of Events" structure where independent sections can be toggled.
+> - Introduce a toggle/checkbox for "Extended" mode to dynamically inject additional personalities and processing steps into the prompt chain.
+> - Dynamically manage API calls based on the active workflow behavior.
+> - Explore transitioning the extension interface to a more fluid HTML-based page to support complex menus and API interactions while keeping the core extension lightweight.
+>
+> ### Solution
+> - Refactor the prompt builder to treat "Short" and "Extended" as configuration options within a singular architecture rather than separate code paths.
+> - Develop a modular UI layout that permits independent section configuration.
+> - Evaluate moving interface logic to a dedicated HTML/JavaScript view to improve user control and extensibility.
+>
+> **Estimation:** 13 Sprint Points.
+
+---
+
+## Plans
+
+| Date | Plan | Status | Approach |
+| ---- | ---- | ------ | -------- |
+| 2026-06-30 | `~/.claude/plans/dustin-thomason-agents-md-do-not-pull-delegated-alpaca.md` | active | Declutter slice only: Type dropdown (Task/Handoff) + Extended toggle + single Refine button; re-route 2×2 onto existing two backend paths; debug-log → settings; iconify secondary buttons. Backend builder unification + HTML-page migration + per-section toggling explicitly deferred. |
+
+---
+
+## Current state
+
+- Popup exposes 4 mode buttons (`exact`, `ai-refine`, `extended-refine`, `extended-handoff`) + stop / copy-latest / copy-debug-log + settings.
+- Two backend paths: `runStandardRefinementJob` (1 call) and `runExtendedRefinement` (~17 calls, persona chain). `EXTENDED_PIPELINES.refinement` / `.handoff` already configure extended type as data.
+- Short path uses the single active prompt; it has no Task/Handoff concept yet.
+
+---
+
+## Session log
+
+<!-- newest first -->
+
+### 2026-06-30T16:42:38Z — OtterCopy (popup + background)
+
+**Summary.** Decluttered the popup: collapsed the 4 mode buttons into a **Type dropdown** (Task refinement / Engineering handoff) + an **Extended review** toggle + one primary **Refine and copy** button, keeping **Copy exact transcript** standalone. Re-routed the resulting 2×2 onto the existing two backend paths (no builder rewrite). Moved **Copy latest debug log** into the Settings panel; compacted **Latest result** + **Stop** into a single iconified row.
+
+**Files/areas.**
+- `popup.html` — replaced mode buttons with `#refineType` select + `#extendedToggle` + `#refineButton`; relocated `#copyDebugLogButton` into `#modelSettingsPanel` (`.settings-tools`); compact `.secondary-actions` row.
+- `popup.css` — `.refine-controls`, `.refine-type-field`, `.extended-toggle-field`, `.secondary-actions`, `.compact-action`, `.settings-tools` styles.
+- `popup.js` — `runRefine()` derives mode from dropdown+toggle; `REFINE_ACTION` now carries `type`; `loadUiPrefs`/`saveUiPrefs` persist selection in `chrome.storage.sync` (`ottercopy:ui:refine`); `setBusy` disables `#refineButton`.
+- `background.js` — `startStandardRefinementJob`/`runStandardRefinementJob` accept `type`; `STANDARD_TYPE_PROMPT_IDS` maps `task→prompt-refinement`, `handoff→prompt-handoff`; short path selects governing prompt by id, falling back to active prompt when `type` absent (legacy-safe).
+
+**User-visible impact.** Fewer primary buttons; refinement intent expressed as Type × Extended. New combination **Handoff + Basic** (toggle off) now works — single-call handoff using the Handoff prompt. Selection persists across popup opens.
+
+**Mode mapping.** Task+Basic→`REFINE_ACTION`(prompt-refinement); Task+Extended→`startExtendedRefinement`; Handoff+Basic→`REFINE_ACTION`(prompt-handoff); Handoff+Extended→`startExtendedHandoff`.
+
+#### Shipping checklist
+
+- **Tests run** — not relevant: OtterCopy has no JS test harness / no `package.json` gates; `node --check popup.js background.js` passes (syntax only).
+- **Tests added/updated** — blocked: no runnable harness for the extension/popup layer; risk = UI-wiring + prompt-routing uncovered by automated tests; follow-up = add a harness (jsdom/vitest) for popup mode-derivation + background prompt-selection. Mitigated by manual verification plan below.
+- **Regression impact** — `runStandardRefinementJob` change is backward-compatible: callers omitting `type` fall through to `getActivePrompt`, so the legacy `ai-refine` outcome is unchanged. Extended paths untouched (`EXTENDED_PIPELINES` route by `pipelineKey`).
+- **API docs** — not relevant: no HTTP contract; provider client unchanged.
+- **Tooling gates** — not applicable: repo has no lint/audit/test scripts.
+- **Conflicts / exceptions** — none.
+
+**Verification (manual, pending user run).** Load unpacked extension on a transcript page; exercise all four cells + exact + debug-log-in-settings + selection persistence; spot-check debug `callCount` (Basic=1, Extended≈17) confirms routing. Not yet run by the agent.
+
+**Note.** Working tree also carried pre-existing (not-this-session) user edits: `prompts/handoff.md` + `prompts/refinement.md` deleted and `HANDOFF_GOVERNING_PROMPT_PATH` repointed to `prompts/custom/handoff.md`, plus `promptStore.js`. Left untouched.
