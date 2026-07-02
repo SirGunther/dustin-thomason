@@ -8,6 +8,31 @@ Personal project changelog for extension behavior, prompt workflow changes, noti
 
 ## Session log
 
+### 2026-07-02T19:00:17Z — OtterCopy
+- **Summary:** Shipped four planned tickets — refine-copy layout-shift fix (T2), top-level Active/Final-pass model pickers (T1), provider-centralized API keys with migration (T3), and JSON import/export of configs (T4).
+- **Plan used:** `~/.claude/plans/i-have-4-tickets-eager-squirrel.md` (build order T2 → T1 → T3 → T4; T4 gated on T3 schema).
+- **Files/Areas:** `popup.css` (T2, T1, T3 hint), `popup.html` (T1 header pickers, T3 provider section + model provider link, T4 buttons/file input), `popup.js` (T1 pickers + handlers, T3 provider CRUD + credential display, T4 export/import/validate/merge), `modelStore.js` (new `providerId` field, exported `saveModels`), `providerStore.js` (**new** — provider store + one-shot migration), `background.js` (`importScripts` provider store, `applyProviderCredentials` + `resolveActiveModels` seam, both refine-path resolution blocks replaced).
+- **User-visible impact:**
+  - **T2:** `Refine and copy` no longer bumps the layout — `#status` and `.result-summary` hold a fixed 2-line box (clamped) instead of `min-height`.
+  - **T1:** Header now has two `<select>` pickers — Active model and Final pass (with "Same as active model" → cleared state). Selection no longer requires opening Settings; the settings model rows lost their "Use"/"Use final" buttons and are management-only.
+  - **T3:** New "API Providers" settings section stores one API key per provider; models link to a provider (new "Linked provider" field) and inherit its key, with the per-model key now an optional override. Existing per-model keys are auto-migrated into providers on first load (one-shot, deterministic ids, idempotent) and keep working.
+  - **T4:** "Export configs" downloads a `schemaVersion: 2` JSON of providers + models (plaintext keys — warns to store securely); "Import configs" validates schema/required-fields/id-collisions, confirms overwrites, then merges by id.
+- **Storage model:** New `ottercopyProviders` array in `chrome.storage.local` (`{ id, provider, name, apiKey, baseUrl, headers, createdAt, updatedAt }`); `ottercopyModels` gains optional `providerId`. One-shot flag `ottercopy:providersMigratedV1`. Effective credential resolution `model.apiKey || provider.apiKey` happens once in `background.resolveActiveModels()` before execution/summaries, keeping `modelProviderClient` pure.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| syntax | `node --check popup.js` | popup UI (T1/T3/T4) | pass | — |
+| syntax | `node --check background.js` | credential seam + refine paths | pass | — |
+| syntax | `node --check providerStore.js` | new provider store + migration | pass | — |
+| syntax | `node --check modelStore.js` | providerId field + saveModels export | pass | — |
+
+- **Tests added/updated:** None persistent — repo has no `package.json`/test harness (consistent with prior sessions). Residual risk requiring a loaded-extension pass: (a) first-load provider migration against real cached `ottercopyModels`; (b) provider-inherited key actually used by a live refine (standard + extended); (c) blob-anchor export download and file import round-trip in the popup. Manual load-unpacked verification steps are in the plan file.
+- **Regression impact:** Both refine paths now resolve models through the single `resolveActiveModels()` choke point (replaced two identical `getActiveModel`/`getFinalPassModel` blocks at former lines 696-699 / 901-904); enriched configs flow unchanged into `generateModelContent`, `summarizeModelConfig`, `generateTranscriptSemanticBlock`, and `runExtendedRefinement`. Models with their own key are unaffected (override wins). Prompt library, polling, cancellation, notifications untouched.
+- **API docs:** Not relevant — browser extension, no HTTP/Swagger surface.
+- **Conflicts / exceptions:** Plan assumed a `downloads` manifest permission for T4; not needed — used an anchor + object-URL download, so `manifest.json` was left unchanged (no new permission prompt).
+- **Tooling gates:** No package-level lint/test/audit gates — repo has no `package.json`; Node `--check` used per repo convention.
+
 ### 2026-06-30T15:09:58Z — OtterCopy
 - **Summary:** Migrated standard-refine prompts to a code-versioned, sync-backed library.
 - **Files/Areas:** `promptStore.js` (core refactor), `background.js`, `popup.js`, `prompts/custom/index.json` (new), `prompts/custom/handoff.md` (moved from `prompts/handoff.md`), `prompts/_archive/refinement-objective-preamble.md` (new); deleted `prompts/refinement.md` and `prompts/handoff.md`.
@@ -676,6 +701,8 @@ Tooling gates:
 ## Current state
 Standard-refine prompts are a code-versioned library. `prompts/custom/index.json` enumerates four packaged built-ins (Refinement, Summary, Variables, Handoff); `promptStore.js` seeds their content from the packaged `.md` files on load and stores only user state in `chrome.storage.sync` — active selection (`ottercopy:activePromptId`), edited-built-in overrides (`ottercopy:override:<id>`), and user-created prompts (`ottercopy:custom:<id>`), one sync item each. Reset deletes an override to restore packaged content; built-ins cannot be deleted; oversized prompts are rejected against the per-item sync quota. A one-shot `ottercopy:migratedV2` migration imports the legacy `chrome.storage.local` `ottercopyPrompts` array. The handoff prompt lives at `prompts/custom/handoff.md` and serves both the selectable Handoff prompt and the extended-handoff pipeline's file-sourced governing prompt. The retired top-level `prompts/refinement.md` `# Objective:` preamble is parked, unused, in `prompts/_archive/`.
 
+Model/API selection is top-level: the popup header has two `<select>` pickers — Active model and Final pass (with a "Same as active model" option that maps to the cleared final-pass state) — wired to `modelStore.activateModel`/`activateFinalPassModel`/`clearFinalPassModel`. The Settings model list is management-only (edit/delete; no in-list selection). API keys are provider-centralized: `providerStore.js` keeps an `ottercopyProviders` array (`chrome.storage.local`) of `{ id, provider, name, apiKey, baseUrl, headers, ... }`; models carry an optional `providerId` and inherit the provider key, with a per-model `apiKey` acting as an override. `background.resolveActiveModels()` is the single seam that resolves `model.apiKey || provider.apiKey` (plus baseUrl/headers fallback) and enriches both refine paths before execution and summaries; `modelProviderClient` stays pure. A one-shot `ottercopy:providersMigratedV1` migration seeds a provider per distinct model provider (deterministic ids, idempotent) and links existing models, leaving their own keys intact. Settings also exposes Export/Import of configs as `schemaVersion: 2` JSON (providers + models, plaintext keys; anchor + object-URL download, no `downloads` permission), with import validation (schema, required fields, id-collision confirmation) and merge-by-id.
+
 Extended refinement uses a final-pass-model semantic-block preflight, then a seven-section paired persona pipeline with claim-ledger discipline before the final synthesis and Objective insertion passes. The same semantic block is appended to downstream prompts for single-pass refinement, extended refinement, and engineering handoff.
 
 An optional user "Direction" textarea in the popup lets the user steer a run. When provided, the direction is injected as a labeled, guard-railed steering block into every model call (semantic block, each persona pass, final synthesis, objective insertion, and the single-pass refine prompt) so the agents can be nudged toward the intended topic when a transcript spans multiple subjects, without treating the direction as new transcript facts. Empty direction preserves prior behavior; the direction is captured per run and not persisted across popup sessions.
@@ -687,6 +714,7 @@ Extended refinement and engineering handoff run as background jobs, save their l
 Legacy in-repo changelog content from C:\Users\dustin.thomason\OneDrive\PDProjects\Browser Extensions\OtterCopy\docs\ottercopy\ottercopy-changelog.md was migrated into this canonical file on 2026-06-08T03:00:52Z without removing historical session text.
 
 ## Plans
+- [2026-07-02] Four-ticket batch — refine-copy layout-shift fix, top-level Active/Final-pass pickers, provider-centralized keys + migration, JSON config import/export. Plan: `C:\Users\dktho\.claude\plans\i-have-4-tickets-eager-squirrel.md`. Status: implemented.
 - [2026-06-30] Migrate autocopy prompts to a code-versioned, sync-backed library (index.json seed + per-key sync overrides; promote handoff; archive Objective preamble). Plan: `C:\Users\dktho\.claude\plans\dustin-thomason-agents-md-do-not-pull-refactored-snowglobe.md`. Status: implemented.
 - [2026-06-15] Optional Direction steering input injected into all pipeline agents. Status: implemented.
 - [2026-06-08] Migrate legacy in-repo changelog into canonical dustin-thomason OtterCopy changelog. Status: implemented.

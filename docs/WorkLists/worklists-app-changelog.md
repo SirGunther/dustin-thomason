@@ -36,6 +36,119 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-07-01T16:08:26Z - WorkLists
+
+- Summary: Fixed a regression where selecting any item in the notes-pane card action (ellipsis) menu collapsed the entire notes pane.
+- Problem: With the notes pane open, choosing any option in the header "…" menu (Copy, Copy All, Refine, Voice, and the new Collapse all) closed the whole pane, destroying user context. The Collapse-all-in-dropdown change (2026-07-01T15:41:50Z) surfaced a latent bug.
+- Root cause: `bindNotesPaneOutsideDismissal` registers a capture-phase `document` click listener that calls `closeNotesPane` for any click outside `#notes-pane`. The card action menu is appended to `document.body` (via `CardActions.openCardActionMenu`), so it is physically outside the pane. The dismissal allowlist `isNotesPaneOpenTarget` only exempted `.task-notes-indicator`, the single `[data-card-action-id="edit-notes"]` item, and `[data-preserve-notes-pane]` — not the menu as a whole. Capture phase means the menu's own bubble-phase `stopPropagation` fires too late, so every non-exempt item read as an outside click and closed the pane.
+- Requirement: Interacting with any item in the notes-pane card action menu must keep the pane open; only intentional handlers change pane visibility.
+- Solution: Added `.card-action-menu--notes-pane` to the `isNotesPaneOpenTarget` exempt selector (`public/todolist2.js`), so a click anywhere in the notes-pane menu (including future/extra items) is treated as an in-pane interaction. Reuses the existing allowlist seam — no new listener, no `cardActions.js` change, no capture/bubble timing change. The class is applied in `openNotesPaneCardActionMenu`/`toggleNotesPaneCardActionMenu` before any item is clickable and scopes the exemption to the notes-pane menu only (board-card menus untouched). Verified that handlers which should still close the pane do so explicitly and are unaffected: `deleteNotesPaneTask` calls `closeNotesPane` after the card is gone; `startCardMove` opens a dialog (dismissal handler is already guarded by `isAppDialogOpen()`).
+- Files/areas: `public/todolist2.js` (`isNotesPaneOpenTarget`), `tests/context-windows.test.js`, canonical changelog.
+- User-visible impact: The notes pane now stays open when you pick Copy, Copy All, Refine, Voice, or Collapse all / Expand all from the card's "…" menu; the action runs with the pane intact. Delete still deletes the card and closes the pane; the × Close button still closes it.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check public/todolist2.js` | Board script syntax | pass | - |
+  | format | `npx prettier --check public/todolist2.js tests/context-windows.test.js` | Touched files | pass | - |
+  | tests | `node --test tests/context-windows.test.js` | Notes-pane context/dismissal contract | pass, 26 tests | - |
+  | tests | `node --test` | Full WorkLists suite | 525 pass / 1 fail | Same pre-existing unrelated `tests/gemma-ui.test.js:417` voice-session shortcut scope failure; not touched by this work. |
+
+- Tests added/updated: `tests/context-windows.test.js` — new case "keeps the card action menu from dismissing the notes pane on item selection" asserting `isNotesPaneOpenTarget`'s allowlist now includes `.card-action-menu--notes-pane`.
+- Regression impact: One-selector addition to the dismissal allowlist; scoped to the notes-pane card action menu. No change to board-card menus, the outside-dismissal listener wiring, or `cardActions.js`. Explicit close paths (Delete, Close button) verified unchanged. Full suite delta is only the +1 new passing test.
+- API docs: Not relevant: UI-only dismissal behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Syntax/format/focused tests passed; full `node --test` carries only the pre-existing unrelated gemma-ui failure. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Fixes a regression from the 2026-07-01T15:41:50Z collapse-all-in-dropdown entry below (same uncommitted session). Browser/Playwright verification not run this session (no running :3010 server); source-contract test covers the allowlist, live click behavior deferred to manual check. Pre-existing unrelated dirty files remain (`gemma-ui` shortcut mismatch, `tests/browser-notes-smoke.js`, `tests/shortcut-registry.test.js`).
+
+### 2026-07-01T15:41:50Z - WorkLists
+
+- Summary: Refined the note-collapse feature from user feedback — chevron no longer holds the hover row open, and Collapse-all/Expand-all moved from a standalone header button into the notes-pane ellipsis dropdown.
+- Problem: (1) Clicking the per-note collapse chevron focused it, so `:focus-within` pinned that note's hover action row visible until the user clicked elsewhere — the icons should hide as soon as the pointer leaves. (2) The Collapse-all control was an always-visible header button; the user wanted it tucked into the existing dropdown menu so it only appears on demand.
+- Requirement: Chevron must not retain focus on mouse click (row hides on pointer-out) while staying keyboard-reachable; Collapse-all/Expand-all must be a selectable item in the notes-pane header ellipsis menu, not a persistent button, and only when there are notes to act on.
+- Solution:
+  - Focus fix (`public/todolist2.js`): a delegated `mousedown` listener on the notes list calls `event.preventDefault()` for `[data-toggle-note-collapse]`, suppressing focus-on-click (so `:focus-within` never engages) while the click still fires the toggle. Keyboard tab focus is intentionally preserved.
+  - Extra menu actions (`public/cardActions.js`): `createCardActionMenu`/`openCardActionMenu`/`toggleCardActionMenu` gained an optional `extraActions` param; each extra item renders after the shared definitions, carries `data-card-action-extra`, and runs its own `onSelect(taskId)` then closes the menu. Board cards pass nothing, so their menus are unchanged.
+  - Notes wiring (`public/todolist2.js`): `getNotesPaneCardActionMenuOptions` now passes `extraActions: getNotesPaneCollapseMenuActions()`. That helper returns a single `collapse-all-notes` item only when `getCollapsibleNoteItems()` is non-empty, with label/icon flipping between "Collapse all notes" (`fa-angle-double-up`) and "Expand all notes" (`fa-angle-double-down`) based on current state; `onSelect` calls `toggleCollapseAllNotes()`.
+  - Removed the standalone `#notes-pane-collapse-all` header button (`public/index.html`), its `collapseAllButton` element ref, its click binding, and the now-unused `syncCollapseAllButton` helper + its calls in `renderTaskNotes`/`setNoteCollapsed`. The menu computes its label freshly on each open, so no live button sync is needed.
+- Files/areas: `public/todolist2.js`, `public/cardActions.js`, `public/index.html`, `tests/notes-collapse.test.js`, `tests/card-actions.test.js`, `tests/context-windows.test.js`, canonical changelog.
+- User-visible impact: Collapsing a note via its chevron no longer keeps that note's icon row visible — moving the mouse away hides the icons as expected. Collapse-all/Expand-all is now a menu item inside the notes-pane header "…" dropdown (labelled "Collapse all notes" / "Expand all notes"), appearing only when notes are present, instead of an always-visible header button.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check public/todolist2.js public/cardActions.js` | Board + card-actions module syntax | pass | - |
+  | format | `npx prettier --check` (7 touched files) | Touched files | pass | - |
+  | tests | `node --test tests/notes-collapse.test.js tests/card-actions.test.js tests/context-windows.test.js` | Collapse + card-action-menu + notes-pane context contracts | pass, 51 tests | - |
+  | tests | `node --test` | Full WorkLists suite | 524 pass / 1 fail | Same pre-existing unrelated `tests/gemma-ui.test.js:417` voice-session shortcut scope failure documented below; not touched by this work. |
+
+- Tests added/updated: `tests/notes-collapse.test.js` reworked — added chevron focus-prevention (mousedown preventDefault) assertion and dropdown-menu assertions (`getNotesPaneCollapseMenuActions`, `collapse-all-notes` id, label flip, `onSelect → toggleCollapseAllNotes`, editing-skip) and negative assertions that the old `notes-pane-collapse-all` button and `syncCollapseAllButton` are gone. `tests/card-actions.test.js` — new case asserting `extraActions` render with `data-card-action-extra`, run their own `onSelect`, close the menu, and are absent from the shared definitions. `tests/context-windows.test.js` — dropped the removed header-button assertion; kept the chevron label assertion.
+- Regression impact: `cardActions.js` change is additive — `extraActions` defaults to none, so board-card menus and their `card-actions.test.js` contracts are unchanged (verified: full card-actions suite green). Notes-pane header menu now carries one contextual item computed at open time. Focus-prevention is scoped to the collapse chevron only. No persistence or API change.
+- API docs: Not relevant: UI-only menu/focus behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Syntax/format/focused tests passed; full `node --test` carries only the pre-existing unrelated gemma-ui failure. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Follows the 2026-07-01T15:32:04Z entry below (same uncommitted session); supersedes that entry's standalone header-button approach for Collapse-all. Browser/Playwright verification not run this session (no running :3010 server); source-contract + card-actions unit tests cover the wiring, live focus/hover geometry deferred to manual check. Pre-existing unrelated dirty files remain (the `gemma-ui` shortcut mismatch, `tests/browser-notes-smoke.js`, `tests/shortcut-registry.test.js`).
+
+### 2026-07-01T15:32:04Z - WorkLists
+
+- Summary: Added session-only collapse/expand for saved notes in the notes pane, plus a header Collapse-all/Expand-all toggle.
+- Problem: Long saved notes render at full height; a few of them push shorter notes out of view and make the notes pane hard to scan.
+- Requirement: A per-note collapse toggle that (a) collapses to header + one clamped preview line, (b) persists only for the current window session and resets on reload, (c) is reachable via a hover-revealed icon, (d) auto-re-expands when the note is opened for edit, plus (e) a header Collapse-all/Expand-all control. Scope confirmed with user: saved notes only (card-text preview untouched); dedicated chevron icon; Collapse-all included this iteration.
+- Solution:
+  - Session state (`public/todolist2.js`): new module-level `collapsedNoteIds = new Set()` keyed by note id. In-memory only — no `localStorage`/`sessionStorage` — which is what makes it reset on reload. State must live in JS (not just a CSS class) because `renderTaskNotes`/`renderNoteItemContent` wipe the DOM on every render, so it is re-applied on render.
+  - `applyNoteCollapsedState(item)` toggles `.notes-pane-note--collapsed` and syncs the chevron's `aria-expanded` + label/title (Collapse note ↔ Expand note) + icon (`fa-chevron-up`/`fa-chevron-down`); called at the end of `renderNoteItemContent`. `setNoteCollapsed(item, collapsed)` updates the Set then re-applies.
+  - Chevron button added to each saved note's `.notes-pane-note-actions` flex row (`notes-pane-collapse-btn`, `data-toggle-note-collapse`) — it inherits the existing hover/focus reveal contract; no card-preview grid change (notes use flex, not the `repeat(5,26px)` grid).
+  - Toggle wired as the first branch of the `elements.list` click delegation (ahead of the note-content edit branch); chevron lives in the actions row, not `.notes-pane-note-content`, so it never triggers edit.
+  - Re-expand on edit: `showNoteInlineEditor` deletes the id from `collapsedNoteIds` and clears the class, so a note opened for edit stays expanded after save/cancel re-render.
+  - Collapse-all: new `#notes-pane-collapse-all` header button (`public/index.html`) + `toggleCollapseAllNotes` / `getCollapsibleNoteItems` / `syncCollapseAllButton` (`public/todolist2.js`). Skips notes currently in `.notes-pane-note-editing`; flips the button label/icon to "Expand all" (`fa-angle-double-down`) once everything collapsible is collapsed; synced on list render.
+  - CSS (`public/todoliststyles2.css`): `.notes-pane-note--collapsed .notes-pane-note-content` clamps to one line (`-webkit-line-clamp:1`) and the collapsed meta row drops its bottom margin.
+- Evidence used: 2026-07-01T13:46:17Z entry added the inert `notes-pane-more-actions-btn` ellipsis "for future actions" — this feature is that next step but uses a separate chevron so the ellipsis stays free for a future menu. Session-only transient state mirrors the existing Gemma-toast `Map<id,{expanded}>` pattern (state in JS, re-applied on render). Notes Initiative UI/UX checklist: viewport-safe controls, no horizontal overflow, hover-revealed compact icons with accessible labels.
+- Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `public/index.html`, `tests/context-windows.test.js`, `tests/notes-collapse.test.js` (new), canonical changelog.
+- User-visible impact: Hovering a saved note now shows a chevron that collapses it to its timestamp header plus one preview line (and back); clicking a collapsed note's body opens the editor already expanded; a new header button collapses/expands all notes at once and reads "Expand all" when everything is collapsed. All collapse state resets when the window/tab reloads.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check public/todolist2.js` | Board script syntax | pass | - |
+  | format | `npx prettier --check public/todolist2.js public/todoliststyles2.css public/index.html tests/context-windows.test.js tests/notes-collapse.test.js` | Touched files | pass | - |
+  | tests | `node --test tests/context-windows.test.js tests/notes-collapse.test.js` | Notes-pane context + new collapse contract | pass, 32 tests | - |
+  | tests | `node --test` | Full WorkLists suite | 521 pass / 1 fail | Pre-existing unrelated failure `tests/gemma-ui.test.js:417` (voice-session shortcut scope mismatch from an earlier dirty `public/todolist2.js` shortcut edit); documented in the 2026-07-01T13:46:17Z entry. Not touched by this work. |
+
+- Tests added/updated: New `tests/notes-collapse.test.js` (7 source-contract cases — session-only Set with no persistence, chevron markup, re-apply on render, toggle-before-edit ordering, re-expand on edit, Collapse-all skipping edit mode + label/icon flip, collapsed clamp CSS). Extended `tests/context-windows.test.js` for the chevron `aria-label` and the header Collapse-all button. Live DOM geometry (clamp height, hover reveal) left to manual/browser check, consistent with prior notes-pane source-contract coverage.
+- Regression impact: Scoped to saved-note rendering + the notes-pane list click handler and header. The card-text preview render and its `repeat(5,26px)` grid are untouched; note actions use a flex row so the added chevron needs no grid change. New click branch returns early and precedes existing branches; no persistence path or API added. Focused notes-pane suites green; full-suite delta is only the +7 new passing tests (514→521), same single pre-existing failure.
+- API docs: Not relevant: UI-only notes-pane affordance; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Syntax/format/focused tests passed. Full `node --test` has one pre-existing unrelated failure (gemma-ui voice-shortcut scope) noted above. No `npm audit` script exists in this repo.
+- Conflicts / exceptions: Pre-existing unrelated uncommitted WorkLists edits remain and were not reverted (notably the dirty `public/todolist2.js` shortcut change behind the gemma-ui failure, and `tests/browser-notes-smoke.js` / `tests/shortcut-registry.test.js`). Browser/Playwright verification not run this session (no running :3010 server); source-contract tests cover the wiring, live geometry deferred.
+
+### 2026-07-01T13:46:17Z - WorkLists
+
+- Summary: Added inert notes-pane ellipsis placeholders while preserving existing quick actions.
+- Problem: The notes pane needed a future secondary-action affordance on card text and saved notes without removing the fast edit/AI/copy/delete buttons or reintroducing visual noise.
+- Requirement: Add a hover/focus-revealed horizontal ellipsis placeholder to each notes-pane card preview and saved note; keep existing quick actions visible on the same local hover/focus interaction; preserve compact spacing, accessible labels, and fixed hit-target sizing.
+- Solution:
+  - Added `notes-pane-more-actions-btn` ellipsis buttons after the existing card-text and saved-note quick action buttons in `public/todolist2.js`.
+  - Marked the new buttons `aria-disabled="true"` so they read as future placeholders and do not imply live actions yet.
+  - Expanded the card-preview action grid from four to five 26px slots and styled disabled placeholder hover/focus as visually quiet in `public/todoliststyles2.css`.
+  - Extended `tests/context-windows.test.js` to assert the placeholder labels, ellipsis icon, five-slot spacing, and existing local hover/focus reveal contract.
+- Evidence used: Notes Initiative UI/UX checklist requires viewport-safe controls, no horizontal overflow, consistent spacing/hit targets, and no action crowding; prior notes-pane session hid action icons until local hover/focus to reduce visual noise.
+- Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/context-windows.test.js`, canonical changelog.
+- User-visible impact: Hovering or focusing card text or a saved note in the notes pane now shows the existing edit/AI/copy/delete quick actions plus a quiet three-dot placeholder for future actions.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check public\todolist2.js` | Board script syntax | pass | - |
+  | format | `npx prettier --check public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js` | Touched files | pass | - |
+  | tests | `node --test tests\context-windows.test.js` | Notes-pane context/action source contract | pass, 25 tests | - |
+  | tests | `node --test tests\context-windows.test.js tests\card-actions.test.js` | Notes-pane context plus existing card action menu contracts | pass, 41 tests | - |
+  | lint | `npm run lint` | Repo Prettier gate | blocked | Pre-existing dirty `tests/browser-notes-smoke.js` formatting warning; touched files passed targeted Prettier check. |
+  | tests | `node --test` | Full WorkLists suite | blocked, 514 pass / 1 fail | Pre-existing shortcut-context mismatch in `tests/gemma-ui.test.js` caused by earlier dirty `public/todolist2.js` shortcut changes; focused placeholder suites passed. |
+
+- Tests added/updated: Updated `tests/context-windows.test.js` for the new placeholder labels, disabled ellipsis icon, five fixed action slots, and unchanged hover/focus reveal behavior.
+- Regression impact: UI-only notes-pane placeholder. Existing edit, AI refine, copy, and delete controls remain in place and use unchanged data attributes/handlers; no new menu behavior or persistence path was added. Adjacent card action menu contracts passed.
+- API docs: Not relevant: UI-only notes-pane affordance; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
+- Tooling gates: Focused syntax/format/tests passed. Repo lint and full suite are blocked by pre-existing dirty-file/test issues noted above.
+- Conflicts / exceptions: Pre-existing unrelated dirty files remain and were not reverted: `tests/browser-notes-smoke.js`, `tests/shortcut-registry.test.js`, plus earlier shortcut edits in `public/todolist2.js` that predated this placeholder work.
+
+
 ### 2026-06-30T16:44:55Z - WorkLists
 
 - Summary: Resolved the Notes pane Ctrl+O action-menu shortcut conflict.

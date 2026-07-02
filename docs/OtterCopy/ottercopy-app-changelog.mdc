@@ -49,6 +49,7 @@
 
 | Date | Plan | Status | Approach |
 | ---- | ---- | ------ | -------- |
+| 2026-07-01 | `~/.claude/plans/that-should-have-put-moonlit-wolf.md` | implemented | Manual transcript ingestion behind a single `resolveTranscript` seam on both paths: paste **supplements** (append) by default, **overrides** (replace, skip Otter) when toggled — mirrors direction-override. Plus stricter Otter validation: `content.js` reports extraction `method`; `assertUsableOtterTranscript` rejects empty / low-confidence container fallback / too-short on both paths (standard had no floor). Supplement never falls back. Round 3: **failure-aware input persistence** — failed/cancelled runs restore all inputs on reopen for retry; only success clears. |
 | 2026-06-30 | `~/.claude/plans/dustin-thomason-agents-md-do-not-pull-delegated-alpaca.md` | active | Declutter slice only: Type dropdown (Task/Handoff) + Extended toggle + single Refine button; re-route 2×2 onto existing two backend paths; debug-log → settings; iconify secondary buttons. Backend builder unification + HTML-page migration + per-section toggling explicitly deferred. |
 
 ---
@@ -58,12 +59,127 @@
 - Popup exposes 4 mode buttons (`exact`, `ai-refine`, `extended-refine`, `extended-handoff`) + stop / copy-latest / copy-debug-log + settings.
 - Two backend paths: `runStandardRefinementJob` (1 call) and `runExtendedRefinement` (~17 calls, persona chain). `EXTENDED_PIPELINES.refinement` / `.handoff` already configure extended type as data.
 - Short path uses the single active prompt; it has no Task/Handoff concept yet.
+- Transcript ingestion is centralized in one `resolveTranscript` seam (both paths). A `Manual transcript` textarea + `Use pasted transcript as the only source` toggle give three modes: **off** (Otter only), **supplement** (Otter + appended paste, default when text present), **override** (paste replaces Otter, skip injection + tab requirement). Per-use only — never persisted, resets off on popup open. Direction / direction-override / extended chain apply unchanged.
+- Otter-transcript validation is stricter: `content.js` `extractTranscriptText()` returns `{ text, method, lineCount }`; `assertUsableOtterTranscript` (both paths) rejects empty / `method:"none"` / low-confidence `container` fallback below 400 chars / below `MIN_TRANSCRIPT_CHARACTER_COUNT` (100). The standard path previously had no floor. Supplement mode errors out rather than falling back to manual-only.
+- Refine inputs are **failure-recoverable**: the popup snapshots all inputs (manual transcript + toggle, direction + override, Type, Extended) to `chrome.storage.local` (`ottercopy:ui:lastAttempt`) on run-start, keyed to the runId. On reopen, `restoreLastAttemptIfNeeded()` restores them iff that run `failed`/`cancelled` (shows the error, ready to retry with a different model/API); a `completed` run clears the snapshot. Happy path still opens fresh (only `UI_PREFS_KEY` promptId/extended restore).
 
 ---
 
 ## Session log
 
 <!-- newest first -->
+
+### 2026-07-01T16:29:05Z — OtterCopy — Failure-aware input persistence (retry after failed/cancelled runs)
+
+**Summary.** User QoL follow-up: refine inputs were always cleared on popup reopen (happy-path assumption). If a run **fails** (e.g. API/model unavailable) the user lost everything and had to re-enter it. Now a failed **or** cancelled run preserves its full input set so the reopened popup reconstructs the attempt, shows the error, and the user retries — typically after switching model/API. Only a successful run clears.
+
+**Mechanism (popup-only; background untouched — it already records terminal status + error).**
+- New device-local key `ottercopy:ui:lastAttempt` (`chrome.storage.local`; may hold a large transcript, so local not sync). Shape `{ runId, inputs: { promptId, extended, direction, directionAsPrompt, manualTranscript, manualAsOnlySource } }`.
+- `saveLastAttemptSnapshot(runId)` — written in `copyFromActiveTab` after each refine start returns `{ ok, runId }` (all three refine modes; not the plain `exact` copy). Overwrites any prior snapshot (fresh attempt).
+- `restoreLastAttemptIfNeeded()` — on open, reads the snapshot + latest result (`getLatestRefinementResult`). If `runId` matches and status is `failed`/`cancelled`, restores all six fields, calls `updateExtendedGating()`, and surfaces the error via `setStatus(..., "error")`; keeps the snapshot. If `completed` / no result / runId mismatch, clears it. `running` → left untouched.
+- Init reordered: `initializeSettings().then(async () => { if (!(await restoreLastAttemptIfNeeded())) loadUiPrefs(); })` — a restored failure sets promptId/extended itself, so generic prefs apply only on the happy path.
+- `announceLatestResultTransition` clears the snapshot when a run completes while the popup stays open.
+- Promisified `chrome.storage.local` get/set/remove helpers so init can await them.
+
+**Files/areas.** `popup.js` — `LAST_ATTEMPT_KEY`, storage helpers, `saveLastAttemptSnapshot`/`clearLastAttemptSnapshot`/`restoreLastAttemptIfNeeded`, snapshot writes on both refine start branches, init reorder, clear-on-completed.
+
+**User-visible impact.** A failed/stopped refine no longer wipes the user's work — reopen shows the same transcript/direction/Type/Extended plus the failure reason, ready to change model and re-run. Successful runs behave as before (fresh popup).
+
+**Decision.** Revises the earlier "no persistence" stance: persistence is now scoped to failure recovery only (device-local, cleared on success). The manual-transcript-in-storage tradeoff is accepted solely for this recovery snapshot, per user request.
+
+#### Shipping checklist
+
+- **Tests run** — not relevant: no JS harness / no `package.json` gates; `node --check popup.js background.js content.js` passes (syntax only).
+- **Tests added/updated** — blocked: no runnable harness for the popup layer; risk = snapshot write/restore/clear reconciliation uncovered; follow-up = jsdom/vitest harness stubbing `chrome.storage.local` + `runtime.sendMessage`. Mitigated by manual verification.
+- **Regression impact** — happy path unchanged (snapshot cleared on completed → fresh open, existing `UI_PREFS_KEY` still applies). New storage key is additive; other flows untouched. Background unchanged.
+- **API docs** — not relevant: no HTTP contract change.
+- **Tooling gates** — not applicable: repo has no lint/test/audit scripts.
+- **Conflicts / exceptions** — supersedes the round-1 "no persistence" decision (intentional, per user).
+
+**Verification (manual, pending user run).** (1) Success → reopen → cleared. (2) Force failure (bad key / dead Base URL / low timeout) with all inputs set → reopen → all six restored + error shown → change model → re-run succeeds. (3) Start extended, Stop, reopen → restored. (4) Restored failure → run success → reopen → cleared. Not yet run by the agent.
+
+### 2026-07-01T16:03:23Z — OtterCopy — Manual transcript: supplement vs override + stricter Otter validation
+
+**Summary.** Generalized the same-day manual-transcript work (entry below) per user follow-up: the pasted transcript now **supplements** (appends to) the Otter transcript by default and **overrides** (replaces it, skipping Otter) only when the toggle is checked — mirroring the `Use direction as the only prompt` supplement/override shape. Separately hardened Otter extraction: the user reported the scraper returning junk/near-empty so the model replied "please enter something." Root cause = the **standard path had no length floor** (only extended did) and the scraper's last-resort `container` fallback can grab generic page chrome.
+
+**Three modes** (derived in `deriveManualTranscriptMode`): `off` (no paste → Otter only), `supplement` (paste + toggle off → validated Otter + separator + paste), `override` (paste + toggle on → paste only, no injection, no tab). Supplement **never falls back** — a missing/unusable Otter transcript fails the run (surfaces a wrong-page mistake).
+
+**Files/areas.**
+- `popup.html` — relabeled: textarea hint "Appended… check below to use it as the only source"; checkbox "Use pasted transcript as the only source (skip Otter.ai)".
+- `popup.js` — `getManualAsOnlySource()` (raw checkbox) replaces the pre-ANDed `shouldUseManualTranscript`; all three payloads now send `manualTranscript` + `manualTranscriptAsOnlySource` (raw), so the background can distinguish supplement from override.
+- `content.js` — `extractTranscriptText()` returns `{ text, method, lineCount }` (`method ∈ sentences|contentBody|loose|container|none`); `EXTRACT_TRANSCRIPT_ACTION` responder forwards `method`/`lineCount`; `copyTranscript` uses `.text`.
+- `background.js` — `resolveTranscript` now branches off/supplement/override; new `fetchOtterTranscript` + `assertUsableOtterTranscript(text, method)` (empty/`none` → error; `container` < `CONTAINER_FALLBACK_MIN_CHARACTER_COUNT` (400) → error; < `MIN_TRANSCRIPT_CHARACTER_COUNT` (100) → error) applied on **both** paths; `MANUAL_SUPPLEMENT_SEPARATOR`; entry guard = tab required unless `override`; result record stores `manualTranscriptMode` (replaces round-1 `usedManualTranscript`). Extended keeps a final min-length floor on the resolved (possibly combined/override) text.
+
+**User-visible impact.** Paste to augment an Otter transcript (default) or to refine wholly external text (toggle). Wrong/unloaded pages now fail loudly ("No usable transcript found") instead of sending junk to the model, on the standard path too. Override never persists.
+
+#### Shipping checklist
+
+- **Tests run** — not relevant: no JS harness / no `package.json` gates; `node --check popup.js background.js content.js` passes (syntax only).
+- **Tests added/updated** — blocked: no runnable harness for the popup/content/background layer; risk = mode derivation, `assertUsableOtterTranscript` thresholds, and supplement concatenation uncovered by automated tests; follow-up = jsdom/vitest harness. Mitigated by manual verification below.
+- **Regression impact** — `off` mode = prior Otter-only behavior plus a **new, stricter** validation gate (intended behavior change: rejects previously-accepted junk/short scrapes; standard path gains a 100-char floor it lacked). `content.js` return-shape change is internal (both callers updated). Notification/toast sites unchanged.
+- **API docs** — not relevant: no HTTP contract change.
+- **Tooling gates** — not applicable: repo has no lint/test/audit scripts.
+- **Conflicts / exceptions** — behavior change called out: stricter validation may reject borderline transcripts the standard path previously sent through; deliberate per user report.
+
+**Verification (manual, pending user run).** (1) override on non-Otter page → refines paste alone, no injection; (2) supplement on loaded Otter → combined text (Otter + separator + paste) refined; (3) supplement on non-Otter page → errors, no fallback; (4) no paste on loaded Otter → unchanged; (5) non-Otter/unloaded page → "No usable transcript found" on both standard and extended; (6) direction + direction-override compose over supplement/override; (7) reopen popup → cleared. Not yet run by the agent.
+
+### 2026-07-01T15:44:31Z — OtterCopy — Manual transcript override (external transcripts)
+
+**Summary.** Enabled refining pasted/external transcripts instead of the Otter.ai page. Added a `Manual transcript` textarea + `Use pasted transcript (skip Otter.ai)` toggle to the popup; when armed, the pasted text supersedes the Otter fetch on **both** refinement paths — no `content.js` injection, no active-Otter-tab dependency. Prompt logic (direction, direction-override, extended persona chain) applies unchanged, moving the tool toward general-purpose refinement.
+
+**Problem → Requirement → Solution.**
+- **Problem.** Ingestion was hardwired to the active tab's Otter DOM; the existing `Use direction as the only prompt` toggle governs prompt scope only, never the source.
+- **Requirement.** Pasted transcript (opt-in) must supersede the Otter fetch on both paths, legacy-safe when opt-out, with prompt logic reusable on non-Otter text.
+- **Solution.** Collapsed the two identical Otter ingestion blocks behind a single `resolveTranscript` seam; threaded a source-override flag mirroring the existing `useDirectionAsPrompt` precedent.
+
+**Files/areas.**
+- `popup.html` — `#manualTranscriptInput` textarea + `#manualTranscriptOverride` checkbox under the direction block.
+- `popup.css` — `.manual-transcript-field` / `.manual-transcript-override-field` styles mirroring `.direction-field`; armed-state accent via `:has()` (amber border/label) so an intended Otter run is not silently skipped.
+- `popup.js` — `getManualTranscript()` + `shouldUseManualTranscript()` (mirror of the direction getters); `manualTranscript` + `useManualTranscript` added to all three outbound payloads (`REFINE_ACTION`, both `START_EXTENDED_*`). No pref persistence (per-use exception; textarea + toggle reset on open).
+- `background.js` — new `resolveTranscript({ tabId, manualTranscript, useManualTranscript })` seam (manual → `cleanText` pasted text, throw if empty; else the moved-verbatim inject + `EXTRACT_TRANSCRIPT_ACTION` block). Both ingestion sites replaced with it. Flags threaded through `startStandardRefinementJob`/`startExtendedRefinementJob` → run functions; entry-guard relaxed to `!tabId && !useManual`; `usedManualTranscript` stored on the result record. Extended min-length guard now covers paste (source-aware error hint).
+
+**User-visible impact.** Paste any transcript, tick the toggle, and refine it (standard or extended) on any page — even with no Otter tab open. Toggle off = Otter behavior unchanged. Override never persists.
+
+**Mode mapping.** Unchanged; the override only swaps the transcript source feeding the existing four cells.
+
+#### Shipping checklist
+
+- **Tests run** — not relevant: OtterCopy has no JS test harness / no `package.json` gates; `node --check popup.js background.js content.js` passes (syntax only).
+- **Tests added/updated** — blocked: no runnable harness for the popup/background layer; risk = `resolveTranscript` branch selection + override threading uncovered by automated tests; follow-up = jsdom/vitest harness for popup payload derivation + background ingestion seam. Mitigated by manual verification below.
+- **Regression impact** — additive + legacy-safe: `resolveTranscript` with the override off is the pre-existing inject+extract block verbatim; both start functions default the flags off; the `!tabId && !useManual` guard still throws for the legacy (no-manual) case exactly as before. Notification/toast call sites unchanged (toast already `try/catch`-guarded).
+- **API docs** — not relevant: no HTTP contract change (provider request shape unchanged).
+- **Tooling gates** — not applicable: repo has no lint/test/audit scripts.
+- **Conflicts / exceptions** — none.
+
+**Verification (manual, pending user run).** (1) Paste text + toggle on, non-Otter page → standard and extended both refine pasted text, no `content.js` injection. (2) Toggle off → Otter path identical. (3) Direction + direction-override compose over pasted text. (4) Extended paste < 100 chars → min-length error; standard empty paste + toggle on → "no transcript pasted" error. (5) Reopen popup → textarea empty, toggle off. Not yet run by the agent.
+
+### 2026-06-30T21:39:23Z — OtterCopy — Fix silent refinement failures (timeout + SW survival)
+
+**Summary.** User reported the Power Automate notification "disconnected" after the refactor and asked whether a long response could silently fail. Root-caused it to a pre-existing MV3 reliability gap, **not** the popup refactor: the notification code (`sendPowerAutomateNotification` + endpoint URL + all 4 call sites) is unchanged; the job was dying before reaching it. Three contributing gaps, all fixed.
+
+**Root cause.**
+- No request timeout in `modelProviderClient.js` (a hung provider — e.g. Gemini Flash under load — waits forever).
+- No service-worker keepalive: the extended job chains ~17 model calls with 4.2s gaps; Chrome's 30s idle reaper terminated the worker between calls, abandoning the async flow before the terminal status + notification.
+- No orphaned-run recovery: a killed job left the stored result at `status:"running"` forever, which also blocked all future runs via the "already running" guard.
+
+**Files/areas.**
+- `modelProviderClient.js` — `DEFAULT_REQUEST_TIMEOUT_MS = 5*60*1000`; `fetchWithTimeout()` (AbortController + setTimeout, clears in finally, throws `createProviderError(504, "...timed out after Ns")` on `AbortError`); `generateModelContent` accepts/defaults `timeoutMs` and threads it through both `generateWithGoogleGenAi` and `generateWithOpenAiCompatible`. All callers (standard, extended persona/final/objective passes, semantic block) inherit it.
+- `background.js` — keepalive (`activeJobCount`, `keepAliveTimer`, `startKeepAlive`/`stopKeepAlive`; 20s `chrome.runtime.getPlatformInfo` ping); `runStandardRefinementJob` and `runExtendedRefinementJob` wrapped with `startKeepAlive()` + `finally { stopKeepAlive() }`. `recoverOrphanedRun()` called on worker startup (marks a stranded `running` result failed via `mergeLatestRefinementResult(runId, …)` — race-safe — and fires one fail notification). `isRunningResultActive()` + `STALE_RUNNING_RESULT_MS = 15min` relax both "already running" guards so a stale run never permanently blocks.
+
+**User-visible impact.** Hung/slow calls now fail loudly (status `failed` + fail notification) instead of hanging silently. Extended chains survive to completion and fire their success notification. A worker death retro-notifies and unblocks the next run.
+
+**5-min ceiling rationale.** Timeout set to 300s per user (Gemini Flash observed hanging that long). Chrome terminates an MV3 service worker around 5 min for a single in-flight request, so a longer client timeout cannot be honored; >5 min would require moving the fetch into an offscreen document — logged as future, out of scope.
+
+#### Shipping checklist
+
+- **Tests run** — not relevant: no JS harness / no `package.json` gates; `node --check modelProviderClient.js background.js` passes (syntax only).
+- **Tests added/updated** — blocked: no runnable harness for the extension/service-worker layer; risk = timeout/keepalive/recovery paths uncovered by automated tests; follow-up = jsdom/vitest harness or a fake-timer SW test. Mitigated by manual verification plan.
+- **Regression impact** — additive: timeout default only bounds previously-unbounded waits; keepalive scoped to active jobs via counter+finally; guard relaxation only affects results older than 15min; recovery only touches `status:"running"` by matching runId. Success/fail notification call sites unchanged.
+- **API docs** — not relevant: provider request shape unchanged (added abort signal only).
+- **Tooling gates** — not applicable: repo has no lint/test/audit scripts.
+- **Conflicts / exceptions** — none.
+
+**Verification (manual, pending user run).** (1) Lower `DEFAULT_REQUEST_TIMEOUT_MS` or point a model Base URL at a dead host → refine flips to failed "timed out" + fail notification received; restore 300s. (2) Run extended refinement → completes past several minutes + success notification; worker stays alive in the SW console across the 4.2s gaps. (3) Terminate the SW mid-run (chrome://extensions) → result flips failed, one fail notification, next run not blocked. (4) `node --check` passes. Not yet run by the agent.
 
 ### 2026-06-30T16:42:38Z — OtterCopy — Type dropdown now lists all prompts, Extended gated
 
