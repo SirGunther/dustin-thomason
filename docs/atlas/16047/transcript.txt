@@ -1,0 +1,1543 @@
+Anastasiya Savchuk
+0 minutes 5 seconds
+0:05
+Anastasiya Savchuk 0 minutes 5 seconds
+Period.
+
+VB
+Viacheslav Bozhko
+0 minutes 12 seconds
+0:12
+Viacheslav Bozhko 0 minutes 12 seconds
+Hello!
+
+Anastasiya Savchuk
+0 minutes 13 seconds
+0:13
+Anastasiya Savchuk 0 minutes 13 seconds
+No.
+
+Kat Giangiulio
+0 minutes 14 seconds
+0:14
+Kat Giangiulio 0 minutes 14 seconds
+Hello.
+
+Anastasiya Savchuk
+0 minutes 29 seconds
+0:29
+Anastasiya Savchuk 0 minutes 29 seconds
+Long wicked for whom?
+
+Kat Giangiulio
+0 minutes 30 seconds
+0:30
+Kat Giangiulio 0 minutes 30 seconds
+The.
+
+Anastasiya Savchuk
+0 minutes 36 seconds
+0:36
+Anastasiya Savchuk 0 minutes 36 seconds
+Oh, by the way, I'm actually on vacation next week.
+
+Kat Giangiulio
+0 minutes 40 seconds
+0:40
+Kat Giangiulio 0 minutes 40 seconds
+Oh, okay. Yeah, I haven't even looked at the calendar recently.
+
+Anastasiya Savchuk
+0 minutes 43 seconds
+0:43
+Anastasiya Savchuk 0 minutes 43 seconds
+Let me recheck, but as far as I remember, it was the first week of July.
+
+Kat Giangiulio
+0 minutes 48 seconds
+0:48
+Kat Giangiulio 0 minutes 48 seconds
+Shaye is out tomorrow. We're closed tomorrow. You know why? Because ClickUp, ClickUp. Where am I going? ClickUp just gives you, you know, the month that in advance doesn't go past that. So let me click to July and see if Anastasiya is off next week. Yeah, you are. You're off next week.
+
+Anastasiya Savchuk
+1 minute 12 seconds
+1:12
+Anastasiya Savchuk 1 minute 12 seconds
+Well, that's a good thing, actually, because I'm leaving you for only one week, so...
+
+Kat Giangiulio
+1 minute 18 seconds
+1:18
+Kat Giangiulio 1 minute 18 seconds
+Yeah.
+
+Anastasiya Savchuk
+1 minute 28 seconds
+1:28
+Anastasiya Savchuk 1 minute 28 seconds
+And actually, Slava said he can demo and I said on Monday I will let you know, but I forgot that on Monday actually I'm on vacation.
+
+Kat Giangiulio
+1 minute 35 seconds
+1:35
+Kat Giangiulio 1 minute 35 seconds
+They're not here. Yeah. So let's just see. Yeah. So today's here we are. Shaye out tomorrow.
+
+Anastasiya Savchuk
+3 minutes
+3:00
+Anastasiya Savchuk 3 minutes
+And also, I don't remember if I added to the calendar, I will be out on 13 but working on 15. I moved the holiday date.
+
+Kat Giangiulio
+3 minutes 15 seconds
+3:15
+Kat Giangiulio 3 minutes 15 seconds
+Say what? You're off on the 14th, you said, and 15th is the...
+
+Anastasiya Savchuk
+3 minutes 18 seconds
+3:18
+Anastasiya Savchuk 3 minutes 18 seconds
+No, I will be out on 13th on Monday and will be working on 15th, the holiday day.
+
+Kat Giangiulio
+3 minutes 25 seconds
+3:25
+Kat Giangiulio 3 minutes 25 seconds
+Oh, I see. Okay.
+
+Anastasiya Savchuk
+3 minutes 39 seconds
+3:39
+Anastasiya Savchuk 3 minutes 39 seconds
+Lit decided to leave us alone.
+
+Kat Giangiulio
+3 minutes 43 seconds
+3:43
+Kat Giangiulio 3 minutes 43 seconds
+Yeah, I chatted and it was like he was in some kind of meeting, so let's get it going. Ridiculous. All right, now, see, why don't you kick it off?
+
+Anastasiya Savchuk
+3 minutes 53 seconds
+3:53
+Anastasiya Savchuk 3 minutes 53 seconds
+Yeah, hello everyone. Yesterday I enjoyed Ukrainian councillors' queues. So I'm back today. And so we had a ticket that Lana did for permissions.
+
+Kat Giangiulio
+4 minutes 3 seconds
+4:03
+Kat Giangiulio 4 minutes 3 seconds
+Yeah.
+
+Anastasiya Savchuk
+4 minutes 11 seconds
+4:11
+Anastasiya Savchuk 4 minutes 11 seconds
+I moved it into testing and Georgiy did a bug fix. I retested it. It's actually only Dev reproducible since we have the feature flag on on Dev, but it was tested. This one has some questions. I and I will be waiting. Lori's probably Lori's.
+
+Larry Adams
+4 minutes 56 seconds
+4:56
+Larry Adams 4 minutes 56 seconds
+Hey there, good morning.
+
+Anastasiya Savchuk
+4 minutes 58 seconds
+4:58
+Anastasiya Savchuk 4 minutes 58 seconds
+Since you are here, I was talking about telling about this comment in the ticket, Lana's ticket, with some questions. If you have some time to answer them, that would be great, so we can close the ticket or...
+
+Larry Adams
+5 minutes 11 seconds
+5:11
+Larry Adams 5 minutes 11 seconds
+Okay, yeah.
+
+Anastasiya Savchuk
+5 minutes 13 seconds
+5:13
+Anastasiya Savchuk 5 minutes 13 seconds
+Okay, then also I had a couple of answers from Shaye about comments that I had, some questions, some tickets in progress, and since I got those questions, I'm covering them with tests.
+
+Kat Giangiulio
+5 minutes 30 seconds
+5:30
+Kat Giangiulio 5 minutes 30 seconds
+Cool. And then if you had any chance to look at any of the pending intake or refinement stuff ahead of tomorrow, get any, and that goes for everybody. Everybody get any questions for Shaye. He's not going to be in part of the refinement. And I think that with all the checkpoints we have in all the spec driven development, you know, initiative,
+
+Larry Adams
+5 minutes 31 seconds
+5:31
+Larry Adams 5 minutes 31 seconds
+Two.
+
+Kat Giangiulio
+5 minutes 50 seconds
+5:50
+Kat Giangiulio 5 minutes 50 seconds
+It should be minimal at that point. When by the time we get to refinement, it should be pretty self-explanatory, but okay, good.
+
+Anastasiya Savchuk
+5 minutes 57 seconds
+5:57
+Anastasiya Savchuk 5 minutes 57 seconds
+That's a good point. Thank you. I will spend some time also to review them and add some questions.
+
+Larry Adams
+6 minutes 11 seconds
+6:11
+Larry Adams 6 minutes 11 seconds
+Awesome, yeah, hey, good morning. Yesterday, let's see here.
+
+Kat Giangiulio
+7 minutes 27 seconds
+7:27
+Kat Giangiulio 7 minutes 27 seconds
+Get him in trouble too. I like it.
+
+Larry Adams
+7 minutes 29 seconds
+7:29
+Larry Adams 7 minutes 29 seconds
+Yeah, we're going to share the blame.
+
+Kat Giangiulio
+7 minutes 32 seconds
+7:32
+Kat Giangiulio 7 minutes 32 seconds
+But.
+
+Larry Adams
+7 minutes 33 seconds
+7:33
+Larry Adams 7 minutes 33 seconds
+But yeah, it's just really difficult for them to be able to look at their logs and stuff, and then I can't even help them because I can't look at the logs. So we'll just iron that out. Today, Anastasiya brought up the permission UI ticket, so we'll take a look at that so we can move that forward. I think I caught up on my inbox, but I'll see if there's anything left over there. Meeting up with Erik.
+
+Kat Giangiulio
+7 minutes 38 seconds
+7:38
+Kat Giangiulio 7 minutes 38 seconds
+The.
+
+Larry Adams
+7 minutes 54 seconds
+7:54
+Larry Adams 7 minutes 54 seconds
+I believe Xavier might have some PRs. I might have to circle back to, but I don't think he pinged me yesterday, so I might just reach out to him just to see. And then we have some intake stuff that really needs to be focused on and then wrapping up 16169.
+
+Kat Giangiulio
+8 minutes 9 seconds
+8:09
+Kat Giangiulio 8 minutes 9 seconds
+Yeah.
+
+Larry Adams
+8 minutes 19 seconds
+8:19
+Larry Adams 8 minutes 19 seconds
+Yeah.
+
+Kat Giangiulio
+8 minutes 35 seconds
+8:35
+Kat Giangiulio 8 minutes 35 seconds
+Oh, well, good luck because it's pretty intense. So I wouldn't spend too much time on it. I would wait for the walkthrough and the conversation, but.
+
+Larry Adams
+8 minutes 42 seconds
+8:42
+Larry Adams 8 minutes 42 seconds
+Okay, that might be good. All right, thank you guys. Yeah.
+
+Kat Giangiulio
+8 minutes 44 seconds
+8:44
+Kat Giangiulio 8 minutes 44 seconds
+That's my opinion, my humble opinion. You may make perfect sense of you, but...
+
+Larry Adams
+8 minutes 46 seconds
+8:46
+Larry Adams 8 minutes 46 seconds
+Yeah.
+
+Kat Giangiulio
+8 minutes 51 seconds
+8:51
+Kat Giangiulio 8 minutes 51 seconds
+Mm-mm.
+
+Xavier Messado
+8 minutes 59 seconds
+8:59
+Xavier Messado 8 minutes 59 seconds
+Good morning. Still working on wrapping up the Callisto PR. And then I did jump on to Nova, Larry's review for the PR for Nova backend. I pulled out those changes into a separate PR just because they're a pretty sizable refactor.
+
+Larry Adams
+9 minutes 22 seconds
+9:22
+Larry Adams 9 minutes 22 seconds
+Okay.
+
+Xavier Messado
+9 minutes 37 seconds
+9:37
+Xavier Messado 9 minutes 37 seconds
+Ohh, and I'll pass it along.
+
+Svitlana Pshenychna
+9 minutes 42 seconds
+9:42
+Svitlana Pshenychna 9 minutes 42 seconds
+Thank you. Good morning guys from my site. Yesterday I deployed my changes for permissions. It's nice to today's test and also today I'm going to create pull request for duration and actually is it so I guess
+
+Anastasiya Savchuk
+10 minutes 10 seconds
+10:10
+Anastasiya Savchuk 10 minutes 10 seconds
+Oh.
+
+Kat Giangiulio
+10 minutes 10 seconds
+10:10
+Kat Giangiulio 10 minutes 10 seconds
+Cars going in, sounds like probably.
+
+Anastasiya Savchuk
+10 minutes 10 seconds
+10:10
+Anastasiya Savchuk 10 minutes 10 seconds
+You?
+
+Svitlana Pshenychna
+10 minutes 10 seconds
+10:10
+Svitlana Pshenychna 10 minutes 10 seconds
+And so.
+
+XM
+Xavier Messado
+8 minutes 59 seconds
+8:59
+Xavier Messado 8 minutes 59 seconds
+Good morning. Still working on wrapping up the Callisto PR. And then I did jump on to Nova, Larry's review for the PR for Nova backend. I pulled out those changes into a separate PR just because they're a pretty sizable refactor.
+
+XM
+Xavier Messado
+9 minutes 37 seconds
+9:37
+Xavier Messado 9 minutes 37 seconds
+Ohh, and I'll pass it along.
+
+Anastasiya Savchuk
+10 minutes 12 seconds
+10:12
+Anastasiya Savchuk 10 minutes 12 seconds
+No, I will remove it as soon as I will be ready. Yeah.
+
+Kat Giangiulio
+10 minutes 14 seconds
+10:14
+Kat Giangiulio 10 minutes 14 seconds
+You will? All right, good. Perfect. Totally fine. Yep, good.
+
+Svitlana Pshenychna
+10 minutes 20 seconds
+10:20
+Svitlana Pshenychna 10 minutes 20 seconds
+Yep, that's all. Thank you. Pass to Dustin.
+
+Dustin Thomason
+10 minutes 29 seconds
+10:29
+Dustin Thomason 10 minutes 29 seconds
+Excellent. And actually, I, yeah, I have some changes that I fixed for you, Lana. You had made some comments. I did a re-request for your eyes. So if you don't have, if you have a moment, please do. A couple of things from yesterday. I actually just need to, I guess, deploy it to.
+
+Larry Adams
+11 minutes 5 seconds
+11:05
+Larry Adams 11 minutes 5 seconds
+Awesome.
+
+Dustin Thomason
+11 minutes 15 seconds
+11:15
+Dustin Thomason 11 minutes 15 seconds
+Cool.
+
+Larry Adams
+11 minutes 15 seconds
+11:15
+Larry Adams 11 minutes 15 seconds
+We don't need a release tag just yet. We'll do that as we get closer to the end of the sprint. We'll start talking about it tomorrow and see if there's a good incision point tomorrow, by the end of tomorrow, or do we need to wait till Friday? But yeah.
+
+Kat Giangiulio
+11 minutes 15 seconds
+11:15
+Kat Giangiulio 11 minutes 15 seconds
+Is that it?
+
+Dustin Thomason
+11 minutes 18 seconds
+11:18
+Dustin Thomason 11 minutes 18 seconds
+Okay.
+
+Kat Giangiulio
+11 minutes 29 seconds
+11:29
+Kat Giangiulio 11 minutes 29 seconds
+So Friday's the holiday, which is a question as well about code freeze. Yeah, so I wasn't sure what y'all were going to do about that.
+
+Larry Adams
+11 minutes 31 seconds
+11:31
+Larry Adams 11 minutes 31 seconds
+Shoot.
+
+Dustin Thomason
+11 minutes 33 seconds
+11:33
+Dustin Thomason 11 minutes 33 seconds
+Yeah.
+
+Larry Adams
+11 minutes 34 seconds
+11:34
+Larry Adams 11 minutes 34 seconds
+Oh, okay, so I guess we kind of shift to today and tomorrow. So yeah, let's take a look at what we really want to get into the release and where it is. Okay, yeah, yeah. So just wait, just wait to, you guys, it sounds like you guys want to tag it though.
+
+Dustin Thomason
+11 minutes 49 seconds
+11:49
+Dustin Thomason 11 minutes 49 seconds
+Oh.
+
+Larry Adams
+11 minutes 55 seconds
+11:55
+Larry Adams 11 minutes 55 seconds
+you and Xavier. So if you guys want to tag it this go around, that sounds great this week. Just wait. Let's talk, let's see what's going on in the board 1st and talk a little bit later today. I'll make a note of that.
+
+Dustin Thomason
+12 minutes
+12:00
+Dustin Thomason 12 minutes
+Yeah.
+
+Kat Giangiulio
+12 minutes 10 seconds
+12:10
+Kat Giangiulio 12 minutes 10 seconds
+Yeah.
+
+Dustin Thomason
+12 minutes 10 seconds
+12:10
+Dustin Thomason 12 minutes 10 seconds
+Google.
+
+Larry Adams
+12 minutes 29 seconds
+12:29
+Larry Adams 12 minutes 29 seconds
+Everything, everything is in progress right now, huh?
+
+Kat Giangiulio
+12 minutes 29 seconds
+12:29
+Kat Giangiulio 12 minutes 29 seconds
+And.
+
+Dustin Thomason
+12 minutes 33 seconds
+12:33
+Dustin Thomason 12 minutes 33 seconds
+Yeah, every every those will be off today, so, except for, yeah.
+
+Larry Adams
+12 minutes 33 seconds
+12:33
+Larry Adams 12 minutes 33 seconds
+Boom, boom, boom.
+
+Dustin Thomason
+12 minutes 40 seconds
+12:40
+Dustin Thomason 12 minutes 40 seconds
+Yes, that's with, yeah, Lana's gotta.
+
+Larry Adams
+12 minutes 43 seconds
+12:43
+Larry Adams 12 minutes 43 seconds
+Okay, so there might be a little bit of back and forth there.
+
+Dustin Thomason
+12 minutes 44 seconds
+12:44
+Dustin Thomason 12 minutes 44 seconds
+Sign one up for me.
+
+Larry Adams
+12 minutes 48 seconds
+12:48
+Larry Adams 12 minutes 48 seconds
+Okay, okay. Awesome, okay.
+
+Derrick Dieso
+12 minutes 50 seconds
+12:50
+Derrick Dieso 12 minutes 50 seconds
+Should we maybe do a, like an impromptu, I don't want to use the word refinement, but maybe dig into the backlog. It sounds like Lara also needs work and she's looking to get a PR up for.
+
+Kat Giangiulio
+13 minutes 1 second
+13:01
+Kat Giangiulio 13 minutes 1 second
+Well, we have refinement tomorrow, so instead of jamming everything outside of ceremonies, why don't we just kind of, I mean, whatever you want to do, Larry. I mean, I don't know. We have refinement. We can do, you know, we can assign tomorrow as well, but
+
+Dustin Thomason
+13 minutes 2 seconds
+13:02
+Dustin Thomason 13 minutes 2 seconds
+Sounds good.
+
+Larry Adams
+13 minutes 14 seconds
+13:14
+Larry Adams 13 minutes 14 seconds
+What?
+
+Derrick Dieso
+13 minutes 15 seconds
+13:15
+Derrick Dieso 13 minutes 15 seconds
+Hey, as long as people have stuff to carry them through today, right?
+
+Larry Adams
+13 minutes 18 seconds
+13:18
+Larry Adams 13 minutes 18 seconds
+Yeah, as long as we have... yeah.
+
+Kat Giangiulio
+13 minutes 18 seconds
+13:18
+Kat Giangiulio 13 minutes 18 seconds
+The long stay is over.
+
+Larry Adams
+13 minutes 21 seconds
+13:21
+Larry Adams 13 minutes 21 seconds
+day is over, that is true, but she has, she's not gonna have anything for tomorrow when she logs in.
+
+Kat Giangiulio
+13 minutes 27 seconds
+13:27
+Kat Giangiulio 13 minutes 27 seconds
+But I'm saying like right this moment to do it so we can you can go today sounds like you need to get Lana and and and Dustin and
+
+Larry Adams
+13 minutes 30 seconds
+13:30
+Larry Adams 13 minutes 30 seconds
+Ohh.
+
+Kat Giangiulio
+13 minutes 35 seconds
+13:35
+Kat Giangiulio 13 minutes 35 seconds
+Alright.
+
+Dustin Thomason
+13 minutes 40 seconds
+13:40
+Dustin Thomason 13 minutes 40 seconds
+Yeah.
+
+Kat Giangiulio
+13 minutes 46 seconds
+13:46
+Kat Giangiulio 13 minutes 46 seconds
+So yeah, as long as y'all can say that all of his work is going to be done and moved to done by, you know, by Tuesday, then yeah, sprint editions, because that's the goal, right? Everything that's been assigned to the sprint gets closed and moved to done at the end of the sprint.
+
+Larry Adams
+13 minutes 48 seconds
+13:48
+Larry Adams 13 minutes 48 seconds
+Yeah.
+
+Kat Giangiulio
+14 minutes 2 seconds
+14:02
+Kat Giangiulio 14 minutes 2 seconds
+Right.
+
+Larry Adams
+14 minutes 31 seconds
+14:31
+Larry Adams 14 minutes 31 seconds
+Yeah.
+
+Kat Giangiulio
+14 minutes 41 seconds
+14:41
+Kat Giangiulio 14 minutes 41 seconds
+pull it in, it's going to be a sprint edition, a late sprint edition, so planned rollover. So these are all in our in the benefit of the team, you know, to show that we did finish sprint work and if anything was churning, we brought it in as a planned rollover kind of thing, right?
+
+Larry Adams
+14 minutes 58 seconds
+14:58
+Larry Adams 14 minutes 58 seconds
+Yeah, and it was not something that jeopardized anything that we had already had agreed to for our sprint goals. Yep.
+
+Kat Giangiulio
+15 minutes 2 seconds
+15:02
+Kat Giangiulio 15 minutes 2 seconds
+And.
+
+Larry Adams
+15 minutes 12 seconds
+15:12
+Larry Adams 15 minutes 12 seconds
+Sounds good.
+
+Dustin Thomason
+15 minutes 14 seconds
+15:14
+Dustin Thomason 15 minutes 14 seconds
+Very good. Awesome. Uh, who should I pass to here? Uh, Derrick, you know, Derrick? No.
+
+Derrick Dieso
+15 minutes 22 seconds
+15:22
+Derrick Dieso 15 minutes 22 seconds
+I can pop in. Morning, Ngo.
+
+Kat Giangiulio
+16 minutes 5 seconds
+16:05
+Kat Giangiulio 16 minutes 5 seconds
+Are these gonna be before you jump in Sava? Are these gonna be moved? Are you doing? Are you the acceptor on the on the PD workflow there? Yeah, you are OK.
+
+Larry Adams
+16 minutes 15 seconds
+16:15
+Larry Adams 16 minutes 15 seconds
+Yeah, I do have a note to, I do have a note to accept that.
+
+Kat Giangiulio
+16 minutes 17 seconds
+16:17
+Kat Giangiulio 16 minutes 17 seconds
+OKOK.
+
+Larry Adams
+16 minutes 26 seconds
+16:26
+Larry Adams 16 minutes 26 seconds
+Good call up. Thank you. I'm going to move that up the priority stack here.
+
+Derrick Dieso
+16 minutes 31 seconds
+16:31
+Derrick Dieso 16 minutes 31 seconds
+And let me know if you have any questions there.
+
+Kat Giangiulio
+16 minutes 32 seconds
+16:32
+Kat Giangiulio 16 minutes 32 seconds
+We have until next Tuesday. Yeah, we have until next Tuesday, really, you think about it. But still, I think you're, yeah, right, true. Well, hopefully there's no feedback there. It sounds like, I don't know, on the PD workflow. Hopefully, hopefully, fingers crossed, I saw that.
+
+Larry Adams
+16 minutes 34 seconds
+16:34
+Larry Adams 16 minutes 34 seconds
+Okay, will do.
+
+VB
+Viacheslav Bozhko
+16 minutes 48 seconds
+16:48
+Viacheslav Bozhko 16 minutes 48 seconds
+Hello, everyone. Yeah, actually, I almost finished the smoke test of Dev environment, 16140. I just assigned a bunch of jobs.
+
+Kat Giangiulio
+18 minutes 2 seconds
+18:02
+Kat Giangiulio 18 minutes 2 seconds
+OK, thanks, Sala. OK, OK, then I think Georgiy and Erik are remaining.
+
+XM
+Xavier Messado
+18 minutes 7 seconds
+18:07
+Xavier Messado 18 minutes 7 seconds
+Okay.
+
+VB
+Viacheslav Bozhko
+18 minutes 7 seconds
+18:07
+Viacheslav Bozhko 18 minutes 7 seconds
+Uh, past Erik.
+
+Erik Johnson
+18 minutes 13 seconds
+18:13
+Erik Johnson 18 minutes 13 seconds
+So not much for me. I think essentially just what Larry went over as far as addressing the permissions in Saturn today. Georgiy.
+
+Kat Giangiulio
+18 minutes 23 seconds
+18:23
+Kat Giangiulio 18 minutes 23 seconds
+Where's QRK? There he is.
+
+GT
+Georgiy Tochitskiy
+18 minutes 25 seconds
+18:25
+Georgiy Tochitskiy 18 minutes 25 seconds
+Okay.
+
+Kat Giangiulio
+19 minutes 25 seconds
+19:25
+Kat Giangiulio 19 minutes 25 seconds
+All right.
+
+Larry Adams
+19 minutes 34 seconds
+19:34
+Larry Adams 19 minutes 34 seconds
+Yeah, there's already a spec kind of written, well, that Lara had made for the initial one. This would go right next to it and would piggyback off of that one.
+
+Kat Giangiulio
+19 minutes 37 seconds
+19:37
+Kat Giangiulio 19 minutes 37 seconds
+Like you mentioned, for...
+
+Anastasiya Savchuk
+20 minutes 2 seconds
+20:02
+Anastasiya Savchuk 20 minutes 2 seconds
+Um, no, Shaye already replied the comments I waited, was waiting, yeah, I just need to elaborate them.
+
+Kat Giangiulio
+20 minutes 3 seconds
+20:03
+Kat Giangiulio 20 minutes 3 seconds
+No, he did.
+
+Anastasiya Savchuk
+20 minutes 15 seconds
+20:15
+Anastasiya Savchuk 20 minutes 15 seconds
+Oh, oh, this one, yeah, sorry. It was, it's mostly for Larry, I guess. But yeah, Shaye, am I correct that all questions for support team is mostly for Larry, not for you?
+
+Kat Giangiulio
+20 minutes 20 seconds
+20:20
+Kat Giangiulio 20 minutes 20 seconds
+Okay.
+
+XM
+Xavier Messado
+20 minutes 22 seconds
+20:22
+Xavier Messado 20 minutes 22 seconds
+Ops.
+
+Shaye Lankford
+20 minutes 31 seconds
+20:31
+Shaye Lankford 20 minutes 31 seconds
+I'm not sure I follow. What do you mean no questions for support team?
+
+Anastasiya Savchuk
+20 minutes 33 seconds
+20:33
+Anastasiya Savchuk 20 minutes 33 seconds
+Ohh.
+
+Shaye Lankford
+20 minutes 44 seconds
+20:44
+Shaye Lankford 20 minutes 44 seconds
+I think you can still reach out to me for some questions. I mean, technical questions, obviously, you reach out to Larry for, but yeah, any questions about priority? I mean, the main thing that I think is important to keep in mind with Europa is like we don't need it to be amazing. We don't need it to be beautiful. We just need it to be functional. Yeah.
+
+Kat Giangiulio
+20 minutes 44 seconds
+20:44
+Kat Giangiulio 20 minutes 44 seconds
+Ops.
+
+Anastasiya Savchuk
+21 minutes 1 second
+21:01
+Anastasiya Savchuk 21 minutes 1 second
+Yeah, I get it, yeah, and the questions are mostly about functional part, and yeah, so...
+
+Shaye Lankford
+21 minutes 3 seconds
+21:03
+Shaye Lankford 21 minutes 3 seconds
+Yeah, yeah.
+
+Kat Giangiulio
+21 minutes 4 seconds
+21:04
+Kat Giangiulio 21 minutes 4 seconds
+Okay.
+
+Shaye Lankford
+21 minutes 8 seconds
+21:08
+Shaye Lankford 21 minutes 8 seconds
+Yeah, I imagine Larry is probably the best person to answer those, but if you do need my input, yeah.
+
+Anastasiya Savchuk
+21 minutes 14 seconds
+21:14
+Anastasiya Savchuk 21 minutes 14 seconds
+I thanked you for awareness, maybe.
+
+Kat Giangiulio
+21 minutes 16 seconds
+21:16
+Kat Giangiulio 21 minutes 16 seconds
+Yeah.
+
+Shaye Lankford
+21 minutes 17 seconds
+21:17
+Shaye Lankford 21 minutes 17 seconds
+Cool, that sounds great.
+
+Kat Giangiulio
+21 minutes 18 seconds
+21:18
+Kat Giangiulio 21 minutes 18 seconds
+Yeah, keep doing that.
+
+Anastasiya Savchuk
+21 minutes 20 seconds
+21:20
+Anastasiya Savchuk 21 minutes 20 seconds
+Thank you.
+
+Kat Giangiulio
+21 minutes 20 seconds
+21:20
+Kat Giangiulio 21 minutes 20 seconds
+for awareness. I think that's a good idea. All right, so that's it. We've done everything. So now we're saying that, okay, Dustin and Derrick maybe need work. So we're going to look for, Larry.
+
+Larry Adams
+21 minutes 34 seconds
+21:34
+Larry Adams 21 minutes 34 seconds
+Ohh, Derrick got Derek's got plenty lined up. I, I don't know if we have a lot in ready for work, so it kind of moves us to either ready for refinement or pending intake. I don't want to chew through anything in ready off of ready for refinement, I suspect, because...
+
+Kat Giangiulio
+21 minutes 38 seconds
+21:38
+Kat Giangiulio 21 minutes 38 seconds
+Uh-huh.
+
+Larry Adams
+21 minutes 53 seconds
+21:53
+Larry Adams 21 minutes 53 seconds
+We want to talk about it.
+
+Kat Giangiulio
+21 minutes 54 seconds
+21:54
+Kat Giangiulio 21 minutes 54 seconds
+Yeah.
+
+Larry Adams
+21 minutes 57 seconds
+21:57
+Larry Adams 21 minutes 57 seconds
+So it kind of, and if that's the case, which that could be wrong of me to say, then it moves us to like pending intake.
+
+Derrick Dieso
+22 minutes 2 seconds
+22:02
+Derrick Dieso 22 minutes 2 seconds
+The.
+
+Kat Giangiulio
+22 minutes 12 seconds
+22:12
+Kat Giangiulio 22 minutes 12 seconds
+We have an intake gate. Yeah, no. I'm just going to stop you. Sorry, but I don't think that we're going to products backlog to pull defects until it reaches go through goes through intake.
+
+Larry Adams
+22 minutes 24 seconds
+22:24
+Larry Adams 22 minutes 24 seconds
+Yeah, so generally we click on the pending intake there, but it's still the backlog. It's just a filtered backlog, Derrick. So, so you're right on.
+
+Kat Giangiulio
+22 minutes 32 seconds
+22:32
+Kat Giangiulio 22 minutes 32 seconds
+You look like here, right?
+
+Larry Adams
+22 minutes 34 seconds
+22:34
+Larry Adams 22 minutes 34 seconds
+Yeah, yeah, yeah, yeah. And is there anything, yeah, defects, there we go.
+
+Kat Giangiulio
+22 minutes 36 seconds
+22:36
+Kat Giangiulio 22 minutes 36 seconds
+And here.
+
+Larry Adams
+22 minutes 41 seconds
+22:41
+Larry Adams 22 minutes 41 seconds
+False positive was a rough one. I think there was something involved with that that had to do with CloudFront, but I could be completely wrong.
+
+Kat Giangiulio
+22 minutes 57 seconds
+22:57
+Kat Giangiulio 22 minutes 57 seconds
+That's a story. Oh, oh, here we go. Sorry.
+
+Larry Adams
+23 minutes
+23:00
+Larry Adams 23 minutes
+Yeah, yeah, yeah.
+
+Anastasiya Savchuk
+23 minutes 1 second
+23:01
+Anastasiya Savchuk 23 minutes 1 second
+That means discussions with Karl and some architect to review.
+
+Larry Adams
+23 minutes 6 seconds
+23:06
+Larry Adams 23 minutes 6 seconds
+I...
+
+Kat Giangiulio
+23 minutes 10 seconds
+23:10
+Kat Giangiulio 23 minutes 10 seconds
+Not this one.
+
+Shaye Lankford
+23 minutes 17 seconds
+23:17
+Shaye Lankford 23 minutes 17 seconds
+Yeah, I'm not sure. This one is about the actual Atlas permission, like in the Atlas permissions UI, you can control the Atlas permissions UI. You're supposed to be able to, but right now you're not able to for other users. So IT can't, shouldn't be able to change their own permissions, so it should be always fixed, but they should be able to change.
+
+Larry Adams
+23 minutes 41 seconds
+23:41
+Larry Adams 23 minutes 41 seconds
+Okay, so we need a kind of a protection around updating to make it so that the person who is updating cannot change whatever role they're in, they cannot change that role's permissions. Is that right?
+
+Shaye Lankford
+23 minutes 53 seconds
+23:53
+Shaye Lankford 23 minutes 53 seconds
+It's really just IT should not be able to change their own. IT should just always have permissions. Everyone else, they can really, it's just the ability, it's fundamentally the ability to add read so that we can, they can let other users view that page. That's the main thing. That's what this, they cannot do right now.
+
+Larry Adams
+24 minutes 14 seconds
+24:14
+Larry Adams 24 minutes 14 seconds
+Okay, so the IT1 permissions we want to manage through migration scripts, it sounds like. Do we even want to show them on the UI?
+
+Shaye Lankford
+24 minutes 24 seconds
+24:24
+Shaye Lankford 24 minutes 24 seconds
+I think we do want to show them so they're aware of what permissions they have. Right now, they're grayed out. They're disabled and grayed out. So like they hover over, they're like, you cannot change your own permissions with a tooltip that says that.
+
+Larry Adams
+24 minutes 28 seconds
+24:28
+Larry Adams 24 minutes 28 seconds
+Lit.
+
+Shaye Lankford
+24 minutes 37 seconds
+24:37
+Shaye Lankford 24 minutes 37 seconds
+Which I think is, yeah, like, yeah, exactly.
+
+Anastasiya Savchuk
+24 minutes 41 seconds
+24:41
+Anastasiya Savchuk 24 minutes 41 seconds
+Yeah, but in this case, it's transcription production members and it shows the same hint that should not show. It should be only for IT themselves.
+
+Larry Adams
+24 minutes 41 seconds
+24:41
+Larry Adams 24 minutes 41 seconds
+I see.
+
+Shaye Lankford
+24 minutes 48 seconds
+24:48
+Shaye Lankford 24 minutes 48 seconds
+Yeah.
+
+Larry Adams
+24 minutes 52 seconds
+24:52
+Larry Adams 24 minutes 52 seconds
+Okay, and so right now, when they hover over, it does disable, it has a tooltip, it's disabled, but they can still update the checkbox. Is that right?
+
+Shaye Lankford
+25 minutes
+25:00
+Shaye Lankford 25 minutes
+No, no, right now it's disabled for all roles. So if IT comes in and they want to change the role for like, let's say, Lit Tech management, they want to make it so that Lit Tech management can read the information on this page, they can't click that button because the tool tip comes up. It's all disabled.
+
+Larry Adams
+25 minutes 37 seconds
+25:37
+Larry Adams 25 minutes 37 seconds
+OK, so.
+
+Shaye Lankford
+25 minutes 39 seconds
+25:39
+Shaye Lankford 25 minutes 39 seconds
+That makes sense. I feel like I could have explained that better.
+
+Larry Adams
+25 minutes 42 seconds
+25:42
+Larry Adams 25 minutes 42 seconds
+I might be having a hard time following. Does anybody else want to give a whack at?
+
+Kat Giangiulio
+25 minutes 45 seconds
+25:45
+Kat Giangiulio 25 minutes 45 seconds
+Let's read it.
+
+Derrick Dieso
+25 minutes 48 seconds
+25:48
+Derrick Dieso 25 minutes 48 seconds
+I would say if we want to take more time to intake this ticket, I'm looking at from the same backlog list there, 16047, seems like a kind of lower hanging fruit, especially if you want something that might not roll over for the sprint.
+
+Larry Adams
+25 minutes 58 seconds
+25:58
+Larry Adams 25 minutes 58 seconds
+Six.
+
+Derrick Dieso
+26 minutes 4 seconds
+26:04
+Derrick Dieso 26 minutes 4 seconds
+16047.
+
+Kat Giangiulio
+26 minutes 4 seconds
+26:04
+Kat Giangiulio 26 minutes 4 seconds
+I need to get, yeah, 1605, okay, the defect.
+
+Larry Adams
+26 minutes 8 seconds
+26:08
+Larry Adams 26 minutes 8 seconds
+And I don't think my brain is working this morning, Shaye. There was no Shaye to you. You know, just want to be clear.
+
+Derrick Dieso
+26 minutes 9 seconds
+26:09
+Derrick Dieso 26 minutes 9 seconds
+Seems like just.
+
+Shaye Lankford
+26 minutes 15 seconds
+26:15
+Shaye Lankford 26 minutes 15 seconds
+No worries, I'm sure I could have said that better. As I was saying it, I was like, uh...
+
+Derrick Dieso
+26 minutes 15 seconds
+26:15
+Derrick Dieso 26 minutes 15 seconds
+Leah.
+
+Kat Giangiulio
+26 minutes 17 seconds
+26:17
+Kat Giangiulio 26 minutes 17 seconds
+Users see withdrawal.
+
+Shaye Lankford
+26 minutes 17 seconds
+26:17
+Shaye Lankford 26 minutes 17 seconds
+No shade to Shaye? Yeah. Shaye.
+
+Kat Giangiulio
+26 minutes 20 seconds
+26:20
+Kat Giangiulio 26 minutes 20 seconds
+This was a priority. So it is marked as an intake priority. So user see withdrawal option in menu from all tracks when no access. And so the role, the role, there's a roles expected actual result that Shaye anything further or is it self-explanatory? Oh, here, let me see this.
+
+Shaye Lankford
+26 minutes 37 seconds
+26:37
+Shaye Lankford 26 minutes 37 seconds
+I think, yeah, let's watch the video. I think Anastasiya might be better equipped to speak on this one.
+
+Kat Giangiulio
+26 minutes 41 seconds
+26:41
+Kat Giangiulio 26 minutes 41 seconds
+Okay.
+
+Anastasiya Savchuk
+26 minutes 41 seconds
+26:41
+Anastasiya Savchuk 26 minutes 41 seconds
+Yeah, actually it started for one role and then I realized it might happen for any role that has partial permissions.
+
+Shaye Lankford
+27 minutes 3 seconds
+27:03
+Shaye Lankford 27 minutes 3 seconds
+Oh, okay. I see what you're saying.
+
+Larry Adams
+27 minutes 7 seconds
+27:07
+Larry Adams 27 minutes 7 seconds
+Because the person doesn't have permissions to withdraw, is that right?
+
+Anastasiya Savchuk
+27 minutes 10 seconds
+27:10
+Anastasiya Savchuk 27 minutes 10 seconds
+Yeah.
+
+Larry Adams
+27 minutes 15 seconds
+27:15
+Larry Adams 27 minutes 15 seconds
+Ohh, okay.
+
+Anastasiya Savchuk
+27 minutes 17 seconds
+27:17
+Anastasiya Savchuk 27 minutes 17 seconds
+Logic.
+
+Larry Adams
+27 minutes 18 seconds
+27:18
+Larry Adams 27 minutes 18 seconds
+That one? Yeah.
+
+Anastasiya Savchuk
+27 minutes 18 seconds
+27:18
+Anastasiya Savchuk 27 minutes 18 seconds
+And actually the expected result should be a little bit updated because it started from one role and then I realized we have several roles. Let me update slightly the expected result.
+
+Larry Adams
+27 minutes 31 seconds
+27:31
+Larry Adams 27 minutes 31 seconds
+So we think that the withdraw, it doesn't have the appropriate permissions on the front end to disable it. And then probably for the back end, well, yeah, because they're able to withdraw it.
+
+Anastasiya Savchuk
+27 minutes 43 seconds
+27:43
+Anastasiya Savchuk 27 minutes 43 seconds
+It actually, this seems like only front end. You see, you see in the actual result, you can click on withdraw, but actually receive an error from back end.
+
+Larry Adams
+27 minutes 47 seconds
+27:47
+Larry Adams 27 minutes 47 seconds
+But you were able to withdraw though.
+
+Anastasiya Savchuk
+27 minutes 57 seconds
+27:57
+Anastasiya Savchuk 27 minutes 57 seconds
+Yeah.
+
+Larry Adams
+27 minutes 57 seconds
+27:57
+Larry Adams 27 minutes 57 seconds
+Awesome!
+
+Kat Giangiulio
+28 minutes
+28:00
+Kat Giangiulio 28 minutes
+And we're saying this is work for Derrick and Dustin to get okay.
+
+Larry Adams
+28 minutes 2 seconds
+28:02
+Larry Adams 28 minutes 2 seconds
+Dustin.
+
+Derrick Dieso
+28 minutes 5 seconds
+28:05
+Derrick Dieso 28 minutes 5 seconds
+I think, yeah, I think this would be for Dustin, just to get something quick on the board.
+
+Kat Giangiulio
+28 minutes 6 seconds
+28:06
+Kat Giangiulio 28 minutes 6 seconds
+It.
+
+Larry Adams
+28 minutes 11 seconds
+28:11
+Larry Adams 28 minutes 11 seconds
+Yeah.
+
+Derrick Dieso
+28 minutes 24 seconds
+28:24
+Derrick Dieso 28 minutes 24 seconds
+I could see a two or a three for investigation. Should be hopefully some straightforward logic given the permissions sheet. And Dustin, I would maybe make sure that you have permissions to see that, just linked it there.
+
+Kat Giangiulio
+28 minutes 41 seconds
+28:41
+Kat Giangiulio 28 minutes 41 seconds
+And then that's fair, the three for Dustin being new to it and maybe just maybe spend some time in support.
+
+Larry Adams
+28 minutes 41 seconds
+28:41
+Larry Adams 28 minutes 41 seconds
+Yeah.
+
+Dustin Thomason
+28 minutes 42 seconds
+28:42
+Dustin Thomason 28 minutes 42 seconds
+Sounds good.
+
+Larry Adams
+28 minutes 46 seconds
+28:46
+Larry Adams 28 minutes 46 seconds
+Yeah, I don't think we can pad it just because he's new, because at some point, even if it takes a little bit longer than three points or whatever, once he gets his bearings and stuff, it's going to be, you know, you're going to see the growth, the velocity, and he's going to be faster.
+
+Derrick Dieso
+28 minutes 48 seconds
+28:48
+Derrick Dieso 28 minutes 48 seconds
+But.
+
+Kat Giangiulio
+28 minutes 51 seconds
+28:51
+Kat Giangiulio 28 minutes 51 seconds
+Okay.
+
+Dustin Thomason
+29 minutes
+29:00
+Dustin Thomason 29 minutes
+Yeah.
+
+Kat Giangiulio
+29 minutes 2 seconds
+29:02
+Kat Giangiulio 29 minutes 2 seconds
+Yeah, for sure.
+
+Dustin Thomason
+29 minutes 4 seconds
+29:04
+Dustin Thomason 29 minutes 4 seconds
+Yeah.
+
+Kat Giangiulio
+29 minutes 4 seconds
+29:04
+Kat Giangiulio 29 minutes 4 seconds
+Alright, so there you go.
+
+Dustin Thomason
+29 minutes 6 seconds
+29:06
+Dustin Thomason 29 minutes 6 seconds
+Oh.
+
+Larry Adams
+29 minutes 8 seconds
+29:08
+Larry Adams 29 minutes 8 seconds
+That's a good score. Good find, Derrick.
+
+Kat Giangiulio
+29 minutes 8 seconds
+29:08
+Kat Giangiulio 29 minutes 8 seconds
+Alrighty.
+
+Larry Adams
+29 minutes 11 seconds
+29:11
+Larry Adams 29 minutes 11 seconds
+Yeah.
+
+Kat Giangiulio
+29 minutes 11 seconds
+29:11
+Kat Giangiulio 29 minutes 11 seconds
+I'm gonna stop sharing. This is gonna call it, we're just gonna call it the late sprint edition 'cause it's kind of sort of is 'cause it's an early, it's an early end of a sprint, one day less.
+
+Larry Adams
+29 minutes 23 seconds
+29:23
+Larry Adams 29 minutes 23 seconds
+It's one, it's one day from the code freeze, so it does, you know what I mean?
+
+Kat Giangiulio
+29 minutes 27 seconds
+29:27
+Kat Giangiulio 29 minutes 27 seconds
+It's late for an addition. Anastasiya.
+
+Larry Adams
+29 minutes 29 seconds
+29:29
+Larry Adams 29 minutes 29 seconds
+Yeah.
+
+Anastasiya Savchuk
+29 minutes 31 seconds
+29:31
+Anastasiya Savchuk 29 minutes 31 seconds
+Yeah, so we received the user report. Shaye, I typed in the comments that we don't have enough description, but I seem to understand the problem. We have 16185.
+
+Derrick Dieso
+29 minutes 32 seconds
+29:32
+Derrick Dieso 29 minutes 32 seconds
+List.
+
+Anastasiya Savchuk
+29 minutes 44 seconds
+29:44
+Anastasiya Savchuk 29 minutes 44 seconds
+User says he's not able to upload files to restricted cases. And we do know that there is a bug when actually you don't have access, you see the upload.
+
+Shaye Lankford
+29 minutes 57 seconds
+29:57
+Shaye Lankford 29 minutes 57 seconds
+Okay.
+
+Anastasiya Savchuk
+30 minutes
+30:00
+Anastasiya Savchuk 30 minutes
+button. So maybe if someone needs to have a ticket, the bug fix might work. I have to find the reported defect, but I need more.
+
+Larry Adams
+30 minutes 15 seconds
+30:15
+Larry Adams 30 minutes 15 seconds
+Need more information.
+
+Kat Giangiulio
+30 minutes 17 seconds
+30:17
+Kat Giangiulio 30 minutes 17 seconds
+HQ.
+
+Anastasiya Savchuk
+30 minutes 21 seconds
+30:21
+Anastasiya Savchuk 30 minutes 21 seconds
+Leah.
+
+Shaye Lankford
+30 minutes 21 seconds
+30:21
+Shaye Lankford 30 minutes 21 seconds
+Upload because, okay, okay.
+
+Anastasiya Savchuk
+30 minutes 22 seconds
+30:22
+Anastasiya Savchuk 30 minutes 22 seconds
+Yeah.
+
+Kat Giangiulio
+30 minutes 24 seconds
+30:24
+Kat Giangiulio 30 minutes 24 seconds
+So, you need to, you need Shaye help to get in touch with Tara. You need more information, OK?
+
+Anastasiya Savchuk
+30 minutes 27 seconds
+30:27
+Anastasiya Savchuk 30 minutes 27 seconds
+Yeah, first of all, I need more description to understand whether this is the defect, I think, and then link everything, Erik.
+
+Kat Giangiulio
+30 minutes 37 seconds
+30:37
+Kat Giangiulio 30 minutes 37 seconds
+What's up, Erik? Yeah, we got one minute remaining.
+
+Larry Adams
+30 minutes 37 seconds
+30:37
+Larry Adams 30 minutes 37 seconds
+The.
+
+Erik Johnson
+30 minutes 38 seconds
+30:38
+Erik Johnson 30 minutes 38 seconds
+Oh, I was just going to suggest Terrence is probably not the best person to work with on that. You may want to talk to Nick or John.
+
+Larry Adams
+30 minutes 46 seconds
+30:46
+Larry Adams 30 minutes 46 seconds
+Okay, do we need Terrence's roles? We might need to get his list of roles.
+
+Shaye Lankford
+30 minutes 51 seconds
+30:51
+Shaye Lankford 30 minutes 51 seconds
+No, Terrence is just an IT person. I think the actual user role is further below. It's Kelsey Hannaford. Yeah, that's the role or that's the user who reported it.
+
+Larry Adams
+31 minutes 2 seconds
+31:02
+Larry Adams 31 minutes 2 seconds
+Okay, so we need her roles, essentially, and her restriction levels.
+
+Kat Giangiulio
+31 minutes 3 seconds
+31:03
+Kat Giangiulio 31 minutes 3 seconds
+Okay.
+
+Shaye Lankford
+31 minutes 5 seconds
+31:05
+Shaye Lankford 31 minutes 5 seconds
+Mhm.
+
+Larry Adams
+31 minutes 8 seconds
+31:08
+Larry Adams 31 minutes 8 seconds
+We can get that from her ID token if you don't have another way, but yeah, worst case scenario.
+
+Kat Giangiulio
+31 minutes 13 seconds
+31:13
+Kat Giangiulio 31 minutes 13 seconds
+Is that needed on every user report? Is there is is it helpful to have that on every user report or?
+
+Shaye Lankford
+31 minutes 13 seconds
+31:13
+Shaye Lankford 31 minutes 13 seconds
+Yeah, Shae.
+
+Larry Adams
+31 minutes 19 seconds
+31:19
+Larry Adams 31 minutes 19 seconds
+Uh, especially where permissions and restrictions are involved. Uh, yeah, I get their list of roles is, yeah.
+
+Kat Giangiulio
+31 minutes 23 seconds
+31:23
+Kat Giangiulio 31 minutes 23 seconds
+Yeah.
+
+Anastasiya Savchuk
+31 minutes 23 seconds
+31:23
+Anastasiya Savchuk 31 minutes 23 seconds
+Yeah.
+
+Kat Giangiulio
+31 minutes 24 seconds
+31:24
+Kat Giangiulio 31 minutes 24 seconds
+So, that needs to be on the template, so they...
+
+Anastasiya Savchuk
+31 minutes 27 seconds
+31:27
+Anastasiya Savchuk 31 minutes 27 seconds
+Yeah, but in our case, we don't have, we do have actually one screenshot and just one line explaining the issue.
+
+Shaye Lankford
+31 minutes 35 seconds
+31:35
+Shaye Lankford 31 minutes 35 seconds
+Yeah, I need to follow up with IT about this because Terrence consistently doesn't give us enough information. So I think we need to.
+
+Kat Giangiulio
+31 minutes 38 seconds
+31:38
+Kat Giangiulio 31 minutes 38 seconds
+Okay.
+
+Shaye Lankford
+31 minutes 44 seconds
+31:44
+Shaye Lankford 31 minutes 44 seconds
+Yeah.
+
+Anastasiya Savchuk
+31 minutes 54 seconds
+31:54
+Anastasiya Savchuk 31 minutes 54 seconds
+Sure, bye. Yeah, take care. Thanks.
+
+Shaye Lankford
+31 minutes 55 seconds
+31:55
+Shaye Lankford 31 minutes 55 seconds
+Awesome. Thanks, everyone.
+
+Erik Johnson
+31 minutes 55 seconds
+31:55
+Erik Johnson 31 minutes 55 seconds
+Thank you. Bye. Bye.
