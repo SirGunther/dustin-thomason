@@ -23,6 +23,7 @@ $skillsDir = Join-Path $repoRoot '.cursor\skills'
 $templatePath = Join-Path $repoRoot 'docs\_templates\TICKET-changelog.template.md'
 $scaffoldPath = Join-Path $repoRoot 'scripts\new-ticket-changelog.ps1'
 $routerPath = Join-Path $rulesDir 'personal-methodology.mdc'
+$readmePath = Join-Path $repoRoot 'README.md'
 
 $requiredAlwaysApply = @(
     'agent-completion-notification',
@@ -56,9 +57,16 @@ $expectedSkills = @(
     'workflow-housekeeping'
 )
 
-foreach ($path in @($indexPath, $templatePath, $scaffoldPath, $routerPath)) {
+foreach ($path in @($indexPath, $templatePath, $scaffoldPath, $routerPath, $readmePath)) {
     if (-not (Test-Path -LiteralPath $path)) {
         Add-Issue "Missing required file: $path" 'ERROR'
+    }
+}
+
+# README is the entry point for any arriving system; it must point at the generator.
+if (Test-Path -LiteralPath $readmePath) {
+    if ((Get-Content -LiteralPath $readmePath -Raw) -notmatch 'sync-rules\.ps1') {
+        Add-Issue 'README.md should document sync-rules.ps1 (the rule generator)' 'WARN'
     }
 }
 
