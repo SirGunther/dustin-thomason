@@ -77,7 +77,7 @@ Bad:  Read Current state only and treat the user's latest message in isolation w
 1. Run scaffold (preferred):
 
    ```powershell
-   cd C:\Users\dustin.thomason\dustin-thomason
+   # from the dustin-thomason repo root
    .\scripts\new-ticket-changelog.ps1 -Ticket PRDV-12345 -System atlas -Title "One-line title" -Repo atlas-front-end
    ```
 
