@@ -50,6 +50,19 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 
 ---
 
+## Generated outputs (how non-Cursor systems load these rules)
+
+`.cursor/rules/*.mdc` is the **source of truth**. `scripts/sync-rules.ps1` mirrors it into two outputs so other systems consume the same standards without duplicate copies:
+
+| Output | Consumer | Committed? | Shape |
+| ------ | -------- | ---------- | ----- |
+| `AGENTS.md` | Codex (and any tool that reads AGENTS.md) | **Yes** — machine-neutral | Full rule bodies |
+| `.claude/rules/*.md` | Claude Code | **No** — git-ignored, per-machine | Full body, pointer stanza, or path-scoped, per rule |
+
+Claude Code loads `.claude/rules/` in-repo automatically, and in **other** project dirs via a one-time junction `~/.claude/rules/dustin-thomason` → this repo's `.claude/rules`. Pointer rules embed this machine's absolute repo path, which is why `.claude/rules` is git-ignored and rebuilt per machine. **Never hand-edit a generated file** — edit the `.mdc` and run `sync-rules.ps1` (the pre-commit hook does this automatically). See `README.md` for one-time machine setup.
+
+---
+
 ## What to `@` by task
 
 | I want to… | What you say or do | `@` needed? |
@@ -82,7 +95,7 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 | `problem-requirement-solution` | frame implementation/plans/specs as Problem → Requirement → Solution |
 | `agent-completion-notification` | end of substantive sessions — `notify-agent-complete.ps1` → Power Automate |
 
-Not always-on: `workflow-housekeeping` (only when editing workflow files here); `codex-agents-sync` (regenerate `AGENTS.md` after rule/skill edits).
+Not always-on: `workflow-housekeeping` (only when editing workflow files here); `agents-sync` (regenerate `AGENTS.md` + `.claude/rules` after rule/skill edits).
 
 ---
 
@@ -147,8 +160,9 @@ Skills are **not** `alwaysApply` — the user `@`’s the skill or asks in plain
 | ------ | ------- |
 | `new-ticket-changelog.ps1` | Create `docs/<system>/PRDV-XXXXX-changelog.md` |
 | `notify-agent-complete.ps1` | Post session completion to Power Automate (`agent-completion-notification` rule) |
-| `validate-workflows.ps1` | Wiring audit — run after changing rules/docs |
-| `sync-agents-md.ps1` | Regenerate root `AGENTS.md` from `.cursor/rules/*.mdc` (Codex mirror) |
+| `validate-workflows.ps1` | Wiring audit (incl. generated-output staleness) — run after changing rules/docs |
+| `sync-rules.ps1` | **Primary generator** — rebuilds `AGENTS.md` (Codex) + `.claude/rules/` (Claude Code) from `.cursor/rules/*.mdc`. `-Check` fails on stale output. |
+| `sync-agents-md.ps1` | Backwards-compatible shim → `sync-rules.ps1` |
 
 ## GitHub (stubs only — never `@`)
 

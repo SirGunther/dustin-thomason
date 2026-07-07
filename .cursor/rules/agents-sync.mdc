@@ -1,0 +1,28 @@
+---
+description: After editing Cursor rules or skills in dustin-thomason, regenerate all downstream rule outputs (AGENTS.md and .claude/rules) with sync-rules.ps1.
+globs: .cursor/rules/**/*.mdc,.cursor/skills/**/*
+alwaysApply: false
+---
+
+# Generated rule outputs (dustin-thomason)
+
+The source of truth is `.cursor/rules/*.mdc`. Two downstream outputs are generated from it and **must never be hand-edited**:
+
+- **`AGENTS.md`** — committed, machine-neutral mirror for Codex (full rule bodies).
+- **`.claude/rules/*.md`** — per-machine, git-ignored rules for Claude Code (full body, pointer stanza, or path-scoped, depending on the rule).
+
+`scripts/sync-rules.ps1` regenerates both; direct edits to either are overwritten on the next run.
+
+When you **create, edit, rename, or delete** any file under `.cursor/rules/` or `.cursor/skills/` in this repo:
+
+1. Run **`.\scripts\sync-rules.ps1`** from the repo root before you finish.
+2. Stage the regenerated **`AGENTS.md`** with the same work — do not leave the mirror stale. `.claude/rules/` is git-ignored and rebuilt per machine, so it is not staged.
+
+A brand-new rule must also be classified in `sync-rules.ps1` (`$Manifest`: `full` | `pointer` | `scoped`), or the script fails loudly rather than silently dropping it from an output.
+
+The `scripts/git-hooks/pre-commit` hook runs this automatically at commit time when hooks are enabled (`git config core.hooksPath scripts/git-hooks`), so regeneration is enforced no matter which agent or human edited the rules. Running the sync by hand is the fallback when hooks are not set up.
+
+```
+Good: edit .cursor/rules/<rule>.mdc, then run .\scripts\sync-rules.ps1, then stage AGENTS.md.
+Bad:  hand-editing AGENTS.md or .claude/rules/*.md (the next sync silently overwrites it).
+```

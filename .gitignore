@@ -1,0 +1,8 @@
+# Claude Code rules are generated per-machine by scripts/sync-rules.ps1 and consumed
+# via a per-machine junction (~/.claude/rules/dustin-thomason). Pointer rules embed this
+# machine's absolute repo path, so committing them would churn across machines. AGENTS.md
+# is the committed, machine-neutral output. Regenerate .claude/rules after clone (see README).
+/.claude/rules/
+
+# Browser-loop tooling deps (scripts/browser, added in a later phase).
+/scripts/browser/node_modules/

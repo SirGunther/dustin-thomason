@@ -38,6 +38,7 @@ $requiredAlwaysApply = @(
 $expectedScripts = @(
     'new-ticket-changelog.ps1',
     'notify-agent-complete.ps1',
+    'sync-rules.ps1',
     'sync-agents-md.ps1',
     'validate-workflows.ps1'
 )
@@ -169,6 +170,29 @@ if (Test-Path $indexPath) {
             Add-Issue "Broken link in workflow-index: $rel" 'WARN'
         }
     }
+}
+
+# Generated outputs must be fresh. sync-rules.ps1 -Check exits 1 when AGENTS.md is stale
+# (committed artifact) or when an existing .claude/rules has drifted. Run it isolated in a
+# child process so its internal 'exit' cannot short-circuit this validator.
+$syncScript = Join-Path $scriptsDir 'sync-rules.ps1'
+if (Test-Path -LiteralPath $syncScript) {
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $syncScript -Check | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Add-Issue 'Generated outputs are stale - run .\scripts\sync-rules.ps1 and stage AGENTS.md' 'ERROR'
+    }
+}
+
+# The auto-regeneration hook only runs when core.hooksPath points at the versioned hooks.
+$hooksPath = git -C $repoRoot config core.hooksPath
+if ($hooksPath -ne 'scripts/git-hooks') {
+    Add-Issue 'core.hooksPath is not scripts/git-hooks - auto-regeneration hook inactive on this machine (see README one-time setup)' 'WARN'
+}
+
+# .claude/rules is per-machine local output; absent means Claude Code rules were never built here.
+$claudeRulesDir = Join-Path $repoRoot '.claude\rules'
+if (-not (Test-Path -LiteralPath $claudeRulesDir)) {
+    Add-Issue 'Claude rules not generated on this machine (.claude/rules missing) - run .\scripts\sync-rules.ps1' 'WARN'
 }
 
 Write-Host 'Workflow wiring audit'
