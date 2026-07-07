@@ -9,7 +9,9 @@ $rulesDir = Join-Path $repoRoot '.cursor\rules'
 $outPath = Join-Path $repoRoot 'AGENTS.md'
 
 function Get-MdcBody([string]$Path) {
-    $raw = Get-Content -LiteralPath $Path -Raw
+    # ReadAllText auto-detects BOM and defaults to UTF-8. Get-Content -Raw on PS 5.1
+    # reads no-BOM files as ANSI and corrupts em-dashes / arrows / curly quotes.
+    $raw = [System.IO.File]::ReadAllText($Path)
     if ($raw -match '(?s)^---\r?\n.*?\r?\n---\r?\n(.*)$') {
         return $Matches[1].Trim()
     }
@@ -17,7 +19,7 @@ function Get-MdcBody([string]$Path) {
 }
 
 $parts = [System.Collections.Generic.List[string]]::new()
-$parts.Add('# AGENTS.md (generated — do not edit)')
+$parts.Add("# AGENTS.md (generated $([char]0x2014) do not edit)")
 $parts.Add('')
 $parts.Add('Source: `.cursor/rules/*.mdc`. Regenerate with `.\scripts\sync-agents-md.ps1`.')
 $parts.Add('')
@@ -33,6 +35,11 @@ foreach ($f in $ruleFiles) {
     $parts.Add('')
 }
 
-$content = ($parts -join "`n").TrimEnd() + "`n"
-Set-Content -LiteralPath $outPath -Value $content -Encoding utf8NoBOM -NoNewline
+$content = $parts -join "`n"
+# Normalize to LF regardless of source EOL (.mdc files checked out CRLF under
+# autocrlf), so output is deterministic and matches .gitattributes (eol=lf).
+$content = ($content -replace "`r`n", "`n") -replace "`r", "`n"
+$content = $content.TrimEnd() + "`n"
+# PS 5.1-safe UTF-8 (no BOM) writer; -Encoding utf8NoBOM is PowerShell 7+ only.
+[System.IO.File]::WriteAllText($outPath, $content, [System.Text.UTF8Encoding]::new($false))
 Write-Host "Wrote $outPath ($($ruleFiles.Count) rules)"

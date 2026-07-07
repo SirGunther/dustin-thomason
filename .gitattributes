@@ -1,0 +1,9 @@
+# dustin-thomason line-ending policy.
+# Generated outputs are written with LF by scripts/sync-rules.ps1. Pin them to LF so
+# regeneration on any machine yields clean diffs and core.autocrlf can't flip them,
+# which would make the -Check staleness gate and the pre-commit hook report false churn.
+/AGENTS.md text eol=lf
+/.claude/rules/** text eol=lf
+
+# Git hooks execute under git-for-windows sh.exe and must be LF regardless of platform.
+/scripts/git-hooks/* text eol=lf

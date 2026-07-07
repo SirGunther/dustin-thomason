@@ -87,7 +87,7 @@ foreach ($name in $requiredAlwaysApply) {
         continue
     }
     if (-not (Get-MdcAlwaysApply -Path $ruleFile)) {
-        Add-Issue "Rule must have alwaysApply: true — $name.mdc" 'ERROR'
+        Add-Issue "Rule must have alwaysApply: true - $name.mdc" 'ERROR'
     }
 }
 
@@ -186,7 +186,7 @@ foreach ($skillName in $expectedSkills) {
 Write-Host ''
 
 if ($issues.Count -eq 0) {
-    Write-Host 'OK — wiring complete.'
+    Write-Host 'OK - wiring complete.'
     exit 0
 }
 

@@ -116,7 +116,7 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 ## Scaffold script (terminal, not `@`)
 
 ```powershell
-cd C:\Users\dustin.thomason\dustin-thomason
+# from the dustin-thomason repo root
 .\scripts\new-ticket-changelog.ps1 -Ticket PRDV-15263 -System atlas -Title "Short title"
 ```
 
@@ -160,7 +160,7 @@ Skills are **not** `alwaysApply` — the user `@`’s the skill or asks in plain
 ## Wiring audit (run anytime)
 
 ```powershell
-cd C:\Users\dustin.thomason\dustin-thomason
+# from the dustin-thomason repo root
 .\scripts\validate-workflows.ps1
 ```
 
