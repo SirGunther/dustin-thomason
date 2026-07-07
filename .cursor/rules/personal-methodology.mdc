@@ -18,6 +18,7 @@ alwaysApply: true
 | **Implement** feature, endpoint, refactor, tests | [ticket-changelog.mdc](./ticket-changelog.mdc) — **task start**: resolve + read canonical changelog (**Current state**, **Plans**, **Attempt history**); then [problem-requirement-solution.mdc](./problem-requirement-solution.mdc) — frame as Problem → Requirement → Solution; then [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) — §5 shipping checklist + that repo's `.cursor/rules/` |
 | **Fix** bug or regression (substantive) | Same as **Implement** — changelog alignment first when a ticket or project log exists |
 | **Explore** unfamiliar code, onboard to ticket, gather multi-area context | [context-fanout.mdc](./context-fanout.mdc) — read-only subagent fanout |
+| **Debug / verify** front-end **layout, CSS, or interaction** at runtime | [browser-loop-guardrails.mdc](./browser-loop-guardrails.mdc) — mandatory boundary rules; setup + tools: [browser-loop-setup.md](../docs/browser-loop-setup.md) |
 
 ## Changelog memory (task start + commit)
 

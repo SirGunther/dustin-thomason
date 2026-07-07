@@ -48,6 +48,7 @@ $Manifest = [ordered]@{
     'problem-requirement-solution'    = 'full'
     'context-fanout'                  = 'full'
     'agent-completion-notification'   = 'full'
+    'browser-loop-guardrails'         = 'full'
     'build-implementation-guardrails' = 'pointer'
     'git-commit-workflow'             = 'pointer'
     'spec-writing'                    = 'pointer'

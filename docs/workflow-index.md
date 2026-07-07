@@ -74,6 +74,7 @@ Claude Code loads `.claude/rules/` in-repo automatically, and in **other** proje
 | **Open a PR** | “Open PR for PRDV-…” | **No** — router reads `pull-request-workflow` |
 | **Implement code** | (normal implementation chat) | **No** — agent resolves changelog at **task start**; then `problem-requirement-solution` + `build-implementation-guardrails` + app repo rules |
 | **Fix bug / regression** | (normal fix chat) | **No** — same **task-start** changelog alignment when a ticket or project log exists |
+| **Debug front-end** layout/CSS/interaction at runtime | (drive/observe the live browser) | **No** — `browser-loop-guardrails` + [browser-loop-setup](../.cursor/docs/browser-loop-setup.md) |
 | **Ticket context (new thread)** | `@docs/atlas/PRDV-XXXXX-changelog` | **Optional** — explicit pointer; agent should still resolve changelog from branch/ticket id |
 | **Stress-test a plan** | `@grill-me` | Yes (skill) |
 | **Audit workflow docs** | “run workflow housekeeping” | Optional `@workflow-housekeeping` |
@@ -92,6 +93,7 @@ Claude Code loads `.claude/rules/` in-repo automatically, and in **other** proje
 | `ticket-changelog` | task-start alignment + session log before commit |
 | `build-implementation-guardrails` | §5 shipping checklist: tests/regression, changelog (PRDV + personal projects), Swagger when applicable |
 | `context-fanout` | read-only exploration subagents for multi-area context compaction |
+| `browser-loop-guardrails` | boundary rules for runtime browser observation + CSS/layout/interaction debugging |
 | `problem-requirement-solution` | frame implementation/plans/specs as Problem → Requirement → Solution |
 | `agent-completion-notification` | end of substantive sessions — `notify-agent-complete.ps1` → Power Automate |
 
@@ -106,6 +108,7 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 | [new-branch-get-started.md](../.cursor/docs/new-branch-get-started.md) | New `PRDV-*` branch |
 | [pull-request-workflow.md](../.cursor/docs/pull-request-workflow.md) | `gh pr create`, PR body, Slack post |
 | [README.md](../.cursor/docs/README.md) | Pointer to this index |
+| [browser-loop-setup.md](../.cursor/docs/browser-loop-setup.md) | Wire and observe a live browser for front-end debugging |
 
 ---
 
@@ -193,6 +196,7 @@ Checks: required `alwaysApply` rules, expected scripts, playbooks, router links,
 | Code quality | `build-implementation-guardrails` + app repo rules |
 | Framing implementation | `problem-requirement-solution` — Problem → Requirement → Solution |
 | Multi-area exploration | `context-fanout` — read-only subagent fanout |
+| Front-end runtime debugging | `browser-loop-guardrails` + `browser-loop-setup` playbook |
 | Spec | `spec-writing` + `wiki-spec-authoring`; `@write-spec` for guided flow |
 | Agent finished substantive work | `agent-completion-notification` → `notify-agent-complete.ps1` |
 

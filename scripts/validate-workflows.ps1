@@ -32,7 +32,8 @@ $requiredAlwaysApply = @(
     'ticket-changelog',
     'build-implementation-guardrails',
     'context-fanout',
-    'problem-requirement-solution'
+    'problem-requirement-solution',
+    'browser-loop-guardrails'
 )
 
 $expectedScripts = @(
@@ -45,7 +46,8 @@ $expectedScripts = @(
 
 $requiredPlaybooks = @(
     'new-branch-get-started.md',
-    'pull-request-workflow.md'
+    'pull-request-workflow.md',
+    'browser-loop-setup.md'
 )
 
 $expectedSkills = @(
