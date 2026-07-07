@@ -1,7 +1,10 @@
 ---
-description: When workflow docs or rules change in dustin-thomason, sync workflow-index and run validate-workflows.ps1.
-globs: rules/**/*.md,.cursor/docs/**/*.md,docs/**/*.md,scripts/*.ps1,.github/*.md
-alwaysApply: false
+paths:
+  - "rules/**/*.md"
+  - ".cursor/docs/**/*.md"
+  - "docs/**/*.md"
+  - "scripts/*.ps1"
+  - ".github/*.md"
 ---
 <!-- generated from rules/workflow-housekeeping.md by scripts/sync-rules.ps1; edit the source, not this file -->
 

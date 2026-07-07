@@ -199,12 +199,6 @@ if ($hooksPath -ne 'scripts/git-hooks') {
     Add-Issue 'core.hooksPath is not scripts/git-hooks - auto-regeneration hook inactive on this machine (see README one-time setup)' 'WARN'
 }
 
-# .claude/rules is per-machine local output; absent means Claude Code rules were never built here.
-$claudeRulesDir = Join-Path $repoRoot '.claude\rules'
-if (-not (Test-Path -LiteralPath $claudeRulesDir)) {
-    Add-Issue 'Claude rules not generated on this machine (.claude/rules missing) - run .\scripts\sync-rules.ps1' 'WARN'
-}
-
 Write-Host 'Workflow wiring audit'
 Write-Host "Repo: $repoRoot"
 Write-Host ''

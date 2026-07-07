@@ -1,7 +1,3 @@
----
-description: Standard commit/push habit for dustin-thomason—runs to completion via npm audit/lint/serial-test gates (when applicable), git status → add → commit → push when an agent pushes work here or in sibling Node repos.
-alwaysApply: true
----
 <!-- generated from rules/git-commit-workflow.md by scripts/sync-rules.ps1; edit the source, not this file -->
 
 # Git commit & push (dustin-thomason)

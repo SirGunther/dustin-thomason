@@ -1,9 +1,8 @@
 ---
 description: Changelog alignment at task start; scaffold on branch start; verbatim requirements on first pass; session log before every PlanetDepos commit.
-alwaysApply: true
+scope: always
+codex: include
 ---
-<!-- generated from rules/ticket-changelog.md by scripts/sync-rules.ps1; edit the source, not this file -->
-
 # Ticket changelog (agents)
 
 Cross-session memory for **`PRDV-*`** work. Full playbook: [docs/ticket-changelog-workflow.md](../../docs/ticket-changelog-workflow.md).

@@ -1,9 +1,8 @@
 ---
 description: Prefer read-only exploration subagents for multi-area investigation so the parent context stays compact and focused.
-alwaysApply: true
+scope: always
+codex: include
 ---
-<!-- generated from rules/context-fanout.md by scripts/sync-rules.ps1; edit the source, not this file -->
-
 # Context fanout — parallel exploration subagents
 
 When a task requires understanding **multiple independent areas** of code before you can act, prefer spawning **read-only** exploration subagents in parallel over serial investigation in the parent context. The goal is **context compaction**: each subagent goes deep, distills what matters, and returns a tight result so the parent stays lean.

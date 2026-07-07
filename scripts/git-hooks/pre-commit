@@ -9,10 +9,10 @@ set -e
 
 # Regenerate when rule/skill sources are staged, then re-stage AGENTS.md (the committed
 # output). .claude/rules is git-ignored and rebuilt locally by the same sync run.
-if git diff --cached --name-only --diff-filter=ACMR | grep -Eq '^\.cursor/(rules|skills)/'; then
-    echo "pre-commit: .cursor rules/skills changed - regenerating rule outputs"
+if git diff --cached --name-only --diff-filter=ACMR | grep -Eq '^rules/'; then
+    echo "pre-commit: rules/ changed - regenerating rule outputs"
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sync-rules.ps1
-    git add AGENTS.md
+    git add AGENTS.md .cursor/rules .claude/rules
 fi
 
 # Always audit wiring; validate-workflows.ps1 also fails on any stale generated output.

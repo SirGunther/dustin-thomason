@@ -1,7 +1,3 @@
----
-description: At the end of substantive agent work in dustin-thomason, run notify-agent-complete.ps1.
-alwaysApply: true
----
 <!-- generated from rules/agent-completion-notification.md by scripts/sync-rules.ps1; edit the source, not this file -->
 
 # Agent completion notification

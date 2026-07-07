@@ -1,7 +1,7 @@
 ---
-description: After editing rules or skills in dustin-thomason, regenerate all downstream rule outputs (.cursor/rules, .claude/rules, AGENTS.md) with sync-rules.ps1.
-globs: rules/**/*.md,.cursor/skills/**/*
-alwaysApply: false
+paths:
+  - "rules/**/*.md"
+  - ".cursor/skills/**/*"
 ---
 <!-- generated from rules/agents-sync.md by scripts/sync-rules.ps1; edit the source, not this file -->
 

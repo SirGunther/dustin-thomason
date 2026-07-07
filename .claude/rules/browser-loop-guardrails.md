@@ -1,7 +1,3 @@
----
-description: Boundary rules for a runtime browser-observation loop (Playwright/CDP/MCP) and for any CSS/layout/interaction debugging — fix the responsible cascade rule not the symptom, explain magic constants, keep independent constants independent, treat a green check as necessary-not-sufficient, and escalate after bounded iteration instead of spiraling.
-alwaysApply: true
----
 <!-- generated from rules/browser-loop-guardrails.md by scripts/sync-rules.ps1; edit the source, not this file -->
 
 # Browser-loop guardrails (dustin-thomason)

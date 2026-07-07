@@ -1,10 +1,9 @@
 ---
 description: After editing rules or skills in dustin-thomason, regenerate all downstream rule outputs (.cursor/rules, .claude/rules, AGENTS.md) with sync-rules.ps1.
+scope: scoped
 globs: rules/**/*.md,.cursor/skills/**/*
-alwaysApply: false
+codex: exclude
 ---
-<!-- generated from rules/agents-sync.md by scripts/sync-rules.ps1; edit the source, not this file -->
-
 # Generated rule outputs (dustin-thomason)
 
 The single source of truth is **`rules/*.md`** (tool-neutral). Three downstream outputs are generated from it and **must never be hand-edited**:

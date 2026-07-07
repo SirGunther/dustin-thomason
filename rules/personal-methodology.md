@@ -1,9 +1,8 @@
 ---
 description: Routes dustin-thomason personal standards into any workspace repo (Atlas, Callisto, etc.) without copying rules there or requiring @-mentions.
-alwaysApply: true
+scope: always
+codex: include
 ---
-<!-- generated from rules/personal-methodology.md by scripts/sync-rules.ps1; edit the source, not this file -->
-
 # Personal methodology (dustin-thomason)
 
 **dustin-thomason** is in the workspace so your standards apply while you work in **any** app repo. Ticket changelogs and **Plans** live **only** in `dustin-thomason/docs/`. **Larry-adams** may be linked read-only when a coworker spec exists there — never push workflow or changelog files to it. The user does **not** need to say "use dustin-thomason rules" or `@` this file. Do **not** ask them to copy these rules into `callisto-back-end`, `atlas-front-end`, etc.

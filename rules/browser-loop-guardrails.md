@@ -1,9 +1,8 @@
 ---
 description: Boundary rules for a runtime browser-observation loop (Playwright/CDP/MCP) and for any CSS/layout/interaction debugging — fix the responsible cascade rule not the symptom, explain magic constants, keep independent constants independent, treat a green check as necessary-not-sufficient, and escalate after bounded iteration instead of spiraling.
-alwaysApply: true
+scope: always
+codex: include
 ---
-<!-- generated from rules/browser-loop-guardrails.md by scripts/sync-rules.ps1; edit the source, not this file -->
-
 # Browser-loop guardrails (dustin-thomason)
 
 **When this applies:** whenever you drive or observe a live browser to diagnose or verify front-end behavior (Playwright, raw Chrome DevTools Protocol, or a browser MCP), **and** more generally whenever you fix a CSS / layout / interaction defect. The observe-fix loop makes iteration faster, which also makes symptom-patching faster — these rules protect *why* a fix is correct, which verification alone cannot. Capability wiring, setup, and tooling live in the playbook [browser-loop-setup.md](../docs/browser-loop-setup.md); the authoritative spec is [runtime-browser-loop-spec-1.md](../../docs/agents/runtime-browser-loop-spec-1.md). Load these rules **before** using the loop.

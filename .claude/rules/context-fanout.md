@@ -1,7 +1,3 @@
----
-description: Prefer read-only exploration subagents for multi-area investigation so the parent context stays compact and focused.
-alwaysApply: true
----
 <!-- generated from rules/context-fanout.md by scripts/sync-rules.ps1; edit the source, not this file -->
 
 # Context fanout — parallel exploration subagents

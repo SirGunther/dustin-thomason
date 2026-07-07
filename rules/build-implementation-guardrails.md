@@ -1,9 +1,8 @@
 ---
 description: Mandatory tests, changelog, Swagger (when applicable), architecture guardrails for Codex/agent builds — shipping checklist, coverage, non-regression, graceful failure, SOLID shaping, avoid raw Postgres/SQL unless unavoidable.
-alwaysApply: true
+scope: always
+codex: include
 ---
-<!-- generated from rules/build-implementation-guardrails.md by scripts/sync-rules.ps1; edit the source, not this file -->
-
 # Build guardrails — implementation & tests
 
 Read this sheet **before** substantive feature work (**new endpoints, callers, transactions, integrations, sizeable refactors**) in Atlas / Nest services / Vue apps. Prefer matching the **patterns already documented** in repo-specific **`/.cursor/rules/**`** (architecture, layering, Nest patterns).

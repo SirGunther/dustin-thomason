@@ -1,9 +1,8 @@
 ---
 description: Required sections when authoring epic and story specs (artifacts, schema, migrations, DTOs, projections) — any repo in the workspace.
-alwaysApply: true
+scope: always
+codex: include
 ---
-<!-- generated from rules/spec-writing.md by scripts/sync-rules.ps1; edit the source, not this file -->
-
 # Epic and story specs (Callisto / Atlas)
 
 When the user asks you to **write, extend, or review** an **epic** or **story** spec — usually in app repos or spec folders the team uses — include the sections below. If requirements come from a coworker spec in **`larry-adams`**, treat that repo as **read-only input**; ticket memory and plan index stay in **`dustin-thomason`**. You do **not** need the user to `@` this file or copy it into the app repo.

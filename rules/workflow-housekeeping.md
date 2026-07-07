@@ -1,10 +1,9 @@
 ---
 description: When workflow docs or rules change in dustin-thomason, sync workflow-index and run validate-workflows.ps1.
+scope: scoped
 globs: rules/**/*.md,.cursor/docs/**/*.md,docs/**/*.md,scripts/*.ps1,.github/*.md
-alwaysApply: false
+codex: include
 ---
-<!-- generated from rules/workflow-housekeeping.md by scripts/sync-rules.ps1; edit the source, not this file -->
-
 # Workflow housekeeping (dustin-thomason)
 
 Triggers when you edit playbooks, rules, scripts, or workflow docs in **this repo**.

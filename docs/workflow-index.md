@@ -41,7 +41,7 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 
 | Layer | Location | Loads how? |
 | ----- | -------- | ------------ |
-| **Rules** | `.cursor/rules/*.mdc` | **Automatic** when `dustin-thomason` is in workspace (`alwaysApply: true`) |
+| **Rules** | `.cursor/rules/*.mdc` (generated from `rules/*.md`) | **Automatic** when `dustin-thomason` is in workspace (`alwaysApply: true`) |
 | **Router** | `personal-methodology.mdc` | **Automatic** — maps “write spec” / “commit” / “open PR” to the right rule or playbook |
 | **Playbooks** | `.cursor/docs/*.md` | **Automatic** when you name the task (router); not via `@` |
 | **Artifacts** | `docs/**/PRDV-*-changelog.md`, `docs/<project>/*-changelog*` | Agents **read at task start** when substantive work begins; **`@`** optional pointer on new threads |
@@ -50,16 +50,17 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 
 ---
 
-## Generated outputs (how non-Cursor systems load these rules)
+## Generated outputs (how each system loads these rules)
 
-`.cursor/rules/*.mdc` is the **source of truth**. `scripts/sync-rules.ps1` mirrors it into two outputs so other systems consume the same standards without duplicate copies:
+`rules/*.md` (tool-neutral) is the **source of truth**. `scripts/sync-rules.ps1` generates every tool-specific format from it, so no system keeps a duplicate copy:
 
 | Output | Consumer | Committed? | Shape |
 | ------ | -------- | ---------- | ----- |
-| `AGENTS.md` | Codex (and any tool that reads AGENTS.md) | **Yes** — machine-neutral | Full rule bodies |
-| `.claude/rules/*.md` | Claude Code | **No** — git-ignored, per-machine | Full body, pointer stanza, or path-scoped, per rule |
+| `.cursor/rules/*.mdc` | Cursor | **Yes** — machine-neutral | description + globs + alwaysApply |
+| `.claude/rules/*.md` | Claude Code | **Yes** — machine-neutral | full body (always) or `paths:`-scoped (on-demand) |
+| `AGENTS.md` | Codex (any AGENTS.md reader) | **Yes** — machine-neutral | concatenated bodies |
 
-Claude Code loads `.claude/rules/` in-repo automatically, and in **other** project dirs via a one-time junction `~/.claude/rules/dustin-thomason` → this repo's `.claude/rules`. Pointer rules embed this machine's absolute repo path, which is why `.claude/rules` is git-ignored and rebuilt per machine. **Never hand-edit a generated file** — edit the `.mdc` and run `sync-rules.ps1` (the pre-commit hook does this automatically). See `README.md` for one-time machine setup.
+All three are committed, so `git pull` distributes rule changes to every machine. Claude Code loads `.claude/rules/` in-repo automatically, and in **other** project dirs via a one-time junction `~/.claude/rules/dustin-thomason` → this repo's `.claude/rules`. Each rule's `scope`/`globs`/`codex` frontmatter (in `rules/`) drives how it lands in each output. **Never hand-edit a generated file** — edit `rules/` and run `sync-rules.ps1` (the pre-commit hook does this automatically). See `README.md` for one-time machine setup.
 
 ---
 
@@ -164,7 +165,7 @@ Skills are **not** `alwaysApply` — the user `@`’s the skill or asks in plain
 | `new-ticket-changelog.ps1` | Create `docs/<system>/PRDV-XXXXX-changelog.md` |
 | `notify-agent-complete.ps1` | Post session completion to Power Automate (`agent-completion-notification` rule) |
 | `validate-workflows.ps1` | Wiring audit (incl. generated-output staleness) — run after changing rules/docs |
-| `sync-rules.ps1` | **Primary generator** — rebuilds `AGENTS.md` (Codex) + `.claude/rules/` (Claude Code) from `.cursor/rules/*.mdc`. `-Check` fails on stale output. |
+| `sync-rules.ps1` | **Primary generator** — rebuilds `.cursor/rules/` (Cursor) + `.claude/rules/` (Claude Code) + `AGENTS.md` (Codex) from `rules/*.md`. `-Check` fails on stale output. |
 | `sync-agents-md.ps1` | Backwards-compatible shim → `sync-rules.ps1` |
 
 ## GitHub (stubs only — never `@`)

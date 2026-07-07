@@ -1,7 +1,3 @@
----
-description: Routes dustin-thomason personal standards into any workspace repo (Atlas, Callisto, etc.) without copying rules there or requiring @-mentions.
-alwaysApply: true
----
 <!-- generated from rules/personal-methodology.md by scripts/sync-rules.ps1; edit the source, not this file -->
 
 # Personal methodology (dustin-thomason)

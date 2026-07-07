@@ -1,7 +1,3 @@
----
-description: Coherent implementation philosophy — reason in order Problem → Requirement → Solution so the line of thinking stays clear for the end user, in implementations, plans, specs, and changelog/PR narratives.
-alwaysApply: true
----
 <!-- generated from rules/problem-requirement-solution.md by scripts/sync-rules.ps1; edit the source, not this file -->
 
 # Problem → Requirement → Solution

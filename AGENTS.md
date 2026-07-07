@@ -1,6 +1,6 @@
 # AGENTS.md (generated — do not edit)
 
-Source: `.cursor/rules/*.mdc`. Regenerate with `.\scripts\sync-agents-md.ps1`.
+Source: `rules/*.md`. Regenerate with `.\scripts\sync-rules.ps1`.
 
 ## agent-completion-notification
 
@@ -540,9 +540,9 @@ Good: "Conflict noted: repo mandates raw-SQL repository for this reader; followe
 Bad:  Noting a "conflict" when the personal habit and repo rule never actually disagreed.
 ```
 
-## Generated outputs (AGENTS.md, .claude/rules)
+## Generated outputs (.cursor/rules, .claude/rules, AGENTS.md)
 
-`AGENTS.md` (Codex mirror) and `.claude/rules/*.md` (Claude Code) are **generated output only** — **never edit them directly.** All behavioral changes go in the source `.mdc` files under `.cursor/rules/`, then run `.\scripts\sync-rules.ps1`; regeneration overwrites direct edits. Authoritative detail: [agents-sync.mdc](./agents-sync.mdc).
+The single source of truth is `rules/*.md`. `.cursor/rules/*.mdc` (Cursor), `.claude/rules/*.md` (Claude Code), and `AGENTS.md` (Codex) are all **generated output only** — **never edit them directly.** Make behavioral changes in `rules/`, then run `.\scripts\sync-rules.ps1`; regeneration overwrites direct edits. Authoritative detail: [agents-sync.mdc](./agents-sync.mdc).
 
 ## Rule language semantics
 
