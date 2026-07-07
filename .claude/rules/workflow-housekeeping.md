@@ -15,7 +15,7 @@ Triggers when you edit playbooks, rules, scripts, or workflow docs in **this rep
 ## After any workflow change
 
 1. Run **`.\scripts\validate-workflows.ps1`** from repo root; fix reported gaps.
-2. Update [docs/workflow-index.md](../../docs/workflow-index.md):
+2. Update [docs/workflow-index.md](../docs/workflow-index.md):
    - **What to @ by task** — add/remove rows
    - **Personal rules**, **Skills**, **Scripts** tables
    - **Playbooks** table — match `.cursor/docs/*.md` (exclude README, session-start)

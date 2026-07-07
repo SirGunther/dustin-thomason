@@ -37,14 +37,23 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$repoRoot = Split-Path -Parent $PSScriptRoot
-$sourceDir = Join-Path $repoRoot 'rules'
+# This script lives in agents/scripts/. Sources live under agents/; outputs live at each
+# tool's canonical location under the repo root (one level above agents/).
+$agentsDir = Split-Path -Parent $PSScriptRoot
+$repoRoot = Split-Path -Parent $agentsDir
+
+# Sources (the single hand-edited home).
+$sourceDir = Join-Path $agentsDir 'rules'
+$skillsSource = Join-Path $agentsDir 'skills'
+$docsSource = Join-Path $agentsDir 'docs'
+
+# Outputs (generated; each at the location its tool reads).
 $agentsPath = Join-Path $repoRoot 'AGENTS.md'
 $cursorDir = Join-Path $repoRoot '.cursor\rules'
 $claudeDir = Join-Path $repoRoot '.claude\rules'
-$skillsSource = Join-Path $repoRoot 'skills'
 $cursorSkills = Join-Path $repoRoot '.cursor\skills'
 $claudeSkills = Join-Path $repoRoot '.claude\skills'
+$cursorDocs = Join-Path $repoRoot '.cursor\docs'
 
 function ConvertTo-Lf([string]$Text) {
     return ($Text -replace "`r`n", "`n") -replace "`r", "`n"
@@ -181,6 +190,15 @@ if (Test-Path -LiteralPath $skillsSource) {
     }
 }
 
+# Docs: mirror docs/** (playbooks + guides) verbatim into .cursor/docs (Cursor's playbook dir).
+$docExpected = @{}
+if (Test-Path -LiteralPath $docsSource) {
+    foreach ($f in (Get-ChildItem -LiteralPath $docsSource -Recurse -File)) {
+        $rel = ($f.FullName.Substring($docsSource.Length).TrimStart('\', '/')) -replace '\\', '/'
+        $docExpected[$rel] = (ConvertTo-Lf (Read-Utf8 $f.FullName)).TrimEnd() + "`n"
+    }
+}
+
 function Test-Artifact([string]$Path, [string]$Expected, [System.Collections.Generic.List[string]]$Stale, [string]$Label) {
     if (-not (Test-Path -LiteralPath $Path)) { $Stale.Add("$Label missing"); return }
     if ((ConvertTo-Lf (Read-Utf8 $Path)) -ne $Expected) { $Stale.Add("$Label out of date") }
@@ -210,6 +228,15 @@ if ($Check) {
         Test-Artifact (Join-Path $cursorSkills ($rel -replace '/', '\')) $skillExpected[$rel] $stale ".cursor/skills/$rel"
         Test-Artifact (Join-Path $claudeSkills ($rel -replace '/', '\')) $skillExpected[$rel] $stale ".claude/skills/$rel"
     }
+    foreach ($rel in $docExpected.Keys) {
+        Test-Artifact (Join-Path $cursorDocs ($rel -replace '/', '\')) $docExpected[$rel] $stale ".cursor/docs/$rel"
+    }
+    if (Test-Path -LiteralPath $cursorDocs) {
+        foreach ($e in (Get-ChildItem -LiteralPath $cursorDocs -Recurse -File)) {
+            $rel = ($e.FullName.Substring($cursorDocs.Length).TrimStart('\', '/')) -replace '\\', '/'
+            if (-not $docExpected.ContainsKey($rel)) { $stale.Add(".cursor/docs/$rel is orphaned (no source doc)") }
+        }
+    }
     foreach ($t in @($cursorSkills, $claudeSkills)) {
         if (Test-Path -LiteralPath $t) {
             foreach ($e in (Get-ChildItem -LiteralPath $t -Recurse -File)) {
@@ -229,7 +256,7 @@ if ($Check) {
 }
 
 # --- Write mode ---
-foreach ($dir in @($cursorDir, $claudeDir)) {
+foreach ($dir in @($cursorDir, $claudeDir, $cursorDocs)) {
     if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 }
 
@@ -267,6 +294,20 @@ foreach ($t in @($cursorSkills, $claudeSkills)) {
     }
 }
 
+# Mirror docs into .cursor/docs, then prune orphans.
+foreach ($rel in $docExpected.Keys) {
+    $dest = Join-Path $cursorDocs ($rel -replace '/', '\')
+    $destDir = Split-Path -Parent $dest
+    if (-not (Test-Path -LiteralPath $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+    Write-Utf8NoBom $dest $docExpected[$rel]
+}
+if (Test-Path -LiteralPath $cursorDocs) {
+    foreach ($e in (Get-ChildItem -LiteralPath $cursorDocs -Recurse -File)) {
+        $rel = ($e.FullName.Substring($cursorDocs.Length).TrimStart('\', '/')) -replace '\\', '/'
+        if (-not $docExpected.ContainsKey($rel)) { Remove-Item -LiteralPath $e.FullName -Force }
+    }
+}
+
 $codexCount = @($rules | Where-Object { $_.Codex -eq 'include' }).Count
 $skillCount = @(Get-ChildItem -LiteralPath $skillsSource -Directory -ErrorAction SilentlyContinue).Count
-Write-Host "Wrote AGENTS.md ($codexCount rules), .cursor/rules/ ($($cursorExpected.Count)), .claude/rules/ ($($claudeExpected.Count)), skills ($skillCount) to .cursor/skills + .claude/skills."
+Write-Host "Wrote AGENTS.md ($codexCount rules); .cursor/rules ($($cursorExpected.Count)), .claude/rules ($($claudeExpected.Count)), skills ($skillCount), docs ($($docExpected.Count)) mirrored from agents/."

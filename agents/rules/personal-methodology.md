@@ -11,7 +11,7 @@ codex: include
 
 | User says or means | Apply automatically |
 | ------------------ | ------------------- |
-| Write / extend / review an **epic** or **story** **spec** | [spec-writing.mdc](./spec-writing.mdc) — all required sections; wiki naming/Obsidian/dev notes: [wiki-spec-authoring.md](../../docs/wiki-spec-authoring.md); guided flow: [write-spec](../skills/write-spec/SKILL.md) |
+| Write / extend / review an **epic** or **story** **spec** | [spec-writing.mdc](./spec-writing.mdc) — all required sections; wiki naming/Obsidian/dev notes: [wiki-spec-authoring.md](../docs/wiki-spec-authoring.md); guided flow: [write-spec](../skills/write-spec/SKILL.md) |
 | **Commit**, **push**, git workflow | [git-commit-workflow.mdc](./git-commit-workflow.mdc) + [ticket-changelog.mdc](./ticket-changelog.mdc) |
 | **New ticket**, **new branch**, start PRDV work | Read [new-branch-get-started.md](../docs/new-branch-get-started.md); update changelog in `dustin-thomason/docs/<system>/` |
 | **Open PR**, PR description, `gh pr create` | Read [pull-request-workflow.md](../docs/pull-request-workflow.md) |
@@ -65,7 +65,7 @@ Bad:  Noting a "conflict" when the personal habit and repo rule never actually d
 
 ## Generated outputs (.cursor/rules, .claude/rules, AGENTS.md)
 
-The single source of truth is `rules/*.md`. `.cursor/rules/*.mdc` (Cursor), `.claude/rules/*.md` (Claude Code), and `AGENTS.md` (Codex) are all **generated output only** — **never edit them directly.** Make behavioral changes in `rules/`, then run `.\scripts\sync-rules.ps1`; regeneration overwrites direct edits. Authoritative detail: [agents-sync.mdc](./agents-sync.mdc).
+The single source of truth is `rules/*.md`. `.cursor/rules/*.mdc` (Cursor), `.claude/rules/*.md` (Claude Code), and `AGENTS.md` (Codex) are all **generated output only** — **never edit them directly.** Make behavioral changes in `rules/`, then run `.gentsscriptssync-rules.ps1`; regeneration overwrites direct edits. Authoritative detail: [agents-sync.mdc](./agents-sync.mdc).
 
 ## Rule language semantics
 

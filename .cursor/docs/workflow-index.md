@@ -52,7 +52,7 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 
 ## Generated outputs (how each system loads these rules)
 
-`rules/*.md` (tool-neutral) is the **source of truth**. `scripts/sync-rules.ps1` generates every tool-specific format from it, so no system keeps a duplicate copy:
+`rules/*.md` (tool-neutral) is the **source of truth**. `agents/scripts/sync-rules.ps1` generates every tool-specific format from it, so no system keeps a duplicate copy:
 
 | Output | Consumer | Committed? | Shape |
 | ------ | -------- | ---------- | ----- |

@@ -2,17 +2,16 @@
 # Versioned pre-commit hook. Enable once per machine:
 #   git config core.hooksPath scripts/git-hooks
 #
-# Keeps generated rule outputs in lockstep with .cursor/rules, regardless of which agent
-# (Cursor, Claude, Codex) or human made the edit, and blocks commits with stale output or
-# broken wiring. Runs under git-for-windows sh.exe; must stay LF (see .gitattributes).
+# Keeps the generated outputs in lockstep with the agents/ sources, regardless of which
+# agent (Cursor, Claude, Codex) or human made the edit, and blocks commits with stale
+# output or broken wiring. Runs under git-for-windows sh.exe; must stay LF (see .gitattributes).
 set -e
 
-# Regenerate when rule/skill sources are staged, then re-stage AGENTS.md (the committed
-# output). .claude/rules is git-ignored and rebuilt locally by the same sync run.
-if git diff --cached --name-only --diff-filter=ACMR | grep -Eq '^(rules|skills)/'; then
-    echo "pre-commit: rules/ or skills/ changed - regenerating outputs"
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sync-rules.ps1
-    git add AGENTS.md .cursor/rules .claude/rules .cursor/skills .claude/skills
+# Regenerate when any agents/ source (rules, skills, docs) is staged, then re-stage outputs.
+if git diff --cached --name-only --diff-filter=ACMR | grep -Eq '^agents/(rules|skills|docs)/'; then
+    echo "pre-commit: agents/ sources changed - regenerating outputs"
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File agents/scripts/sync-rules.ps1
+    git add AGENTS.md .cursor/rules .claude/rules .cursor/skills .claude/skills .cursor/docs
 fi
 
 # Always audit wiring; validate-workflows.ps1 also fails on any stale generated output.

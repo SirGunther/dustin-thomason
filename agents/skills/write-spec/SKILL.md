@@ -11,7 +11,7 @@ Guided workflow for authoring PRDV specs. Pair with **grill-me** (`.cursor/skill
 
 | Topic | Source |
 | ----- | ------ |
-| Naming, frontmatter, Obsidian wiring, dev notes, author checklist | [docs/wiki-spec-authoring.md](../../../docs/wiki-spec-authoring.md) |
+| Naming, frontmatter, Obsidian wiring, dev notes, author checklist | [docs/wiki-spec-authoring.md](../../docs/wiki-spec-authoring.md) |
 | Spec sections 1–8, cross-cutting callouts | [spec-writing.mdc](../../rules/spec-writing.mdc) |
 | Problem → Requirement → Solution framing | [problem-requirement-solution.mdc](../../rules/problem-requirement-solution.mdc) |
 | Ticket memory, Plans, session log | `docs/<system>/PRDV-XXXXX-changelog.md` |
@@ -25,7 +25,7 @@ Guided workflow for authoring PRDV specs. Pair with **grill-me** (`.cursor/skill
 
 ## Workflow
 
-1. **Read [docs/wiki-spec-authoring.md](../../../docs/wiki-spec-authoring.md)** — naming, frontmatter, Obsidian checklist, dev note template, author checklist.
+1. **Read [docs/wiki-spec-authoring.md](../../docs/wiki-spec-authoring.md)** — naming, frontmatter, Obsidian checklist, dev note template, author checklist.
 2. **Read [spec-writing.mdc](../../rules/spec-writing.mdc)** — sections 1–8 and optional callouts.
 3. **Resolve changelog** — read `docs/<system>/PRDV-XXXXX-changelog.md` when the ticket is active; add or refresh a **Plans** row with the spec path when done.
 4. **Gather inputs** — ClickUp/product description, acceptance criteria, scope boundaries, companion tickets.

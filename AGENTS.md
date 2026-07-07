@@ -302,7 +302,7 @@ Baseline for landing changes on the **current working branch**. Team or ticket t
 
 **Browsing on GitHub?** [.github/git-commit-workflow.md](../../.github/git-commit-workflow.md) jumps here—we keep authoritative text **in `.cursor/rules/`** so Cursor keeps loading it automatically (**`alwaysApply`**); we do **not** relocate solely under **`.github/`**.
 
-**Ticket changelog (before commit):** [ticket-changelog.mdc](./ticket-changelog.mdc) and [docs/ticket-changelog-workflow.md](../../docs/ticket-changelog-workflow.md). Scaffold: `scripts/new-ticket-changelog.ps1`.
+**Ticket changelog (before commit):** [ticket-changelog.mdc](./ticket-changelog.mdc) and [docs/ticket-changelog-workflow.md](../docs/ticket-changelog-workflow.md). Scaffold: `scripts/new-ticket-changelog.ps1`.
 
 Repositories such as **`atlas-front-end`**, **`callisto-back-end`**, **`europa-back-end`**, and **`triton-back-end`** expose **`npm run lint`**—often with **`eslint --fix`** wired into that script (**backend** repos and **Triton**). **`atlas-front-end`** uses **`npm run lint`** (no fix; **`eslint . --max-warnings 0`**) plus a separate **`npm run lint:fix`** when autofix helps; **`npm run lint`** must succeed before you commit here. Those app repos also ship **`test`** scripts—run them **serially** (**`--runInBand`** for Jest, **`vitest run --maxWorkers 1`** for Atlas) so local runs do not spawn enough parallel workers to overwhelm the machine.
 
@@ -488,7 +488,7 @@ Heavy **rebase/merge choreography**, tagging, signatures, husky internals. This 
 
 | User says or means | Apply automatically |
 | ------------------ | ------------------- |
-| Write / extend / review an **epic** or **story** **spec** | [spec-writing.mdc](./spec-writing.mdc) — all required sections; wiki naming/Obsidian/dev notes: [wiki-spec-authoring.md](../../docs/wiki-spec-authoring.md); guided flow: [write-spec](../skills/write-spec/SKILL.md) |
+| Write / extend / review an **epic** or **story** **spec** | [spec-writing.mdc](./spec-writing.mdc) — all required sections; wiki naming/Obsidian/dev notes: [wiki-spec-authoring.md](../docs/wiki-spec-authoring.md); guided flow: [write-spec](../skills/write-spec/SKILL.md) |
 | **Commit**, **push**, git workflow | [git-commit-workflow.mdc](./git-commit-workflow.mdc) + [ticket-changelog.mdc](./ticket-changelog.mdc) |
 | **New ticket**, **new branch**, start PRDV work | Read [new-branch-get-started.md](../docs/new-branch-get-started.md); update changelog in `dustin-thomason/docs/<system>/` |
 | **Open PR**, PR description, `gh pr create` | Read [pull-request-workflow.md](../docs/pull-request-workflow.md) |
@@ -542,7 +542,7 @@ Bad:  Noting a "conflict" when the personal habit and repo rule never actually d
 
 ## Generated outputs (.cursor/rules, .claude/rules, AGENTS.md)
 
-The single source of truth is `rules/*.md`. `.cursor/rules/*.mdc` (Cursor), `.claude/rules/*.md` (Claude Code), and `AGENTS.md` (Codex) are all **generated output only** — **never edit them directly.** Make behavioral changes in `rules/`, then run `.\scripts\sync-rules.ps1`; regeneration overwrites direct edits. Authoritative detail: [agents-sync.mdc](./agents-sync.mdc).
+The single source of truth is `rules/*.md`. `.cursor/rules/*.mdc` (Cursor), `.claude/rules/*.md` (Claude Code), and `AGENTS.md` (Codex) are all **generated output only** — **never edit them directly.** Make behavioral changes in `rules/`, then run `.gentsscriptssync-rules.ps1`; regeneration overwrites direct edits. Authoritative detail: [agents-sync.mdc](./agents-sync.mdc).
 
 ## Rule language semantics
 
@@ -684,7 +684,7 @@ Use **N/A** when none; otherwise a short list is enough.
 
 # Ticket changelog (agents)
 
-Cross-session memory for **`PRDV-*`** work. Full playbook: [docs/ticket-changelog-workflow.md](../../docs/ticket-changelog-workflow.md).
+Cross-session memory for **`PRDV-*`** work. Full playbook: [docs/ticket-changelog-workflow.md](../docs/ticket-changelog-workflow.md).
 
 **Path:** `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md` — **all changelog and Plans data stays in this repo.**  
 **Larry-adams:** optional **read-only** link in the **Plans** table when a coworker spec exists there. **Do not** create, edit, or push workflow/changelog files to `larry-adams`.  
@@ -921,7 +921,7 @@ Triggers when you edit playbooks, rules, scripts, or workflow docs in **this rep
 ## After any workflow change
 
 1. Run **`.\scripts\validate-workflows.ps1`** from repo root; fix reported gaps.
-2. Update [docs/workflow-index.md](../../docs/workflow-index.md):
+2. Update [docs/workflow-index.md](../docs/workflow-index.md):
    - **What to @ by task** — add/remove rows
    - **Personal rules**, **Skills**, **Scripts** tables
    - **Playbooks** table — match `.cursor/docs/*.md` (exclude README, session-start)

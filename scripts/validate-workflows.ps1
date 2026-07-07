@@ -16,10 +16,12 @@ function Get-MdcAlwaysApply([string]$Path) {
     return $head -match 'alwaysApply:\s*true'
 }
 
-$indexPath = Join-Path $repoRoot 'docs\workflow-index.md'
+# Sources live under agents/; generated outputs at repo root. Check sources for existence and
+# the generated .cursor/rules output for alwaysApply (kept in sync by sync-rules.ps1 -Check).
+$indexPath = Join-Path $repoRoot 'agents\docs\workflow-index.md'
 $rulesDir = Join-Path $repoRoot '.cursor\rules'
-$playbooksDir = Join-Path $repoRoot '.cursor\docs'
-$skillsDir = Join-Path $repoRoot '.cursor\skills'
+$playbooksDir = Join-Path $repoRoot 'agents\docs'
+$skillsDir = Join-Path $repoRoot 'agents\skills'
 $templatePath = Join-Path $repoRoot 'docs\_templates\TICKET-changelog.template.md'
 $scaffoldPath = Join-Path $repoRoot 'scripts\new-ticket-changelog.ps1'
 $routerPath = Join-Path $rulesDir 'personal-methodology.mdc'
@@ -40,9 +42,11 @@ $requiredAlwaysApply = @(
 $expectedScripts = @(
     'new-ticket-changelog.ps1',
     'notify-agent-complete.ps1',
-    'sync-rules.ps1',
-    'sync-agents-md.ps1',
     'validate-workflows.ps1'
+)
+$expectedAgentScripts = @(
+    'sync-rules.ps1',
+    'sync-agents-md.ps1'
 )
 
 $requiredPlaybooks = @(
@@ -82,6 +86,13 @@ foreach ($scriptName in $expectedScripts) {
         if ($indexText -notmatch [regex]::Escape($scriptName)) {
             Add-Issue "Script not listed in workflow-index: $scriptName" 'WARN'
         }
+    }
+}
+
+$agentScriptsDir = Join-Path $repoRoot 'agents\scripts'
+foreach ($scriptName in $expectedAgentScripts) {
+    if (-not (Test-Path -LiteralPath (Join-Path $agentScriptsDir $scriptName))) {
+        Add-Issue "Missing expected script: agents/scripts/$scriptName" 'ERROR'
     }
 }
 
@@ -185,7 +196,7 @@ if (Test-Path $indexPath) {
 # Generated outputs must be fresh. sync-rules.ps1 -Check exits 1 when AGENTS.md is stale
 # (committed artifact) or when an existing .claude/rules has drifted. Run it isolated in a
 # child process so its internal 'exit' cannot short-circuit this validator.
-$syncScript = Join-Path $scriptsDir 'sync-rules.ps1'
+$syncScript = Join-Path $repoRoot 'agents\scripts\sync-rules.ps1'
 if (Test-Path -LiteralPath $syncScript) {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $syncScript -Check | Out-Null
     if ($LASTEXITCODE -ne 0) {

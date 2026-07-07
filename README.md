@@ -6,29 +6,29 @@ tool-neutral source of truth, generated into whatever each AI system reads. Not 
 
 ## Arriving here as an AI agent? Read this first
 
-**Source of truth: `rules/*.md`.** Every tool-specific format below is *generated* from it by
-`scripts/sync-rules.ps1` — you never hand-edit the outputs.
+**Source of truth lives in `agents/`.** You only ever hand-edit `agents/`; everything each tool
+reads is *generated* from it by `agents/scripts/sync-rules.ps1`.
 
-| System | Reads | Generated? |
-| ------ | ----- | ---------- |
-| **Cursor** | `.cursor/rules/*.mdc` | generated from `rules/` |
-| **Claude Code** | `.claude/rules/*.md` | generated from `rules/` |
-| **Codex** (any AGENTS.md reader) | `AGENTS.md` | generated from `rules/` |
-| **Humans / anything else** | `docs/workflow-index.md` | hand-written map |
+| Source (edit here) | Generated output (tool reads) | For |
+| ------------------ | ----------------------------- | --- |
+| `agents/rules/*.md` | `.cursor/rules/*.mdc` | Cursor |
+| `agents/rules/*.md` | `.claude/rules/*.md` | Claude Code |
+| `agents/rules/*.md` | `AGENTS.md` (repo root) | Codex / any AGENTS.md reader |
+| `agents/skills/<name>/` | `.cursor/skills/` + `.claude/skills/` | Cursor + Claude skills |
+| `agents/docs/*.md` | `.cursor/docs/*.md` | Cursor playbooks/guides |
 
-All three outputs are committed and machine-neutral. If you skim only one file for "how does he
-want things built," read [docs/workflow-index.md](docs/workflow-index.md).
+All outputs are committed and machine-neutral. If you skim only one file for "how does he want
+things built," read `agents/docs/workflow-index.md`.
 
 ## Generated files - NEVER hand-edit
 
-`.cursor/rules/*.mdc`, `.claude/rules/*.md`, and `AGENTS.md` are **all generated** from
-`rules/*.md` by `scripts/sync-rules.ps1`. Edit the `rules/` source; the next sync overwrites any
-direct edit to an output. Each generated file carries a `<!-- generated ... -->` marker so it's
-obvious in-editor.
+`.cursor/*`, `.claude/*`, and `AGENTS.md` are **all generated** from `agents/` by
+`agents/scripts/sync-rules.ps1`. Edit the source under `agents/`; the next sync overwrites any
+direct edit to an output. Generated rule/skill files carry a `<!-- generated ... -->` marker.
 
 ## Changing or adding a rule
 
-1. Edit (or add) `rules/<name>.md`.
+1. Edit (or add) `agents/rules/<name>.md`.
 2. Frontmatter declares the rule's routing (this is the *only* place classification lives):
 
    ```yaml
@@ -40,16 +40,16 @@ obvious in-editor.
    ---
    ```
 
-3. If it is **new**, also add it to [docs/workflow-index.md](docs/workflow-index.md) and the
+3. If it is **new**, also add it to `agents/docs/workflow-index.md` and the
    `personal-methodology` router; if `scope: always`, add it to `$requiredAlwaysApply` in
    `scripts/validate-workflows.ps1`.
-4. Commit. The pre-commit hook regenerates all three outputs and stages them. (Or run
-   `.\scripts\sync-rules.ps1` then `.\scripts\validate-workflows.ps1` by hand if hooks are off.)
+4. Commit. The pre-commit hook regenerates all outputs and stages them. (Or run
+   `.\agents\scripts\sync-rules.ps1` then `.\scripts\validate-workflows.ps1` by hand if hooks are off.)
 
-How `scope` maps downstream: `always` -> Cursor `alwaysApply: true`, Claude full inline (always
-in context); `scoped` -> Cursor `alwaysApply: false` + `globs`, Claude `paths:`-scoped (loads
-only when Claude touches matching files). `sync-rules.ps1` fails loudly on missing/invalid
-frontmatter, so a rule can't be silently mis-generated.
+Skills are folders in `agents/skills/<name>/` (mirrored verbatim). Playbooks/guides are
+`agents/docs/*.md` (mirrored to `.cursor/docs`). How `scope` maps downstream: `always` -> Cursor
+`alwaysApply: true`, Claude full inline; `scoped` -> Cursor `globs`, Claude `paths:`-scoped.
+`sync-rules.ps1` fails loudly on missing/invalid frontmatter, so a rule can't be silently mis-generated.
 
 ## One-time machine setup
 
@@ -69,11 +69,11 @@ New-Item -ItemType Junction `
 ```
 
 `.claude/rules` is committed, so a fresh clone already has it and a `git pull` keeps it current
-on every machine — no per-machine rebuild. (Running `.\scripts\sync-rules.ps1` is only needed if
-you edit rules without committing.)
+on every machine — no per-machine rebuild. (Run `.\agents\scripts\sync-rules.ps1` only if you
+edit sources without committing.)
 
 Optionally add this repo to `~/.claude/settings.json` so Claude can open repo files a rule
-references (playbooks, specs) from other projects without a prompt (path is per-machine):
+references from other projects without a prompt (path is per-machine):
 
 ```json
 {
@@ -81,15 +81,15 @@ references (playbooks, specs) from other projects without a prompt (path is per-
 }
 ```
 
-Verify wiring at any time: `.\scripts\validate-workflows.ps1` (also run in CI on every push).
+Verify wiring any time: `.\scripts\validate-workflows.ps1` (also run in CI on every push).
 
 ## Repo map
 
-- `rules/*.md` - **source of truth** (tool-neutral; frontmatter: `description`, `scope`, `globs`, `codex`)
-- `.cursor/rules/*.mdc` - generated for Cursor
-- `.claude/rules/*.md` - generated for Claude Code (committed)
-- `AGENTS.md` - generated for Codex (committed)
-- `.cursor/docs/*.md` - task playbooks (session start, new branch, PR, browser-loop setup)
-- `.cursor/skills/` - Cursor skills (`grill-me`, `write-spec`, `workflow-housekeeping`)
-- `scripts/` - `sync-rules.ps1` (generator), `validate-workflows.ps1` (audit), `git-hooks/`, changelog + notify helpers
-- `docs/` - `workflow-index.md` (the map), ticket changelogs, specs (`docs/agents/`), templates
+- `agents/` - **the source home** (only place you hand-edit for agent config):
+  - `agents/rules/*.md` - tool-neutral rule source (frontmatter: `description`, `scope`, `globs`, `codex`)
+  - `agents/skills/<name>/` - skill source (SKILL.md + supporting files)
+  - `agents/docs/*.md` - playbooks + guides + `workflow-index.md` (the map)
+  - `agents/scripts/` - `sync-rules.ps1` (generator) + `sync-agents-md.ps1` (shim)
+- Generated outputs (do not edit): `.cursor/rules`, `.cursor/skills`, `.cursor/docs`, `.claude/rules`, `.claude/skills`, `AGENTS.md`
+- `scripts/` - `validate-workflows.ps1` (audit), `git-hooks/`, `new-ticket-changelog.ps1`, `notify-agent-complete.ps1`
+- `docs/` - ticket changelogs, specs (`docs/agents/`), `_templates/` (kept separate from `agents/`)
