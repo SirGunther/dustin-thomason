@@ -42,6 +42,9 @@ $sourceDir = Join-Path $repoRoot 'rules'
 $agentsPath = Join-Path $repoRoot 'AGENTS.md'
 $cursorDir = Join-Path $repoRoot '.cursor\rules'
 $claudeDir = Join-Path $repoRoot '.claude\rules'
+$skillsSource = Join-Path $repoRoot 'skills'
+$cursorSkills = Join-Path $repoRoot '.cursor\skills'
+$claudeSkills = Join-Path $repoRoot '.claude\skills'
 
 function ConvertTo-Lf([string]$Text) {
     return ($Text -replace "`r`n", "`n") -replace "`r", "`n"
@@ -168,6 +171,16 @@ foreach ($r in $rules) {
     $claudeExpected["$($r.Name).md"] = (ConvertTo-Lf (Build-Claude $r)).TrimEnd() + "`n"
 }
 
+# Skills: mirror skills/<name>/** verbatim (LF-normalized) into .cursor/skills and .claude/skills.
+# relpath key uses forward slashes, e.g. investigation/SKILL.md.
+$skillExpected = @{}
+if (Test-Path -LiteralPath $skillsSource) {
+    foreach ($f in (Get-ChildItem -LiteralPath $skillsSource -Recurse -File)) {
+        $rel = ($f.FullName.Substring($skillsSource.Length).TrimStart('\', '/')) -replace '\\', '/'
+        $skillExpected[$rel] = (ConvertTo-Lf (Read-Utf8 $f.FullName)).TrimEnd() + "`n"
+    }
+}
+
 function Test-Artifact([string]$Path, [string]$Expected, [System.Collections.Generic.List[string]]$Stale, [string]$Label) {
     if (-not (Test-Path -LiteralPath $Path)) { $Stale.Add("$Label missing"); return }
     if ((ConvertTo-Lf (Read-Utf8 $Path)) -ne $Expected) { $Stale.Add("$Label out of date") }
@@ -191,6 +204,18 @@ if ($Check) {
     if (Test-Path -LiteralPath $claudeDir) {
         foreach ($e in (Get-ChildItem -LiteralPath $claudeDir -Filter '*.md' -File)) {
             if (-not $claudeExpected.ContainsKey($e.Name)) { $stale.Add(".claude/rules/$($e.Name) is orphaned (no source rule)") }
+        }
+    }
+    foreach ($rel in $skillExpected.Keys) {
+        Test-Artifact (Join-Path $cursorSkills ($rel -replace '/', '\')) $skillExpected[$rel] $stale ".cursor/skills/$rel"
+        Test-Artifact (Join-Path $claudeSkills ($rel -replace '/', '\')) $skillExpected[$rel] $stale ".claude/skills/$rel"
+    }
+    foreach ($t in @($cursorSkills, $claudeSkills)) {
+        if (Test-Path -LiteralPath $t) {
+            foreach ($e in (Get-ChildItem -LiteralPath $t -Recurse -File)) {
+                $rel = ($e.FullName.Substring($t.Length).TrimStart('\', '/')) -replace '\\', '/'
+                if (-not $skillExpected.ContainsKey($rel)) { $stale.Add("$($t.Substring($repoRoot.Length + 1) -replace '\\','/')/$rel is orphaned (no source skill)") }
+            }
         }
     }
 
@@ -220,5 +245,28 @@ foreach ($e in (Get-ChildItem -LiteralPath $claudeDir -Filter '*.md' -File)) {
     if (-not $claudeExpected.ContainsKey($e.Name)) { Remove-Item -LiteralPath $e.FullName -Force }
 }
 
+# Mirror skills into both tool locations, then prune orphan files and empty dirs.
+foreach ($rel in $skillExpected.Keys) {
+    foreach ($t in @($cursorSkills, $claudeSkills)) {
+        $dest = Join-Path $t ($rel -replace '/', '\')
+        $destDir = Split-Path -Parent $dest
+        if (-not (Test-Path -LiteralPath $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+        Write-Utf8NoBom $dest $skillExpected[$rel]
+    }
+}
+foreach ($t in @($cursorSkills, $claudeSkills)) {
+    if (Test-Path -LiteralPath $t) {
+        foreach ($e in (Get-ChildItem -LiteralPath $t -Recurse -File)) {
+            $rel = ($e.FullName.Substring($t.Length).TrimStart('\', '/')) -replace '\\', '/'
+            if (-not $skillExpected.ContainsKey($rel)) { Remove-Item -LiteralPath $e.FullName -Force }
+        }
+        Get-ChildItem -LiteralPath $t -Recurse -Directory |
+            Sort-Object { $_.FullName.Length } -Descending |
+            Where-Object { -not (Get-ChildItem -LiteralPath $_.FullName -Recurse -File) } |
+            Remove-Item -Force -Recurse
+    }
+}
+
 $codexCount = @($rules | Where-Object { $_.Codex -eq 'include' }).Count
-Write-Host "Wrote AGENTS.md ($codexCount rules), .cursor/rules/ ($($cursorExpected.Count)), .claude/rules/ ($($claudeExpected.Count)) from rules/*.md."
+$skillCount = @(Get-ChildItem -LiteralPath $skillsSource -Directory -ErrorAction SilentlyContinue).Count
+Write-Host "Wrote AGENTS.md ($codexCount rules), .cursor/rules/ ($($cursorExpected.Count)), .claude/rules/ ($($claudeExpected.Count)), skills ($skillCount) to .cursor/skills + .claude/skills."
