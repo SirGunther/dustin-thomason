@@ -17,25 +17,57 @@ Diagnosing or verifying front-end layout, CSS cascade, or interaction (drag/resi
 
 ## One-time setup
 
-Register a stock browser MCP at **user scope** so it is available in every project:
+**Stock browser MCP** (drive / screenshot / console / network). This repo ships a project-scoped `.mcp.json` with the Playwright MCP; for availability in **every** project, also register it at user scope:
 
 ```
 claude mcp add --scope user playwright -- npx @playwright/mcp@latest
+```
+
+**Custom CDP tools** (cascade provenance, trajectory sampler, baselines) live in `scripts/browser/`:
+
+```
+cd scripts/browser
+npm install
 npx playwright install chromium
 ```
 
-(Cursor / other harnesses: add the same server to their MCP config. Chrome DevTools MCP is an alternative for driving + console + network.)
+(Cursor / other harnesses: add the Playwright MCP to their MCP config. Chrome DevTools MCP is an alternative for driving + console + network.)
 
 ## Tools
 
 | Capability | Tool | Status |
 | ---------- | ---- | ------ |
 | Navigate, click, drag, type; screenshot; console; network bodies | Stock browser MCP (Playwright MCP / Chrome DevTools MCP) | Available now |
-| Cascade provenance — which rule won and what it struck through (`CSS.getMatchedStylesForNode`) | `scripts/browser/css-provenance.mjs` | Planned (Phase 5) |
-| Stepped-drag trajectory sampler — per-step `getBoundingClientRect` for many elements + discontinuity flagging | `scripts/browser/trajectory-sampler.mjs` | Planned (Phase 5) |
-| Per-component baseline capture/compare (geometry + visibility + threshold screenshot) | `scripts/browser/baseline.mjs` | Planned (Phase 5) |
+| Cascade provenance — which rule won and what it struck through (`CSS.getMatchedStylesForNode`) | `scripts/browser/css-provenance.mjs` | Available |
+| Stepped-drag trajectory sampler — per-step `getBoundingClientRect` for many elements + discontinuity flagging | `scripts/browser/trajectory-sampler.mjs` | Available |
+| Per-component baseline capture/compare (geometry + visibility + threshold screenshot) | `scripts/browser/baseline.mjs` | Available |
 
-The two provenance/trajectory items are **not** reliably exposed by stock MCP tools; they are thin custom scripts the agent invokes via the shell. Until Phase 5 lands them, use stock MCP driving/observation plus the method below.
+The provenance/trajectory/baseline items are **not** reliably exposed by stock MCP tools; they are thin custom scripts the agent invokes via the shell (they use Playwright + a raw CDP session under the hood). Invocation examples below.
+
+## Invoking the custom tools
+
+Run from `scripts/browser/` (or with the full path). All emit JSON on stdout.
+
+```bash
+# Which rule won each property on an element, and what it struck through (spec 3.1):
+node css-provenance.mjs --url http://localhost:5173 --selector ".panel"
+#   attach to an already-open Chrome instead of launching one:
+node css-provenance.mjs --cdp http://localhost:9222 --selector ".panel"
+
+# Stepped drag; capture geometry of many elements per step; flag impossible jumps (spec 3.2-3.3).
+# Exits 1 if a discontinuity is flagged. Prefer a --config file for real cases:
+node trajectory-sampler.mjs --url http://localhost:5173 --handle ".resize-handle" \
+  --dx -240 --dy 0 --steps 12 --watch ".panel,.panel .content,.neighbor" --threshold 50 \
+  --trigger-click ".backdrop"
+
+# Per-component baseline: capture once, compare on later changes (spec 3.4, 4).
+node baseline.mjs capture  --url http://localhost:5173 --selectors ".panel,.panel .content" \
+  --dir ../../docs/<project>/baselines/panel --clip ".panel"
+node baseline.mjs compare  --url http://localhost:5173 --selectors ".panel,.panel .content" \
+  --dir ../../docs/<project>/baselines/panel --clip ".panel" --max-diff-pixels 100
+```
+
+The trajectory sampler takes a `--config <file>` too (fields: `url`, `handle`, `delta:{dx,dy}`, `steps`, `watch:[…]`, `threshold`, `trigger:{action,selector}`) — use it for boundary conditions and multi-step scenarios.
 
 ## Method (from the spec)
 
@@ -62,13 +94,15 @@ The six boundary rules in [browser-loop-guardrails.mdc](../rules/browser-loop-gu
 
 ## Handoff checklist (spec section 7)
 
-- [ ] Claude Code (or equivalent) as the loop; no custom harness.
-- [ ] Playwright driving + raw `newCDPSession` for hidden domains (DOM/CSS).
-- [ ] Stock browser MCP for drive / screenshot / console / network.
-- [ ] Thin custom tool: `CSS.getMatchedStylesForNode` cascade/provenance query.
-- [ ] Thin custom tool: stepped-drag trajectory sampler capturing multi-element `getBoundingClientRect` + discontinuity flagging.
-- [ ] Baseline store per component (geometry + visibility + threshold screenshot).
-- [ ] Boundary rules loaded as enforced agent rules **before** the loop is used.
+- [x] Claude Code (or equivalent) as the loop; no custom harness.
+- [x] Playwright driving + raw `newCDPSession` for hidden domains (DOM/CSS) — used by the scripts below.
+- [x] Stock browser MCP for drive / screenshot / console / network — `.mcp.json` (Playwright MCP).
+- [x] Thin custom tool: `CSS.getMatchedStylesForNode` cascade/provenance query — `scripts/browser/css-provenance.mjs`.
+- [x] Thin custom tool: stepped-drag trajectory sampler capturing multi-element `getBoundingClientRect` + discontinuity flagging — `scripts/browser/trajectory-sampler.mjs`.
+- [x] Baseline store per component (geometry + visibility + threshold screenshot) — `scripts/browser/baseline.mjs` + `docs/<project>/baselines/`.
+- [x] Boundary rules loaded as enforced agent rules **before** the loop is used — `browser-loop-guardrails` (alwaysApply).
+
+Per-machine activation still required: `npm install` + `npx playwright install chromium` in `scripts/browser/` (see One-time setup).
 
 ## investigation-report.md
 
