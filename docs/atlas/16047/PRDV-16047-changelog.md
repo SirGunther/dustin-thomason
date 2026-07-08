@@ -61,18 +61,99 @@
 
 ## Current state
 
-- On branch `PRDV-16047` (off `main`).
-- **Root cause proven** (read-only investigation, atlas-front-end + callisto-back-end) and captured
-  in `docs/atlas/16047/PRDV-16047-code-investigation.md`.
-- **Spec** in review — larry-adams [PR #13](https://github.com/planetdepos/larry-adams/pull/13).
-- **Implementation complete** on branch `PRDV-16047` (atlas-front-end): centralized
+**As of 2026-07-07** (verified live via `gh pr view` / `git fetch` — not from memory):
+
+- **Spec PR #13 (larry-adams) — APPROVED.** `daedalus1215` (Larry) approved with comment "lgtm" on
+  2026-07-02T19:33:23Z. **Not yet merged** (`mergedAt: null`), but `mergeStateStatus: CLEAN` /
+  `mergeable: MERGEABLE` — nothing blocking a merge.
+- **Implementation PR #530 (atlas-front-end) — CHANGES REQUESTED, unaddressed.** `derrickdso`
+  (Derrick Dieso) requested changes on 2026-07-02T19:34:45Z. The **only** concrete ask (inline
+  comment on `useProceedingFilePermission.ts:59`): *"lets clear out these unnecessary comments and
+  likely good to go!"* — referring to the explanatory comment block above `canWithdrawApproval`
+  (consistent with this repo's "no comments unless the WHY is non-obvious" convention). Reads as
+  near-approval once addressed. **`daedalus1215` (Larry) is still the requested reviewer on #530
+  but has not yet reviewed the code** (only the spec, PR #13).
+- **Branch drift — resolved locally 2026-07-07.** Derrick had pushed a
+  `Merge branch 'main' into PRDV-16047` commit (`bdd3fa9d`, 2026-07-02T19:36:10Z, pulling in
+  unrelated `main` history — PR #528 / PRDV-9756) directly to `origin/PRDV-16047`. Local checkout was
+  5 commits behind; fast-forward `git pull` applied cleanly (no conflicts). Local `atlas-front-end`
+  now matches `origin/PRDV-16047` exactly (`bdd3fa9d`).
+- **Root cause proven** (read-only investigation, atlas-front-end + callisto-back-end) — captured in
+  `docs/atlas/16047/PRDV-16047-code-investigation.md`. Unaffected by the above; still accurate.
+- **Implementation** (commit `57cbd7e58800486133072cd57f4ada54c2f4ef8f`): centralized
   `canWithdrawApproval` capability gating all three withdraw entry points; hide-on-no-permission;
-  audio disabled+tooltip preserved; Approve untouched. All gates green (audit / lint / type-check /
-  146 tests). Implemented ahead of spec sign-off at the user's request; still to be reviewed against
-  spec PR #13 before merge.
-- **Atlas PR:** [planetdepos/atlas-front-end#530](https://github.com/planetdepos/atlas-front-end/pull/530)
-  — commit `57cbd7e58800486133072cd57f4ada54c2f4ef8f`; reviewer `daedalus1215` (Larry). Manual UI
-  repro per STR + screenshots pending.
+  audio disabled+tooltip preserved; Approve untouched.
+- **Gates re-verified against the current branch tip (`bdd3fa9d`) on 2026-07-07:**
+  `npx vitest run --maxWorkers 1` over `ProceedingDetailPage` + `auth/composables/permissions` →
+  **153 passing** (was 146 at original push; +7 from unrelated merged-in media-duration specs). No
+  conflicts between this change and what Derrick's merge brought in.
+- **Outstanding before merge:** (1) remove the flagged comment block, (2) get Larry's review on #530
+  itself (only the spec is reviewed so far), (3) manual UI repro/screenshots per STR, (4) merge #13
+  (spec) — approved, unmerged.
+
+## Local testability (verified 2026-07-07 — this was the specific objective of this handoff)
+
+**Answer: the frontend half is confirmed runnable locally; a full end-to-end repro of the ticket's
+STR requires a local backend + real dev credentials that this session could not complete.** Details:
+
+### What "local" means for this app
+
+`atlas-front-end` is a Vue/Quasar SPA with **no offline/mocked mode** for auth or permissions.
+`.env.local` on this machine sets `ENV_NAME=local` and `CALLISTO_API_URL=http://localhost:3004` —
+i.e. the intended local setup is: Atlas frontend dev server (Vite, port 9000) + a **locally-run
+`callisto-back-end`** (NestJS, expected on port 3004) + **real AWS Cognito** (dev user pool
+`us-east-1_SlOE1Mh9Q`) for login. There is no way to exercise the permission-gated withdraw UI
+without a live backend supplying real `Permission[]` data — this is exactly why the ticket's own
+STR requires assigning a real role to a real test account.
+
+### Confirmed this session
+
+- Pulled `atlas-front-end` to the exact PR tip (`bdd3fa9d`) — see Branch drift above.
+- Started `npm run dev:local` — Quasar/Vite compiled with **no build errors** (only two pre-existing,
+  unrelated warnings: `defineEmits`/`defineProps` compiler-macro notices, and a stale
+  browserslist-db cache notice). Server bound to `http://localhost:9000`.
+- `curl http://localhost:9000` → **HTTP 200**, valid Atlas SPA shell HTML (correct `<title>Atlas`,
+  Vite client script, full head/meta) — confirms the app boots and serves on this branch.
+- Cleanly stopped the dev server afterward (killed the exact `npm` / `cross-env` / `quasar` PIDs;
+  confirmed port 9000 no longer responds).
+- **Not attempted:** logging in (no real dev Cognito test credentials available in this session) or
+  reaching the Proceeding Detail page — both require a human or an agent with actual credentials.
+- **No browser-automation tool** (Playwright/chromium-cli) was available in this environment, so the
+  rendered page was not screenshotted — confirmation rests on the HTTP 200 + correct HTML + clean
+  compile log, not a visual check.
+
+### A real blocker found — port mismatch
+
+`atlas-front-end/.env.local` expects Callisto at **`localhost:3004`**, but
+`callisto-back-end/.env.local` on this machine currently has **`APP_PORT=3003`**
+(`callisto-back-end/.env.sample` defaults to `3004`, so `.env.local` there has drifted from sample).
+**Whoever runs the full local stack needs to align these** (either set `callisto-back-end`'s
+`APP_PORT=3004`, or change Atlas's `CALLISTO_API_URL` to `3003`) before the frontend can reach a
+local backend at all.
+
+### `callisto-back-end` was deliberately not touched
+
+It is currently on branch **`PRDV-15776`** (not `main`) with **uncommitted changes**
+(`.swcrc`, `notification-template-preview.html` modified; untracked `scripts/`) — this is the user's
+own in-progress, unrelated work. This session did not start, stash, or switch that repo. Whoever
+picks up local E2E testing needs to decide how to handle that branch (e.g. a separate worktree, or
+stash+switch with the owner's awareness) before running the backend locally.
+
+### What's still needed for a full local repro of the STR
+
+1. Resolve the port mismatch above.
+2. A `callisto-back-end` instance running locally (`main`, or whatever branch has this ticket's
+   assumptions about permissions unchanged) with a seeded local DB.
+3. A real dev-environment Cognito account, assigned **only** `Neptune_Facilities` (or another
+   partial-permission role) — role membership normally comes from Entra ID group sync; for local
+   testing this likely means a seeded/test row in the local `roles`/`permissions` tables rather than
+   a real AD sync.
+4. Test data: an **unrestricted proceeding** with **approved** files in every track (Transcript /
+   Video / MVC / Audio).
+5. With that in place: log in, open the row menu on an approved file in a track the test role lacks
+   `CLIENT_DELIVERABLE_PROCEEDING_FILES_<TRACK>` `create` for — "Withdraw approval" should be
+   **hidden** (non-audio) or **shown-disabled-with-tooltip** (audio); the FAB should be disabled for
+   the same selection; a track the role IS authorized for should stay active and succeed.
 
 ## Plans
 
