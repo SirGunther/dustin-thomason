@@ -11,9 +11,9 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Generated outputs are fresh (AGENTS.md)
+      - name: Generated outputs are fresh
         shell: powershell
-        run: .\scripts\sync-rules.ps1 -Check
+        run: .\agents\scripts\sync-rules.ps1 -Check
       - name: Workflow wiring audit
         shell: powershell
         run: .\scripts\validate-workflows.ps1
