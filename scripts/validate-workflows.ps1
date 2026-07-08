@@ -193,14 +193,14 @@ if (Test-Path $indexPath) {
     }
 }
 
-# Generated outputs must be fresh. sync-rules.ps1 -Check exits 1 when AGENTS.md is stale
+# Generated outputs must be fresh. sync-rules.ps1 -Check exits 1 when any output is stale
 # (committed artifact) or when an existing .claude/rules has drifted. Run it isolated in a
 # child process so its internal 'exit' cannot short-circuit this validator.
 $syncScript = Join-Path $repoRoot 'agents\scripts\sync-rules.ps1'
 if (Test-Path -LiteralPath $syncScript) {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $syncScript -Check | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        Add-Issue 'Generated outputs are stale - run .\scripts\sync-rules.ps1 and stage AGENTS.md' 'ERROR'
+        Add-Issue 'Generated outputs are stale - run .\agents\scripts\sync-rules.ps1 and stage the outputs' 'ERROR'
     }
 }
 

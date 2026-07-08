@@ -1,4 +1,4 @@
-# AGENTS.md (generated — do not edit)
+# agents-rules.md (generated — do not edit)
 
 Source: `rules/*.md`. Regenerate with `.\scripts\sync-rules.ps1`.
 

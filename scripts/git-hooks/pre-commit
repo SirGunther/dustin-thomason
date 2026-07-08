@@ -11,7 +11,7 @@ set -e
 if git diff --cached --name-only --diff-filter=ACMR | grep -Eq '^agents/(rules|skills|docs)/'; then
     echo "pre-commit: agents/ sources changed - regenerating outputs"
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File agents/scripts/sync-rules.ps1
-    git add AGENTS.md agents-rules.md agents-skills.md agents-docs.md .cursor/rules .claude/rules .cursor/skills .claude/skills .cursor/docs .claude/docs
+    git add agents-rules.md agents-skills.md agents-docs.md .cursor/rules .claude/rules .cursor/skills .claude/skills .cursor/docs .claude/docs
 fi
 
 # Always audit wiring; validate-workflows.ps1 also fails on any stale generated output.

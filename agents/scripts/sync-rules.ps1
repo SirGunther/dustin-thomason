@@ -11,14 +11,14 @@
     description: <shared one-line summary>
     scope: always | scoped        # always = load unconditionally; scoped = load on demand
     globs: <comma,list>           # required iff scope: scoped (Cursor globs / Claude paths)
-    codex: include | exclude      # whether the rule appears in AGENTS.md
+    codex: include | exclude      # whether the rule appears in agents-rules.md
     ---
     <body>
 
   From that, three outputs are generated (all committed, all machine-neutral):
     1. .cursor/rules/*.mdc  - Cursor: description + globs + alwaysApply frontmatter + body
     2. .claude/rules/*.md   - Claude Code: full body (always) or paths-scoped body (scoped)
-    3. AGENTS.md            - Codex: concatenated bodies of every codex:include rule
+    3. agents-rules.md      - Codex: concatenated bodies of every codex:include rule
 
   Every rules/*.md must have valid scope/codex (and globs when scoped) or the script throws,
   so a malformed or half-specified rule fails loudly instead of silently mis-generating.
@@ -48,7 +48,6 @@ $skillsSource = Join-Path $agentsDir 'skills'
 $docsSource = Join-Path $agentsDir 'docs'
 
 # Outputs (generated; each at the location its tool reads).
-$agentsPath = Join-Path $repoRoot 'AGENTS.md'
 $cursorDir = Join-Path $repoRoot '.cursor\rules'
 $claudeDir = Join-Path $repoRoot '.claude\rules'
 $cursorSkills = Join-Path $repoRoot '.cursor\skills'
@@ -142,7 +141,7 @@ function Get-Rules {
 
 function Build-Agents($Rules) {
     $parts = [System.Collections.Generic.List[string]]::new()
-    $parts.Add("# AGENTS.md (generated $([char]0x2014) do not edit)")
+    $parts.Add("# agents-rules.md (generated $([char]0x2014) do not edit)")
     $parts.Add('')
     $parts.Add('Source: `rules/*.md`. Regenerate with `.\scripts\sync-rules.ps1`.')
     $parts.Add('')
@@ -219,7 +218,7 @@ if (Test-Path -LiteralPath $docsSource) {
     }
 }
 
-# Compiled single-file Codex surfaces. AGENTS.md == agents-rules.md (kept for Codex auto-load).
+# Compiled single-file Codex surfaces.
 $agentsSkillsContent = (ConvertTo-Lf (Build-Concat 'agents-skills' '`agents/skills/**`' $skillExpected)).TrimEnd() + "`n"
 $agentsDocsContent = (ConvertTo-Lf (Build-Concat 'agents-docs' '`agents/docs/**`' $docExpected)).TrimEnd() + "`n"
 
@@ -230,7 +229,6 @@ function Test-Artifact([string]$Path, [string]$Expected, [System.Collections.Gen
 
 if ($Check) {
     $stale = [System.Collections.Generic.List[string]]::new()
-    Test-Artifact $agentsPath $agentsContent $stale 'AGENTS.md'
 
     foreach ($fname in $cursorExpected.Keys) {
         Test-Artifact (Join-Path $cursorDir $fname) $cursorExpected[$fname] $stale ".cursor/rules/$fname"
@@ -290,7 +288,6 @@ foreach ($dir in @($cursorDir, $claudeDir, $cursorDocs, $claudeDocs)) {
     if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 }
 
-Write-Utf8NoBom $agentsPath $agentsContent
 Write-Utf8NoBom $agentsRulesPath $agentsContent
 Write-Utf8NoBom $agentsSkillsPath $agentsSkillsContent
 Write-Utf8NoBom $agentsDocsPath $agentsDocsContent
@@ -348,4 +345,4 @@ foreach ($t in @($cursorDocs, $claudeDocs)) {
 $codexCount = @($rules | Where-Object { $_.Codex -eq 'include' }).Count
 $skillCount = @(Get-ChildItem -LiteralPath $skillsSource -Directory -ErrorAction SilentlyContinue).Count
 Write-Host "Mirrored to .cursor + .claude: rules ($($cursorExpected.Count)), skills ($skillCount), docs ($($docExpected.Count))."
-Write-Host "Compiled for Codex: AGENTS.md ($codexCount rules), agents-rules.md, agents-skills.md, agents-docs.md."
+Write-Host "Compiled for Codex: agents-rules.md ($codexCount rules), agents-skills.md, agents-docs.md."
