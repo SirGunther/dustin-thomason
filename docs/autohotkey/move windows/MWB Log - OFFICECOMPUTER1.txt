@@ -1,0 +1,35 @@
+2026-07-06 11:27:43.272  ========================================================
+2026-07-06 11:27:43.272  LOG START | PC=OFFICECOMPUTER1 | AHK=1.1.37.02
+2026-07-06 11:27:43.273  file=C:\Users\dktho\OneDrive\SCRIPTS ALL SYSTEMS\MWB Log - OFFICECOMPUTER1.txt
+2026-07-06 11:27:43.273  ========================================================
+2026-07-06 11:27:46.702  GUARD: MWB helper active -> SUSPEND (this PC is controlling another)
+2026-07-06 11:27:50.910  GUARD: back on this PC -> RESUME
+2026-07-06 11:27:51.984  CTRL latch ON  (~*LControl)
+2026-07-06 11:27:52.158  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=1 LBtnP=1 LBtnLog=0
+2026-07-06 11:27:52.536  MOVE end   | iters=17
+2026-07-06 11:27:52.649  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=1 LBtnP=1 LBtnLog=0
+2026-07-06 11:27:53.012  MOVE end   | iters=30
+2026-07-06 11:27:53.693  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 LBtnP=1 LBtnLog=0
+2026-07-06 11:27:54.002  CTRL latch OFF (20 presses over 2016 ms)
+2026-07-06 11:27:54.030  MOVE end   | iters=22
+2026-07-06 11:27:54.227  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=0 CtrlP=0 LBtnP=1 LBtnLog=0
+2026-07-06 11:27:54.665  MOVE end   | iters=30
+2026-07-06 11:27:55.338  GUARD: MWB helper active -> SUSPEND (this PC is controlling another)
+2026-07-06 11:28:09.083  GUARD: back on this PC -> RESUME
+2026-07-06 11:28:10.304  CTRL latch ON  (~*LControl)
+2026-07-06 11:28:10.529  RESIZE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=1 RBtnP=1 RBtnLog=0
+2026-07-06 11:28:10.833  RESIZE end | iters=16
+2026-07-06 11:28:11.026  RESIZE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=1 RBtnP=1 RBtnLog=0
+2026-07-06 11:28:11.375  RESIZE end | iters=16
+2026-07-06 11:28:11.559  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=1 LBtnP=1 LBtnLog=0
+2026-07-06 11:28:12.022  MOVE end   | iters=28
+2026-07-06 11:28:12.110  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=1 LBtnP=1 LBtnLog=0
+2026-07-06 11:28:12.697  MOVE end   | iters=34
+2026-07-06 11:28:13.032  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 LBtnP=1 LBtnLog=0
+2026-07-06 11:28:13.291  MOVE end   | iters=18
+2026-07-06 11:28:13.426  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 LBtnP=1 LBtnLog=0
+2026-07-06 11:28:13.602  CTRL latch OFF (59 presses over 3297 ms)
+2026-07-06 11:28:13.703  MOVE end   | iters=19
+2026-07-06 11:28:14.212  GRAB on  | win=0x50c76 MinMax=0
+2026-07-06 11:28:14.964  DROP     | ~MButton
+2026-07-06 11:28:21.446  LOG STOP
