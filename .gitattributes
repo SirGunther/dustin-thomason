@@ -8,6 +8,10 @@
 /.cursor/skills/** text eol=lf
 /.cursor/docs/** text eol=lf
 /.claude/skills/** text eol=lf
+/.claude/docs/** text eol=lf
+/agents-rules.md text eol=lf
+/agents-skills.md text eol=lf
+/agents-docs.md text eol=lf
 
 # Git hooks execute under git-for-windows sh.exe and must be LF regardless of platform.
 /scripts/git-hooks/* text eol=lf
