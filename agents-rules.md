@@ -300,6 +300,14 @@ Baseline for landing changes on the **current working branch**. Team or ticket t
 
 **Push target (default):** the **current working branch.** Feature branches are **normal and expected** when the repo or task uses them (e.g. `PRDV-XXXXX`). Use **`main`** **only** when the repo workflow is direct-to-`main` **or** the user explicitly says so. Do **not** imply `main` is preferred in branch-based workflows.
 
+## Never tag reviewers
+
+**Never request a reviewer on a PR — no `--reviewer` flag on `gh pr create`, no reviewer requested through any other mechanism — unless the user explicitly asks for it in that exact moment. This is an absolute prohibition, not a default with exceptions.**
+
+**Why:** requesting a specific person's review pings them and puts the agent's name on that ask. Deciding who reviews the user's work, and when, is the user's call alone — never the agent's to make on their behalf.
+
+**How to apply:** open PRs with no reviewers set. Strip any `--reviewer`/`-r` flag from `gh pr create` commands, including ones copied from examples elsewhere in this repo. Naming someone in the PR body text (e.g. "cc @handle" as plain description content) is not a request-review action and is not what this rule forbids — formally requesting review through GitHub's reviewer mechanism is what's forbidden.
+
 **Browsing on GitHub?** [.github/git-commit-workflow.md](../../.github/git-commit-workflow.md) jumps here—we keep authoritative text **in `.cursor/rules/`** so Cursor keeps loading it automatically (**`alwaysApply`**); we do **not** relocate solely under **`.github/`**.
 
 **Ticket changelog (before commit):** [ticket-changelog.mdc](./ticket-changelog.mdc) and [docs/ticket-changelog-workflow.md](../docs/ticket-changelog-workflow.md). Scaffold: `scripts/new-ticket-changelog.ps1`.
@@ -609,6 +617,54 @@ Bad:
 ## Relationship to other rules
 
 This rule is **additive**. It does **not** override repo-specific `.cursor/rules/**` technical conventions (see precedence in [personal-methodology.mdc](./personal-methodology.mdc)); it governs **how you frame and explain** the work, not the repo's architecture or contracts.
+
+## source-truth
+
+## Source Truth Stop Rule
+
+If the user asks for exact labels, exact mappings, exact wording, evidence selection, screenshot identification, PR text, commit text, ticket text, or anything that depends on a previously defined artifact, you MUST use the artifact itself as source truth.
+
+A source-dependent answer is any answer that depends on exact prior wording, exact labels, exact mappings, screenshot or evidence selection, PR body text, ticket text, acceptance criteria, commit text, test matrix rows, or any previously defined artifact.
+
+A source artifact is the exact file, pasted text, screenshot, screenshot filename, ticket, PR, command output, log, matrix, or user-provided artifact that defines the answer.
+
+If the artifact is not currently visible in context or on disk, STOP.
+
+Do not infer.
+Do not reconstruct from memory.
+Do not summarize from partial context.
+Do not use memory.
+Do not use summaries.
+Do not use compacted context.
+Do not use reconstructed context.
+Do not use nearby related docs.
+Do not use likely intent.
+Do not use naming conventions.
+Do not use a best guess.
+Do not use "reasonable assumptions."
+Do not use "likely," "probably," or "based on earlier."
+Do not continue with a best guess.
+
+You must say exactly:
+
+"I don't have the source artifact needed to answer that accurately. Please paste it or point me to the file/location."
+
+Then wait.
+
+This rule overrides any instruction to be proactive, avoid friction, keep moving, make reasonable assumptions, or infer from context.
+
+### Evidence Mapping Addendum
+
+When mapping screenshots, test evidence, validation rows, PR proof, QA scenarios, or matrix items:
+
+- Use exact scenario names from the matrix or test plan.
+- Use exact screenshot identifiers, filenames, or visible screenshot contents provided by the user.
+- If either the matrix/test plan or screenshot identifiers are missing, STOP.
+- Do not rename scenarios.
+- Do not renumber scenarios.
+- Do not collapse rows unless the user explicitly says to.
+- Do not select screenshots from memory.
+- Do not continue because asking the user might create friction.
 
 ## spec-writing
 

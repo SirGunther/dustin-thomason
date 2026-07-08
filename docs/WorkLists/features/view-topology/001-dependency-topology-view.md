@@ -120,10 +120,10 @@ Proceed with conditions. This is **not a product and not a bend-vs-adopt decisio
 
 ### Open variables to collect
 - [ ] Node-placement upkeep economics (highest-risk) — owner: <you>
-- [ ] Stale/broken-reference visible-fail spec — owner: <you>
+- [x] Stale/broken-reference visible-fail spec — closed 2026-07-08: epic [002](./002-topology-view-epic.md) decision 13 + story [007](./007-story-5-reads-filters-visible-fail.md)
 - [ ] Behavior-change measure (does rabbit-hole rate drop?) — owner: <you>
 - [ ] Legibility strategy at scale (clustering/filtering thresholds) — owner: <you>
-- [ ] Minimum viable architecture-node representation (how little is enough) — owner: <you>
+- [x] Minimum viable architecture-node representation — closed 2026-07-08: title + color + groups + position/size, notes via event-notes; no C4/types/descriptions (epic [002](./002-topology-view-epic.md) decisions 9–10)
 
 ---
 
@@ -131,7 +131,7 @@ Proceed with conditions. This is **not a product and not a bend-vs-adopt decisio
 ### Handoff table
 | Action | Owner | Done-when (falsifiable) |
 |--------|-------|-------------------------|
-| Spec data model + visible-fail | <you> | A written spec exists; a deleted source ticket's node is defined to render as flagged, not stale |
+| Spec data model + visible-fail | <you> | ✅ Done 2026-07-08 — [002-topology-view-epic.md](./002-topology-view-epic.md) + stories [003](./003-story-1-data-model-and-api.md)–[008](./008-story-6-node-notes.md); broken-reference rendering defined in [007](./007-story-5-reads-filters-visible-fail.md) |
 | Minimal graph render over board API | <you> | Opening graph view shows real tickets with status matching the board within one refresh |
 | Spatial pointing authoring | <you> | A ticket dragged to an architecture node creates a persisted dependency with no separate "blocks" click |
 | Topology reads (count/fan-out/depth) | <you> | Given a real epic, the most-gated and most-unblocking nodes are identifiable in <5s by someone without the mental model |
@@ -142,8 +142,8 @@ Proceed with conditions. This is **not a product and not a bend-vs-adopt decisio
 - [x] This report (Sections 0–10)
 
 #### Project Spec
-- [ ] Draft open questions / unknowns
-- [ ] Create project spec
+- [x] Draft open questions / unknowns (grill-me session 2026-07-08 — all design branches resolved; decisions recorded in [002-topology-view-epic.md](./002-topology-view-epic.md) §3)
+- [x] Create project spec (epic [002](./002-topology-view-epic.md) + stories [003](./003-story-1-data-model-and-api.md), [004](./004-story-2-canvas-shell.md), [005](./005-story-3-nodes-and-wires.md), [006](./006-story-4-card-placement-and-parity.md), [007](./007-story-5-reads-filters-visible-fail.md), [008](./008-story-6-node-notes.md))
 
 #### Development
 - [ ] Create new branch

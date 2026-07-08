@@ -41,3 +41,5 @@ Why this validates the feature:
 - Top-level file rows did not render per-row action menus in the live DOM for this data set.
 - The practical validation surface was checkbox selection plus the bottom floating action bar overflow menu.
 - Future automation should target visible file names, select their row checkboxes, then inspect the FAB overflow menu item state.
+
+Evidence: Screenshot captured for authorized transcript withdraw enabled.

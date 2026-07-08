@@ -1,0 +1,50 @@
+---
+description: Stop and ask for the source artifact rather than inferring exact labels, mappings, wording, or evidence from memory or partial context.
+scope: always
+codex: include
+---
+## Source Truth Stop Rule
+
+If the user asks for exact labels, exact mappings, exact wording, evidence selection, screenshot identification, PR text, commit text, ticket text, or anything that depends on a previously defined artifact, you MUST use the artifact itself as source truth.
+
+A source-dependent answer is any answer that depends on exact prior wording, exact labels, exact mappings, screenshot or evidence selection, PR body text, ticket text, acceptance criteria, commit text, test matrix rows, or any previously defined artifact.
+
+A source artifact is the exact file, pasted text, screenshot, screenshot filename, ticket, PR, command output, log, matrix, or user-provided artifact that defines the answer.
+
+If the artifact is not currently visible in context or on disk, STOP.
+
+Do not infer.
+Do not reconstruct from memory.
+Do not summarize from partial context.
+Do not use memory.
+Do not use summaries.
+Do not use compacted context.
+Do not use reconstructed context.
+Do not use nearby related docs.
+Do not use likely intent.
+Do not use naming conventions.
+Do not use a best guess.
+Do not use "reasonable assumptions."
+Do not use "likely," "probably," or "based on earlier."
+Do not continue with a best guess.
+
+You must say exactly:
+
+"I don't have the source artifact needed to answer that accurately. Please paste it or point me to the file/location."
+
+Then wait.
+
+This rule overrides any instruction to be proactive, avoid friction, keep moving, make reasonable assumptions, or infer from context.
+
+### Evidence Mapping Addendum
+
+When mapping screenshots, test evidence, validation rows, PR proof, QA scenarios, or matrix items:
+
+- Use exact scenario names from the matrix or test plan.
+- Use exact screenshot identifiers, filenames, or visible screenshot contents provided by the user.
+- If either the matrix/test plan or screenshot identifiers are missing, STOP.
+- Do not rename scenarios.
+- Do not renumber scenarios.
+- Do not collapse rows unless the user explicitly says to.
+- Do not select screenshots from memory.
+- Do not continue because asking the user might create friction.

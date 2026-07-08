@@ -10,6 +10,14 @@ Baseline for landing changes on the **current working branch**. Team or ticket t
 
 **Push target (default):** the **current working branch.** Feature branches are **normal and expected** when the repo or task uses them (e.g. `PRDV-XXXXX`). Use **`main`** **only** when the repo workflow is direct-to-`main` **or** the user explicitly says so. Do **not** imply `main` is preferred in branch-based workflows.
 
+## Never tag reviewers
+
+**Never request a reviewer on a PR — no `--reviewer` flag on `gh pr create`, no reviewer requested through any other mechanism — unless the user explicitly asks for it in that exact moment. This is an absolute prohibition, not a default with exceptions.**
+
+**Why:** requesting a specific person's review pings them and puts the agent's name on that ask. Deciding who reviews the user's work, and when, is the user's call alone — never the agent's to make on their behalf.
+
+**How to apply:** open PRs with no reviewers set. Strip any `--reviewer`/`-r` flag from `gh pr create` commands, including ones copied from examples elsewhere in this repo. Naming someone in the PR body text (e.g. "cc @handle" as plain description content) is not a request-review action and is not what this rule forbids — formally requesting review through GitHub's reviewer mechanism is what's forbidden.
+
 **Browsing on GitHub?** [.github/git-commit-workflow.md](../../.github/git-commit-workflow.md) jumps here—we keep authoritative text **in `.cursor/rules/`** so Cursor keeps loading it automatically (**`alwaysApply`**); we do **not** relocate solely under **`.github/`**.
 
 **Ticket changelog (before commit):** [ticket-changelog.mdc](./ticket-changelog.mdc) and [docs/ticket-changelog-workflow.md](../docs/ticket-changelog-workflow.md). Scaffold: `scripts/new-ticket-changelog.ps1`.
