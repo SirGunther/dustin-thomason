@@ -1,0 +1,41 @@
+2026-07-06 11:27:32.532  ========================================================
+2026-07-06 11:27:32.533  LOG START | PC=PDLP-D362HS3 | AHK=1.1.37.02
+2026-07-06 11:27:32.533  file=C:\Users\dustin.thomason\OneDrive\SCRIPTS ALL SYSTEMS\PDWorkComputerScripts\MWB Log - PDLP-D362HS3.txt
+2026-07-06 11:27:32.534  ========================================================
+2026-07-06 11:27:33.133  GUARD: MWB helper active -> SUSPEND (this PC is controlling another)
+2026-07-06 11:27:46.586  GUARD: back on this PC -> RESUME
+2026-07-06 11:27:48.040  CTRL latch ON  (~*LControl)
+2026-07-06 11:27:48.257  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 LBtnP=0 LBtnLog=0
+2026-07-06 11:27:48.258  MOVE end   | iters=1
+2026-07-06 11:27:48.773  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 LBtnP=0 LBtnLog=0
+2026-07-06 11:27:48.774  MOVE end   | iters=1
+2026-07-06 11:27:49.356  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 LBtnP=0 LBtnLog=0
+2026-07-06 11:27:49.357  MOVE end   | iters=1
+2026-07-06 11:27:49.872  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 LBtnP=0 LBtnLog=0
+2026-07-06 11:27:49.873  MOVE end   | iters=1
+2026-07-06 11:27:50.654  GUARD: MWB helper active -> SUSPEND (this PC is controlling another)
+2026-07-06 11:27:51.291  CTRL latch OFF (58 presses over 3250 ms)
+2026-07-06 11:27:55.187  GUARD: back on this PC -> RESUME
+2026-07-06 11:28:00.779  CTRL latch ON  (~*LControl)
+2026-07-06 11:28:00.928  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 LBtnP=0 LBtnLog=0
+2026-07-06 11:28:00.929  MOVE end   | iters=1
+2026-07-06 11:28:01.467  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 LBtnP=0 LBtnLog=0
+2026-07-06 11:28:01.468  MOVE end   | iters=1
+2026-07-06 11:28:01.973  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 LBtnP=0 LBtnLog=0
+2026-07-06 11:28:01.974  MOVE end   | iters=1
+2026-07-06 11:28:03.131  GRAB on  | win=0x1a903ac MinMax=0
+2026-07-06 11:28:03.358  CTRL latch OFF (37 presses over 2578 ms)
+2026-07-06 11:28:05.011  DROP     | ~MButton
+2026-07-06 11:28:05.675  CTRL latch ON  (~*LControl)
+2026-07-06 11:28:05.821  RESIZE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 RBtnP=0 RBtnLog=0
+2026-07-06 11:28:05.821  RESIZE end | iters=1
+2026-07-06 11:28:06.409  RESIZE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 RBtnP=0 RBtnLog=0
+2026-07-06 11:28:06.409  RESIZE end | iters=1
+2026-07-06 11:28:06.932  RESIZE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 RBtnP=0 RBtnLog=0
+2026-07-06 11:28:06.933  RESIZE end | iters=1
+2026-07-06 11:28:08.221  MOVE start | exe=Explorer.EXE MinMax=0 CtrlLatched=1 CtrlP=0 LBtnP=0 LBtnLog=0
+2026-07-06 11:28:08.222  MOVE end   | iters=1
+2026-07-06 11:28:08.943  GUARD: MWB helper active -> SUSPEND (this PC is controlling another)
+2026-07-06 11:28:09.644  CTRL latch OFF (49 presses over 3969 ms)
+2026-07-06 11:28:22.696  GUARD: back on this PC -> RESUME
+2026-07-06 11:28:26.508  LOG STOP

@@ -1,0 +1,97 @@
+<!-- generated from rules/personal-methodology.md by scripts/sync-rules.ps1; edit the source, not this file -->
+
+# Personal methodology (dustin-thomason)
+
+**dustin-thomason** is in the workspace so your standards apply while you work in **any** app repo. Ticket changelogs and **Plans** live **only** in `dustin-thomason/docs/`. **Larry-adams** may be linked read-only when a coworker spec exists there — never push workflow or changelog files to it. The user does **not** need to say "use dustin-thomason rules" or `@` this file. Do **not** ask them to copy these rules into `callisto-back-end`, `atlas-front-end`, etc.
+
+## Intent → what to follow
+
+| User says or means | Apply automatically |
+| ------------------ | ------------------- |
+| Write / extend / review an **epic** or **story** **spec** | [spec-writing.mdc](./spec-writing.mdc) — all required sections; wiki naming/Obsidian/dev notes: [wiki-spec-authoring.md](../docs/wiki-spec-authoring.md); guided flow: [write-spec](../skills/write-spec/SKILL.md) |
+| **Commit**, **push**, git workflow | [git-commit-workflow.mdc](./git-commit-workflow.mdc) + [ticket-changelog.mdc](./ticket-changelog.mdc) |
+| **New ticket**, **new branch**, start PRDV work | Read [new-branch-get-started.md](../docs/new-branch-get-started.md); update changelog in `dustin-thomason/docs/<system>/` |
+| **Open PR**, PR description, `gh pr create` | Read [pull-request-workflow.md](../docs/pull-request-workflow.md) |
+| **Implement** feature, endpoint, refactor, tests | [ticket-changelog.mdc](./ticket-changelog.mdc) — **task start**: resolve + read canonical changelog (**Current state**, **Plans**, **Attempt history**); then [problem-requirement-solution.mdc](./problem-requirement-solution.mdc) — frame as Problem → Requirement → Solution; then [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) — §5 shipping checklist + that repo's `.cursor/rules/` |
+| **Fix** bug or regression (substantive) | Same as **Implement** — changelog alignment first when a ticket or project log exists |
+| **Explore** unfamiliar code, onboard to ticket, gather multi-area context | [context-fanout.mdc](./context-fanout.mdc) — read-only subagent fanout |
+| **Debug / verify** front-end **layout, CSS, or interaction** at runtime | [browser-loop-guardrails.mdc](./browser-loop-guardrails.mdc) — mandatory boundary rules; setup + tools: [browser-loop-setup.md](../docs/browser-loop-setup.md) |
+
+## Changelog memory (task start + commit)
+
+Canonical changelog paths and **task-start alignment** live in [ticket-changelog.mdc](./ticket-changelog.mdc) (**Task start — changelog alignment**). Agents **must** resolve and read the relevant log **once at the start of each new substantive task** — not only when the user `@` mentions it.
+
+| User does | You do |
+| --------- | ------ |
+| Starts implement / fix / refactor / spec / ticket work | **Resolve** canonical changelog (PRDV → `docs/<system>/`; personal project → `docs/<project>/`); read **Current state**, **Plans**, **Attempt history**, latest **Session log**; align before planning or coding |
+| `@docs/.../PRDV-XXXXX-changelog` or says "working on PRDV-XXXXX" | Same — treat as explicit pointer; continue from **Current state** and **Session log** |
+| New ticket, no file yet | Run `scripts/new-ticket-changelog.ps1` or template; **Requirements (verbatim)** on first pass |
+| **Commit** / **push** | Append **Session log** in that file **before** `git commit` ([ticket-changelog.mdc](./ticket-changelog.mdc)) |
+
+Optional human opener (still helps on new threads): [.cursor/docs/session-start.md](../docs/session-start.md).
+
+## Skills (not automatic — user invokes)
+
+| Skill | When |
+| ----- | ---- |
+| `write-spec` | Author or update PRDV specs and dev notes (wiki or app-repo paths) |
+| `grill-me` | User wants plan/design stress-tested |
+| `workflow-housekeeping` | User asks to audit/sync workflow docs after edits |
+
+## Precedence — repo rules vs personal rules
+
+**Why:** these personal rules travel into every repo, so a tie-break must be explicit or they will quietly override a repo's real conventions.
+
+- **Repo-specific `.cursor/rules/**` win** for **repo behavior and technical conventions.**
+- **`dustin-thomason` rules win** for **personal workflow habits** — but **only** when they do **not** conflict with the repo's technical conventions.
+
+| Repo `.cursor/rules/**` wins | `dustin-thomason` wins |
+| ---------------------------- | ---------------------- |
+| architecture and layering | changelog location |
+| testing harness and test placement conventions | session memory |
+| file placement and module structure | cross-repo personal workflow habits |
+| API / Swagger / DTO / contract conventions | |
+| branch / commit / PR formats required by that repo | |
+
+If a **direct conflict materially changes behavior**, note that **exception in the changelog**. Do **not** note conflicts when the rules were **compatible in practice**.
+
+```
+Good: "Conflict noted: repo mandates raw-SQL repository for this reader; followed repo rule over the personal 'avoid brittle SQL' default — recorded in changelog."
+Bad:  Noting a "conflict" when the personal habit and repo rule never actually disagreed.
+```
+
+## Generated outputs (.cursor/rules, .claude/rules, AGENTS.md)
+
+The single source of truth is `rules/*.md`. `.cursor/rules/*.mdc` (Cursor), `.claude/rules/*.md` (Claude Code), and `AGENTS.md` (Codex) are all **generated output only** — **never edit them directly.** Make behavioral changes in `rules/`, then run `.gentsscriptssync-rules.ps1`; regeneration overwrites direct edits. Authoritative detail: [agents-sync.mdc](./agents-sync.mdc).
+
+## Rule language semantics
+
+**Why:** mixed strengths of wording make rules ambiguous. Use one vocabulary across all personal rules:
+
+- **must / required** = mandatory unless an explicit exception applies.
+- **default / normally** = expected baseline, but context may change it.
+- **may / can** = optional.
+
+Avoid soft wording in mandatory instructions.
+
+## Reporting integrity (truthfulness / evidence)
+
+**Why:** a status report is only useful if it maps to what actually happened. Agents **must not** claim a file was changed, a command was run, or a result was observed unless it **actually happened**. Status reporting **must** be grounded in observable evidence: if no file changed, do **not** imply it did; if a command was not run, do **not** present it as completed; if intended work was not completed, **say so directly.**
+
+Distinguish clearly:
+
+- **planned** = intended but not done.
+- **attempted** = tried but not completed.
+- **completed** = actually changed / performed.
+- **verified** = completed **and** confirmed by an applicable check.
+
+```
+Good: "Spec planned but not written; impl completed; verified via npm test -- --runInBand (12 passing)."
+Bad:  "Added tests and everything passes" when no test file was created or run.
+```
+
+## Overlap with app repos
+
+- **Spec / build / commit habits** → personal rules above win for *how you work* (subject to **Precedence** above).
+- **Commit subject on `PRDV-*` branches** → still use app repo `PRDV-X:` format when present.
+- **Vue / Nest / architecture patterns** → app repo rules still apply alongside personal guardrails.

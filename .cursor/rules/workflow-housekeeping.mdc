@@ -1,8 +1,9 @@
 ---
 description: When workflow docs or rules change in dustin-thomason, sync workflow-index and run validate-workflows.ps1.
-globs: .cursor/rules/**/*.mdc,.cursor/docs/**/*.md,docs/**/*.md,scripts/*.ps1,.github/*.md
+globs: rules/**/*.md,.cursor/docs/**/*.md,docs/**/*.md,scripts/*.ps1,.github/*.md
 alwaysApply: false
 ---
+<!-- generated from rules/workflow-housekeeping.md by scripts/sync-rules.ps1; edit the source, not this file -->
 
 # Workflow housekeeping (dustin-thomason)
 
@@ -11,7 +12,7 @@ Triggers when you edit playbooks, rules, scripts, or workflow docs in **this rep
 ## After any workflow change
 
 1. Run **`.\scripts\validate-workflows.ps1`** from repo root; fix reported gaps.
-2. Update [docs/workflow-index.md](../../docs/workflow-index.md):
+2. Update [docs/workflow-index.md](../docs/workflow-index.md):
    - **What to @ by task** — add/remove rows
    - **Personal rules**, **Skills**, **Scripts** tables
    - **Playbooks** table — match `.cursor/docs/*.md` (exclude README, session-start)

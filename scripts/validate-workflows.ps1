@@ -16,13 +16,16 @@ function Get-MdcAlwaysApply([string]$Path) {
     return $head -match 'alwaysApply:\s*true'
 }
 
-$indexPath = Join-Path $repoRoot 'docs\workflow-index.md'
+# Sources live under agents/; generated outputs at repo root. Check sources for existence and
+# the generated .cursor/rules output for alwaysApply (kept in sync by sync-rules.ps1 -Check).
+$indexPath = Join-Path $repoRoot 'agents\docs\workflow-index.md'
 $rulesDir = Join-Path $repoRoot '.cursor\rules'
-$playbooksDir = Join-Path $repoRoot '.cursor\docs'
-$skillsDir = Join-Path $repoRoot '.cursor\skills'
+$playbooksDir = Join-Path $repoRoot 'agents\docs'
+$skillsDir = Join-Path $repoRoot 'agents\skills'
 $templatePath = Join-Path $repoRoot 'docs\_templates\TICKET-changelog.template.md'
 $scaffoldPath = Join-Path $repoRoot 'scripts\new-ticket-changelog.ps1'
 $routerPath = Join-Path $rulesDir 'personal-methodology.mdc'
+$readmePath = Join-Path $repoRoot 'README.md'
 
 $requiredAlwaysApply = @(
     'agent-completion-notification',
@@ -32,19 +35,24 @@ $requiredAlwaysApply = @(
     'ticket-changelog',
     'build-implementation-guardrails',
     'context-fanout',
-    'problem-requirement-solution'
+    'problem-requirement-solution',
+    'browser-loop-guardrails'
 )
 
 $expectedScripts = @(
     'new-ticket-changelog.ps1',
     'notify-agent-complete.ps1',
-    'sync-agents-md.ps1',
     'validate-workflows.ps1'
+)
+$expectedAgentScripts = @(
+    'sync-rules.ps1',
+    'sync-agents-md.ps1'
 )
 
 $requiredPlaybooks = @(
     'new-branch-get-started.md',
-    'pull-request-workflow.md'
+    'pull-request-workflow.md',
+    'browser-loop-setup.md'
 )
 
 $expectedSkills = @(
@@ -53,9 +61,16 @@ $expectedSkills = @(
     'workflow-housekeeping'
 )
 
-foreach ($path in @($indexPath, $templatePath, $scaffoldPath, $routerPath)) {
+foreach ($path in @($indexPath, $templatePath, $scaffoldPath, $routerPath, $readmePath)) {
     if (-not (Test-Path -LiteralPath $path)) {
         Add-Issue "Missing required file: $path" 'ERROR'
+    }
+}
+
+# README is the entry point for any arriving system; it must point at the generator.
+if (Test-Path -LiteralPath $readmePath) {
+    if ((Get-Content -LiteralPath $readmePath -Raw) -notmatch 'sync-rules\.ps1') {
+        Add-Issue 'README.md should document sync-rules.ps1 (the rule generator)' 'WARN'
     }
 }
 
@@ -74,6 +89,13 @@ foreach ($scriptName in $expectedScripts) {
     }
 }
 
+$agentScriptsDir = Join-Path $repoRoot 'agents\scripts'
+foreach ($scriptName in $expectedAgentScripts) {
+    if (-not (Test-Path -LiteralPath (Join-Path $agentScriptsDir $scriptName))) {
+        Add-Issue "Missing expected script: agents/scripts/$scriptName" 'ERROR'
+    }
+}
+
 $changelogUnderCursor = Get-ChildItem -LiteralPath $playbooksDir -Recurse -Filter '*-changelog.md' -ErrorAction SilentlyContinue
 foreach ($f in $changelogUnderCursor) {
     Add-Issue "Ticket changelog must be under docs/<system>/ only, not: $($f.FullName)" 'ERROR'
@@ -87,7 +109,7 @@ foreach ($name in $requiredAlwaysApply) {
         continue
     }
     if (-not (Get-MdcAlwaysApply -Path $ruleFile)) {
-        Add-Issue "Rule must have alwaysApply: true — $name.mdc" 'ERROR'
+        Add-Issue "Rule must have alwaysApply: true - $name.mdc" 'ERROR'
     }
 }
 
@@ -171,6 +193,23 @@ if (Test-Path $indexPath) {
     }
 }
 
+# Generated outputs must be fresh. sync-rules.ps1 -Check exits 1 when any output is stale
+# (committed artifact) or when an existing .claude/rules has drifted. Run it isolated in a
+# child process so its internal 'exit' cannot short-circuit this validator.
+$syncScript = Join-Path $repoRoot 'agents\scripts\sync-rules.ps1'
+if (Test-Path -LiteralPath $syncScript) {
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $syncScript -Check | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Add-Issue 'Generated outputs are stale - run .\agents\scripts\sync-rules.ps1 and stage the outputs' 'ERROR'
+    }
+}
+
+# The auto-regeneration hook only runs when core.hooksPath points at the versioned hooks.
+$hooksPath = git -C $repoRoot config core.hooksPath
+if ($hooksPath -ne 'scripts/git-hooks') {
+    Add-Issue 'core.hooksPath is not scripts/git-hooks - auto-regeneration hook inactive on this machine (see README one-time setup)' 'WARN'
+}
+
 Write-Host 'Workflow wiring audit'
 Write-Host "Repo: $repoRoot"
 Write-Host ''
@@ -186,7 +225,7 @@ foreach ($skillName in $expectedSkills) {
 Write-Host ''
 
 if ($issues.Count -eq 0) {
-    Write-Host 'OK — wiring complete.'
+    Write-Host 'OK - wiring complete.'
     exit 0
 }
 

@@ -1,0 +1,188 @@
+---
+description: Standard commit/push habit for dustin-thomason—runs to completion via npm audit/lint/serial-test gates (when applicable), git status → add → commit → push when an agent pushes work here or in sibling Node repos.
+scope: always
+codex: include
+---
+# Git commit & push (dustin-thomason)
+
+Baseline for landing changes on the **current working branch**. Team or ticket tooling can override when it conflicts.
+
+**Push target (default):** the **current working branch.** Feature branches are **normal and expected** when the repo or task uses them (e.g. `PRDV-XXXXX`). Use **`main`** **only** when the repo workflow is direct-to-`main` **or** the user explicitly says so. Do **not** imply `main` is preferred in branch-based workflows.
+
+**Browsing on GitHub?** [.github/git-commit-workflow.md](../../.github/git-commit-workflow.md) jumps here—we keep authoritative text **in `.cursor/rules/`** so Cursor keeps loading it automatically (**`alwaysApply`**); we do **not** relocate solely under **`.github/`**.
+
+**Ticket changelog (before commit):** [ticket-changelog.mdc](./ticket-changelog.mdc) and [docs/ticket-changelog-workflow.md](../docs/ticket-changelog-workflow.md). Scaffold: `scripts/new-ticket-changelog.ps1`.
+
+Repositories such as **`atlas-front-end`**, **`callisto-back-end`**, **`europa-back-end`**, and **`triton-back-end`** expose **`npm run lint`**—often with **`eslint --fix`** wired into that script (**backend** repos and **Triton**). **`atlas-front-end`** uses **`npm run lint`** (no fix; **`eslint . --max-warnings 0`**) plus a separate **`npm run lint:fix`** when autofix helps; **`npm run lint`** must succeed before you commit here. Those app repos also ship **`test`** scripts—run them **serially** (**`--runInBand`** for Jest, **`vitest run --maxWorkers 1`** for Atlas) so local runs do not spawn enough parallel workers to overwhelm the machine.
+
+If the repo root has **no** **`package.json`** (many **`dustin-thomason`** changes are doc-only)—**skip §Pre-flight** entirely.
+
+---
+
+## For Cursor agents (read this first)
+
+When the user tells you to **push**, **commit**, **follow the git workflow**, **use `.cursor/rules/git-commit-workflow.mdc`**, or similar, do **not** stop at proposing commands unless they **explicitly** ask for command text only.
+
+### Pre-flight (**npm**)—before **`git commit`**
+
+From **the repo root whose changes you intend to ship** (`package.json` at that cwd):
+
+**A.** Run **`npm audit --audit-level=high`**.
+
+- If it exits non‑zero (**HIGH** or **CRITICAL** vulns)—**STOP immediately**. Do **not** run **`git commit`** or **`git push`**. Give a short recap of **`npm audit`** for the developer to triage (**`npm audit fix`**, policy exception, downgrade, fork). Only proceed after they resolve audits or waive them.
+
+**B.** Run **`npm run lint`**.
+
+- If it exits non‑zero—**STOP before commit.** Fix surfaced issues (including rerunning **`npm run lint`** after edits). **`atlas-front-end`**: **`npm run lint:fix`** is available when ESLint autofix clears noise; rerun **`npm run lint`** afterward until it passes.
+- Scripts that embed **`eslint --fix`** (**e.g.** Callisto/Europa/Triton backend packages) **may mutate files.** After any fixes land, rerun **`git status`** and fold those changes into the next **`git add`** so the pushed tree matches ESLint reality.
+
+**C.** Run tests when **`package.json`** defines a **`test`** script (skip for doc-only **`dustin-thomason`** commits with no code under test). **Always serialize** so parallel workers do not overload the machine:
+
+- **Jest** (Callisto, Europa, Triton backends): **`npm test -- --runInBand`**
+- **Vitest** (**`atlas-front-end`**): non-watch only—**`npx vitest run --maxWorkers 1`** (or **`npm run test:unit:ci -- --maxWorkers 1`**). Do **not** run bare **`npm test`** / **`vitest`** without **`run`**; watch mode blocks agents.
+
+If tests exit non‑zero—**STOP before commit.** Fix or report failures; rerun the same command until green.
+
+#### Order: audit → lint → tests
+
+Run and report in a **fixed order — audit, then lint, then tests**:
+
+- **audit first** to catch shipment blockers early, before you invest in fixes;
+- **lint second** because it **may mutate files** (`eslint --fix`);
+- **tests last**, against the **post-lint tree**.
+
+Tests **must** run after lint against the **final post-lint state.** Do **not** add pedantic rerun requirements beyond this order — require an **extra rerun only** when a gate was run **before** a later file-mutating step in a nonstandard flow.
+
+#### Use the repo-standard gate command
+
+**Why:** an ad-hoc narrower command can pass while the real gate would fail. When a repo provides a standard verification command, **use that command by default.** Do **not** substitute a weaker or narrower command unless the standard one is **unavailable or blocked**, and only when the substitute **preserves the intent** of the standard gate for the changed scope. **Convenience alone is not a valid reason to substitute.** If you substitute, record: **why** the standard command was not used, **why** the substitute still verifies the relevant scope, and **what (if anything) remains unverified.**
+
+#### Reporting verification gates
+
+**Why:** "tests passed" is unfalsifiable — a reader cannot tell what ran or over what scope. For **tests, lint, and audit**, reporting **must** be auditable (canonical format in [ticket-changelog.mdc](./ticket-changelog.mdc) → **Verification-gate reporting**):
+
+- Record the **exact gate command**, the **scope** it covered, and the **result**. "Tests passed" / "lint passed" / "audit passed" by itself is **not** sufficient.
+- **Only session-end verification** is the official compliance record; exploratory runs **may** be mentioned but **do not** replace the final result.
+- Report the **final post-change state only** — do **not** cite an earlier green run if later edits followed it.
+- Use a **markdown table** (preferred by default; **required** when **multiple gates** or **any exception** are reported):
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | callisto-back-end | pass | — |
+| lint | `npm run lint` | callisto-back-end | pass | — |
+| tests | `npm test -- --runInBand src/foo` | foo module | pass | — |
+
+```
+Good: the table above.
+Bad:  "ran lint and tests, all good."
+```
+
+### Ticket changelog — before **`git commit`**
+
+Follow [ticket-changelog.mdc](./ticket-changelog.mdc) (**Session log** + first-pass rules), then continue here.
+
+### Git sequence
+
+Once **§Pre-flight** is satisfied—or skipped because there is no npm workspace—continue:
+
+**3.** **`git status`**—read staged vs unstaged vs untracked.
+
+**4.** Stage with **`git add -A`** when **everything** listed should ride in **one** commit. If paths must remain out (**secrets**, stray scratch files, unrelated edits), **`git add <paths>`** selectively and—in one terse sentence—what you staged and why.
+
+**5.** **`git commit -m "`** + §Commit-message subject below + **`"`**. If neither staging nor substantive working-tree changes remain, explain that **`main`** (or the current branch) already matches **`origin`** rather than forging an empty commit.
+
+**6.** **`git push`** to **`origin`** for your **current working branch** (feature branch when the task uses one; `main` only for direct-to-`main` repos or when the user says so).
+
+**7.** Leave **no temp helper files**. Delete ephemeral commit-message scratch paths.
+
+**8.** **Paste one clean SHA**: after **`git push`**, capture **`HEAD`** and reply with **one fenced markdown block containing only that forty‑character hash** (no branch name, no `commit` prefix) so the reader copies it cleanly from Cursor.
+
+- **PowerShell (preferred on Windows):** **`git rev-parse HEAD | Set-Clipboard`**, then **`git rev-parse HEAD`** so the hash is on the clipboard **and** visible in the terminal/chat output for a second copy.
+- **Bash / sh:** **`git rev-parse HEAD`**
+
+PR bodies and channel posts use the same fenced-block shape—see [pull-request-workflow.md](../docs/pull-request-workflow.md) (**Commit hash**).
+
+---
+
+**Commit SHA block example**
+
+> Pushed the current branch with passing audit / lint / test gates; landing SHA:
+
+```
+0123456789abcdef0123456789abcdef01234567
+```
+
+(Replace with output from **`git rev-parse HEAD`**. On pwsh, run **`git rev-parse HEAD | Set-Clipboard`** first.)
+
+---
+
+### Commit subject sanity
+
+The **`git`** subject stays **exactly** the short §phrase below—no stray trailers merging into the title. Run **`git log -1 --pretty=%s`**; **`git commit --amend`** once when tooling corrupts **`HEAD`**’s subject line, then push again when history rewrite is allowed (**`--force-with-lease`** sparingly).
+
+### Command-only mode
+
+When the human demands **literally paste four git commands**, deliver **§Human quick reference** verbatim with the filled **`message`**. Omit npm blocks unless asked for full gate steps.
+
+---
+
+## Human quick reference (git only)
+
+```bash
+git status
+git add -A
+git commit -m "message"
+git push
+```
+
+Swap **`git add -A`** for explicit paths anytime one commit shouldn’t sweep the tree.
+
+---
+
+## Human quick reference (Node repo—before commit)
+
+Typical prelude when **`package.json`** ships **`lint`**:
+
+```bash
+npm audit --audit-level=high
+npm run lint
+# Jest backends (serial):
+npm test -- --runInBand
+# atlas-front-end (serial, non-watch):
+npx vitest run --maxWorkers 1
+```
+
+Whenever **`eslint --fix`** rewrote tracked files (`npm run lint` exits **0**, but **`git status`** gains diffs—common on backends), rerun **`git status`**, **`git add`**, rerun **`npm run lint`** once more until clean, **then** run the bash block in **Human quick reference (git only)**.
+
+**atlas-front-end:** run **`npm run lint:fix`** first when ESLint autofix likely helps—**`npm run lint`** must exit **0** before **`git commit`**. Use **`npx vitest run --maxWorkers 1`** for tests—not watch-mode **`npm test`**.
+
+Omit the test lines when the repo has no **`test`** script or the change is doc-only with nothing to exercise.
+
+---
+
+## Commit messages
+
+### Length & focus
+
+Keep the subject short for readability: **aim for five to seven words** in the **descriptive** text, describing the **surface change**, not implementation detail. **Exceed that only when absolutely necessary.** A **ticket prefix** (e.g. `PRDV-14699:`) **does not count** toward the word limit.
+
+```
+Good: "PRDV-14699: Co-locate comparator with mapper"   (prefix excluded; 5 descriptive words)
+Bad:  "PRDV-14699: Refactor the comparator so it now reads sort keys from the proceeding mapper instead of inline"
+```
+
+### Wording starts
+
+**Add**, **fix**, **update**, **remove**, **refactor**, **revert**, etc.—telegram-style headline.
+
+Examples: **`PRDV-14699: Co-locate comparator with proceeding mapper`** (ticket-prefixed repos such as Callisto/Europa/Triton back-end and atlas-front-end), **`Add natural-sort QA text fixtures`**, **`Fix upload validation empty file`**.
+
+### One narrative per commit
+
+Unrelated deltas → split commits or refrain from **`git add -A`** wholesale.
+
+---
+
+## Out of scope (defaults here)
+
+Heavy **rebase/merge choreography**, tagging, signatures, husky internals. This memo covers **straight line**: optional **audit + lint + serial test gates → git status/add/commit/push** when Node repo applies.

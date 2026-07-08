@@ -1,0 +1,18 @@
+#!/bin/sh
+# Versioned pre-commit hook. Enable once per machine:
+#   git config core.hooksPath scripts/git-hooks
+#
+# Keeps the generated outputs in lockstep with the agents/ sources, regardless of which
+# agent (Cursor, Claude, Codex) or human made the edit, and blocks commits with stale
+# output or broken wiring. Runs under git-for-windows sh.exe; must stay LF (see .gitattributes).
+set -e
+
+# Regenerate when any agents/ source (rules, skills, docs) is staged, then re-stage outputs.
+if git diff --cached --name-only --diff-filter=ACMR | grep -Eq '^agents/(rules|skills|docs)/'; then
+    echo "pre-commit: agents/ sources changed - regenerating outputs"
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File agents/scripts/sync-rules.ps1
+    git add agents-rules.md agents-skills.md agents-docs.md .cursor/rules .claude/rules .cursor/skills .claude/skills .cursor/docs .claude/docs
+fi
+
+# Always audit wiring; validate-workflows.ps1 also fails on any stale generated output.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/validate-workflows.ps1

@@ -2,6 +2,7 @@
 description: Required sections when authoring epic and story specs (artifacts, schema, migrations, DTOs, projections) — any repo in the workspace.
 alwaysApply: true
 ---
+<!-- generated from rules/spec-writing.md by scripts/sync-rules.ps1; edit the source, not this file -->
 
 # Epic and story specs (Callisto / Atlas)
 

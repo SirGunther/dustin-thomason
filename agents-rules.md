@@ -1,6 +1,6 @@
-# AGENTS.md (generated — do not edit)
+# agents-rules.md (generated — do not edit)
 
-Source: `.cursor/rules/*.mdc`. Regenerate with `.\scripts\sync-agents-md.ps1`.
+Source: `rules/*.md`. Regenerate with `.\scripts\sync-rules.ps1`.
 
 ## agent-completion-notification
 
@@ -26,6 +26,41 @@ Parameters:
 Example:
 
     .\scripts\notify-agent-complete.ps1 -Status "Completed" -Message "Work finished; all tests passed."
+
+## browser-loop-guardrails
+
+# Browser-loop guardrails (dustin-thomason)
+
+**When this applies:** whenever you drive or observe a live browser to diagnose or verify front-end behavior (Playwright, raw Chrome DevTools Protocol, or a browser MCP), **and** more generally whenever you fix a CSS / layout / interaction defect. The observe-fix loop makes iteration faster, which also makes symptom-patching faster — these rules protect *why* a fix is correct, which verification alone cannot. Capability wiring, setup, and tooling live in the playbook [browser-loop-setup.md](../docs/browser-loop-setup.md); the authoritative spec is [runtime-browser-loop-spec-1.md](../../docs/agents/runtime-browser-loop-spec-1.md). Load these rules **before** using the loop.
+
+These are enforced constraints, not suggestions.
+
+1. **No specificity band-aids.** Do **not** resolve a cascade conflict by adding a higher-specificity override or `!important`. Identify the responsible rule (via matched-styles / cascade provenance) and fix or remove it. If an override is genuinely unavoidable, it **must** carry a comment naming the exact rule it intentionally beats and why removal was not possible.
+
+2. **Magic constants must be explained.** Any numeric offset, nudge, or constant introduced to make layout line up **must** carry a comment stating the real quantity it represents and why it exists. An unexplained tuned number is not an acceptable end-state even when it works.
+
+3. **Independent constants stay independent.** Constants addressing distinct scenarios **must** remain separate variables even if they currently share a value. Do **not** couple, deduplicate, or derive one from another because adjusting either currently moves the output the same way. (This is the specific anti-body for black-box tuning collapsing two unrelated quantities into one.)
+
+4. **A passing check is necessary, not sufficient.** "It lines up now / the assertion is green" authorizes nothing about correctness of cause. Prefer a fix that follows from a model of *why* the bug occurred over one found by nudging until output matches. Where a tuned fix is shipped consciously, say so explicitly and record the residual risk.
+
+5. **Fix the rule, not the symptom.** When runtime observation reveals the responsible party, address that party. Do **not** add a compensating layer that leaves the original defect in place.
+
+6. **Bounded iteration — escalate instead of spiraling.** If repeated observe-fix cycles on the same defect fail to converge within a small fixed number of attempts (default **three**), **stop tuning** and escalate. Continuing to nudge toward a passing state past this point is the black-box spiral this setup makes *faster*; the correct output there is a structured account of the uncertainty, not another guess.
+
+**Escalation format (rule 6).** When you hit the attempt cap, report — do not guess again:
+
+- **Attempts:** each attempt, the change made, and what the runtime showed (geometry / matched styles / console), not just pass/fail.
+- **Competing hypotheses:** the candidate causes still in play and what would distinguish them.
+- **Decision needed:** the specific question or direction you need from the user.
+
+```
+Good: matched-styles shows .panel width struck through by `.layout .panel { width }`;
+      remove that stale owner (the real cause) rather than adding a heavier selector.
+      A 12px nudge is commented: "12 = scrollbar gutter (see .list overflow-y)".
+Bad:  add `width: 600px !important` and ship because the screenshot now matches;
+      or fold two separately-derived offsets into one shared constant because both
+      happened to be 8px this session.
+```
 
 ## build-implementation-guardrails
 
@@ -267,7 +302,7 @@ Baseline for landing changes on the **current working branch**. Team or ticket t
 
 **Browsing on GitHub?** [.github/git-commit-workflow.md](../../.github/git-commit-workflow.md) jumps here—we keep authoritative text **in `.cursor/rules/`** so Cursor keeps loading it automatically (**`alwaysApply`**); we do **not** relocate solely under **`.github/`**.
 
-**Ticket changelog (before commit):** [ticket-changelog.mdc](./ticket-changelog.mdc) and [docs/ticket-changelog-workflow.md](../../docs/ticket-changelog-workflow.md). Scaffold: `scripts/new-ticket-changelog.ps1`.
+**Ticket changelog (before commit):** [ticket-changelog.mdc](./ticket-changelog.mdc) and [docs/ticket-changelog-workflow.md](../docs/ticket-changelog-workflow.md). Scaffold: `scripts/new-ticket-changelog.ps1`.
 
 Repositories such as **`atlas-front-end`**, **`callisto-back-end`**, **`europa-back-end`**, and **`triton-back-end`** expose **`npm run lint`**—often with **`eslint --fix`** wired into that script (**backend** repos and **Triton**). **`atlas-front-end`** uses **`npm run lint`** (no fix; **`eslint . --max-warnings 0`**) plus a separate **`npm run lint:fix`** when autofix helps; **`npm run lint`** must succeed before you commit here. Those app repos also ship **`test`** scripts—run them **serially** (**`--runInBand`** for Jest, **`vitest run --maxWorkers 1`** for Atlas) so local runs do not spawn enough parallel workers to overwhelm the machine.
 
@@ -453,13 +488,14 @@ Heavy **rebase/merge choreography**, tagging, signatures, husky internals. This 
 
 | User says or means | Apply automatically |
 | ------------------ | ------------------- |
-| Write / extend / review an **epic** or **story** **spec** | [spec-writing.mdc](./spec-writing.mdc) — all required sections; wiki naming/Obsidian/dev notes: [wiki-spec-authoring.md](../../docs/wiki-spec-authoring.md); guided flow: [write-spec](../skills/write-spec/SKILL.md) |
+| Write / extend / review an **epic** or **story** **spec** | [spec-writing.mdc](./spec-writing.mdc) — all required sections; wiki naming/Obsidian/dev notes: [wiki-spec-authoring.md](../docs/wiki-spec-authoring.md); guided flow: [write-spec](../skills/write-spec/SKILL.md) |
 | **Commit**, **push**, git workflow | [git-commit-workflow.mdc](./git-commit-workflow.mdc) + [ticket-changelog.mdc](./ticket-changelog.mdc) |
 | **New ticket**, **new branch**, start PRDV work | Read [new-branch-get-started.md](../docs/new-branch-get-started.md); update changelog in `dustin-thomason/docs/<system>/` |
 | **Open PR**, PR description, `gh pr create` | Read [pull-request-workflow.md](../docs/pull-request-workflow.md) |
 | **Implement** feature, endpoint, refactor, tests | [ticket-changelog.mdc](./ticket-changelog.mdc) — **task start**: resolve + read canonical changelog (**Current state**, **Plans**, **Attempt history**); then [problem-requirement-solution.mdc](./problem-requirement-solution.mdc) — frame as Problem → Requirement → Solution; then [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc) — §5 shipping checklist + that repo's `.cursor/rules/` |
 | **Fix** bug or regression (substantive) | Same as **Implement** — changelog alignment first when a ticket or project log exists |
 | **Explore** unfamiliar code, onboard to ticket, gather multi-area context | [context-fanout.mdc](./context-fanout.mdc) — read-only subagent fanout |
+| **Debug / verify** front-end **layout, CSS, or interaction** at runtime | [browser-loop-guardrails.mdc](./browser-loop-guardrails.mdc) — mandatory boundary rules; setup + tools: [browser-loop-setup.md](../docs/browser-loop-setup.md) |
 
 ## Changelog memory (task start + commit)
 
@@ -504,9 +540,9 @@ Good: "Conflict noted: repo mandates raw-SQL repository for this reader; followe
 Bad:  Noting a "conflict" when the personal habit and repo rule never actually disagreed.
 ```
 
-## AGENTS.md is generated
+## Generated outputs (.cursor/rules, .claude/rules, AGENTS.md)
 
-`AGENTS.md` is **generated output only** — **never edit it directly.** All behavioral changes go in the source `.mdc` files under `.cursor/rules/`; regeneration overwrites direct edits. Authoritative detail: [codex-agents-sync.mdc](./codex-agents-sync.mdc).
+The single source of truth is `rules/*.md`. `.cursor/rules/*.mdc` (Cursor), `.claude/rules/*.md` (Claude Code), and `AGENTS.md` (Codex) are all **generated output only** — **never edit them directly.** Make behavioral changes in `rules/`, then run `.gentsscriptssync-rules.ps1`; regeneration overwrites direct edits. Authoritative detail: [agents-sync.mdc](./agents-sync.mdc).
 
 ## Rule language semantics
 
@@ -648,7 +684,7 @@ Use **N/A** when none; otherwise a short list is enough.
 
 # Ticket changelog (agents)
 
-Cross-session memory for **`PRDV-*`** work. Full playbook: [docs/ticket-changelog-workflow.md](../../docs/ticket-changelog-workflow.md).
+Cross-session memory for **`PRDV-*`** work. Full playbook: [docs/ticket-changelog-workflow.md](../docs/ticket-changelog-workflow.md).
 
 **Path:** `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md` — **all changelog and Plans data stays in this repo.**  
 **Larry-adams:** optional **read-only** link in the **Plans** table when a coworker spec exists there. **Do not** create, edit, or push workflow/changelog files to `larry-adams`.  
@@ -723,7 +759,7 @@ Bad:  Read Current state only and treat the user's latest message in isolation w
 1. Run scaffold (preferred):
 
    ```powershell
-   cd C:\Users\dustin.thomason\dustin-thomason
+   # from the dustin-thomason repo root
    .\scripts\new-ticket-changelog.ps1 -Ticket PRDV-12345 -System atlas -Title "One-line title" -Repo atlas-front-end
    ```
 
@@ -885,7 +921,7 @@ Triggers when you edit playbooks, rules, scripts, or workflow docs in **this rep
 ## After any workflow change
 
 1. Run **`.\scripts\validate-workflows.ps1`** from repo root; fix reported gaps.
-2. Update [docs/workflow-index.md](../../docs/workflow-index.md):
+2. Update [docs/workflow-index.md](../docs/workflow-index.md):
    - **What to @ by task** — add/remove rows
    - **Personal rules**, **Skills**, **Scripts** tables
    - **Playbooks** table — match `.cursor/docs/*.md` (exclude README, session-start)

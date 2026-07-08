@@ -1,0 +1,21 @@
+# Risk Register
+
+Status: Draft  
+Prepared: 2026-07-06
+
+| ID | Risk | Severity | Evidence | Mitigation | Owner candidate | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| R1 | OJB reconnect triggers full historical backlog and repeatedly exceeds OMTI 60-second timeout. | Critical | Internal note: RB9 offline since May 21, 2026; provider hard limit; backlog catch-up expected. | Clone pre-prod, advance high-water mark, test segmented CDC queries, reconnect flows sequentially. | Dustin/Eric/Gregg | Open |
+| R2 | High-water mark advancement creates a data gap. | High | Internal note: skipped period between May 21 and restoration timestamp. | Ops sign-off, gap report, separate throttled backfill plan, audit marker in SharePoint. | Gregg/Ops/Dustin | Open |
+| R3 | OJB SharePoint lists hit list view/delegation limits. | High | Microsoft documents 5,000-item list view threshold; local notes mention OJB threshold issues. | Verify item counts, indexed columns, filtered views, connector "Limit Columns by View", and app delegation warnings. | Dustin/Jamie | Open |
+| R4 | Gateway request/response payload limits break OJB or Lagrange query shapes. | High | Microsoft gateway docs: 2-MB request limit, 8-MB compressed read response limit, 2-MB write payload limit. | Keep queries narrow, use paging/batches, log payload sizes, avoid broad joins through gateway. | Eric/Dustin | Open |
+| R5 | Power Automate request throttling slows or blocks high-volume flows. | High | Microsoft counts actions, failures, retries, and pagination; official request limits apply by owner/license/flow. | Inventory flow owners/licenses, stagger schedules, reduce retries, use Process license where needed. | Dustin/Eric | Open |
+| R6 | ADB manual overrides become stale and conflict with source data. | Medium | Internal note: SharePoint overrides intentionally compensate for twice-daily refresh latency. | Define expiry/reconciliation rules and make override provenance visible to Ops. | Jamie/Ops | Open |
+| R7 | Power BI semantic model refresh is delayed or disabled after failures. | Medium | Microsoft docs: scheduled refresh can be delayed up to one hour; disabled after four consecutive failures. | Configure alerts, document owner, review refresh history, define fallback manual refresh procedure. | Chris/Justin/Dustin | Open |
+| R8 | Lagrange PostgreSQL connector fails due to TLS certificate identity mismatch. | Critical | AWS docs: verify-full depends on endpoint identity; internal note flags non-matching DNS concern. | PoC exact DNS/cert path; avoid insecure trust settings; choose proxy/NLB design that presents a valid name. | Eric/Carl/Dustin | Open |
+| R9 | Lagrange path violates security boundary by exposing database publicly. | Critical | Internal note: security constraint prohibits direct internet-to-database access. | Require gateway/proxy/private routing review; document security groups, allowlists, and least-privilege roles. | Eric/Carl | Open |
+| R10 | NLB TLS behavior conflicts with required authentication model. | High | AWS docs: TLS listener terminates TLS; TCP listener passes encrypted traffic; NLB TLS listener does not support mTLS. | Decide whether termination is at NLB, proxy, or Postgres; validate authentication in PoC. | Carl/Eric | Open |
+| R11 | Legacy credentials remain shared with non-technical users. | High | Internal note: historical credential exposure risk; source notes contained credential-like strings. | Rotate credentials, inventory shared connections, remove unneeded connection users, use least-privilege accounts. | Eric/Dustin | Open |
+| R12 | Lagrange fallback schema is not ready when Plan A fails. | Medium | Internal note: Larry to review/merge Lagrange PRs for TST views/tables. | Confirm PR status, deploy to TST, validate read role, map fields to OJB needs. | Larry | Open |
+| R13 | Lack of pre-prod parity hides production-only OJB issues. | High | Internal note: OJB built directly in production on large SharePoint list. | Clone list schemas and flows, document differences, run all query tuning outside production first. | Dustin | Open |
+| R14 | Cutover ownership is unclear during reconnect. | High | Multiple owners across Ops, IT, Power Platform, and Lagrange. | Assign cutover commander, gateway owner, Ops validator, rollback approver, and note-taker. | Gregg | Open |

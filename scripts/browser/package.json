@@ -1,0 +1,18 @@
+{
+  "name": "dustin-thomason-browser-loop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Thin CDP/Playwright tools for the runtime browser-observation loop (see docs/agents/runtime-browser-loop-spec-1.md and the browser-loop-guardrails rule).",
+  "scripts": {
+    "provenance": "node css-provenance.mjs",
+    "trajectory": "node trajectory-sampler.mjs",
+    "baseline": "node baseline.mjs",
+    "postinstall-hint": "echo Run: npx playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0",
+    "pixelmatch": "^5.3.0",
+    "pngjs": "^7.0.0"
+  }
+}

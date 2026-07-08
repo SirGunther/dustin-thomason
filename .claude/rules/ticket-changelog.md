@@ -1,0 +1,231 @@
+<!-- generated from rules/ticket-changelog.md by scripts/sync-rules.ps1; edit the source, not this file -->
+
+# Ticket changelog (agents)
+
+Cross-session memory for **`PRDV-*`** work. Full playbook: [docs/ticket-changelog-workflow.md](../docs/ticket-changelog-workflow.md).
+
+**Path:** `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md` — **all changelog and Plans data stays in this repo.**  
+**Larry-adams:** optional **read-only** link in the **Plans** table when a coworker spec exists there. **Do not** create, edit, or push workflow/changelog files to `larry-adams`.  
+**Scaffold (human or agent):** `scripts/new-ticket-changelog.ps1` (see script help).
+
+---
+
+## When this rule applies
+
+| Trigger | Action |
+| ------- | ------ |
+| User starts a **new substantive task** (implement, fix, refactor, spec, ticket onboarding) | **Resolve** canonical changelog (below); **read** **Current state**, **Plans**, **Attempt history**, latest **Session log**; align before planning or coding |
+| User starts a ticket / new branch | Scaffold changelog if missing; **first pass** verbatim requirements |
+| User `@` or names `docs/.../PRDV-*-changelog`, branch `PRDV-*`, or ticket id in message | **Read** existing file or scaffold; treat as active ticket for this thread |
+| User asks to **commit** / **push** / git workflow | **Session log** entry **before** `git commit` (then [git-commit-workflow.mdc](./git-commit-workflow.mdc) pre-flight + git) |
+| User opens a PR | Summarize from changelog; do not paste the whole file |
+| User or agent **generates a plan** | Add/update a row under **Plans** (path, status, one-line approach) |
+| New implementation approach | Read **Plans** + **Attempt history** first; avoid repeating **superseded** / **abandoned** plans |
+
+Skip only for trivial **`dustin-thomason`**-only edits with **no** ticket, pure Q&A with no implementation intent, or workflow/doc housekeeping that does not touch product code.
+
+---
+
+## Task start — changelog alignment (read before substantive work)
+
+**Why:** the changelog is the cross-session **story** — requirements, chosen approach, what shipped, and what was abandoned. Reading it once at task start keeps new work aligned without re-reading it on every agent step.
+
+**When (once per new task or agent thread, before planning or coding):**
+
+- User asks to **implement**, **fix**, **refactor**, **write/extend a spec**, **onboard to a ticket**, or otherwise start substantive work — including when rules such as `personal-methodology`, `build-implementation-guardrails`, or generated **`AGENTS.md`** route you there.
+- **Not** on every follow-up message, tool call, or micro-step within the same task.
+
+**Resolve the canonical changelog** (same path you would **write** session log entries to):
+
+| Work context | Where to read |
+| ------------ | ------------- |
+| **`PRDV-*` ticket** (Atlas, Callisto, Europa, Triton, …) | `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md` |
+| **Personal / side project** (Countdowns, WorkLists, OtterCopy, …) | `dustin-thomason/docs/<project>/` — project changelog (e.g. `*-app-changelog.mdc`) |
+| **Changelog lives in the app repo** (rare; only when that repo is already the established home) | That repo's changelog path — **only** when prior session logs or project docs already use it |
+
+**How to resolve it (in priority order — `@` is not required):**
+
+1. **Explicit** — path or `@` in the user message wins.
+2. **`PRDV-` id** — from user message, open files, or **`git branch --show-current`** in the app repo; then glob `dustin-thomason/docs/**/PRDV-XXXXX-changelog.md`.
+3. **Personal project** — from workspace folder, app name, or `docs/<project>/` in dustin-thomason; read the project changelog there.
+4. **Missing file** — scaffold (ticket: `new-ticket-changelog.ps1`; personal: create under `docs/<project>/` per [build-implementation-guardrails.mdc](./build-implementation-guardrails.mdc)) before deep work.
+
+**What to read (minimum):**
+
+- **Current state** — what is true now; do not contradict it without noting why.
+- **Requirements (verbatim)** — scope boundary for the ticket or project.
+- **Plans** — prefer **`active`** / **`implemented`** rows; do **not** repeat **`superseded`** / **`abandoned`** approaches.
+- **Attempt history** — failures and dead ends to avoid.
+- **Latest Session log** entry — most recent shipped direction.
+
+**After reading — align before acting:**
+
+- State briefly (in thinking or first reply when useful) which changelog you used and which **active Plan** or **Current state** line governs this task.
+- If the user's new request **conflicts** with **Current state** or an **active Plan**, say so and confirm direction before a large refactor or new plan.
+- **Use the changelog as user context, not only ticket state.** When possible, pull out prior session logs, **Attempt history**, and superseded plans that resemble the current ask (same surface, problem class, or repeated iteration). Infer what the user has **consistently** wanted, how they **redirected** after follow-ups, what they **rejected** or pushed back on, and which risks or regressions already surfaced. Let that shape how you interpret a brief or ambiguous request — and what problems to anticipate before you plan or code.
+
+```
+Good: "Changelog shows two prior redirects toward minimal diff and explicit regression notes; this ask matches that pattern — I'll keep scope narrow and name the checked boundary."
+Good: "Attempt history documents an abandoned raw-SQL approach; I won't propose that again without new evidence."
+Bad:  Read Current state only and treat the user's latest message in isolation when the changelog already records repeated follow-ups on the same concern.
+```
+
+---
+
+## First pass (file missing)
+
+1. Run scaffold (preferred):
+
+   ```powershell
+   # from the dustin-thomason repo root
+   .\scripts\new-ticket-changelog.ps1 -Ticket PRDV-12345 -System atlas -Title "One-line title" -Repo atlas-front-end
+   ```
+
+   Or copy `docs/_templates/TICKET-changelog.template.md` manually.
+
+2. Under **Requirements (verbatim)** — paste ClickUp / user text **verbatim** (blockquote). **Do not paraphrase** the initial capture.
+
+3. Fill **Ticket** metadata and **Context** if the user gave constraints.
+4. If a **plan** already exists (Cursor plan, in-session approach, or read-only coworker spec in `larry-adams`), add a **Plans** row in **dustin-thomason** with status **`active`** (link only for `larry-adams`).
+
+---
+
+## Plans (avoid duplicate approaches)
+
+- **Before** proposing a new plan or large refactor, read **Plans** and **Attempt history** on the ticket changelog.
+- **When** a plan is created in chat or saved to disk, append a **Plans** table row in **dustin-thomason**: date, path or title, status (`active` first), one-line summary. Coworker specs in `larry-adams` → **link** the path; do not write files there.
+- When an approach is **replaced**, set the old plan to **`superseded`** and add the new row — do not delete old rows.
+- When work **lands**, set plan to **`implemented`** and point to session log / commits.
+- In **Session log**, optional **Plan used:** links which plan row this session followed.
+
+---
+
+## Before every `git commit` (PlanetDepos repos)
+
+1. Resolve ticket from branch name, user message, or commit subject.
+2. Ensure `docs/<system>/PRDV-XXXXX-changelog.md` exists (scaffold if not).
+3. Append a **Session log** entry (newest first):
+   - Date, repo(s), summary of **this conversation**, files/areas, intended commit message.
+4. Update **Current state** when scope changes; update **Plans** status if the approach shipped or was abandoned.
+5. Proceed with audit → lint → tests → git per [git-commit-workflow.mdc](./git-commit-workflow.mdc).
+
+**Gate:** No `git commit` without a session log entry covering this conversation's code changes.
+
+---
+
+## Canonical record (source of truth)
+
+**Why:** the reader needs one authoritative account of what shipped; a chat wrap-up scrolls away and drifts from the tree. When a changelog exists, **it is the canonical record**; a final chat wrap-up **may** summarize but is **not** the source of truth.
+
+- **PRDV work** → canonical record is `dustin-thomason/docs/<system>/PRDV-XXXXX-changelog.md`.
+- **Personal-project work** → canonical record is that project's changelog under `docs/<project>/`.
+- **Trivial `dustin-thomason`-only doc tweak with no changelog** → the final wrap-up **may** be the only record.
+
+```
+Good: "Recorded in docs/atlas/PRDV-12264-changelog.md → Session log 2026-05-29T17:40:00Z; wrap-up below is a summary."
+Bad:  Reporting results only in chat when a ticket changelog exists for the work.
+```
+
+---
+
+## Shipping checklist (canonical vocabulary)
+
+**Why:** a single standardized checklist keeps every session auditable and stops "looks fine" omissions. This is the **source of truth** for the checklist; other rules (`build-implementation-guardrails.mdc`, `git-commit-workflow.mdc`) **reference** these headings rather than redefining them.
+
+**Structure rules:**
+
+- The checklist is **required** for any session that **materially changes code or behavior**.
+- Keep the **session narrative first**; **append** the checklist at the **end** of the session entry.
+- A heading **may** be omitted **only** when its trigger is absent (**not relevant**) or an explicit exception applies. An omitted heading means **not relevant**.
+- If a **triggered** heading is **not** performed, the exception **must** be recorded explicitly (see **Exception & evidence reporting**).
+- **Do not** pad entries with irrelevant noise, and **do not** allow open-ended omission based on agent preference or assumption.
+
+**Not required for:** trivial planning-only sessions, note-taking, or minor docs with no behavior impact.
+
+**Standard headings** (append in this order; omit a heading only when its trigger is absent):
+
+| Heading | Default trigger (required when…) | Valid exception |
+| ------- | -------------------------------- | --------------- |
+| **Tests run** | the repo has applicable lint/test/audit gates for the touched work | repo lacks the gate, work is truly outside its scope, or a documented blocker prevented running it |
+| **Tests added/updated** | behavior/logic changed or a bug was fixed | documented test-blocker (see `build-implementation-guardrails.mdc` §1) |
+| **Regression impact** | shared infrastructure, cross-cutting behavior, or adjacent surfaces were touched | change is strictly isolated **and** the note names the isolating boundary |
+| **API docs** | an HTTP contract or API metadata changed | no contract / API-surface change (name the checked surface) |
+| **Tooling gates** | the repo provides applicable lint/test/audit gates | repo lacks the gate, work is out of that gate's scope, or a documented blocker applies |
+| **Conflicts / exceptions** | a normal rule was skipped, blocked, or overridden | — (record whenever it happens) |
+
+**Posture:** do the check **by default**; skip **only** by explicit exception; **never** silently assume "it should be fine." Tooling gates are **verification steps, not optional confidence checks** — confidence or intuition is never a substitute for running the gate.
+
+---
+
+## Exception & evidence reporting (anti-handwave)
+
+**Why:** a bare "N/A" or "blocked" hides whether a step was irrelevant or skipped, and whether risk remains. Every exception must be auditable.
+
+**Not relevant vs blocked:**
+
+- **Not relevant** = the trigger was **absent**.
+- **Blocked / exception** = the trigger was **present**, but the action was **not** completed.
+- A **blocked** item **must never** be recorded as `N/A`. If something was not done, the record **must** say why.
+
+**Every exception must state:** (1) why the normal step was not done, (2) the exact check or action skipped, (3) the residual risk or the follow-up that resolves it. Vague notes like only "blocked" or "N/A" are **not** allowed.
+
+**Out of scope** must define the **scope boundary** and explain why the skipped check falls outside it. "Out of scope" by itself is **not** sufficient.
+
+**Absence of change must be verified against a concrete surface**, not inferred from intent. "I only refactored", "I only touched internals", and "this should not affect anything" are **not** sufficient by themselves — name the checked surface and confirm it stayed unchanged. (Layer-specific evidence examples — regression boundary, API surface, tooling gate — live in `build-implementation-guardrails.mdc`.)
+
+```
+Good: "API docs — not relevant: service-internal refactor only; route path/method, DTO shape, and auth/status decorators checked, all unchanged."
+Good: "Tests — blocked: no Vitest harness for this CLI layer; risk: arg-parse path uncovered; follow-up: scaffold harness (PRDV-XXXXX)."
+Bad:  "API docs: N/A"
+Bad:  "tests: blocked"
+```
+
+---
+
+## Verification-gate reporting
+
+**Why:** "tests passed" is unfalsifiable; a reader cannot tell what ran or over what scope. Reporting must be reproducible and reflect the shipped tree.
+
+- Record the **exact gate command**, the **scope** it covered, and the **result**. "Tests passed", "lint passed", or "audit passed" by itself is **not** sufficient. Applies to **tests**, **lint**, and **audit**.
+- **Order** matches the workflow: **audit → lint → tests** (rationale and commands in `git-commit-workflow.mdc`).
+- **Only session-end verification** counts as the official compliance record. Exploratory runs **may** be mentioned but **do not** replace the final gate result.
+- Report the **final post-change state only.** Do **not** cite an earlier green run if later edits followed it; if the final state differs from an intermediate run, report the final state.
+
+**Reporting format — markdown table.** Preferred by default; **required** when **multiple gates** or **any exception** are reported:
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | atlas-front-end | pass | — |
+| lint | `npm run lint` | atlas-front-end | pass | — |
+| tests | `npx vitest run --maxWorkers 1 src/foo` | foo composable | pass | — |
+
+```
+Good: the table above (exact command + scope + result per gate).
+Bad:  "lint passed; tests passed."
+```
+
+---
+
+## UTC timestamps for session entries
+
+**Why:** a single canonical timezone-free format keeps cross-session ordering unambiguous across agents and machines.
+
+- Session entries that record **implementation activity** **must** include a UTC timestamp.
+- Use **one** canonical format: **ISO 8601 UTC with trailing `Z`**, reflecting when the entry was recorded.
+
+```
+Good: ### 2026-05-29T21:14:00Z — atlas-front-end
+Bad:  ### 2026-05-29 — atlas-front-end   (no time, no zone, for implementation work)
+```
+
+---
+
+## System → default repo
+
+| `<system>` | Default repo |
+| ---------- | ------------ |
+| `atlas` | `atlas-front-end` |
+| `callisto` | `callisto-back-end` |
+| `europa` | `europa-back-end` |
+| `triton` | `triton-back-end` |
+| `other` | _(set `-Repo` explicitly)_ |

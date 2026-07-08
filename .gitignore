@@ -1,0 +1,2 @@
+# Browser-loop tooling deps (scripts/browser, added in a later phase).
+/scripts/browser/node_modules/

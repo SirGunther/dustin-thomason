@@ -2,6 +2,7 @@
 description: Mandatory tests, changelog, Swagger (when applicable), architecture guardrails for Codex/agent builds — shipping checklist, coverage, non-regression, graceful failure, SOLID shaping, avoid raw Postgres/SQL unless unavoidable.
 alwaysApply: true
 ---
+<!-- generated from rules/build-implementation-guardrails.md by scripts/sync-rules.ps1; edit the source, not this file -->
 
 # Build guardrails — implementation & tests
 
@@ -161,6 +162,3 @@ Bad:  "Tooling gates N/A."
 ## 6. Local app-server checks
 
 Do **not** run a local test whose only purpose is to confirm the app server is already listening. Only start or probe a local server when it directly verifies requested behavior (**browser automation**, endpoint checks, or a manual repro path), and state the behavioral signal it provides.
-
-
-

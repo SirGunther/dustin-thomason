@@ -41,12 +41,26 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 
 | Layer | Location | Loads how? |
 | ----- | -------- | ------------ |
-| **Rules** | `.cursor/rules/*.mdc` | **Automatic** when `dustin-thomason` is in workspace (`alwaysApply: true`) |
+| **Rules** | `.cursor/rules/*.mdc` (generated from `rules/*.md`) | **Automatic** when `dustin-thomason` is in workspace (`alwaysApply: true`) |
 | **Router** | `personal-methodology.mdc` | **Automatic** — maps “write spec” / “commit” / “open PR” to the right rule or playbook |
 | **Playbooks** | `.cursor/docs/*.md` | **Automatic** when you name the task (router); not via `@` |
 | **Artifacts** | `docs/**/PRDV-*-changelog.md`, `docs/<project>/*-changelog*` | Agents **read at task start** when substantive work begins; **`@`** optional pointer on new threads |
 
 **Authoritative long content** lives in `docs/`. `.cursor/docs/` holds short, task-oriented playbooks that link into `docs/`. `.github/*.md` files are **stubs for GitHub browsing only** — do not `@` them.
+
+---
+
+## Generated outputs (how each system loads these rules)
+
+`rules/*.md` (tool-neutral) is the **source of truth**. `agents/scripts/sync-rules.ps1` generates every tool-specific format from it, so no system keeps a duplicate copy:
+
+| Output | Consumer | Committed? | Shape |
+| ------ | -------- | ---------- | ----- |
+| `.cursor/rules/*.mdc` | Cursor | **Yes** — machine-neutral | description + globs + alwaysApply |
+| `.claude/rules/*.md` | Claude Code | **Yes** — machine-neutral | full body (always) or `paths:`-scoped (on-demand) |
+| `AGENTS.md` | Codex (any AGENTS.md reader) | **Yes** — machine-neutral | concatenated bodies |
+
+All three are committed, so `git pull` distributes rule changes to every machine. Claude Code loads `.claude/rules/` in-repo automatically, and in **other** project dirs via a one-time junction `~/.claude/rules/dustin-thomason` → this repo's `.claude/rules`. Each rule's `scope`/`globs`/`codex` frontmatter (in `rules/`) drives how it lands in each output. **Never hand-edit a generated file** — edit `rules/` and run `sync-rules.ps1` (the pre-commit hook does this automatically). See `README.md` for one-time machine setup.
 
 ---
 
@@ -61,6 +75,7 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 | **Open a PR** | “Open PR for PRDV-…” | **No** — router reads `pull-request-workflow` |
 | **Implement code** | (normal implementation chat) | **No** — agent resolves changelog at **task start**; then `problem-requirement-solution` + `build-implementation-guardrails` + app repo rules |
 | **Fix bug / regression** | (normal fix chat) | **No** — same **task-start** changelog alignment when a ticket or project log exists |
+| **Debug front-end** layout/CSS/interaction at runtime | (drive/observe the live browser) | **No** — `browser-loop-guardrails` + [browser-loop-setup](../.cursor/docs/browser-loop-setup.md) |
 | **Ticket context (new thread)** | `@docs/atlas/PRDV-XXXXX-changelog` | **Optional** — explicit pointer; agent should still resolve changelog from branch/ticket id |
 | **Stress-test a plan** | `@grill-me` | Yes (skill) |
 | **Audit workflow docs** | “run workflow housekeeping” | Optional `@workflow-housekeeping` |
@@ -79,10 +94,11 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 | `ticket-changelog` | task-start alignment + session log before commit |
 | `build-implementation-guardrails` | §5 shipping checklist: tests/regression, changelog (PRDV + personal projects), Swagger when applicable |
 | `context-fanout` | read-only exploration subagents for multi-area context compaction |
+| `browser-loop-guardrails` | boundary rules for runtime browser observation + CSS/layout/interaction debugging |
 | `problem-requirement-solution` | frame implementation/plans/specs as Problem → Requirement → Solution |
 | `agent-completion-notification` | end of substantive sessions — `notify-agent-complete.ps1` → Power Automate |
 
-Not always-on: `workflow-housekeeping` (only when editing workflow files here); `codex-agents-sync` (regenerate `AGENTS.md` after rule/skill edits).
+Not always-on: `workflow-housekeeping` (only when editing workflow files here); `agents-sync` (regenerate `AGENTS.md` + `.claude/rules` after rule/skill edits).
 
 ---
 
@@ -93,6 +109,7 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 | [new-branch-get-started.md](../.cursor/docs/new-branch-get-started.md) | New `PRDV-*` branch |
 | [pull-request-workflow.md](../.cursor/docs/pull-request-workflow.md) | `gh pr create`, PR body, Slack post |
 | [README.md](../.cursor/docs/README.md) | Pointer to this index |
+| [browser-loop-setup.md](../.cursor/docs/browser-loop-setup.md) | Wire and observe a live browser for front-end debugging |
 
 ---
 
@@ -116,7 +133,7 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 ## Scaffold script (terminal, not `@`)
 
 ```powershell
-cd C:\Users\dustin.thomason\dustin-thomason
+# from the dustin-thomason repo root
 .\scripts\new-ticket-changelog.ps1 -Ticket PRDV-15263 -System atlas -Title "Short title"
 ```
 
@@ -147,8 +164,9 @@ Skills are **not** `alwaysApply` — the user `@`’s the skill or asks in plain
 | ------ | ------- |
 | `new-ticket-changelog.ps1` | Create `docs/<system>/PRDV-XXXXX-changelog.md` |
 | `notify-agent-complete.ps1` | Post session completion to Power Automate (`agent-completion-notification` rule) |
-| `validate-workflows.ps1` | Wiring audit — run after changing rules/docs |
-| `sync-agents-md.ps1` | Regenerate root `AGENTS.md` from `.cursor/rules/*.mdc` (Codex mirror) |
+| `validate-workflows.ps1` | Wiring audit (incl. generated-output staleness) — run after changing rules/docs |
+| `sync-rules.ps1` | **Primary generator** — rebuilds `.cursor/rules/` (Cursor) + `.claude/rules/` (Claude Code) + `AGENTS.md` (Codex) from `rules/*.md`. `-Check` fails on stale output. |
+| `sync-agents-md.ps1` | Backwards-compatible shim → `sync-rules.ps1` |
 
 ## GitHub (stubs only — never `@`)
 
@@ -160,7 +178,7 @@ Skills are **not** `alwaysApply` — the user `@`’s the skill or asks in plain
 ## Wiring audit (run anytime)
 
 ```powershell
-cd C:\Users\dustin.thomason\dustin-thomason
+# from the dustin-thomason repo root
 .\scripts\validate-workflows.ps1
 ```
 
@@ -179,6 +197,7 @@ Checks: required `alwaysApply` rules, expected scripts, playbooks, router links,
 | Code quality | `build-implementation-guardrails` + app repo rules |
 | Framing implementation | `problem-requirement-solution` — Problem → Requirement → Solution |
 | Multi-area exploration | `context-fanout` — read-only subagent fanout |
+| Front-end runtime debugging | `browser-loop-guardrails` + `browser-loop-setup` playbook |
 | Spec | `spec-writing` + `wiki-spec-authoring`; `@write-spec` for guided flow |
 | Agent finished substantive work | `agent-completion-notification` → `notify-agent-complete.ps1` |
 
