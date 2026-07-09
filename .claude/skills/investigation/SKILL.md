@@ -22,6 +22,7 @@ Instances come before classification: they are the evidence a classification is 
 - Name real instances: specific people or cases, blocked right now, on real tasks. No named instance = no confirmed problem; say so.
 - State the problem in one plain sentence a stranger could confirm or deny. Enumerate the distinct problems separately — don't merge them.
 - Establish urgency: the date or trigger event when this bites next. "Eventually" doesn't count.
+- Run the **Problem Check** lens (`agents/docs/problem-check.md`) on the problem as stated — **every investigation, not just transcripts**. It surfaces what's being **conflated** (usually several distinct problems treated as one → separate them, per the bullet above), asked-vs-answered drift, **thin** terms, and internal contradictions ("off"). Feed its findings into Step 2 (class) and the assumptions ledger / open variables. When the evidence includes a transcript or live discussion, also extract the explicit **decisions** made.
 
 ## Step 2 — Classify the problem (provisional, from the instances)
 

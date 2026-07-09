@@ -104,6 +104,93 @@ The six boundary rules in [browser-loop-guardrails.mdc](../rules/browser-loop-gu
 
 Per-machine activation still required: `npm install` + `npx playwright install chromium` in `scripts/browser/` (see One-time setup).
 
+## investigation-question-coverage.md
+
+# Investigation method — question coverage checklist
+
+> **What this is:** the loose questions/principles collected for the investigation method, deduped and checked against what the method **currently** captures. Every "present" item carries a **verbatim quote** from the source so this reads as an audit, not a claim — no lookup required.
+> **Sources quoted:** `SK` = `agents/skills/investigation/SKILL.md` (line refs); `RT` = `agents/docs/investigation-report.md`.
+> **Scope:** built from *Questions to answer*, *Guiding principles*, the *Problem→Requirement→Solution* note, and *Transcript Analysis Tasks*. **Excludes** Jim's Question Battery and the Pre-meeting self-grill.
+> **Legend:** `[x]` = present, with quote · `[ ]` = gap / handled elsewhere (explained inline). Net-new software questions live in [investigation-software-gaps.md](./investigation-software-gaps.md).
+
+## Questions to answer
+
+- [x] **Solve the class, not just the instance**
+  > SK Step 5: *"**The confirmed class** — does it solve the class of problem (not the assumed class, not just this occurrence)?"*
+- [x] **Will it scale?**
+  > SK Step 5: *"**Scale** — will it hold up as scope, volume, or the number of people and cases involved grows?"*
+- [x] **Can/should it be abstracted?**
+  > SK Step 5: *"**Generalization** — should this be abstracted, or is that overreach?"*
+- [x] **Follows best practices / fits architecture & philosophy**
+  > SK Step 5: *"**Fit** — does it follow established practice and integrate cleanly with the existing system, its conventions, and its philosophy?"*
+- [x] **Leaks: fix now vs. follow-up + effort tradeoff**
+  > SK Step 5: *"**Adjacent issues** — if you surface related problems, is it lower effort to resolve them now or to spin off a follow-up? State the tradeoff."*
+- [x] **Front-end: change behavior, appearance, or both?**
+  > SK software branch (line 94): *"Add a frontend lens where relevant: should we change how it behaves, how it looks, or both?"*
+
+## Guiding principles
+
+- [x] **No simpler / no more complex than it needs to be**
+  > SK Step 5, inside Generalization: *"The fix must be no simpler than it needs to be and no more complex than it needs to be."*
+  > *(Note: currently embedded in the Generalization bullet, not a standalone principle.)*
+- [x] **Every claim written to be refuted**
+  > SK standing disciplines: *"**Every claim falsifiable.** Write each claim — including problem statements and classifications — so it could be refuted, then go look for the refutation."*
+- [x] **Confirm/revise each claim against evidence**
+  > SK Step 4: *"Confirm or revise each assumption against that evidence, not against what the request claims."*
+  > RT §8 assumptions ledger status: *"open | confirmed | confirmed directionally | revised | refuted"*.
+- [x] **Test happy path AND negative/inferred paths (defect not leaking in from / out to unmodeled areas)**
+  > SK Step 6: *"**Negative / inferred paths:** prove the problem isn't leaking in from, or out to, somewhere we haven't modeled."*
+
+## Root cause in code
+
+- [x] **Understand the code and *why* the problem exists**
+  > SK Step 4: *"Trace the problem to its origin. Gather evidence from the primary source before asking me."*
+  > SK software branch (line 94): *"search the codebase for evidence and trace the defect to its origin in code."*
+
+## Validation & recommendation (always-on outputs, present)
+
+The four *Transcript Analysis Tasks* split **2 + 2**: two are always-on outputs the method already emits on every investigation (here); the other two are transcript-triggered lenses (next section). The always-on two are **not** transcript-gated.
+
+- [x] **Testing strategies / how to validate** — this is the validation plan; the behavioral "how we test" *is* the happy + negative paths.
+  > SK Step 6: *"**Happy path:** the sequence that should work, step by step."* and *"**Negative / inferred paths:** prove the problem isn't leaking in from, or out to, somewhere we haven't modeled."*
+  > *(One software-specific sharpening — the automated red→green test that encodes the defect — is logged in [investigation-software-gaps.md](./investigation-software-gaps.md); the general behavioral coverage is here.)*
+- [x] **Recommendations (how to proceed)** — a core emit at the **end of every investigation**, not transcript-gated.
+  > SK Step 7: *"**Decisions and recommendation with gates** — what we settled; what to do in order; what proceeds first and what stays gated behind which proof or artifact."*
+  > RT §10: *"- **Recommendation** (what to do, in order):"*
+
+## Identify uncertainties → Problem Check (always-run, present)
+
+- [x] **Run Problem Check on every investigation** — wired into `SK Step 1`, **not** contextual. The always-on disciplines only catch a **known blank** (a missing value):
+  > SK standing disciplines: *"**Log unknowns as they surface.** Any value, mapping, threshold, owner, or boundary you can't pin down goes into the open-variables list the moment you notice it."*
+  Problem Check catches the **ambiguity** they don't: asked-vs-answered drift, and above all **conflation** — usually *several* distinct problems treated as one, which split into branches — plus *thin* terms and *off* (internal contradictions). Now wired at:
+  > SK Step 1: *"Run the **Problem Check** lens … **every investigation, not just transcripts**."*
+  Tool: [problem-check.md](./problem-check.md).
+
+## Identify decisions → context-triggered pointer (present)
+
+- [x] **Extract decisions when a transcript / live discussion is present** — the one genuinely conditional item (you can't mine decisions from a discussion that isn't there). Home in the report when they exist:
+  > RT §10: *"- **Decisions** (settled):"*
+  Wired as a rider on the same Step 1 Problem Check line: *"When the evidence includes a transcript or live discussion, also extract the explicit decisions made."*
+
+## Not this method's job (parked)
+
+- [ ] **Problem → Requirement → Solution as an explicit ordered narrative** — this belongs to **ticket generation**, not investigation. It's the fast framing used when *writing a ticket* ("here's the problem, the requirement, the solution we'll implement"), which falls out of the investigation's own outputs (problem in SK Step 1, acceptance criteria ≈ requirement in SK Step 3, solution in SK Step 5). Revisit it as a note on how tickets are built, not as an investigation step.
+
+---
+
+## Summary
+
+Against the collected questions, the redundancy you felt is confirmed — everything under *Questions to answer*, *Guiding principles*, and *root cause* is **present with a verbatim quote above**. The four *Transcript Analysis Tasks* resolve as **2 always-on + 2 triggered**:
+
+- **Testing strategies** → present; the behavioral "how we test" is the happy/negative validation plan (SK Step 6). Automated-test sharpening logged in software-gaps.
+- **Recommendations** → present; a core end-of-investigation emit (SK Step 7 / RT §10), not transcript-gated.
+- **Identify uncertainties** → now an **always-run** lens (Problem Check, wired into SK Step 1) — conflation-detection is its core.
+- **Identify decisions** → a **context-triggered pointer**: when a transcript is present, extract decisions (already have a report home; rides the same Step 1 line).
+
+And separately: **P→R→S** → not this method's job; a ticket-framing note for later.
+
+Software-specific questions the method doesn't ask at all are tracked separately in [investigation-software-gaps.md](./investigation-software-gaps.md).
+
 ## investigation-report.md
 
 # Investigation Report: <short title>
@@ -274,6 +361,68 @@ Don't move past investigation until each is answered:
 - [ ] Open variables each have an owner
 - [ ] Tracked action with a falsifiable done-when
 
+## investigation-software-gaps.md
+
+# Investigation method — software lens: candidate additions (staging)
+
+> **Status:** staging / not yet adopted. These are questions the current method (`agents/skills/investigation/SKILL.md` + `agents/docs/investigation-report.md`) does **not** force, that a real software investigation needs. Parked here to review and possibly fold into the software branch / Steps 4 & 6 later. Nothing here is live yet.
+> **Companion:** [investigation-question-coverage.md](./investigation-question-coverage.md) audits the questions we already had; this doc holds the net-new ones.
+
+## The organizing idea: ground *sideways*, not just down and up
+
+The method already grounds in two directions:
+
+- **Downward** — "show me the instance." (Step 1: named, blocked, real.)
+- **Upward** — "does it solve the class?" (Steps 2/5.)
+
+Software bugs need a **third direction — sideways/outward, across the code surface.** Instance-and-class framing can't see that code has a *surface* (every call site that can reach the behavior), a *contract* (an authoritative layer someone else owns), *neighbors* (other behavior sharing the same code path), and a *detection net* (the tests/types/review that were supposed to catch this). The class of PRDV-16047 was obvious in one sentence; the entire investigation was sideways work. The four candidates below are that missing axis. They're worth asking on any change that touches shared code or crosses a layer boundary — not just bugs.
+
+---
+
+## Candidate 1 — Contract / source-of-truth alignment
+
+- **What we mean to ask:** What is the authoritative definition of this behavior, and who owns it (a backend guard, an API contract, a DB constraint, a shared type, a spec)? Does the layer we're changing **mirror it exactly**? Where could the two **drift apart again** later?
+- **Why it's useful:** A large share of software defects are not logic errors — they're one layer disagreeing with the layer that actually decides. If you don't name the authority and check the mirror, you "fix" the symptom on the wrong side and it silently re-drifts.
+- **Where it attaches:** SKILL Step 4 (trace why it exists) → after finding origin, identify the authority and verify the mirror. Report: fold into §5 (Why it exists) or a new "Contract alignment" line in §7.
+- **16047 evidence:** the whole root cause — the frontend gated withdraw on `SUBMISSION_PROCEEDING_FILES_<TRACK>` while the backend guard (`MultiDeliverableFileAuthorizeRole`) authorizes on `CLIENT_DELIVERABLE_PROCEEDING_FILES_<TRACK>`. The fix was "make the FE mirror the BE authority exactly"; the durable risk is re-drift.
+- **Done-when / artifact:** the authoritative source is named with a pointer; the changed layer is shown to match it (ideally byte-identical, as with the resource-key strings); the re-drift risk is noted.
+
+## Candidate 2 — Exhaustive surface enumeration (blast radius)
+
+- **What we mean to ask:** What are **all** the call sites / entry points / consumers this change touches — and **how do we know the list is complete** (grep for callers, type/usage references, i18n keys, route/registry entries)?
+- **Why it's useful:** The method's Step 6 already says "prove the defect isn't leaking out to somewhere we haven't modeled" — but as a *principle*, not a forced artifact. An un-enumerated surface is exactly where a fix half-lands: you patch the obvious path and miss the twin. Requiring the list + a completeness claim is what turns the principle into a catch.
+- **Where it attaches:** SKILL Step 6 (make the enumeration an explicit output of the negative-path work). Report: a "Affected surfaces" list in §7 or §9.
+- **16047 evidence:** the withdraw action had **three** entry points (row-single, row-batch, and the FAB). The FAB had *no* permission check at all and was the easiest to miss — it only surfaced because the entry points were enumerated and the plumbing (`useUnapproveFlow`, imported by exactly two tables) was traced to prove the list was complete. A feared 4th surface (a `deliverables.bulkActions` i18n key) was checked and confirmed non-existent.
+- **Done-when / artifact:** an enumerated list of every surface that can reach the behavior, plus a one-line statement of how completeness was established ("`useUnapproveFlow` imported only by X and Y; grep of `withdraw*` i18n keys yields exactly these three").
+
+## Candidate 3 — Protect-the-neighbors (regression proof)
+
+- **What we mean to ask:** What existing behaviors share this code path and **must not change**? How did we verify they stayed identical?
+- **Why it's useful:** Distinct from "adjacent issues" (which is about *new* problems worth fixing) and from negative paths (which prove the *new* behavior fails visibly). This is the opposite duty: name the neighbors on the shared path and prove they didn't move. It's the "absence of change verified against a concrete surface" discipline — the thing that stops a fix from quietly regressing a sibling.
+- **Where it attaches:** SKILL Step 5 (Fit) or Step 6. Report: a "Unchanged surfaces (verified)" line in §9.
+- **16047 evidence:** the withdraw items shared the `canModifyDeliverableApproval` flag with **Approve**, and had a deliberate **audio "cannot withdraw" tooltip**. The fix had to leave Approve gating (submission resource) and the audio disabled+tooltip untouched — both were named and asserted (Approve verified unchanged; audio preserved via the `v-if` audio special-case + a menu spec).
+- **Done-when / artifact:** each shared-path neighbor named, with the concrete check that confirmed it's unchanged (a test, a preserved branch, an asserted prop).
+
+## Candidate 4 — Detection gap (why the net missed it)
+
+- **What we mean to ask:** Why wasn't this already caught — no test, a permissive/`any`-typed seam, a review blind spot, an untested component? (Bugs only.)
+- **Why it's useful:** The answer *designs the regression test you add.* "Why it exists" (Step 4) explains the defect's origin; this explains the **detection** failure, which is a different and equally actionable finding. Currently it lives only as a bug-closeout checkbox in the report DoD, too late to shape the fix.
+- **Where it attaches:** SKILL Step 4 checkpoint (for the software branch). Report: a line under §5.
+- **16047 evidence:** the shared `canModifyDeliverableApproval` flag conflated two backend-distinct permissions, and `ProceedingFileRowActionsMenu` had **no** spec at all — so nothing could have caught the drift. That gap is exactly what the new `useProceedingFilePermission.spec.ts` (submission-only → `false`) and the first menu spec now close.
+- **Done-when / artifact:** a one-line detection-failure cause, tied to the specific test/type/guard added to close it.
+
+---
+
+## Two refinements (sharpen existing steps rather than add sections)
+
+- **Red→green regression test.** Step 6 should ask for the test that **fails before / passes after**, encoding the exact defect — not just "a testing strategy." This is what makes the fix's proof durable and prevents silent re-drift. (16047: the `useProceedingFilePermission` drift case.)
+- **Reproduction recipe + preconditions.** The software branch should ask for the role / data-state / feature-flag / environment needed to observe the defect. "Actor / action / moment" (Step 5) is adjacent but not the SE "how do I see this locally, and what's gated" recipe — the absence of which is exactly what ballooned 16047 into a separate local-testability question.
+
+## Also flagged (from the coverage checklist, if we ever promote them)
+
+- **P→R→S as an explicit ordered narrative** — components exist across Steps 1/3/5 but aren't ordered/named; personal-vs-general-skill decision.
+- **A transcript/discussion evidence sub-branch** — the four extraction outputs exist; the "mine a meeting transcript" lens doesn't. Low priority.
+
 ## new-branch-get-started.md
 
 # Start a new branch
@@ -349,6 +498,100 @@ Use your repo’s PR template. Title: **`PRDV-15263: Same short description`**. 
 ---
 
 That’s the starting point. For PR body text, screenshots, and commit hash in the description, use [pull-request-workflow.md](./pull-request-workflow.md) when you’re ready to open the PR—not before.
+
+## problem-check.md
+
+# Problem Check — is the question even the right question?
+
+> **What this is:** a drop-in lens for reading a live, partial problem discussion. It does **not** summarize or solve — it audits the *problem's framing and standing*: what's being asked vs. actually worked on, what's being **conflated**, what's **thin**, what's **off**.
+>
+> **How it fits the investigation method:** the method grounds *downward* (Step 1 — show me the instance) and *upward* (Steps 2/5 — does it solve the class). This grounds a third way — *inward*: is this one, well-defined, well-supported question, or several tangled together? Its highest-value output is **conflation detection** — and usually it's not a single merge but a *list* of distinct problems treated as one, which then split into separate branches. It is the concrete mechanism behind the "identify uncertainties" need flagged in [investigation-question-coverage.md](./investigation-question-coverage.md).
+>
+> **When to run it:** **every investigation** — it's wired into the method's Step 1 (collect the raw facts), not gated behind a trigger. On a crisp, single-problem request the flags will mostly come back "nothing here," and that's fine (fast when there's nothing to find). Its value spikes when a request bundles several things, when "asked" and "answered" have drifted, or when a term / "what does solved look like" is undefined — and it's strongest on a transcript or live discussion, where you *also* extract the explicit decisions.
+
+---
+
+## The prompt (verbatim)
+
+```
+**Problem Check** — Injected mid-discussion. You're reading a live, partial transcript of people working a problem. Don't summarize it, don't solve it. Answer the questions below about the *problem itself* — its framing and standing.
+
+Rules for every answer:
+- A question may be answered "nothing here." Never manufacture a finding to look useful.
+- Every claim cites the words that justify it. A claim you can't ground, you drop.
+- Plain register: no scare quotes around the team's words, no intensifiers (massive, critical, impossible), no invented terms. Use their plain language, not a sharpened version.
+- Treat the transcript as live and noisy — partial, possibly mislabeled speakers. Anchor on the active thread, not the whole meeting. The last thing said isn't necessarily the point.
+
+THE QUESTION
+1. **Asked** — What problem does the group *say* it's working on?
+2. **Answered** — What is the discussion *actually* working on? If it differs from Asked, name the drift.
+3. **Should-ask** — Is there a sharper or more upstream question that would serve them better? If the asked question is the right one, say so.
+
+THE FLAGS — raise only what's present; "nothing here" is valid for all three.
+4. **Conflation** — Are two+ distinct problems being treated as one? Name them apart; say whether solving one would even touch the other.
+5. **Thin** — Any key term undefined, any "what does solved look like" unstated, any claim with no support? Name the specific gap, not "needs detail."
+6. **Off** — Does anything fail to track with the rest — a claim that contradicts another, or an assumption that doesn't hold given what else was said? (Internal inconsistency only — you can't catch factual errors against the world.)
+
+FORMATTING — keep all six findings and their evidence. The goal is a fast top-down scan: each finding is a "### " section heading followed by its own two-column table.
+- Above each table, print the section name as a heading: "### Asked", "### Answered", etc.
+- The table has a blank header row "|  |  |", then the separator "|---|---|", then one row per labeled line. (No column titles — keep it quiet.)
+    **finding** — the claim, one plain clause. (Always present.)
+    **drift** — Answered only: "[what they think they're asking]" → "[what they're actually doing]"
+    **consequence** — Conflation / Off only: the second thought, the valuable half.
+    **why** — Should-ask only: one line on what the better question decides.
+    **evidence** — the supporting quote, TRIMMED to the 5–10 words that prove it. Never paste a full rambling quote.
+- Row order: finding → (drift / consequence / why) → evidence. Omit any row you have nothing for.
+- Group under two headers: "## The question" (Asked, Answered, Should-ask) and "## Flags" (Conflation, Thin, Off).
+- If all three flags are clear, under Flags print only: "No flags — the question being answered is the one being asked."
+
+Layout:
+
+## In brief
+A 2–3 sentence plain-language sketch of what the discussion is about and where it currently stands — just enough to orient a reader before the findings. This is the one place you describe rather than diagnose: no flags, no drift, no quotes. Neutral and factual.
+
+# The question
+---
+### Asked
+|  |  |
+|---|---|
+| **finding** | [claim] |
+| **evidence** | "[trimmed quote]" |
+
+### Answered
+|  |  |
+|---|---|
+| **finding** | [claim] |
+| **drift** | "[think they're asking]" → "[actually doing]" |
+| **evidence** | "[trimmed quote]" |
+
+### Should-ask
+|  |  |
+|---|---|
+| **finding** | [the sharper question] |
+| **why** | [what it decides] |
+
+# Flags
+---
+### Conflation
+|  |  |
+|---|---|
+| **finding** | [two problems, named apart] |
+| **consequence** | [whether solving one touches the other] |
+| **evidence** | "[trimmed quote]" |
+
+### Thin
+|  |  |
+|---|---|
+| **finding** | [the specific gap] |
+| **evidence** | "[trimmed quote]" |
+
+### Off
+|  |  |
+|---|---|
+| **finding** | [what doesn't track] |
+| **consequence** | [why it matters] |
+| **evidence** | "[fragment A]" → "[contradicting fragment B]" |
+```
 
 ## pull-request-workflow.md
 
