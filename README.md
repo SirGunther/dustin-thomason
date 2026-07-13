@@ -13,18 +13,20 @@ reads is *generated* from it by `agents/scripts/sync-rules.ps1`.
 | ------------------ | ----------------------------- | --- |
 | `agents/rules/*.md` | `.cursor/rules/*.mdc` | Cursor |
 | `agents/rules/*.md` | `.claude/rules/*.md` | Claude Code |
+| `agents/rules/*.md` (the `scope: always` ones) + `agents/docs/workflow-index.md` | `.claude/CLAUDE.md` (repo root manifest) | Claude Code, loaded in **every** project (see machine setup) |
 | `agents/rules/*.md` | `AGENTS.md` (repo root) | Codex / any AGENTS.md reader |
 | `agents/skills/<name>/` | `.cursor/skills/` + `.claude/skills/` | Cursor + Claude skills |
-| `agents/docs/*.md` | `.cursor/docs/*.md` | Cursor playbooks/guides |
+| `agents/docs/*.md` | `.cursor/docs/*.md` + `.claude/docs/*.md` | Cursor + Claude playbooks/guides |
 
 All outputs are committed and machine-neutral. If you skim only one file for "how does he want
 things built," read `agents/docs/workflow-index.md`.
 
 ## Generated files - NEVER hand-edit
 
-`.cursor/*`, `.claude/*`, and `AGENTS.md` are **all generated** from `agents/` by
-`agents/scripts/sync-rules.ps1`. Edit the source under `agents/`; the next sync overwrites any
-direct edit to an output. Generated rule/skill files carry a `<!-- generated ... -->` marker.
+`.cursor/*`, `.claude/*` (including the `.claude/CLAUDE.md` manifest), and `AGENTS.md` are
+**all generated** from `agents/` by `agents/scripts/sync-rules.ps1`. Edit the source under
+`agents/`; the next sync overwrites any direct edit to an output. Generated files carry a
+`<!-- generated ... -->` marker.
 
 ## Changing or adding a rule
 
@@ -40,11 +42,21 @@ direct edit to an output. Generated rule/skill files carry a `<!-- generated ...
    ---
    ```
 
-3. If it is **new**, also add it to `agents/docs/workflow-index.md` and the
-   `personal-methodology` router; if `scope: always`, add it to `$requiredAlwaysApply` in
-   `scripts/validate-workflows.ps1`.
+3. Optionally add an **editorial routing row** to the hand-written part of
+   `agents/docs/workflow-index.md` (task-to-words guidance) and wire it into the
+   `personal-methodology` router if intent should route to it. You do **not** hand-add it to the
+   index's **Complete inventory** section or to `$requiredAlwaysApply` — both are
+   generated/derived from the folder + frontmatter now.
 4. Commit. The pre-commit hook regenerates all outputs and stages them. (Or run
    `.\agents\scripts\sync-rules.ps1` then `.\scripts\validate-workflows.ps1` by hand if hooks are off.)
+
+Everything downstream of the source is **automatic**: a new `scope: always` rule flows into the
+`.claude/CLAUDE.md` manifest (loaded everywhere — no bootstrap re-run) and any new rule/skill/doc/script
+flows into the generated **Complete inventory** block in `workflow-index.md`. The guard: the
+pre-commit hook regenerates and re-stages every output, `validate-workflows.ps1` (hook + CI) derives
+its own checks from the filesystem and fails on any stale output, so a new item cannot land without
+its manifest + inventory entries. `bootstrap.ps1` is one-time-per-machine; adding a rule is just
+edit-source-and-commit.
 
 Skills are folders in `agents/skills/<name>/` (mirrored verbatim). Playbooks/guides are
 `agents/docs/*.md` (mirrored to `.cursor/docs`). How `scope` maps downstream: `always` -> Cursor
@@ -54,23 +66,30 @@ Skills are folders in `agents/skills/<name>/` (mirrored verbatim). Playbooks/gui
 ## One-time machine setup
 
 From the repo root (`c:\dustin-thomason` at home, `C:\Users\dustin.thomason\dustin-thomason`
-at work):
+at work), run the bootstrap once:
 
 ```powershell
-# 1) Enable the auto-regeneration + wiring-audit hook.
-git config core.hooksPath scripts/git-hooks
-
-# 2) Make Claude Code load these rules in EVERY project, not just this repo, by junctioning
-#    the (committed) generated Claude rules into the user-level Claude rules directory.
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\rules" | Out-Null
-New-Item -ItemType Junction `
-  -Path   "$env:USERPROFILE\.claude\rules\dustin-thomason" `
-  -Target (Join-Path (Get-Location) '.claude\rules')
+.\agents\scripts\bootstrap.ps1
 ```
 
-`.claude/rules` is committed, so a fresh clone already has it and a `git pull` keeps it current
-on every machine — no per-machine rebuild. (Run `.\agents\scripts\sync-rules.ps1` only if you
-edit sources without committing.)
+That single command is the baseline for a fresh clone / new computer. It is idempotent (safe to
+re-run) and:
+
+1. Enables the auto-regeneration + wiring-audit pre-commit hook (`core.hooksPath scripts/git-hooks`).
+2. Regenerates every output (`sync-rules.ps1`), including the `.claude/CLAUDE.md` manifest.
+3. Wires `~/.claude/CLAUDE.md` to `@`-import this repo's `.claude/CLAUDE.md` (inside a managed
+   marker block), so the `scope: always` rules load in **every** Claude Code session, in every
+   project — even ones that do not include this repo as a workspace folder.
+4. Sets user env var `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` so path-scoped rules and
+   `CLAUDE.md` also load natively when this repo IS an `--add-dir` workspace root.
+
+Options: `-MirrorSkills` also copies skills into `~/.claude/skills` (for sessions that don't
+include this repo as a workspace folder); `-SkipEnvVar` leaves the env var alone; `-DryRun`
+prints what would change without writing. Restart Claude Code sessions after running so the env
+var and user memory are re-read.
+
+> This supersedes the older manual setup (junctioning `.claude/rules` into `~/.claude/rules`).
+> `bootstrap.ps1` is the one and only entry point now.
 
 Optionally add this repo to `~/.claude/settings.json` so Claude can open repo files a rule
 references from other projects without a prompt (path is per-machine):
@@ -89,7 +108,7 @@ Verify wiring any time: `.\scripts\validate-workflows.ps1` (also run in CI on ev
   - `agents/rules/*.md` - tool-neutral rule source (frontmatter: `description`, `scope`, `globs`, `codex`)
   - `agents/skills/<name>/` - skill source (SKILL.md + supporting files)
   - `agents/docs/*.md` - playbooks + guides + `workflow-index.md` (the map)
-  - `agents/scripts/` - `sync-rules.ps1` (generator) + `sync-agents-md.ps1` (shim)
-- Generated outputs (do not edit): `.cursor/rules`, `.cursor/skills`, `.cursor/docs`, `.claude/rules`, `.claude/skills`, `AGENTS.md`
+  - `agents/scripts/` - `sync-rules.ps1` (generator) + `sync-agents-md.ps1` (shim) + `bootstrap.ps1` (one-time machine setup)
+- Generated outputs (do not edit): `.cursor/rules`, `.cursor/skills`, `.cursor/docs`, `.claude/rules`, `.claude/skills`, `.claude/docs`, `.claude/CLAUDE.md`, `AGENTS.md`, `agents-rules.md`, `agents-skills.md`, `agents-docs.md`
 - `scripts/` - `validate-workflows.ps1` (audit), `git-hooks/`, `new-ticket-changelog.ps1`, `notify-agent-complete.ps1`
 - `docs/` - ticket changelogs, specs (`docs/agents/`), `_templates/` (kept separate from `agents/`)

@@ -47,6 +47,13 @@ $sourceDir = Join-Path $agentsDir 'rules'
 $skillsSource = Join-Path $agentsDir 'skills'
 $docsSource = Join-Path $agentsDir 'docs'
 
+# workflow-index.md is a hybrid: hand-edited editorial + one generated "Complete inventory"
+# block (between the markers below) that this script rebuilds from the folder so nothing added
+# under agents/ can silently miss the index.
+$indexPath = Join-Path $docsSource 'workflow-index.md'
+$inventoryBegin = '<!-- BEGIN generated:inventory (agents/scripts/sync-rules.ps1) - do not edit; regenerate with sync-rules.ps1 -->'
+$inventoryEnd = '<!-- END generated:inventory -->'
+
 # Outputs (generated; each at the location its tool reads).
 $cursorDir = Join-Path $repoRoot '.cursor\rules'
 $claudeDir = Join-Path $repoRoot '.claude\rules'
@@ -54,6 +61,9 @@ $cursorSkills = Join-Path $repoRoot '.cursor\skills'
 $claudeSkills = Join-Path $repoRoot '.claude\skills'
 $cursorDocs = Join-Path $repoRoot '.cursor\docs'
 $claudeDocs = Join-Path $repoRoot '.claude\docs'
+# Claude-global manifest: a portable CLAUDE.md (relative @imports of the scope:always rules)
+# that ~/.claude/CLAUDE.md imports so the always-on rules load in every session, every repo.
+$claudeManifestPath = Join-Path $repoRoot '.claude\CLAUDE.md'
 # Compiled single-file surfaces for Codex (which can't read folders): one per source type.
 $agentsRulesPath = Join-Path $repoRoot 'agents-rules.md'
 $agentsSkillsPath = Join-Path $repoRoot 'agents-skills.md'
@@ -86,6 +96,90 @@ function Build-Concat([string]$Title, [string]$SourceDesc, [hashtable]$FileMap) 
         $parts.Add('')
     }
     return ($parts -join "`n")
+}
+
+function Get-FmField([string]$Path, [string]$Field) {
+    # First value of a frontmatter field (--- ... ---), or '' if absent.
+    $raw = ConvertTo-Lf (Read-Utf8 $Path)
+    if ($raw -match '(?s)^---\n(.*?)\n---\n') {
+        foreach ($line in ($Matches[1] -split "`n")) {
+            if ($line -match "^\s*$([regex]::Escape($Field)):\s*(.*)$") { return $Matches[1].Trim() }
+        }
+    }
+    return ''
+}
+function Get-FirstHeading([string]$Path) {
+    foreach ($line in ((ConvertTo-Lf (Read-Utf8 $Path)) -split "`n")) {
+        if ($line -match '^#\s+(.*)$') { return $Matches[1].Trim() }
+    }
+    return ''
+}
+function Get-Synopsis([string]$Path) {
+    # First non-empty line of the comment-based-help .SYNOPSIS block.
+    $lines = (ConvertTo-Lf (Read-Utf8 $Path)) -split "`n"
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '^\s*\.SYNOPSIS\s*$') {
+            for ($j = $i + 1; $j -lt $lines.Count; $j++) {
+                $t = $lines[$j].Trim()
+                if ($t -eq '') { continue }
+                if ($t -match '^\.[A-Za-z]' -or $t -match '#>') { break }
+                return $t
+            }
+        }
+    }
+    return ''
+}
+function Format-Cell([string]$Text) {
+    # One-line, table-safe: collapse newlines, escape pipes.
+    if (-not $Text) { return '' }
+    return ((($Text -replace "`n", ' ') -replace '\|', '\|').Trim())
+}
+function Build-Inventory($Rules) {
+    # The generated "Complete inventory" block: every rule/skill/doc/script + its own description,
+    # so adding anything under agents/ (or scripts/) auto-populates the index on the next sync.
+    $l = [System.Collections.Generic.List[string]]::new()
+    $l.Add($inventoryBegin)
+    $l.Add('## Complete inventory (generated)')
+    $l.Add('')
+    $l.Add('Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built from the folder + frontmatter by `agents/scripts/sync-rules.ps1`. `-Check` fails if this is stale, so nothing you add can silently miss the index. The routing/editorial sections above are hand-written.')
+    $l.Add('')
+    $l.Add('### Rules (`agents/rules/`)')
+    $l.Add('')
+    $l.Add('| Rule | Load | Purpose |')
+    $l.Add('| ---- | ---- | ------- |')
+    foreach ($r in ($Rules | Sort-Object Name)) {
+        $l.Add("| ``$($r.Name)`` | $($r.Scope) | $(Format-Cell $r.Description) |")
+    }
+    $l.Add('')
+    $l.Add('### Skills (`agents/skills/`)')
+    $l.Add('')
+    $l.Add('| Skill | Purpose |')
+    $l.Add('| ----- | ------- |')
+    foreach ($d in (Get-ChildItem -LiteralPath $skillsSource -Directory -ErrorAction SilentlyContinue | Sort-Object Name)) {
+        $l.Add("| ``$($d.Name)`` | $(Format-Cell (Get-FmField (Join-Path $d.FullName 'SKILL.md') 'description')) |")
+    }
+    $l.Add('')
+    $l.Add('### Docs & playbooks (`agents/docs/`)')
+    $l.Add('')
+    $l.Add('| Doc | About |')
+    $l.Add('| --- | ----- |')
+    foreach ($f in (Get-ChildItem -LiteralPath $docsSource -Filter '*.md' -File -ErrorAction SilentlyContinue | Sort-Object Name)) {
+        if ($f.Name -eq 'workflow-index.md') { continue }
+        $l.Add("| ``$($f.Name)`` | $(Format-Cell (Get-FirstHeading $f.FullName)) |")
+    }
+    $l.Add('')
+    $l.Add('### Scripts (`scripts/`, `agents/scripts/`)')
+    $l.Add('')
+    $l.Add('| Script | Purpose |')
+    $l.Add('| ------ | ------- |')
+    $scriptFiles = @()
+    $scriptFiles += Get-ChildItem -LiteralPath (Join-Path $repoRoot 'scripts') -Filter '*.ps1' -File -ErrorAction SilentlyContinue
+    $scriptFiles += Get-ChildItem -LiteralPath (Join-Path $agentsDir 'scripts') -Filter '*.ps1' -File -ErrorAction SilentlyContinue
+    foreach ($s in ($scriptFiles | Sort-Object Name)) {
+        $l.Add("| ``$($s.Name)`` | $(Format-Cell (Get-Synopsis $s.FullName)) |")
+    }
+    $l.Add($inventoryEnd)
+    return ($l -join "`n")
 }
 
 function Get-Rules {
@@ -154,6 +248,26 @@ function Build-Agents($Rules) {
     return ($parts -join "`n")
 }
 
+function Build-ClaudeManifest($Rules) {
+    # Portable manifest: relative @imports resolve against .claude/, so no absolute paths live here.
+    # The only machine-specific line is the @import of this file from ~/.claude/CLAUDE.md (bootstrap.ps1).
+    $lines = [System.Collections.Generic.List[string]]::new()
+    $lines.Add('<!-- generated from agents/ by scripts/sync-rules.ps1; edit the sources under agents/, not this file -->')
+    $lines.Add('# dustin-thomason always-on context')
+    $lines.Add('')
+    $lines.Add('Imported by `~/.claude/CLAUDE.md` (wired by `agents/scripts/bootstrap.ps1`) so it loads in every')
+    $lines.Add('Claude Code session, in every repo. Pulls in the scope:always rules plus the workflow index;')
+    $lines.Add('scope:scoped rules stay on-demand via `.claude/rules/` path matching.')
+    $lines.Add('')
+    foreach ($r in ($Rules | Where-Object { $_.Scope -eq 'always' } | Sort-Object Name)) {
+        $lines.Add("@rules/$($r.Name).md")
+    }
+    if (Test-Path -LiteralPath (Join-Path $docsSource 'workflow-index.md')) {
+        $lines.Add('@docs/workflow-index.md')
+    }
+    return ($lines -join "`n")
+}
+
 function Build-Cursor($Rule) {
     $lines = [System.Collections.Generic.List[string]]::new()
     $lines.Add('---')
@@ -191,6 +305,15 @@ $rules = Get-Rules
 if ($rules.Count -eq 0) { throw "No rules found in $sourceDir." }
 
 $agentsContent = (ConvertTo-Lf (Build-Agents $rules)).TrimEnd() + "`n"
+$claudeManifestContent = (ConvertTo-Lf (Build-ClaudeManifest $rules)).TrimEnd() + "`n"
+
+# workflow-index.md: strip any prior generated inventory block, append a freshly built one.
+# Idempotent - the block is replaced, never duplicated. Editorial content above is untouched.
+$inventoryBlock = (ConvertTo-Lf (Build-Inventory $rules)).Trim()
+$currentIndex = if (Test-Path -LiteralPath $indexPath) { ConvertTo-Lf (Read-Utf8 $indexPath) } else { '' }
+$stripPattern = "(?s)\s*" + [regex]::Escape($inventoryBegin) + ".*?" + [regex]::Escape($inventoryEnd)
+$baseIndex = ([regex]::Replace($currentIndex, $stripPattern, '')).TrimEnd()
+$expectedIndexContent = ($baseIndex + "`n`n" + $inventoryBlock).TrimEnd() + "`n"
 
 $cursorExpected = @{}  # <name>.mdc -> content
 $claudeExpected = @{}  # <name>.md  -> content
@@ -214,7 +337,13 @@ $docExpected = @{}
 if (Test-Path -LiteralPath $docsSource) {
     foreach ($f in (Get-ChildItem -LiteralPath $docsSource -Recurse -File)) {
         $rel = ($f.FullName.Substring($docsSource.Length).TrimStart('\', '/')) -replace '\\', '/'
-        $docExpected[$rel] = (ConvertTo-Lf (Read-Utf8 $f.FullName)).TrimEnd() + "`n"
+        # The index carries the generated inventory block; mirror the injected form, not raw disk.
+        if ($rel -eq 'workflow-index.md') {
+            $docExpected[$rel] = $expectedIndexContent
+        }
+        else {
+            $docExpected[$rel] = (ConvertTo-Lf (Read-Utf8 $f.FullName)).TrimEnd() + "`n"
+        }
     }
 }
 
@@ -262,6 +391,8 @@ if ($Check) {
             }
         }
     }
+    Test-Artifact $indexPath $expectedIndexContent $stale 'agents/docs/workflow-index.md (inventory block)'
+    Test-Artifact $claudeManifestPath $claudeManifestContent $stale '.claude/CLAUDE.md'
     Test-Artifact $agentsRulesPath $agentsContent $stale 'agents-rules.md'
     Test-Artifact $agentsSkillsPath $agentsSkillsContent $stale 'agents-skills.md'
     Test-Artifact $agentsDocsPath $agentsDocsContent $stale 'agents-docs.md'
@@ -288,6 +419,9 @@ foreach ($dir in @($cursorDir, $claudeDir, $cursorDocs, $claudeDocs)) {
     if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 }
 
+# Write the injected index back to its source (hand-edited editorial + regenerated inventory block).
+Write-Utf8NoBom $indexPath $expectedIndexContent
+Write-Utf8NoBom $claudeManifestPath $claudeManifestContent
 Write-Utf8NoBom $agentsRulesPath $agentsContent
 Write-Utf8NoBom $agentsSkillsPath $agentsSkillsContent
 Write-Utf8NoBom $agentsDocsPath $agentsDocsContent
@@ -346,3 +480,6 @@ $codexCount = @($rules | Where-Object { $_.Codex -eq 'include' }).Count
 $skillCount = @(Get-ChildItem -LiteralPath $skillsSource -Directory -ErrorAction SilentlyContinue).Count
 Write-Host "Mirrored to .cursor + .claude: rules ($($cursorExpected.Count)), skills ($skillCount), docs ($($docExpected.Count))."
 Write-Host "Compiled for Codex: agents-rules.md ($codexCount rules), agents-skills.md, agents-docs.md."
+$alwaysCount = @($rules | Where-Object { $_.Scope -eq 'always' }).Count
+Write-Host "Claude-global manifest: .claude/CLAUDE.md ($alwaysCount always-on rules + workflow index)."
+Write-Host "Rebuilt inventory block in agents/docs/workflow-index.md (rules, skills, docs, scripts)."

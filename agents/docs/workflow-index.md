@@ -202,3 +202,63 @@ Checks: required `alwaysApply` rules, expected scripts, playbooks, router links,
 | Agent finished substantive work | `agent-completion-notification` → `notify-agent-complete.ps1` |
 
 If a new workflow type appears (e.g. release, hotfix), add **one row** above, **one** playbook, update `personal-methodology.mdc`, run `validate-workflows.ps1`.
+
+<!-- BEGIN generated:inventory (agents/scripts/sync-rules.ps1) - do not edit; regenerate with sync-rules.ps1 -->
+## Complete inventory (generated)
+
+Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built from the folder + frontmatter by `agents/scripts/sync-rules.ps1`. `-Check` fails if this is stale, so nothing you add can silently miss the index. The routing/editorial sections above are hand-written.
+
+### Rules (`agents/rules/`)
+
+| Rule | Load | Purpose |
+| ---- | ---- | ------- |
+| `agent-completion-notification` | always | At the end of substantive agent work in dustin-thomason, run notify-agent-complete.ps1. |
+| `agents-sync` | scoped | After editing rules or skills in dustin-thomason, regenerate all downstream outputs (.cursor/rules, .claude/rules, .claude/CLAUDE.md, AGENTS.md) with sync-rules.ps1. |
+| `browser-loop-guardrails` | always | Boundary rules for a runtime browser-observation loop (Playwright/CDP/MCP) and for any CSS/layout/interaction debugging — fix the responsible cascade rule not the symptom, explain magic constants, keep independent constants independent, treat a green check as necessary-not-sufficient, and escalate after bounded iteration instead of spiraling. |
+| `build-implementation-guardrails` | always | Mandatory tests, changelog, Swagger (when applicable), architecture guardrails for Codex/agent builds — shipping checklist, coverage, non-regression, graceful failure, SOLID shaping, avoid raw Postgres/SQL unless unavoidable. |
+| `context-fanout` | always | Prefer read-only exploration subagents for multi-area investigation so the parent context stays compact and focused. |
+| `git-commit-workflow` | always | Standard commit/push habit for dustin-thomason—runs to completion via npm audit/lint/serial-test gates (when applicable), git status → add → commit → push when an agent pushes work here or in sibling Node repos. |
+| `personal-methodology` | always | Routes dustin-thomason personal standards into any workspace repo (Atlas, Callisto, etc.) without copying rules there or requiring @-mentions. |
+| `problem-requirement-solution` | always | Coherent implementation philosophy — reason in order Problem → Requirement → Solution so the line of thinking stays clear for the end user, in implementations, plans, specs, and changelog/PR narratives. |
+| `source-truth` | always | Stop and ask for the source artifact rather than inferring exact labels, mappings, wording, or evidence from memory or partial context. |
+| `spec-writing` | always | Required sections when authoring epic and story specs (artifacts, schema, migrations, DTOs, projections) — any repo in the workspace. |
+| `ticket-changelog` | always | Changelog alignment at task start; scaffold on branch start; verbatim requirements on first pass; session log before every PlanetDepos commit. |
+| `workflow-housekeeping` | scoped | When workflow docs or rules change in dustin-thomason, sync workflow-index and run validate-workflows.ps1. |
+
+### Skills (`agents/skills/`)
+
+| Skill | Purpose |
+| ----- | ------- |
+| `grill-me` | Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when user wants to stress-test a plan, get grilled on their design, or mentions "grill me". |
+| `investigation` | The method for investigating a problem and its proposed fix before committing to it — in any domain (software, workflow, policy, process, etc.). Ground in real instances, classify the problem, lock acceptance criteria, trace why it exists, re-confirm the class, then stress-test the solution against scale, generalization, and fit. Emits an Investigation Report (see the investigation-report template): verdict, problem class, assumptions-to-test, a happy/negative validation plan, recommendation with gates, and open variables to collect. Use when scoping a change, validating assumptions, writing a spec, or when the user says "investigate". |
+| `workflow-housekeeping` | Audit dustin-thomason workflow docs, rules, and index for drift, duplicates, and missing entries. Use when user asks to housekeeping workflows, sync workflow-index, validate personal Cursor setup, or after adding a new playbook or rule. |
+| `write-spec` | Create or update epic/story specs and dev notes for Callisto/Atlas. Use when the user asks to write a spec, author PRDV ticket documentation, create a dev note for estimation, or extend specs under a systems/ wiki tree. |
+
+### Docs & playbooks (`agents/docs/`)
+
+| Doc | About |
+| --- | ----- |
+| `browser-loop-setup.md` | Browser-loop setup (dustin-thomason) |
+| `investigation-question-coverage.md` | Investigation method — question coverage checklist |
+| `investigation-report.md` | Investigation Report: <short title> |
+| `investigation-software-gaps.md` | Investigation method — software lens: candidate additions (staging) |
+| `new-branch-get-started.md` | Start a new branch |
+| `problem-check.md` | Problem Check — is the question even the right question? |
+| `pull-request-workflow.md` | Pull request workflow (reference) |
+| `README.md` | Cursor docs (playbooks) |
+| `session-start.md` | Session start (optional) |
+| `ticket-changelog-workflow.md` | Ticket changelog workflow |
+| `wiki-spec-authoring.md` | Wiki spec authoring (Callisto / Atlas) |
+
+### Scripts (`scripts/`, `agents/scripts/`)
+
+| Script | Purpose |
+| ------ | ------- |
+| `bootstrap.ps1` | One-time per-machine baseline: wire dustin-thomason's agent rules into Claude Code globally. |
+| `gitcommit.ps1` |  |
+| `new-ticket-changelog.ps1` | Scaffold docs/<system>/PRDV-XXXXX-changelog.md from the ticket template. |
+| `notify-agent-complete.ps1` | POST agent session completion to a Power Automate manual-trigger webhook. |
+| `sync-agents-md.ps1` | Backwards-compatible shim. The generator is now scripts/sync-rules.ps1, which produces |
+| `sync-rules.ps1` | Generate every tool-specific rule artifact from the single neutral source of truth (rules/*.md). |
+| `validate-workflows.ps1` | Audits dustin-thomason workflow wiring: rules, playbooks, skills, scripts, duplicates. |
+<!-- END generated:inventory -->

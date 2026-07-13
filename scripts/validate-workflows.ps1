@@ -27,16 +27,13 @@ $scaffoldPath = Join-Path $repoRoot 'scripts\new-ticket-changelog.ps1'
 $routerPath = Join-Path $rulesDir 'personal-methodology.mdc'
 $readmePath = Join-Path $repoRoot 'README.md'
 
+# Derived from the source of truth, not hand-listed: every rule whose frontmatter is scope: always.
+# This is what keeps the validator itself from drifting when a rule is added/retired.
+$rulesSourceDir = Join-Path $repoRoot 'agents\rules'
 $requiredAlwaysApply = @(
-    'agent-completion-notification',
-    'personal-methodology',
-    'spec-writing',
-    'git-commit-workflow',
-    'ticket-changelog',
-    'build-implementation-guardrails',
-    'context-fanout',
-    'problem-requirement-solution',
-    'browser-loop-guardrails'
+    Get-ChildItem -LiteralPath $rulesSourceDir -Filter '*.md' -File -ErrorAction SilentlyContinue |
+        Where-Object { ((Get-Content -LiteralPath $_.FullName -TotalCount 10) -join "`n") -match 'scope:\s*always' } |
+        ForEach-Object { $_.BaseName } | Sort-Object
 )
 
 $expectedScripts = @(
@@ -46,7 +43,8 @@ $expectedScripts = @(
 )
 $expectedAgentScripts = @(
     'sync-rules.ps1',
-    'sync-agents-md.ps1'
+    'sync-agents-md.ps1',
+    'bootstrap.ps1'
 )
 
 $requiredPlaybooks = @(
@@ -55,10 +53,10 @@ $requiredPlaybooks = @(
     'browser-loop-setup.md'
 )
 
+# Derived from the folder, not hand-listed: every skill directory under agents/skills/.
 $expectedSkills = @(
-    'grill-me',
-    'write-spec',
-    'workflow-housekeeping'
+    Get-ChildItem -LiteralPath $skillsDir -Directory -ErrorAction SilentlyContinue |
+        ForEach-Object { $_.Name } | Sort-Object
 )
 
 foreach ($path in @($indexPath, $templatePath, $scaffoldPath, $routerPath, $readmePath)) {
