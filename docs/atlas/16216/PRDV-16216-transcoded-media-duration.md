@@ -1,5 +1,7 @@
 # Investigation Report: PRDV-16216 — Media duration for Nova-transcoded files
 
+> **SUPERSEDED (recommendation only), 2026-07-14** — after principal-dev review, the solution direction changed: see `PRDV-16216-lookup-display-investigation.md` (Callisto read-time lookup for 16216 + separate Nova duration-validation ticket; no protocol change). The evidence and path traces in this report remain valid and are cited by the new report.
+
 > Delivered results of the `investigation` method run on 2026-07-13. Source of truth for the spec that follows.
 
 ## Metadata
@@ -107,7 +109,7 @@ The ticket is viable and small in code terms, but it is **not an Atlas ticket**.
 
 | Alternative | Rejected because |
 |-------------|------------------|
-| Callisto copies `sourceFile.length` → derived row (no Nova/contract change) | **False parity** — values identical by construction; a real runtime mismatch could never surface. Also wrong if transcode ever alters runtime. Fails the parity requirement outright. |
+| Callisto copies `sourceFile.length` → derived row (no Nova/contract change) | **Rejected — legal-deliverable integrity (principal-dev ruling).** A copied value equals the source by construction, so it *asserts* the deliverable matches the source without ever *verifying* it. In a legal videography pipeline a truncated/incomplete transcode = lost evidence = potential lost client; the length must be independently measurable, not assumed. Cheapest path (one line, source `File` already loaded in the handler) but non-negotiably insufficient. |
 | Callisto probes the transcoded file itself (S3 download + ffprobe in Callisto) | Gives Callisto a media-tooling responsibility it doesn't have; Nova already has ffprobe *and* the file on local disk at the exact moment — zero marginal cost there. |
 | Atlas computes duration at display/preview time | Requires fetching media to the client to read metadata; expensive, wrong layer, breaks for restricted files. |
 | New `v2` event instead of additive field | No v2 precedent anywhere in the package (19 v1 dirs, zero v2); additive-optional is backward compatible and doesn't force simultaneous consumer upgrades. Gate: protocol owner sign-off. |
@@ -175,8 +177,8 @@ Gate commands: Jest backends `npm test -- --runInBand`; Atlas `npx vitest run --
 
 - **Decisions (settled this investigation):**
   1. Reuse the existing `length` → `formatMediaDuration` path; no new UI/format/column.
-  2. Nova probes the **output** (parity requires independent measurement; copying is disqualified).
-  3. Parity = visual comparison of two independently measured rows — created *by* this ticket, not deferred.
+  2. Nova probes and emits the **output** duration **only**; the stored source `File.length` is the established reference (Nova does not re-communicate it). Independent measurement is a **legal-deliverable-integrity non-negotiable** (principal-dev ruling): the deliverable length must be *verifiable* against the source, never copied/assumed.
+  3. Verification = visual comparison of the stored source length vs the converted length in the existing two-row (original/converted) view — no Atlas change.
   4. Backfill = separate ticket, with the copy≠parity caveat recorded.
   5. Contract change = additive optional `duration` (integer seconds) on the completed event, pending protocol-owner approval.
 - **Recommendation (in order):**
@@ -191,6 +193,7 @@ Gate commands: Jest backends `npm test -- --runInBand`; Atlas `npx vitest run --
 - [ ] Version anomaly `^1.0.5` declared vs `0.2.13` installed — owner: Nova dev(s) / dev-ops
 - [ ] Is `video-transcoded` (sibling event) consumed by any system outside this workspace? — owner: protocol owner
 - [ ] Named requesting user / ops group for the parity use case — owner: product
+- [ ] **Source-reference coverage** — comparison relies on the stored source `File.length`, which the investigation found is captured **only** browser-side (null for non-web formats: `.mts`/AVCHD, `.mkv`, `.avi`, `.wmv`…, common in legal video). Larry indicates capture happens "through other means" not found in the investigation. Confirm a non-browser source capture exists; if not, the verification has a blind spot for exactly those formats (output measured, source blank → nothing to compare). — owner: Dustin / Larry
 - [ ] Backfill: wanted? residual-gap + display-only caveat accepted? — owner: product
 - [ ] Explicit parity-indicator UI as a future story? — owner: product
 - [ ] Confirm Nova is video-only (audio N/A) — owner: Nova dev(s)

@@ -62,12 +62,16 @@ Cross-session implementation memory for the ClickUpWideLayout browser extension.
 - `popup.js` owns the active popup copy flow.
 - Existing task copy behavior remains `id - title` plus URL when available.
 - Markdown copy requires `id`, `title`, and resolved task URL; output shape is exactly `# [title - id](url)`.
+- Toggle layout flow now waits for a background response before the popup closes.
+- `background.js` centralizes toggle state changes and returns `{ ok, enabled }` or `{ ok, error }` for popup requests.
+- `content.js` restores storage-backed enabled state only after `window.__CU_LAYOUT_API__` exists.
 - No package file or automated test harness exists in the extension repo.
 
 ## Plans
 
 | Date | Plan | Status | Summary |
 | ---- | ---- | ------ | ------- |
+| 2026-07-14 | Fix toggle UI sync | implemented | Make popup toggle wait for background completion; centralize toggle state/apply logic; move content storage restore after API creation. |
 | 2026-07-01 | Add Markdown copy button | implemented | Share popup task lookup and clipboard helpers; add Markdown heading-link copy action requiring URL. |
 
 ## Attempt History
@@ -76,6 +80,27 @@ Cross-session implementation memory for the ClickUpWideLayout browser extension.
 - 2026-07-01: Rejected fallback `# ${title} - ${id}` when URL is missing; requirement only supports heading link Markdown.
 
 ## Session Log
+
+### 2026-07-14T00:00:00-04:00 - ClickUpWideLayout
+
+- Summary: Fixed first-click toggle UI synchronization for the ClickUp layout extension.
+- Files/areas:
+  - `popup.js`: toggle click now queries the active tab, sends `{ action: "toggle-layout", tabId }`, waits for the background response, disables the button while pending, and shows status on failure.
+  - `background.js`: centralized toggle state changes through one async path shared by popup messages and action clicks; script/storage failures now return `{ ok: false, error }` to the popup.
+  - `content.js`: moved storage restore and live sync listeners after `window.__CU_LAYOUT_API__` is assigned so first-load restore can call `enable()` immediately.
+- User-visible impact:
+  - The popup no longer closes before the layout toggle finishes applying.
+  - First-click enabled/disabled state should immediately match the ClickUp pane layout and extension badge state.
+  - Existing `Copy ID - Title` and `Copy as Markdown` popup actions were not intentionally changed.
+- Tests run:
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | syntax | `node --check popup.js` | popup toggle and copy wiring | pass | - |
+  | syntax | `node --check background.js` | background toggle/message flow | pass | - |
+  | syntax | `node --check content.js` | injected layout API and storage sync | pass | - |
+- Manual validation: not run in this agent session; requires reloading the unpacked extension in Chrome and exercising a live ClickUp task page.
+- Tests added/updated: not added; repo has no package/test harness and the fix is native MV3 extension wiring.
+- Regression impact: intended to affect only the layout toggle path; copy flows and manifest permissions unchanged.
 
 ### 2026-07-01T16:28:25Z - ClickUpWideLayout
 

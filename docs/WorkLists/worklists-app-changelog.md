@@ -36,6 +36,36 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-07-14T18:17:13Z - WorkLists
+
+- Summary: Followed up on markdown checklist indentation after the screenshot showed child bullet text still aligned with the parent checklist label.
+- Problem: The prior fix reset nested checklist item margins, but normal child bullets under a checklist parent still used only nested-list padding. Because browser bullets render with `list-style-position: outside`, the child bullet marker moved left and the child text landed in the same column as the parent checklist label.
+- Requirement: For input like `- [x] Generate Investigation Report...` followed by `  - 07/13/26`, the child bullet text must start visibly to the right of the parent checklist label text.
+- Solution: Added an explicit nested-list `margin-left` in addition to `padding-left` for `ul`/`ol` directly under `.markdown-task-list-item` in both card read-mode markdown and notes-pane markdown. Kept the parser unchanged.
+- Files/areas: `public/todoliststyles2.css`, `tests/markdown-renderer.test.js`, canonical changelog.
+- User-visible impact: Child bullets beneath checklist parents now render as a true visual sub-level instead of sharing the parent label column.
+- Tests run: `node --test tests\markdown-renderer.test.js` passed, 23 tests; `npx prettier --check public\todoliststyles2.css tests\markdown-renderer.test.js` passed; one-off Playwright layout measurement for the reported sample showed child text 19px to the right of the parent checklist label text; `npm test` passed 526 / failed 1.
+- Tests added/updated: Strengthened CSS source-contract assertions so nested lists under checklist items require both `margin-left` and `padding-left` on card and notes markdown surfaces.
+- Regression impact: CSS-only visual spacing correction; no parser, persistence, API, or OpenAPI changes.
+- API docs: Not relevant; no HTTP route, payload, schema, auth, or OpenAPI metadata changed.
+- Tooling gates: Focused markdown renderer suite, touched-file Prettier check, and the one-off browser geometry check passed. Full `npm test` still carries the pre-existing unrelated `tests/gemma-ui.test.js:417` voice-session shortcut scope failure.
+
+### 2026-07-14T17:46:07Z - WorkLists
+
+- Summary: Fixed markdown checklist sub-bullet indentation for rendered cards and notes.
+- Problem: Nested bullets or nested checklist items directly under a markdown checklist parent rendered structurally as nested lists, but the checklist CSS applied a negative left margin to every `.markdown-task-list-item`, including nested items. That visually flattened child items to the parent margin.
+- Requirement: Preserve hierarchy for child bullets/checklist items under checklist parents while keeping existing top-level checklist checkbox alignment. Do not add markdown libraries or change the parser unless necessary.
+- Solution: Kept the existing `MarkdownRenderer` parser untouched. Scoped the negative checklist margin to top-level rendered task-list items in card content and notes-pane markdown, reset nested checklist item margins to `0`, and added nested `ul`/`ol` spacing/padding under checklist items so children retain visible indentation.
+- Evidence used: The app-local changelog points to this canonical changelog; the Notes Initiative UI/UX checklist requires markdown lists and checkboxes to render without breaking layout; the 2026-05-27 entry introduced rendered markdown checkboxes in `public/markdownRenderer.js` and `public/todoliststyles2.css`. A local render sample confirmed `- [ ] Parent\n  - Child` already produced nested `<ul>` markup, so the fix was CSS-only.
+- Files/areas: `public/todoliststyles2.css`, `tests/markdown-renderer.test.js`, canonical changelog.
+- User-visible impact: Sub-bullets and nested checklist items under a checklist parent now appear visually indented beneath the parent in both card read-mode markdown and notes-pane markdown.
+- Tests run: `node --test tests\markdown-renderer.test.js` passed, 23 tests; `npx prettier --check public\todoliststyles2.css tests\markdown-renderer.test.js` passed; `npm test` passed 526 / failed 1.
+- Tests added/updated: Added exact renderer regression coverage for checklist parent + normal child bullet and strengthened nested checklist source-line coverage with exact markup. Updated CSS source-contract assertions for top-level-only negative checklist margins and nested margin resets in both card and notes markdown surfaces.
+- Regression impact: CSS-only rendering correction; no parser, persistence, API, or OpenAPI changes.
+- API docs: Not relevant; no HTTP route, payload, schema, auth, or OpenAPI metadata changed.
+- Tooling gates: Focused markdown renderer suite and touched-file Prettier check passed. Full `npm test` carries the pre-existing unrelated `tests/gemma-ui.test.js:417` voice-session shortcut scope failure documented in recent entries; not touched by this CSS/test change.
+- Conflicts / exceptions: `git status --short` remains unusable because the repo reports a loose-object permission error and `fatal: bad object HEAD`; implementation avoided relying on git state.
+
 ### 2026-07-01T16:08:26Z - WorkLists
 
 - Summary: Fixed a regression where selecting any item in the notes-pane card action (ellipsis) menu collapsed the entire notes pane.
@@ -47,12 +77,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: The notes pane now stays open when you pick Copy, Copy All, Refine, Voice, or Collapse all / Expand all from the card's "…" menu; the action runs with the pane intact. Delete still deletes the card and closes the pane; the × Close button still closes it.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | syntax | `node --check public/todolist2.js` | Board script syntax | pass | - |
-  | format | `npx prettier --check public/todolist2.js tests/context-windows.test.js` | Touched files | pass | - |
-  | tests | `node --test tests/context-windows.test.js` | Notes-pane context/dismissal contract | pass, 26 tests | - |
-  | tests | `node --test` | Full WorkLists suite | 525 pass / 1 fail | Same pre-existing unrelated `tests/gemma-ui.test.js:417` voice-session shortcut scope failure; not touched by this work. |
+  | Gate   | Command                                                                  | Scope                                 | Result            | Exception / risk                                                                                                         |
+  | ------ | ------------------------------------------------------------------------ | ------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
+  | syntax | `node --check public/todolist2.js`                                       | Board script syntax                   | pass              | -                                                                                                                        |
+  | format | `npx prettier --check public/todolist2.js tests/context-windows.test.js` | Touched files                         | pass              | -                                                                                                                        |
+  | tests  | `node --test tests/context-windows.test.js`                              | Notes-pane context/dismissal contract | pass, 26 tests    | -                                                                                                                        |
+  | tests  | `node --test`                                                            | Full WorkLists suite                  | 525 pass / 1 fail | Same pre-existing unrelated `tests/gemma-ui.test.js:417` voice-session shortcut scope failure; not touched by this work. |
 
 - Tests added/updated: `tests/context-windows.test.js` — new case "keeps the card action menu from dismissing the notes pane on item selection" asserting `isNotesPaneOpenTarget`'s allowlist now includes `.card-action-menu--notes-pane`.
 - Regression impact: One-selector addition to the dismissal allowlist; scoped to the notes-pane card action menu. No change to board-card menus, the outside-dismissal listener wiring, or `cardActions.js`. Explicit close paths (Delete, Close button) verified unchanged. Full suite delta is only the +1 new passing test.
@@ -74,12 +104,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Collapsing a note via its chevron no longer keeps that note's icon row visible — moving the mouse away hides the icons as expected. Collapse-all/Expand-all is now a menu item inside the notes-pane header "…" dropdown (labelled "Collapse all notes" / "Expand all notes"), appearing only when notes are present, instead of an always-visible header button.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | syntax | `node --check public/todolist2.js public/cardActions.js` | Board + card-actions module syntax | pass | - |
-  | format | `npx prettier --check` (7 touched files) | Touched files | pass | - |
-  | tests | `node --test tests/notes-collapse.test.js tests/card-actions.test.js tests/context-windows.test.js` | Collapse + card-action-menu + notes-pane context contracts | pass, 51 tests | - |
-  | tests | `node --test` | Full WorkLists suite | 524 pass / 1 fail | Same pre-existing unrelated `tests/gemma-ui.test.js:417` voice-session shortcut scope failure documented below; not touched by this work. |
+  | Gate   | Command                                                                                             | Scope                                                      | Result            | Exception / risk                                                                                                                          |
+  | ------ | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+  | syntax | `node --check public/todolist2.js public/cardActions.js`                                            | Board + card-actions module syntax                         | pass              | -                                                                                                                                         |
+  | format | `npx prettier --check` (7 touched files)                                                            | Touched files                                              | pass              | -                                                                                                                                         |
+  | tests  | `node --test tests/notes-collapse.test.js tests/card-actions.test.js tests/context-windows.test.js` | Collapse + card-action-menu + notes-pane context contracts | pass, 51 tests    | -                                                                                                                                         |
+  | tests  | `node --test`                                                                                       | Full WorkLists suite                                       | 524 pass / 1 fail | Same pre-existing unrelated `tests/gemma-ui.test.js:417` voice-session shortcut scope failure documented below; not touched by this work. |
 
 - Tests added/updated: `tests/notes-collapse.test.js` reworked — added chevron focus-prevention (mousedown preventDefault) assertion and dropdown-menu assertions (`getNotesPaneCollapseMenuActions`, `collapse-all-notes` id, label flip, `onSelect → toggleCollapseAllNotes`, editing-skip) and negative assertions that the old `notes-pane-collapse-all` button and `syncCollapseAllButton` are gone. `tests/card-actions.test.js` — new case asserting `extraActions` render with `data-card-action-extra`, run their own `onSelect`, close the menu, and are absent from the shared definitions. `tests/context-windows.test.js` — dropped the removed header-button assertion; kept the chevron label assertion.
 - Regression impact: `cardActions.js` change is additive — `extraActions` defaults to none, so board-card menus and their `card-actions.test.js` contracts are unchanged (verified: full card-actions suite green). Notes-pane header menu now carries one contextual item computed at open time. Focus-prevention is scoped to the collapse chevron only. No persistence or API change.
@@ -105,12 +135,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Hovering a saved note now shows a chevron that collapses it to its timestamp header plus one preview line (and back); clicking a collapsed note's body opens the editor already expanded; a new header button collapses/expands all notes at once and reads "Expand all" when everything is collapsed. All collapse state resets when the window/tab reloads.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | syntax | `node --check public/todolist2.js` | Board script syntax | pass | - |
-  | format | `npx prettier --check public/todolist2.js public/todoliststyles2.css public/index.html tests/context-windows.test.js tests/notes-collapse.test.js` | Touched files | pass | - |
-  | tests | `node --test tests/context-windows.test.js tests/notes-collapse.test.js` | Notes-pane context + new collapse contract | pass, 32 tests | - |
-  | tests | `node --test` | Full WorkLists suite | 521 pass / 1 fail | Pre-existing unrelated failure `tests/gemma-ui.test.js:417` (voice-session shortcut scope mismatch from an earlier dirty `public/todolist2.js` shortcut edit); documented in the 2026-07-01T13:46:17Z entry. Not touched by this work. |
+  | Gate   | Command                                                                                                                                            | Scope                                      | Result            | Exception / risk                                                                                                                                                                                                                       |
+  | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | syntax | `node --check public/todolist2.js`                                                                                                                 | Board script syntax                        | pass              | -                                                                                                                                                                                                                                      |
+  | format | `npx prettier --check public/todolist2.js public/todoliststyles2.css public/index.html tests/context-windows.test.js tests/notes-collapse.test.js` | Touched files                              | pass              | -                                                                                                                                                                                                                                      |
+  | tests  | `node --test tests/context-windows.test.js tests/notes-collapse.test.js`                                                                           | Notes-pane context + new collapse contract | pass, 32 tests    | -                                                                                                                                                                                                                                      |
+  | tests  | `node --test`                                                                                                                                      | Full WorkLists suite                       | 521 pass / 1 fail | Pre-existing unrelated failure `tests/gemma-ui.test.js:417` (voice-session shortcut scope mismatch from an earlier dirty `public/todolist2.js` shortcut edit); documented in the 2026-07-01T13:46:17Z entry. Not touched by this work. |
 
 - Tests added/updated: New `tests/notes-collapse.test.js` (7 source-contract cases — session-only Set with no persistence, chevron markup, re-apply on render, toggle-before-edit ordering, re-expand on edit, Collapse-all skipping edit mode + label/icon flip, collapsed clamp CSS). Extended `tests/context-windows.test.js` for the chevron `aria-label` and the header Collapse-all button. Live DOM geometry (clamp height, hover reveal) left to manual/browser check, consistent with prior notes-pane source-contract coverage.
 - Regression impact: Scoped to saved-note rendering + the notes-pane list click handler and header. The card-text preview render and its `repeat(5,26px)` grid are untouched; note actions use a flex row so the added chevron needs no grid change. New click branch returns early and precedes existing branches; no persistence path or API added. Focused notes-pane suites green; full-suite delta is only the +7 new passing tests (514→521), same single pre-existing failure.
@@ -133,21 +163,20 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Hovering or focusing card text or a saved note in the notes pane now shows the existing edit/AI/copy/delete quick actions plus a quiet three-dot placeholder for future actions.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | syntax | `node --check public\todolist2.js` | Board script syntax | pass | - |
-  | format | `npx prettier --check public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js` | Touched files | pass | - |
-  | tests | `node --test tests\context-windows.test.js` | Notes-pane context/action source contract | pass, 25 tests | - |
-  | tests | `node --test tests\context-windows.test.js tests\card-actions.test.js` | Notes-pane context plus existing card action menu contracts | pass, 41 tests | - |
-  | lint | `npm run lint` | Repo Prettier gate | blocked | Pre-existing dirty `tests/browser-notes-smoke.js` formatting warning; touched files passed targeted Prettier check. |
-  | tests | `node --test` | Full WorkLists suite | blocked, 514 pass / 1 fail | Pre-existing shortcut-context mismatch in `tests/gemma-ui.test.js` caused by earlier dirty `public/todolist2.js` shortcut changes; focused placeholder suites passed. |
+  | Gate   | Command                                                                                             | Scope                                                       | Result                     | Exception / risk                                                                                                                                                      |
+  | ------ | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | syntax | `node --check public\todolist2.js`                                                                  | Board script syntax                                         | pass                       | -                                                                                                                                                                     |
+  | format | `npx prettier --check public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js` | Touched files                                               | pass                       | -                                                                                                                                                                     |
+  | tests  | `node --test tests\context-windows.test.js`                                                         | Notes-pane context/action source contract                   | pass, 25 tests             | -                                                                                                                                                                     |
+  | tests  | `node --test tests\context-windows.test.js tests\card-actions.test.js`                              | Notes-pane context plus existing card action menu contracts | pass, 41 tests             | -                                                                                                                                                                     |
+  | lint   | `npm run lint`                                                                                      | Repo Prettier gate                                          | blocked                    | Pre-existing dirty `tests/browser-notes-smoke.js` formatting warning; touched files passed targeted Prettier check.                                                   |
+  | tests  | `node --test`                                                                                       | Full WorkLists suite                                        | blocked, 514 pass / 1 fail | Pre-existing shortcut-context mismatch in `tests/gemma-ui.test.js` caused by earlier dirty `public/todolist2.js` shortcut changes; focused placeholder suites passed. |
 
 - Tests added/updated: Updated `tests/context-windows.test.js` for the new placeholder labels, disabled ellipsis icon, five fixed action slots, and unchanged hover/focus reveal behavior.
 - Regression impact: UI-only notes-pane placeholder. Existing edit, AI refine, copy, and delete controls remain in place and use unchanged data attributes/handlers; no new menu behavior or persistence path was added. Adjacent card action menu contracts passed.
 - API docs: Not relevant: UI-only notes-pane affordance; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Focused syntax/format/tests passed. Repo lint and full suite are blocked by pre-existing dirty-file/test issues noted above.
 - Conflicts / exceptions: Pre-existing unrelated dirty files remain and were not reverted: `tests/browser-notes-smoke.js`, `tests/shortcut-registry.test.js`, plus earlier shortcut edits in `public/todolist2.js` that predated this placeholder work.
-
 
 ### 2026-06-30T16:44:55Z - WorkLists
 
@@ -161,6 +190,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Updated the shortcut contract test helper and WorkLists shortcut contract assertions so closed-menu Ctrl+O stays blocked in notes focus, while open-menu Ctrl+O dispatches `notes.actionMenu.close`.
 - Files/areas: `public/todolist2.js`, `tests/shortcut-registry.test.js`, canonical changelog.
 - User-visible impact: Pressing Ctrl+O while the Notes pane card action menu is open now closes that menu instead of opening/toggling the board library; Ctrl+O remains inert for normal Notes pane editing focus when no such menu is open.
+
 ### 2026-06-29T00:30:00Z - WorkLists
 
 - Summary: Completed cards now color the action bar with the "Done" status color (overriding the selected status), and the completion-date slot is fixed-width like the creation date.
@@ -175,18 +205,19 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Checking a card's completion box turns its whole action bar the "Done" color (e.g. `#646464`) regardless of the status that was selected, and unchecking restores the prior status color. The completion date on the right always occupies the same fixed-width block as the creation date on the left, so it never truncates or overlaps the completion check no matter the date.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | tests | `node --test tests\shortcut-registry.test.js` | Shortcut registry/controller/source contract | pass, 20 tests | - |
-  | tests | `node --test tests\context-windows.test.js` | Notes/context-window source contracts | pass, 25 tests | - |
-  | tests | `node --test tests\card-actions.test.js` | Card action menu contracts | pass, 16 tests | - |
-  | tests | `node --test tests\search-shortcuts.test.js` | Search and Ctrl+O side-panel contracts | pass, 18 tests | - |
+  | Gate  | Command                                       | Scope                                        | Result         | Exception / risk |
+  | ----- | --------------------------------------------- | -------------------------------------------- | -------------- | ---------------- |
+  | tests | `node --test tests\shortcut-registry.test.js` | Shortcut registry/controller/source contract | pass, 20 tests | -                |
+  | tests | `node --test tests\context-windows.test.js`   | Notes/context-window source contracts        | pass, 25 tests | -                |
+  | tests | `node --test tests\card-actions.test.js`      | Card action menu contracts                   | pass, 16 tests | -                |
+  | tests | `node --test tests\search-shortcuts.test.js`  | Search and Ctrl+O side-panel contracts       | pass, 18 tests | -                |
 
 - Tests added/updated: Updated `tests/shortcut-registry.test.js` to register `notes.actionMenu.close`, assert normal Notes pane Ctrl+O remains blocked when the menu is closed, and assert Ctrl+O dispatches the notes-menu closer when `notesActionMenuOpen` is true.
 - Regression impact: Scoped to the Notes pane card action menu shortcut path. The new command is in `notes-pane` scope and enabled only by `.card-action-menu--notes-pane`, so board-level Ctrl+O and search/side-panel behavior remain on existing paths; focused shortcut, context-window, card-action, and search shortcut suites are green.
 - API docs: Not relevant: UI-only keyboard shortcut behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Focused applicable test gates passed. Full `npm run lint` / full `node --test` were not rerun in this follow-up; risk is limited to formatting/full-suite coverage outside the touched shortcut/context/card/search surfaces. No `npm audit` script exists in this repo.
 - Conflicts / exceptions: Initial wrap-up missed the canonical changelog and notification workflow because the first AGENTS path supplied did not exist; corrected after reading `C:\dustin-thomason\AGENTS.md`. Pre-existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+
 ### 2026-06-30T19:40:00Z - WorkLists
 
 - Summary: Added a pinned "Active tags" summary at the top of the card tag chooser, then segmented it into distinct primary/secondary category groups.
@@ -202,11 +233,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Opening a card's tag chooser now shows an "Active tags" strip at the top listing the tags already applied, split into a "Color" group and a "Secondary" group (each in its own bordered box with an accent edge); chips have an × to remove a tag, and the strip updates instantly as tags are toggled, removed, renamed, or deleted.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/active-tags-summary.test.js` | Touched files | pass | - |
-  | lint | `npm run lint` | WorkLists formatting gate (`prettier --check .`) | pass | - |
-  | tests | `node --test` | Full WorkLists suite | pass, 515 tests | - |
+  | Gate   | Command                                                                                                 | Scope                                            | Result          | Exception / risk |
+  | ------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | --------------- | ---------------- |
+  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/active-tags-summary.test.js` | Touched files                                    | pass            | -                |
+  | lint   | `npm run lint`                                                                                          | WorkLists formatting gate (`prettier --check .`) | pass            | -                |
+  | tests  | `node --test`                                                                                           | Full WorkLists suite                             | pass, 515 tests | -                |
 
 - Tests added/updated: New `tests/active-tags-summary.test.js` (8 cases) asserts the source/CSS contract — pinned-first placement, removable chips, declarative `getActiveTagGroups` category split, deferred-sort removal paths, single-point summary refresh, full-width strip styling, and the per-category bordered/labeled group styling. Follows the repo's established source-contract harness (the chooser is covered this way in `tests/secondary-tags.test.js`); live DOM geometry (chip wrap, group reflow) is left to manual/Playwright check, consistent with prior chooser work. Risk: interaction wiring is asserted by source contract, not a jsdom event simulation.
 - Regression impact: Scoped to the tag-chooser overlay. `renderPrimaryTagRows` / `renderSecondaryTagRows` gained a leading summary-refresh call that is a no-op when the list is detached (initial construction) or outside a chooser; the search-input rerender path (no data change) re-renders a cheap chip strip. Card rendering, filters, scheduler, and the live batch endpoint paths untouched; full suite (515) green.
@@ -257,11 +288,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Each card's action bar shows the status word again (e.g. "Unrefined") in the original centered dropdown, and the whole bar is painted with that status's exact Settings color so status reads at a glance; the bar has rounded corners and its labels auto-switch to dark/light text for legibility. Cards whose tags expose no status show no color and no dropdown. Completed cards show "Completed" in place of the dropdown (original behavior). The notes indicator is now a flat icon+count matching the tag icon, and both light up with the same subtle hover highlight.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public/batchMode.js public/todolist2.js public/index.html public/todoliststyles2.css tests/batch-mode.test.js tests/batch-todos.test.js` | Touched files | pass | - |
-  | lint | `npm run lint` (`prettier --check .`) | Whole project | pass | - |
-  | tests | `node --test` | Full WorkLists suite | pass, 506 tests | - |
+  | Gate   | Command                                                                                                                                                        | Scope                | Result          | Exception / risk |
+  | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | --------------- | ---------------- |
+  | format | `npx prettier --write public/batchMode.js public/todolist2.js public/index.html public/todoliststyles2.css tests/batch-mode.test.js tests/batch-todos.test.js` | Touched files        | pass            | -                |
+  | lint   | `npm run lint` (`prettier --check .`)                                                                                                                          | Whole project        | pass            | -                |
+  | tests  | `node --test`                                                                                                                                                  | Full WorkLists suite | pass, 506 tests | -                |
 
 - Tests added/updated: `tests/batch-mode.test.js` (23 unit cases — mode toggle, selection add/remove/clear/normalize, payload builders for all four ops with replace semantics, two-stage Escape) and `tests/batch-todos.test.js` (API contract regression — `PATCH /todos` batch status/tag/secondaryTagIds/completion across multiple todos, mixed updates in one request, persistence via `GET /data`, unknown-id skip). Both green under the full run.
 - Regression impact: New feature is additive. `batchMode.js` is a standalone module; `todolist2.js` changes are additive (one `createTask` append, one init call, one capture-phase listener, two shortcut/provider additions, a new function block) and gated behind `body.batch-mode` / `BatchMode.isActive()` so default board behavior is unchanged. Reused `PATCH /todos` unchanged. Full 506-test suite (prior 468 + pre-existing untracked suites + new 23) passes with 0 failures.
@@ -296,12 +327,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Each card's action bar is now a single line (~33px vs the old ~42px two-row). Tag text is gone from the bar — hover the tag icon to see all tag names. Status is a colored dot tinted by its Settings color (e.g. Ready = green); hover shows the status label, click opens the picker to change it (and the dot recolors). The notes indicator looks the same, just repositioned. Completing a card shows the completion date in reserved space at the right without shifting the completion check.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/project-status.test.js tests/action-bar-consolidation.test.js` | Touched files | pass | - |
-  | lint | `npm run lint` | WorkLists formatting gate (`prettier --check .`) | pass | - |
-  | tests | `node --test` | Full WorkLists suite | pass, 477 tests | - |
-  | browser | Playwright against `http://localhost:3010` | single-line flex bar (33px), hidden tag text, tag tooltip, status circle tinted (Ready→`rgb(0,148,2)`), tooltip `Status: <label>`, recolor on change, transparent overlay, check pinned right, status hidden on non-status cards, 0 console errors | pass | mutated one card's status during the click test; restored to original "Unrefined" afterward |
+  | Gate    | Command                                                                                                                                   | Scope                                                                                                                                                                                                                                              | Result          | Exception / risk                                                                            |
+  | ------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------- |
+  | format  | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/project-status.test.js tests/action-bar-consolidation.test.js` | Touched files                                                                                                                                                                                                                                      | pass            | -                                                                                           |
+  | lint    | `npm run lint`                                                                                                                            | WorkLists formatting gate (`prettier --check .`)                                                                                                                                                                                                   | pass            | -                                                                                           |
+  | tests   | `node --test`                                                                                                                             | Full WorkLists suite                                                                                                                                                                                                                               | pass, 477 tests | -                                                                                           |
+  | browser | Playwright against `http://localhost:3010`                                                                                                | single-line flex bar (33px), hidden tag text, tag tooltip, status circle tinted (Ready→`rgb(0,148,2)`), tooltip `Status: <label>`, recolor on change, transparent overlay, check pinned right, status hidden on non-status cards, 0 console errors | pass            | mutated one card's status during the click test; restored to original "Unrefined" afterward |
 
 - Tests added/updated: Added `tests/action-bar-consolidation.test.js` (status circle + overlay, color tint + hover tooltip, refresh recolor, tag tooltip wiring, removal of the "Completed" override, single-line flex layout, hidden tag text, right-pinned completion cluster). Updated `tests/project-status.test.js`: the prior assertions pinned the old two-row grid (`grid-template-rows: 22px 18px`, fixed 112px select, `.task-completion-status` grid placement) and the "Completed" label injection; rewrote them to assert the new flex layout, status circle/overlay, and that completion no longer overrides the status display. `tests/secondary-tags.test.js` unchanged — the base `.secondary-tag-list` rule is intact (the bar only adds a card-scoped hide), so its grid assertions still hold.
 - Regression impact: Scoped to the per-card action bar. Behavior change: completion no longer replaces the status with a "Completed" label and no longer hides the status control on completion (status circle stays visible/selectable on completed cards). Verified the full suite green, the notes indicator/secondary-tag base styles unchanged, and status visibility on tag-gated cards still works (46 status-enabled cards showed the circle, non-status cards hid it). Checked surfaces: `refreshTaskNotesIndicator` still inserts before the `.status-checkbox` (a direct child of `.actions`), and `refreshTaskSecondaryTagDisplay` still inserts before `.task-status-select` — both unaffected by the wrapper.
@@ -324,11 +355,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Editing a note now opens a roomy editor that grows with what you type, stops at the pane edge with tabs/toolbar always visible and the text scrolling inside; other notes remain visible and scrollable; the note snaps to the top of the pane when you start editing; the card-text area at the top is compact by default but can be dragged taller (and double-clicked to reset), with the boundary invisible until hovered.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css public/index.html tests/markdown-editor.test.js` | Touched files | pass | - |
-  | lint | `npm run lint` | WorkLists formatting gate (`prettier --check .`) | pass | - |
-  | tests | `node --test` | Full WorkLists suite | pass, 468 tests | - |
+  | Gate   | Command                                                                                                               | Scope                                            | Result          | Exception / risk |
+  | ------ | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | --------------- | ---------------- |
+  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css public/index.html tests/markdown-editor.test.js` | Touched files                                    | pass            | -                |
+  | lint   | `npm run lint`                                                                                                        | WorkLists formatting gate (`prettier --check .`) | pass            | -                |
+  | tests  | `node --test`                                                                                                         | Full WorkLists suite                             | pass, 468 tests | -                |
 
 - Tests added/updated: Updated `tests/markdown-editor.test.js` to assert the new card-preview cap `max-height: min(19vh, 180px)`. No new behavioral test was added for the JS sizing/splitter logic — the existing suite covers source/CSS contracts and pinned the changed CSS value; the live drag/fit-to-pane geometry depends on real layout measurement (`clientHeight`/`offsetHeight`) not exercised by the jsdom/source-contract harness. Risk: drag clamp and fit-to-pane math are validated by manual browser check, not an automated assertion. Follow-up: add a Playwright case under `tests/browser-notes-smoke.js` for editor fit-to-pane and splitter persistence.
 - Regression impact: Scoped to the notes-pane inline editor and card-text preview. `.notes-pane-note { flex: 0 0 auto }` is a new base rule affecting all notes' flex behavior in the list; verified read view, multi-note layout, and list scrolling are intact via the full suite and manual check. Card-text edit (`.notes-pane-task-edit`), the new-note form, search, and scheduler paths untouched.
@@ -347,20 +378,21 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Closing expanded search no longer leaves the search icon highlighted.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js tests\search-shortcuts.test.js` | Touched JS/test files | pass | - |
-  | syntax | `node --check public\todolist2.js` | Touched runtime file | pass | - |
-  | tests | `node --test tests\search-shortcuts.test.js` | Search shortcut/source contracts | pass, 17 tests | - |
-  | browser | Playwright ad hoc check against `http://localhost:3010` | X/Escape close leaves opener unfocused | pass | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 468 tests | - |
+  | Gate    | Command                                                                   | Scope                                  | Result          | Exception / risk |
+  | ------- | ------------------------------------------------------------------------- | -------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write public\todolist2.js tests\search-shortcuts.test.js` | Touched JS/test files                  | pass            | -                |
+  | syntax  | `node --check public\todolist2.js`                                        | Touched runtime file                   | pass            | -                |
+  | tests   | `node --test tests\search-shortcuts.test.js`                              | Search shortcut/source contracts       | pass, 17 tests  | -                |
+  | browser | Playwright ad hoc check against `http://localhost:3010`                   | X/Escape close leaves opener unfocused | pass            | -                |
+  | lint    | `npm run lint`                                                            | WorkLists formatting gate              | pass            | -                |
+  | tests   | `npm test`                                                                | Full WorkLists suite                   | pass, 468 tests | -                |
 
 - Tests added/updated: Search source-contract coverage now asserts the search opener is excluded from return-focus capture.
 - Regression impact: Isolated to search cancel focus restoration; search expansion, query handling, Filters, and Scheduler paths unchanged.
 - API docs: Not relevant: UI-only focus behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Format, syntax, focused search contracts, browser interaction check, lint, and full test suite passed. No `npm audit` script exists in this repo.
 - Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remained present and were not reverted (`tests/browser-notes-smoke.js`, `tests/context-windows.test.js`, `.claude/`, and prior notes-pane/search work in `public/todolist2.js`).
+
 ### 2026-06-27T21:01:53Z - WorkLists
 
 - Summary: Hid the search opener during expanded search.
@@ -371,19 +403,20 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Search rests at the same spacing as the adjacent toolbar icons; once opened, only the search field and cancel X remain visible until search is cancelled.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todoliststyles2.css tests\search-shortcuts.test.js` | Touched CSS/test files | pass | - |
-  | tests | `node --test tests\search-shortcuts.test.js` | Search shortcut/source contracts | pass, 17 tests | - |
-  | browser | Playwright ad hoc check against `http://localhost:3010` | Search rest gap/opener hide/cancel restore | pass | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 468 tests | - |
+  | Gate    | Command                                                                          | Scope                                      | Result          | Exception / risk |
+  | ------- | -------------------------------------------------------------------------------- | ------------------------------------------ | --------------- | ---------------- |
+  | format  | `npx prettier --write public\todoliststyles2.css tests\search-shortcuts.test.js` | Touched CSS/test files                     | pass            | -                |
+  | tests   | `node --test tests\search-shortcuts.test.js`                                     | Search shortcut/source contracts           | pass, 17 tests  | -                |
+  | browser | Playwright ad hoc check against `http://localhost:3010`                          | Search rest gap/opener hide/cancel restore | pass            | -                |
+  | lint    | `npm run lint`                                                                   | WorkLists formatting gate                  | pass            | -                |
+  | tests   | `npm test`                                                                       | Full WorkLists suite                       | pass, 468 tests | -                |
 
 - Tests added/updated: Search shortcut source-contract coverage now asserts zero internal search-field gap, zero-footprint collapsed input, expanded input border restoration, and hidden opener while expanded.
 - Regression impact: CSS-only refinement isolated to the search toolbar shell; search query handling, shortcut registration, Filters, and Scheduler paths unchanged.
 - API docs: Not relevant: UI-only toolbar styling; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Format, focused search contracts, browser interaction check, lint, and full test suite passed. No `npm audit` script exists in this repo.
 - Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remained present and were not reverted (`tests/browser-notes-smoke.js`, `tests/context-windows.test.js`, `.claude/`, and prior notes-pane/search work in `public/todolist2.js`).
+
 ### 2026-06-27T20:46:55Z - WorkLists
 
 - Summary: Converted top-right search to an expandable icon control.
@@ -394,20 +427,21 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Search now rests as a compact icon in the top-right toolbar; clicking it or pressing Ctrl+K expands and focuses the field with the same search behavior as before.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\index.html public\todolist2.js public\todoliststyles2.css tests\search-shortcuts.test.js` | Touched UI/source-contract files | pass | - |
-  | syntax | `node --check public\todolist2.js` | Touched runtime file | pass | - |
-  | tests | `node --test tests\search-shortcuts.test.js tests\filter-menu.test.js` | Search shortcut/filter toolbar contracts | pass, 21 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 468 tests | - |
-  | browser | Playwright ad hoc check against `http://localhost:3010` | Search collapse/click expand/cancel collapse/Ctrl+K expand | pass | - |
+  | Gate    | Command                                                                                                                | Scope                                                      | Result          | Exception / risk |
+  | ------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write public\index.html public\todolist2.js public\todoliststyles2.css tests\search-shortcuts.test.js` | Touched UI/source-contract files                           | pass            | -                |
+  | syntax  | `node --check public\todolist2.js`                                                                                     | Touched runtime file                                       | pass            | -                |
+  | tests   | `node --test tests\search-shortcuts.test.js tests\filter-menu.test.js`                                                 | Search shortcut/filter toolbar contracts                   | pass, 21 tests  | -                |
+  | lint    | `npm run lint`                                                                                                         | WorkLists formatting gate                                  | pass            | -                |
+  | tests   | `npm test`                                                                                                             | Full WorkLists suite                                       | pass, 468 tests | -                |
+  | browser | Playwright ad hoc check against `http://localhost:3010`                                                                | Search collapse/click expand/cancel collapse/Ctrl+K expand | pass            | -                |
 
 - Tests added/updated: `tests/search-shortcuts.test.js` now asserts the expandable search icon markup, shared click/keyboard open wiring, collapsed/expanded CSS contract, and cancel icon placement.
 - Regression impact: Isolated to the top-right search shell; query debounce, result rendering, Filters, and Scheduler controls remain on existing paths.
 - API docs: Not relevant: UI-only toolbar interaction; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Format, syntax, focused contracts, full test suite, lint, and browser interaction check passed. No `npm audit` script exists in this repo.
 - Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remained present and were not reverted (`public/todolist2.js` notes-pane changes, `tests/browser-notes-smoke.js`, `tests/context-windows.test.js`, `.claude/`).
+
 ### 2026-06-27T20:16:47Z - WorkLists
 
 - Summary: Scoped notes-pane reveal nudge to scrollbar columns only.
@@ -418,20 +452,21 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Tuning the nudge changes only scrollable-column reveal placement; non-scrollbar columns remain governed by `NOTES_PANE_BOARD_GAP`.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js` | Touched source/test files | pass | - |
-  | syntax | `node --check public\todolist2.js` | Touched runtime file | pass | - |
-  | tests | `node --test tests\context-windows.test.js` | Notes-pane reveal source contract | pass, 25 tests | - |
-  | browser | `npm run test:browser` | Notes/side-pane smoke | pass, 4 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | Gate    | Command                                                                  | Scope                             | Result          | Exception / risk |
+  | ------- | ------------------------------------------------------------------------ | --------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write public\todolist2.js tests\context-windows.test.js` | Touched source/test files         | pass            | -                |
+  | syntax  | `node --check public\todolist2.js`                                       | Touched runtime file              | pass            | -                |
+  | tests   | `node --test tests\context-windows.test.js`                              | Notes-pane reveal source contract | pass, 25 tests  | -                |
+  | browser | `npm run test:browser`                                                   | Notes/side-pane smoke             | pass, 4 tests   | -                |
+  | lint    | `npm run lint`                                                           | WorkLists formatting gate         | pass            | -                |
+  | tests   | `npm test`                                                               | Full WorkLists suite              | pass, 467 tests | -                |
 
 - Tests added/updated: Source-contract coverage now asserts `safeRight` uses only `NOTES_PANE_BOARD_GAP`, and the nudge is applied in the layout-scrollbar branch of `getActiveCardRevealRightEdge()`.
 - Regression impact: Isolated to notes-pane active-card reveal math; current tuned constants were preserved.
 - API docs: Not relevant: UI-only layout tuning; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Focused test, browser smoke, lint, and full `npm test` passed. No `npm audit` script exists in this repo.
 - Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+
 ### 2026-06-27T19:57:28Z - WorkLists
 
 - Summary: Added a notes-pane reveal calibration knob.
@@ -442,20 +477,21 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Default behavior is unchanged at `0`; the reveal placement can now be tuned by editing a single constant.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js tests\browser-notes-smoke.js` | Touched source/test files | pass | - |
-  | syntax | `node --check public\todolist2.js` | Touched runtime file | pass | - |
-  | tests | `node --test tests\context-windows.test.js` | Notes-pane reveal source contract | pass, 25 tests | - |
-  | browser | `npm run test:browser` | Notes/side-pane smoke | pass, 4 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | Gate    | Command                                                                                               | Scope                             | Result          | Exception / risk |
+  | ------- | ----------------------------------------------------------------------------------------------------- | --------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write public\todolist2.js tests\context-windows.test.js tests\browser-notes-smoke.js` | Touched source/test files         | pass            | -                |
+  | syntax  | `node --check public\todolist2.js`                                                                    | Touched runtime file              | pass            | -                |
+  | tests   | `node --test tests\context-windows.test.js`                                                           | Notes-pane reveal source contract | pass, 25 tests  | -                |
+  | browser | `npm run test:browser`                                                                                | Notes/side-pane smoke             | pass, 4 tests   | -                |
+  | lint    | `npm run lint`                                                                                        | WorkLists formatting gate         | pass            | -                |
+  | tests   | `npm test`                                                                                            | Full WorkLists suite              | pass, 467 tests | -                |
 
 - Tests added/updated: Source-contract coverage asserts the new nudge constant and its use in `safeRight`; browser smoke now waits for the documented closed board margin instead of an impossible zero margin.
 - Regression impact: Default nudge is zero, so runtime reveal behavior is unchanged until the constant is edited.
 - API docs: Not relevant: UI-only layout tuning; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Focused test, browser smoke, lint, and full `npm test` passed. No `npm audit` script exists in this repo.
 - Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+
 ### 2026-06-27T05:45:00Z - WorkLists
 
 - Summary: Removed the notes-pane open scroll "catch-up" by making the reveal's right boundary stable across the whole open.
@@ -466,14 +502,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Opening notes on a covered card now glides the board to reveal it in a single synced motion with the pane - no second "catch-up" scroll after the pane finishes opening.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public/todolist2.js tests/context-windows.test.js` | runtime/test | pass | - |
-  | syntax | `node --check public/todolist2.js` | runtime file | pass | - |
-  | tests | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts | pass, 41 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
-  | browser | `npm run test:browser` | inset geometry + reveal + static close + smoke | pass, 4 tests | - |
+  | Gate    | Command                                                                    | Scope                                          | Result          | Exception / risk |
+  | ------- | -------------------------------------------------------------------------- | ---------------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write public/todolist2.js tests/context-windows.test.js`   | runtime/test                                   | pass            | -                |
+  | syntax  | `node --check public/todolist2.js`                                         | runtime file                                   | pass            | -                |
+  | tests   | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts              | pass, 41 tests  | -                |
+  | lint    | `npm run lint`                                                             | WorkLists formatting gate                      | pass            | -                |
+  | tests   | `npm test`                                                                 | Full WorkLists suite                           | pass, 467 tests | -                |
+  | browser | `npm run test:browser`                                                     | inset geometry + reveal + static close + smoke | pass, 4 tests   | -                |
 
 - Tests added/updated: `tests/context-windows.test.js` now asserts the stable boundary `const safeRight = finalPaneLeft - NOTES_PANE_ACTIVE_CARD_MARGIN;` (replacing the old `Math.min(wrapperRect.right, finalPaneLeft)` assertion).
 - Regression impact: Only the reveal-scroll right-boundary computation changed (open path); inset/scrollbar, close-static, final-max clamp, and side-panel behavior unchanged. Full suite + 4 browser tests green.
@@ -489,14 +525,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Opening notes on a covered card now glides the board to reveal it as one smooth motion with the pane, including when the pane has been resized wider.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public/todolist2.js` | runtime file | pass | - |
-  | syntax | `node --check public/todolist2.js` | runtime file | pass | - |
-  | tests | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts | pass, 41 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
-  | browser | `npm run test:browser` | inset geometry + reveal + static close + smoke | pass, 4 tests | - |
+  | Gate    | Command                                                                    | Scope                                          | Result          | Exception / risk |
+  | ------- | -------------------------------------------------------------------------- | ---------------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write public/todolist2.js`                                 | runtime file                                   | pass            | -                |
+  | syntax  | `node --check public/todolist2.js`                                         | runtime file                                   | pass            | -                |
+  | tests   | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts              | pass, 41 tests  | -                |
+  | lint    | `npm run lint`                                                             | WorkLists formatting gate                      | pass            | -                |
+  | tests   | `npm test`                                                                 | Full WorkLists suite                           | pass, 467 tests | -                |
+  | browser | `npm run test:browser`                                                     | inset geometry + reveal + static close + smoke | pass, 4 tests   | -                |
 
 - Tests added/updated: `tests/context-windows.test.js` asserts the final-max clamp (`pendingInset = reserveValue - currentMarginRight`, `maxScrollLeft = getBoardWrapperMaxScrollLeft(boardWrapper) + pendingInset`) so the smooth-reveal fix is locked.
 - Regression impact: Only the reveal-scroll target clamp changed (open path); inset/scrollbar fix, close-static, and side-panel behavior unchanged. Full suite + 4 browser tests green.
@@ -505,21 +541,21 @@ Track implementation sessions and current delivery status for the WorkLists appl
 ### 2026-06-27T04:30:00Z - WorkLists
 
 - Summary: Inset the board scroll container to the notes pane edge (margin-right) instead of stretching #board padding-right - fixes the hidden scrollbar and the scroll stutter.
-- Problem: User clue - the horizontal scrollbar disappeared behind the notes pane when scrolling right. Root cause: the scroll container (`.board-wrapper`) ran full-width *under* the fixed pane; the `padding-right` reserve only stretched `#board`'s content (gliding `scrollWidth`), so the scrollbar/last columns sat under the pane and the changing `scrollWidth` made scrolling/the scrollbar stutter.
+- Problem: User clue - the horizontal scrollbar disappeared behind the notes pane when scrolling right. Root cause: the scroll container (`.board-wrapper`) ran full-width _under_ the fixed pane; the `padding-right` reserve only stretched `#board`'s content (gliding `scrollWidth`), so the scrollbar/last columns sat under the pane and the changing `scrollWidth` made scrolling/the scrollbar stutter.
 - Requirement: The scroll container and its scrollbar must stop at the pane's left edge; `scrollWidth` must stay stable so scrolling is smooth; open still reveals the active card, close stays static.
 - Solution: Replaced the `#board` `padding-right` reserve with a `.board-wrapper` `margin-right` inset equal to pane width + margin, transitioned (`margin-right 0.24s ease`) so it glides in/out in sync with the pane. `#board` `scrollWidth` is now stable (no padding reserve) - smooth scroll, stable scrollbar, scrollbar ends at the pane edge. Removed the now-unneeded held-reserve close machinery (`releaseNotesPaneReserveAfterClose`, `finishNotesPaneCloseReserve`, `clearNotesPaneCloseReserveTimer`, `notesPaneCloseReserveTimer`, `NOTES_PANE_CLOSE_RESERVE_MS`, the `notes-pane-closing` class): close now simply clears the inset via `syncNotesPaneBoardViewportReserve`, gliding it back while scroll stays static. The open reveal-scroll glide (cubic-bezier 0.24s) is retained.
 - Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/context-windows.test.js`, `tests/browser-notes-smoke.js`, canonical changelog.
 - User-visible impact: The board scrollbar now ends at the notes pane's left edge (never hidden behind it); horizontal scrolling while the pane is open is smooth (stable scroll width); open reveals the card and close leaves scroll static.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write` (touched files) | source/CSS/test | pass | - |
-  | syntax | `node --check public/todolist2.js`; `node --check tests/browser-notes-smoke.js` | runtime/browser files | pass | - |
-  | tests | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts | pass, 41 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
-  | browser | `npm run test:browser` | inset geometry + static close + side-panel + smoke | pass, 4 tests | - |
+  | Gate    | Command                                                                         | Scope                                              | Result          | Exception / risk |
+  | ------- | ------------------------------------------------------------------------------- | -------------------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write` (touched files)                                          | source/CSS/test                                    | pass            | -                |
+  | syntax  | `node --check public/todolist2.js`; `node --check tests/browser-notes-smoke.js` | runtime/browser files                              | pass            | -                |
+  | tests   | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js`      | notes-pane + side-panel contracts                  | pass, 41 tests  | -                |
+  | lint    | `npm run lint`                                                                  | WorkLists formatting gate                          | pass            | -                |
+  | tests   | `npm test`                                                                      | Full WorkLists suite                               | pass, 467 tests | -                |
+  | browser | `npm run test:browser`                                                          | inset geometry + static close + side-panel + smoke | pass, 4 tests   | -                |
 
 - Tests added/updated: `tests/context-windows.test.js` rewritten to the margin-right model (`.board-wrapper` margin-right transition, `boardWrapper.style.marginRight` set/clear, `shouldReserve` on `.open` only) and asserts the held-reserve machinery is gone (`doesNotMatch` for the removed symbols and `#board` padding-right transition). `tests/browser-notes-smoke.js` now asserts the wrapper's right edge sits at/left of the pane's left edge (scrollbar not under pane), the margin-right reserves the pane width, close releases the inset, and scroll stays static.
 - Regression impact: Notes-pane reserve mechanism changed (padding-right -> margin-right inset); close simplified (no held reserve); open reveal-scroll glide unchanged; side-panel left behavior untouched. Full suite + 4 browser tests green.
@@ -535,14 +571,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Opening notes on a covered card now glides the columns aside in lockstep with the pane (no stutter/snap); closing still leaves the board static.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write` (touched files) | source/test | pass | - |
-  | syntax | `node --check public/todolist2.js` | runtime file | pass | - |
-  | tests | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts | pass, 41 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
-  | browser | `npm run test:browser` | reveal glide + static close + side-panel + smoke | pass, 4 tests | - |
+  | Gate    | Command                                                                    | Scope                                            | Result          | Exception / risk |
+  | ------- | -------------------------------------------------------------------------- | ------------------------------------------------ | --------------- | ---------------- |
+  | format  | `npx prettier --write` (touched files)                                     | source/test                                      | pass            | -                |
+  | syntax  | `node --check public/todolist2.js`                                         | runtime file                                     | pass            | -                |
+  | tests   | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts                | pass, 41 tests  | -                |
+  | lint    | `npm run lint`                                                             | WorkLists formatting gate                        | pass            | -                |
+  | tests   | `npm test`                                                                 | Full WorkLists suite                             | pass, 467 tests | -                |
+  | browser | `npm run test:browser`                                                     | reveal glide + static close + side-panel + smoke | pass, 4 tests   | -                |
 
 - Tests added/updated: `tests/context-windows.test.js` now asserts the tween helpers (`animateBoardScrollLeft`, `easeBoardScrollProgress`, `cancelNotesPaneScrollAnimation`), the `animate: true` open path / `animate: false` settle, the `keepActiveCardVisibleBesideNotesPane(options = {})` signature, the rAF(animateRun) + setTimeout(settleRun, 300) schedule, and (scoped to `closeNotesPane`) that close cancels the glide but never restores/animates scroll (close-static lock). `tests/browser-notes-smoke.js` continues to assert the close scroll stays static (closing and settled both equal the revealed position).
 - Regression impact: Reveal scroll changed from instant double-fire to a single synced glide + no-op settle; close-static unchanged and now test-locked; side-panel left glide and notes-pane reserve untouched. Full suite + 4 browser tests green.
@@ -559,14 +595,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Closing the notes pane in a neutral scroll position no longer shifts the board - the columns stay exactly where the open nudge revealed them.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write` (3 touched files) | source/test | pass | - |
-  | syntax | `node --check public/todolist2.js`; `node --check tests/browser-notes-smoke.js` | runtime/browser files | pass | - |
-  | tests | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts | pass, 41 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
-  | browser | `npm run test:browser` | notes-pane static-close + side-panel + smoke | pass, 4 tests | - |
+  | Gate    | Command                                                                         | Scope                                        | Result          | Exception / risk |
+  | ------- | ------------------------------------------------------------------------------- | -------------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write` (3 touched files)                                        | source/test                                  | pass            | -                |
+  | syntax  | `node --check public/todolist2.js`; `node --check tests/browser-notes-smoke.js` | runtime/browser files                        | pass            | -                |
+  | tests   | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js`      | notes-pane + side-panel contracts            | pass, 41 tests  | -                |
+  | lint    | `npm run lint`                                                                  | WorkLists formatting gate                    | pass            | -                |
+  | tests   | `npm test`                                                                      | Full WorkLists suite                         | pass, 467 tests | -                |
+  | browser | `npm run test:browser`                                                          | notes-pane static-close + side-panel + smoke | pass, 4 tests   | -                |
 
 - Tests added/updated: `tests/context-windows.test.js` now asserts the absence of the scroll-restore (`doesNotMatch animateBoardScrollLeft` / `notesPanePreOpenScrollLeft`) and reverts the switch-close regex to `{ restoreFocus: false }`. `tests/browser-notes-smoke.js` "scrolls a right-edge active card" asserts the scroll stays static through close (closing and settled scroll both equal the revealed position).
 - Regression impact: Open-side reveal unchanged; close reverts to static. Side-panel left-reserve glide untouched. Full suite + 4 browser tests green.
@@ -582,14 +618,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Closing the notes pane after it nudged the board now glides the columns back to where they were before opening, in time with the pane sliding away.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write` (3 touched files) | source/test | pass | - |
-  | syntax | `node --check public/todolist2.js`; `node --check tests/browser-notes-smoke.js` | runtime/browser files | pass | - |
-  | tests | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js` | notes-pane + side-panel contracts | pass, 41 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
-  | browser | `npm run test:browser` | notes-pane close-restore glide + side-panel + smoke | pass, 4 tests | - |
+  | Gate    | Command                                                                         | Scope                                               | Result          | Exception / risk |
+  | ------- | ------------------------------------------------------------------------------- | --------------------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write` (3 touched files)                                        | source/test                                         | pass            | -                |
+  | syntax  | `node --check public/todolist2.js`; `node --check tests/browser-notes-smoke.js` | runtime/browser files                               | pass            | -                |
+  | tests   | `node --test tests/context-windows.test.js tests/search-shortcuts.test.js`      | notes-pane + side-panel contracts                   | pass, 41 tests  | -                |
+  | lint    | `npm run lint`                                                                  | WorkLists formatting gate                           | pass            | -                |
+  | tests   | `npm test`                                                                      | Full WorkLists suite                                | pass, 467 tests | -                |
+  | browser | `npm run test:browser`                                                          | notes-pane close-restore glide + side-panel + smoke | pass, 4 tests   | -                |
 
 - Tests added/updated: `tests/context-windows.test.js` source contract for `notesPanePreOpenScrollLeft`, `easeBoardScrollProgress`, `animateBoardScrollLeft`, the close restore call, `skipScrollRestore: true` on switch, and the capture-on-open line (also updated the switch-close regex to the new args). `tests/browser-notes-smoke.js` "scrolls a right-edge active card" now captures the pre-open scroll, asserts the close is mid-glide back toward it (no longer pinned), and settles exactly at the pre-open scroll.
 - Regression impact: Open-side scroll nudge unchanged (still instant via `keepActiveCardVisibleBesideNotesPane`); only the close adds the synced glide-back. `padding-right` reserve hold/instant-drop unchanged. Full suite + 4 browser tests green.
@@ -598,21 +634,21 @@ Track implementation sessions and current delivery status for the WorkLists appl
 ### 2026-06-27T01:05:00Z - WorkLists
 
 - Summary: Glided the left side-panel overlay reserve in sync with the panel collapse at far-left.
-- Problem: Open the left panel while offset (overlay mode adds a `padding-left` reserve), then scroll to far-left and close. The panel slid out (0.24s) but the reserve was held during the slide and dropped instantly at `transitionend`; at far-left no scroll could absorb it, so the columns snapped left *after* the menu was gone - "disjointed menu first, then columns snap."
+- Problem: Open the left panel while offset (overlay mode adds a `padding-left` reserve), then scroll to far-left and close. The panel slid out (0.24s) but the reserve was held during the slide and dropped instantly at `transitionend`; at far-left no scroll could absorb it, so the columns snapped left _after_ the menu was gone - "disjointed menu first, then columns snap."
 - Requirement: At/near far-left, the columns must glide into the vacated space in one continuous motion with the menu. Deeply-offset close must stay stationary (no content motion), preserving the no-bump behavior from the first ticket.
 - Solution: Added a scoped CSS rule `#board.side-panel-reserve-gliding` that transitions `padding-left` on the same `0.24s ease` curve as the panel. New `glideSidePanelOverlayReserveToZero` adds the class, flushes layout (`void offsetWidth`), then clears the reserve so `padding-left` glides `R->0` with `scrollLeft` untouched (lands at the natural closed position). `closeSidePanelWithoutLayoutBump` chooses the glide only when `reserve > 0 && scrollLeft <= reserve`; otherwise it keeps the existing hold-then-instant-drop (stationary). `finishSidePanelOverlayClose` retires the glide class so future open/offset reserve writes stay instant.
 - Files/areas: `public/todoliststyles2.css`, `public/todolist2.js`, `tests/search-shortcuts.test.js`, `tests/browser-notes-smoke.js`, canonical changelog. Plan: `~/.claude/plans/still-not-in-sync-elegant-spindle.md`.
 - User-visible impact: Closing the left menu after scrolling to the far-left now glides the columns left in lockstep with the menu instead of snapping them after it. Deeply-offset close behavior is unchanged.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write` (4 touched files) | source/CSS/test | pass | - |
-  | syntax | `node --check public/todolist2.js`; `node --check tests/browser-notes-smoke.js` | runtime/browser files | pass | - |
-  | tests | `node --test tests/search-shortcuts.test.js tests/context-windows.test.js` | side-panel + context-window contracts | pass, 41 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
-  | browser | `npm run test:browser` | overlay open/close + new far-left glide | pass, 4 tests | - |
+  | Gate    | Command                                                                         | Scope                                   | Result          | Exception / risk |
+  | ------- | ------------------------------------------------------------------------------- | --------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write` (4 touched files)                                        | source/CSS/test                         | pass            | -                |
+  | syntax  | `node --check public/todolist2.js`; `node --check tests/browser-notes-smoke.js` | runtime/browser files                   | pass            | -                |
+  | tests   | `node --test tests/search-shortcuts.test.js tests/context-windows.test.js`      | side-panel + context-window contracts   | pass, 41 tests  | -                |
+  | lint    | `npm run lint`                                                                  | WorkLists formatting gate               | pass            | -                |
+  | tests   | `npm test`                                                                      | Full WorkLists suite                    | pass, 467 tests | -                |
+  | browser | `npm run test:browser`                                                          | overlay open/close + new far-left glide | pass, 4 tests   | -                |
 
 - Tests added/updated: Source/CSS contract in `tests/search-shortcuts.test.js` (glide helper, `scrollLeft <= reserve` branch, `#board.side-panel-reserve-gliding` rule, finish cleanup). New browser test asserts the far-left close engages the glide class, `padding-left` is mid-transition (`0 < pad < reserve`, i.e. animating not snapping), `scrollLeft` stays 0, and settles to `padding-left: 0px`.
 - Regression impact: `padding-left` stays instant for open and deeply-offset close (glide is opt-in via class only during the far-left close window); the existing "overlays the side panel" browser test closes at `scrollLeft > reserve` -> hold branch -> unchanged. `padding-right` notes-pane glide untouched. Full suite + 4 browser tests green.
@@ -628,14 +664,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Opening the notes pane now glides the columns aside in lockstep with the pane, one continuous motion instead of a snap-then-slide; left and right panes animate at the same speed.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/context-windows.test.js` | Touched source/CSS/test | pass | - |
-  | syntax | `node --check public/todolist2.js` | Touched runtime file | pass | - |
-  | tests | `node --test tests/context-windows.test.js` | Notes-pane reserve/motion source+CSS contract | pass, 25 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
-  | browser | `npm run test:browser` | Notes-pane open/close reserve + scroll stability | pass, 3 tests | - |
+  | Gate    | Command                                                                                             | Scope                                            | Result          | Exception / risk |
+  | ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------ | --------------- | ---------------- |
+  | format  | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/context-windows.test.js` | Touched source/CSS/test                          | pass            | -                |
+  | syntax  | `node --check public/todolist2.js`                                                                  | Touched runtime file                             | pass            | -                |
+  | tests   | `node --test tests/context-windows.test.js`                                                         | Notes-pane reserve/motion source+CSS contract    | pass, 25 tests  | -                |
+  | lint    | `npm run lint`                                                                                      | WorkLists formatting gate                        | pass            | -                |
+  | tests   | `npm test`                                                                                          | Full WorkLists suite                             | pass, 467 tests | -                |
+  | browser | `npm run test:browser`                                                                              | Notes-pane open/close reserve + scroll stability | pass, 3 tests   | -                |
 
 - Tests added/updated: `tests/context-windows.test.js` now asserts `#board` carries `transition: padding-right 0.24s ease` and that `finishNotesPaneCloseReserve` suppresses the transition for the instant close drop.
 - Regression impact: Held-reserve close geometry (closing/closed padding + scroll) unchanged — guarded by the existing passing browser smoke; only the open-side reserve gains the synced glide. Left-panel overlay padding-left stays instant (stationary-content design untouched). Full suite + browser smoke green.
@@ -652,14 +688,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Collapsing the menu while scrolled right no longer jumps the columns or horizontal scroll; the collapse animation is consistent regardless of scroll position.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public/todolist2.js tests/search-shortcuts.test.js` | Touched source/test files | pass | - |
-  | syntax | `node --check public/todolist2.js` | Touched runtime file | pass | - |
-  | tests | `node --test tests/search-shortcuts.test.js` | Side-panel collapse source contract | pass, 16 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
-  | browser | `npm run test:browser` | Side-panel overlay open/close stability | pass, 3 tests | - |
+  | Gate    | Command                                                                   | Scope                                   | Result          | Exception / risk |
+  | ------- | ------------------------------------------------------------------------- | --------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write public/todolist2.js tests/search-shortcuts.test.js` | Touched source/test files               | pass            | -                |
+  | syntax  | `node --check public/todolist2.js`                                        | Touched runtime file                    | pass            | -                |
+  | tests   | `node --test tests/search-shortcuts.test.js`                              | Side-panel collapse source contract     | pass, 16 tests  | -                |
+  | lint    | `npm run lint`                                                            | WorkLists formatting gate               | pass            | -                |
+  | tests   | `npm test`                                                                | Full WorkLists suite                    | pass, 467 tests | -                |
+  | browser | `npm run test:browser`                                                    | Side-panel overlay open/close stability | pass, 3 tests   | -                |
 
 - Tests added/updated: Source-contract coverage in `tests/search-shortcuts.test.js` asserts the decoupled collapse (offset-driven branch via `isBoardScrolledAwayFromLeft`, `!boardOffset && !alreadyOverlay` origin guard, and `convertSidePanelPushToOverlayInPlace` in-place conversion). Behavioral overlay-close stability remains guarded by the existing passing browser smoke ("overlays the side panel unless protected content would be covered").
 - Regression impact: Tested paths (origin push at `scrollLeft 0`, offset overlay open/close) are byte-for-byte identical; only the previously-untested push-while-offset close gains the stable overlay conversion. Full suite + browser smoke green.
@@ -675,20 +711,21 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: While the left menu overlays a scrolled board, users can scroll fully left and still see the first board item; right-side over-scroll is reduced; notes-pane open/close feels less abrupt.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\search-shortcuts.test.js tests\browser-notes-smoke.js` | Touched source/CSS/test files | pass | - |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\browser-notes-smoke.js` | Touched runtime/browser files | pass | - |
-  | tests | `node --test tests\context-windows.test.js tests\search-shortcuts.test.js tests\board-scroll.test.js` | Pane reserves, side-panel overlay, board scroll contracts | pass, 47 tests | - |
-  | browser | `npm run test:browser` | Left overlay reveal, exact overlay close geometry, right reserve, notes-pane smoke | pass, 3 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | Gate    | Command                                                                                                                                                         | Scope                                                                              | Result          | Exception / risk |
+  | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\search-shortcuts.test.js tests\browser-notes-smoke.js` | Touched source/CSS/test files                                                      | pass            | -                |
+  | syntax  | `node --check public\todolist2.js`; `node --check tests\browser-notes-smoke.js`                                                                                 | Touched runtime/browser files                                                      | pass            | -                |
+  | tests   | `node --test tests\context-windows.test.js tests\search-shortcuts.test.js tests\board-scroll.test.js`                                                           | Pane reserves, side-panel overlay, board scroll contracts                          | pass, 47 tests  | -                |
+  | browser | `npm run test:browser`                                                                                                                                          | Left overlay reveal, exact overlay close geometry, right reserve, notes-pane smoke | pass, 3 tests   | -                |
+  | lint    | `npm run lint`                                                                                                                                                  | WorkLists formatting gate                                                          | pass            | -                |
+  | tests   | `npm test`                                                                                                                                                      | Full WorkLists suite                                                               | pass, 467 tests | -                |
 
 - Tests added/updated: Browser smoke now verifies the leftmost board item clears the open overlay menu at `scrollLeft = 0`, right reserve lives on `#board` only, and notes-pane close keeps the stored reserve stable; source-contract coverage asserts left overlay reserve helpers and the slower notes-pane transition.
 - Regression impact: Isolated to horizontal board reserve math and notes-pane transform timing; full suite and browser smoke passed.
 - API docs: Not relevant: UI-only layout/scroll/animation behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Focused tests, browser smoke, lint, and full `npm test` passed. No `npm audit` script exists in this repo.
 - Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+
 ### 2026-06-26T21:51:24Z - WorkLists
 
 - Summary: Removed one-pixel side-panel overlay close shift.
@@ -700,19 +737,20 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: No one-pixel board nudge when closing the left menu from a scrolled overlay state.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todoliststyles2.css tests\search-shortcuts.test.js tests\browser-notes-smoke.js` | Touched CSS/test files | pass, unchanged | - |
-  | tests | `node --test tests\search-shortcuts.test.js tests\board-scroll.test.js` | Side-panel CSS contract and board scroll contracts | pass, 22 tests | - |
-  | browser | `npm run test:browser` | Exact overlay close geometry, notes-pane smoke | pass, 3 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | Gate    | Command                                                                                                       | Scope                                              | Result          | Exception / risk |
+  | ------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write public\todoliststyles2.css tests\search-shortcuts.test.js tests\browser-notes-smoke.js` | Touched CSS/test files                             | pass, unchanged | -                |
+  | tests   | `node --test tests\search-shortcuts.test.js tests\board-scroll.test.js`                                       | Side-panel CSS contract and board scroll contracts | pass, 22 tests  | -                |
+  | browser | `npm run test:browser`                                                                                        | Exact overlay close geometry, notes-pane smoke     | pass, 3 tests   | -                |
+  | lint    | `npm run lint`                                                                                                | WorkLists formatting gate                          | pass            | -                |
+  | tests   | `npm test`                                                                                                    | Full WorkLists suite                               | pass, 467 tests | -                |
 
 - Tests added/updated: Browser smoke now asserts wrapper/content left positions remain within `0.01px` during and after overlay close; source-contract coverage asserts side-panel border-box sizing.
 - Regression impact: Isolated to side-panel box sizing and browser geometry assertions; left-edge push and overlay mode remain covered.
 - API docs: Not relevant: UI-only CSS/layout behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Focused tests, browser smoke, lint, and full `npm test` passed. No `npm audit` script exists in this repo.
 - Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted.
+
 ### 2026-06-26T21:42:19Z - WorkLists
 
 - Summary: Aligned notes-pane close behavior with the side-panel viewport rule.
@@ -723,14 +761,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Closing the contextual notes pane no longer clamps or shifts the board while the pane retracts after auto-revealing a right-edge card.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js tests\browser-notes-smoke.js` | Touched source/test files | pass, unchanged | - |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\browser-notes-smoke.js` | Touched runtime/browser files | pass | - |
-  | tests | `node --test tests\context-windows.test.js tests\board-scroll.test.js` | Notes-pane reserve guard and board scroll contracts | pass, 31 tests | - |
-  | browser | `npm run test:browser` | Notes-pane reveal and stable close, side-panel smoke | pass, 3 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | Gate    | Command                                                                                               | Scope                                                | Result          | Exception / risk |
+  | ------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write public\todolist2.js tests\context-windows.test.js tests\browser-notes-smoke.js` | Touched source/test files                            | pass, unchanged | -                |
+  | syntax  | `node --check public\todolist2.js`; `node --check tests\browser-notes-smoke.js`                       | Touched runtime/browser files                        | pass            | -                |
+  | tests   | `node --test tests\context-windows.test.js tests\board-scroll.test.js`                                | Notes-pane reserve guard and board scroll contracts  | pass, 31 tests  | -                |
+  | browser | `npm run test:browser`                                                                                | Notes-pane reveal and stable close, side-panel smoke | pass, 3 tests   | -                |
+  | lint    | `npm run lint`                                                                                        | WorkLists formatting gate                            | pass            | -                |
+  | tests   | `npm test`                                                                                            | Full WorkLists suite                                 | pass, 467 tests | -                |
 
 - Tests added/updated: Browser smoke now asserts notes-pane close keeps board padding and scroll position stable mid-retract, then clears reserve after close; source-contract coverage asserts close guard helpers and transition/fallback release path.
 - Regression impact: Isolated to notes-pane close timing and board reserve release; existing active-card reveal behavior remains covered.
@@ -748,14 +786,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Left-edge menu open preserves the expected screen push; scrolled-board overlay open/close no longer causes a board-location bump.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\search-shortcuts.test.js tests\browser-notes-smoke.js` | Touched source/test files | pass, unchanged | - |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\browser-notes-smoke.js` | Touched runtime/browser files | pass | - |
-  | tests | `node --test tests\search-shortcuts.test.js tests\context-windows.test.js tests\board-scroll.test.js` | Side-panel contracts, notes viewport reserve, board scroll | pass, 47 tests | - |
-  | browser | `npm run test:browser` | Left-edge push, scrolled overlay close stability, notes reveal | pass, 3 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | Gate    | Command                                                                                                                                                         | Scope                                                          | Result          | Exception / risk |
+  | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\search-shortcuts.test.js tests\browser-notes-smoke.js` | Touched source/test files                                      | pass, unchanged | -                |
+  | syntax  | `node --check public\todolist2.js`; `node --check tests\browser-notes-smoke.js`                                                                                 | Touched runtime/browser files                                  | pass            | -                |
+  | tests   | `node --test tests\search-shortcuts.test.js tests\context-windows.test.js tests\board-scroll.test.js`                                                           | Side-panel contracts, notes viewport reserve, board scroll     | pass, 47 tests  | -                |
+  | browser | `npm run test:browser`                                                                                                                                          | Left-edge push, scrolled overlay close stability, notes reveal | pass, 3 tests   | -                |
+  | lint    | `npm run lint`                                                                                                                                                  | WorkLists formatting gate                                      | pass            | -                |
+  | tests   | `npm test`                                                                                                                                                      | Full WorkLists suite                                           | pass, 467 tests | -                |
 
 - Tests added/updated: Browser smoke now asserts left-edge push after margin animation, scrolled overlay mode, and static board position during overlay close; source-contract coverage asserts scroll-left-aware side-panel gating and overlay close guards.
 - Regression impact: Isolated to side-panel layout-mode timing/closing behavior and notes-pane overlap coverage already in the same smoke file.
@@ -773,14 +811,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Right-edge active cards scroll out from under the notes pane; the left board library overlays instead of bumping for overflow-only/whitespace states.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\search-shortcuts.test.js tests\browser-notes-smoke.js` | Touched source/test files | pass | - |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js`; `node --check tests\search-shortcuts.test.js`; `node --check tests\browser-notes-smoke.js` | Touched JS files | pass | - |
-  | tests | `node --test tests\context-windows.test.js tests\search-shortcuts.test.js tests\board-scroll.test.js` | Notes-pane reserve, side-panel bump gating, board scroll contracts | pass, 47 tests | - |
-  | browser | `npm run test:browser` | Playwright notes-pane viewport, right-edge reveal, and side-panel overlay smoke | pass, 3 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | Gate    | Command                                                                                                                                                                      | Scope                                                                           | Result          | Exception / risk |
+  | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\search-shortcuts.test.js tests\browser-notes-smoke.js`              | Touched source/test files                                                       | pass            | -                |
+  | syntax  | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js`; `node --check tests\search-shortcuts.test.js`; `node --check tests\browser-notes-smoke.js` | Touched JS files                                                                | pass            | -                |
+  | tests   | `node --test tests\context-windows.test.js tests\search-shortcuts.test.js tests\board-scroll.test.js`                                                                        | Notes-pane reserve, side-panel bump gating, board scroll contracts              | pass, 47 tests  | -                |
+  | browser | `npm run test:browser`                                                                                                                                                       | Playwright notes-pane viewport, right-edge reveal, and side-panel overlay smoke | pass, 3 tests   | -                |
+  | lint    | `npm run lint`                                                                                                                                                               | WorkLists formatting gate                                                       | pass            | -                |
+  | tests   | `npm test`                                                                                                                                                                   | Full WorkLists suite                                                            | pass, 467 tests | -                |
 
 - Tests added/updated: Added browser coverage for right-edge active-card reveal under the notes pane and changed side-panel browser coverage to assert overflow-only overlay behavior; updated source-contract coverage for final-pane-position math, board-level reserve, post-transition correction, protected-focus tracking, and `.column` protected selectors.
 - Regression impact: Isolated to notes-pane horizontal reserve/scroll correction and side-panel layout-mode selection; full unit suite plus browser smoke passed.
@@ -798,13 +836,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: No production UI change in this pass; browser coverage now exercises the shipped notes-pane and side-panel layout behavior.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write tests\browser-notes-smoke.js` | Browser smoke test | pass, unchanged | - |
-  | syntax | `node --check tests\browser-notes-smoke.js` | Browser smoke test | pass | - |
-  | browser | `npm run test:browser` | Playwright notes-pane viewport and side-panel overlay/push smoke | pass, 2 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | Gate    | Command                                             | Scope                                                            | Result          | Exception / risk |
+  | ------- | --------------------------------------------------- | ---------------------------------------------------------------- | --------------- | ---------------- |
+  | format  | `npx prettier --write tests\browser-notes-smoke.js` | Browser smoke test                                               | pass, unchanged | -                |
+  | syntax  | `node --check tests\browser-notes-smoke.js`         | Browser smoke test                                               | pass            | -                |
+  | browser | `npm run test:browser`                              | Playwright notes-pane viewport and side-panel overlay/push smoke | pass, 2 tests   | -                |
+  | lint    | `npm run lint`                                      | WorkLists formatting gate                                        | pass            | -                |
+  | tests   | `npm test`                                          | Full WorkLists suite                                             | pass, 467 tests | -                |
 
 - Tests added/updated: Updated Playwright smoke coverage for hidden title text, hover-revealed notes-pane actions, existing-edit autosave behavior, side-panel overlay mode, and side-panel push mode under overflow.
 - Regression impact: Test-only browser coverage update; production behavior unchanged from the prior implementation pass. Full suite and browser smoke passed.
@@ -822,13 +860,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Opening the board library no longer bumps the board in non-overflow states; existing pushed layout remains available when overflow or protected content needs it.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\search-shortcuts.test.js` | Touched source/test files | pass | - |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js`; `node --check tests\search-shortcuts.test.js` | Touched JS files | pass | - |
-  | tests | `node --test tests\search-shortcuts.test.js tests\context-windows.test.js tests\board-scroll.test.js` | Side-panel bump gating, notes-pane reserve, board scroll contracts | pass, 47 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 467 tests | - |
+  | Gate   | Command                                                                                                                            | Scope                                                              | Result          | Exception / risk |
+  | ------ | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------- | ---------------- |
+  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\search-shortcuts.test.js` | Touched source/test files                                          | pass            | -                |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js`; `node --check tests\search-shortcuts.test.js`    | Touched JS files                                                   | pass            | -                |
+  | tests  | `node --test tests\search-shortcuts.test.js tests\context-windows.test.js tests\board-scroll.test.js`                              | Side-panel bump gating, notes-pane reserve, board scroll contracts | pass, 47 tests  | -                |
+  | lint   | `npm run lint`                                                                                                                     | WorkLists formatting gate                                          | pass            | -                |
+  | tests  | `npm test`                                                                                                                         | Full WorkLists suite                                               | pass, 467 tests | -                |
 
 - Tests added/updated: Updated shortcut integration coverage for side-panel overflow detection, protected-content detection, overlay-mode class toggling, toggle/render/resize sync, and CSS overlay positioning.
 - Regression impact: Isolated to side-panel layout mode selection and the content-area overlay class; existing push behavior remains when the board overflows or protected content would be covered. Full suite passed.
@@ -846,20 +884,19 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Opening or resizing the notes pane now reserves board viewport space and auto-scrolls the active card out from under the pane.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js` | Touched source/test files | pass | - |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js` | Touched JS files | pass | - |
-  | tests | `node --test tests\context-windows.test.js tests\board-scroll.test.js` | Notes-pane viewport reserve and board scroll contracts | pass, 31 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 466 tests | - |
+  | Gate   | Command                                                                          | Scope                                                  | Result          | Exception / risk |
+  | ------ | -------------------------------------------------------------------------------- | ------------------------------------------------------ | --------------- | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js`         | Touched source/test files                              | pass            | -                |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js` | Touched JS files                                       | pass            | -                |
+  | tests  | `node --test tests\context-windows.test.js tests\board-scroll.test.js`           | Notes-pane viewport reserve and board scroll contracts | pass, 31 tests  | -                |
+  | lint   | `npm run lint`                                                                   | WorkLists formatting gate                              | pass            | -                |
+  | tests  | `npm test`                                                                       | Full WorkLists suite                                   | pass, 466 tests | -                |
 
 - Tests added/updated: Updated context-window source-contract coverage for notes-pane board reserve, active-card auto-scroll, close cleanup, open scheduling, resize handling, and requestAnimationFrame scheduling.
 - Regression impact: Isolated to notes-pane viewport reservation and horizontal scroll correction; board scroll state is recaptured after auto-scroll, notes-pane close clears the reserve, and full suite passed.
 - API docs: Not relevant: UI-only layout/scroll behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Prettier, syntax checks, focused tests, final `npm run lint`, and final `npm test` passed. No `npm audit` script exists in this repo.
 - Conflicts / exceptions: Existing unrelated uncommitted WorkLists edits remain present and were not reverted. Part 3, side-panel overflow-aware bump gating, remains intentionally untouched.
-
 
 ### 2026-06-26T14:54:01Z - WorkLists
 
@@ -871,13 +908,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Clicking the notes-pane ellipsis now reveals the card action dropdown instead of hiding it behind the pane.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js` | Touched source/test files | pass, unchanged | - |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js` | Touched JS files | pass | - |
-  | tests | `node --test tests\context-windows.test.js tests\card-actions.test.js tests\task-clipboard.test.js tests\card-move-ui.test.js` | Notes-pane/card action menu visibility and adjacent action wiring | pass, 59 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 465 tests | - |
+  | Gate   | Command                                                                                                                        | Scope                                                             | Result          | Exception / risk |
+  | ------ | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- | --------------- | ---------------- |
+  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js`                            | Touched source/test files                                         | pass, unchanged | -                |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js`                                               | Touched JS files                                                  | pass            | -                |
+  | tests  | `node --test tests\context-windows.test.js tests\card-actions.test.js tests\task-clipboard.test.js tests\card-move-ui.test.js` | Notes-pane/card action menu visibility and adjacent action wiring | pass, 59 tests  | -                |
+  | lint   | `npm run lint`                                                                                                                 | WorkLists formatting gate                                         | pass            | -                |
+  | tests  | `npm test`                                                                                                                     | Full WorkLists suite                                              | pass, 465 tests | -                |
 
 - Tests added/updated: Updated notes-pane source-contract coverage to assert the pane menu receives the elevated class and z-index.
 - Regression impact: Isolated to menus opened from the notes-pane header; regular card menus keep the existing base stacking layer. Full suite passed.
@@ -895,13 +932,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: When the notes pane is open, the header ellipsis exposes the active card's standard actions, including Copy All for the pane contents, Move, and Delete-with-notes behavior.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\index.html public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\task-clipboard.test.js tests\card-move-ui.test.js`; `npx prettier --write tests\context-windows.test.js` | Touched source/test files | pass, unchanged | - |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js`; `node --check tests\task-clipboard.test.js`; `node --check tests\card-move-ui.test.js` | Touched JS files | pass | - |
-  | tests | `node --test tests\context-windows.test.js tests\task-clipboard.test.js tests\card-actions.test.js tests\card-move-ui.test.js` | Notes-pane context, clipboard, card actions, move wiring | pass, 59 tests | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 465 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | Gate   | Command                                                                                                                                                                                                                             | Scope                                                    | Result          | Exception / risk |
+  | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | --------------- | ---------------- |
+  | format | `npx prettier --write public\index.html public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\task-clipboard.test.js tests\card-move-ui.test.js`; `npx prettier --write tests\context-windows.test.js` | Touched source/test files                                | pass, unchanged | -                |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\context-windows.test.js`; `node --check tests\task-clipboard.test.js`; `node --check tests\card-move-ui.test.js`                                                            | Touched JS files                                         | pass            | -                |
+  | tests  | `node --test tests\context-windows.test.js tests\task-clipboard.test.js tests\card-actions.test.js tests\card-move-ui.test.js`                                                                                                      | Notes-pane context, clipboard, card actions, move wiring | pass, 59 tests  | -                |
+  | tests  | `npm test`                                                                                                                                                                                                                          | Full WorkLists suite                                     | pass, 465 tests | -                |
+  | lint   | `npm run lint`                                                                                                                                                                                                                      | WorkLists formatting gate                                | pass            | -                |
 
 - Tests added/updated: Updated source-contract coverage for the notes-pane header action trigger, active-card handler mapping, Copy All content source, Move routing, Delete routing, and header action accessibility.
 - Regression impact: Reused existing `CardActions`, clipboard, card move, AI/voice, and notes-pane delete paths; isolated new behavior to notes-pane header trigger binding and active-task handler resolution. Full suite passed.
@@ -919,13 +956,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Pressing Enter after `- [ ] Task` or `- [x] Task` now inserts the next `- [ ] ` item in new-card, card-edit, and notes textareas; Enter/Backspace on an empty generated checklist marker cancels back to the current indent.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\markdownAuthoring.js tests\markdown-authoring.test.js` | Touched markdown authoring files | pass, unchanged | - |
-  | syntax | `node --check public\markdownAuthoring.js`; `node --check tests\markdown-authoring.test.js` | Touched JS files | pass | - |
-  | tests | `node --test tests\markdown-authoring.test.js` | Markdown authoring helper and wiring | pass, 12 tests | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 465 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | Gate   | Command                                                                                     | Scope                                | Result          | Exception / risk |
+  | ------ | ------------------------------------------------------------------------------------------- | ------------------------------------ | --------------- | ---------------- |
+  | format | `npx prettier --write public\markdownAuthoring.js tests\markdown-authoring.test.js`         | Touched markdown authoring files     | pass, unchanged | -                |
+  | syntax | `node --check public\markdownAuthoring.js`; `node --check tests\markdown-authoring.test.js` | Touched JS files                     | pass            | -                |
+  | tests  | `node --test tests\markdown-authoring.test.js`                                              | Markdown authoring helper and wiring | pass, 12 tests  | -                |
+  | tests  | `npm test`                                                                                  | Full WorkLists suite                 | pass, 465 tests | -                |
+  | lint   | `npm run lint`                                                                              | WorkLists formatting gate            | pass            | -                |
 
 - Tests added/updated: Added focused coverage for unchecked checklist continuation, checked-to-unchecked continuation, nested checklist indentation, Enter cancellation, and Backspace cancellation.
 - Regression impact: Isolated to `MarkdownAuthoring.getListItemParts()` parsing and existing Enter/Backspace authoring flows; wiring across new-card, card-edit, notes create, notes card edit, and note edit remains unchanged and covered by the existing integration assertions.
@@ -943,13 +980,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Settings left toolbar now shows General first, a divider, then APIs, Prompts, Secondary Tags, Shortcuts, Statuses, and Tag Colors.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\gemma-ui.test.js` | Touched source/test files | pass | - |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\gemma-ui.test.js` | Touched JS files | pass | - |
-  | tests | `node --test tests\gemma-ui.test.js` | Settings UI source-contract coverage | pass, 30 tests | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 460 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | Gate   | Command                                                                                      | Scope                                | Result          | Exception / risk |
+  | ------ | -------------------------------------------------------------------------------------------- | ------------------------------------ | --------------- | ---------------- |
+  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\gemma-ui.test.js` | Touched source/test files            | pass            | -                |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\gemma-ui.test.js`                    | Touched JS files                     | pass            | -                |
+  | tests  | `node --test tests\gemma-ui.test.js`                                                         | Settings UI source-contract coverage | pass, 30 tests  | -                |
+  | tests  | `npm test`                                                                                   | Full WorkLists suite                 | pass, 460 tests | -                |
+  | lint   | `npm run lint`                                                                               | WorkLists formatting gate            | pass            | -                |
 
 - Tests added/updated: Updated `tests/gemma-ui.test.js` to assert General-first tab ordering, separator insertion, and separator styling.
 - Regression impact: Isolated to Settings tab list rendering and separator CSS; tab IDs, panels, click handlers, active tab fallback, prompt sorting, and Settings data flows remain unchanged. Full suite passed.
@@ -967,13 +1004,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Settings > Prompts now displays prompt rows in ascending alphabetical order by prompt title, falling back to ID when needed.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js tests\gemma-ui.test.js` | Touched source/test files | pass | - |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\gemma-ui.test.js` | Touched JS files | pass | - |
-  | tests | `node --test tests\gemma-ui.test.js` | Settings prompt UI source-contract coverage | pass, 30 tests | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 460 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | Gate   | Command                                                                   | Scope                                       | Result          | Exception / risk |
+  | ------ | ------------------------------------------------------------------------- | ------------------------------------------- | --------------- | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\gemma-ui.test.js`         | Touched source/test files                   | pass            | -                |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\gemma-ui.test.js` | Touched JS files                            | pass            | -                |
+  | tests  | `node --test tests\gemma-ui.test.js`                                      | Settings prompt UI source-contract coverage | pass, 30 tests  | -                |
+  | tests  | `npm test`                                                                | Full WorkLists suite                        | pass, 460 tests | -                |
+  | lint   | `npm run lint`                                                            | WorkLists formatting gate                   | pass            | -                |
 
 - Tests added/updated: Updated `tests/gemma-ui.test.js` to assert prompt-list rendering uses `getAlphabetizedClassificationPrompts()` and sorts by `name || id` with case-insensitive comparison.
 - Regression impact: Isolated to Settings prompt-list render order; prompt CRUD, selected prompt IDs, API fetch/update paths, prompt payload shape, and active prompt behavior remain unchanged. Full suite passed.
@@ -991,13 +1028,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Settings tabs now render alphabetically: APIs, General, Prompts, Secondary Tags, Shortcuts, Statuses, Tag Colors.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js tests\gemma-ui.test.js` | Touched source/test files | pass | - |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\gemma-ui.test.js` | Touched JS files | pass | - |
-  | tests | `node --test tests\gemma-ui.test.js` | Settings UI source-contract coverage | pass, 30 tests | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 460 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | Gate   | Command                                                                   | Scope                                | Result          | Exception / risk |
+  | ------ | ------------------------------------------------------------------------- | ------------------------------------ | --------------- | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\gemma-ui.test.js`         | Touched source/test files            | pass            | -                |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\gemma-ui.test.js` | Touched JS files                     | pass            | -                |
+  | tests  | `node --test tests\gemma-ui.test.js`                                      | Settings UI source-contract coverage | pass, 30 tests  | -                |
+  | tests  | `npm test`                                                                | Full WorkLists suite                 | pass, 460 tests | -                |
+  | lint   | `npm run lint`                                                            | WorkLists formatting gate            | pass            | -                |
 
 - Tests added/updated: Updated `tests/gemma-ui.test.js` to assert the Settings toolbar uses `sortModelSettingsTabsByLabel()` and sorted tab metadata for rendering.
 - Regression impact: Isolated to Settings tab button render order; tab IDs, panel IDs, click handlers, active tab fallback, data fetches, and Settings panel contents remain unchanged. Full suite passed.
@@ -1015,13 +1052,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: While dictating in the notes pane, `Ctrl+Enter` now stops recording and saves/updates the active note editor.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js tests\shortcut-registry.test.js tests\gemma-ui.test.js` | Touched source/test files | pass | - |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\shortcut-registry.test.js`; `node --check tests\gemma-ui.test.js` | Touched JS files | pass | - |
-  | tests | `node --test tests\shortcut-registry.test.js tests\gemma-ui.test.js` | Voice-session shortcut and notes AI/source contracts | pass, 50 tests | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 460 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | Gate   | Command                                                                                                                   | Scope                                                | Result          | Exception / risk |
+  | ------ | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | --------------- | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\shortcut-registry.test.js tests\gemma-ui.test.js`                         | Touched source/test files                            | pass            | -                |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\shortcut-registry.test.js`; `node --check tests\gemma-ui.test.js` | Touched JS files                                     | pass            | -                |
+  | tests  | `node --test tests\shortcut-registry.test.js tests\gemma-ui.test.js`                                                      | Voice-session shortcut and notes AI/source contracts | pass, 50 tests  | -                |
+  | tests  | `npm test`                                                                                                                | Full WorkLists suite                                 | pass, 460 tests | -                |
+  | lint   | `npm run lint`                                                                                                            | WorkLists formatting gate                            | pass            | -                |
 
 - Tests added/updated: Added shortcut-registry coverage for active voice + `Ctrl+Enter` across notes create, notes card edit, and inline note edit; added Gemma UI source-contract coverage for `editor.save` and `getGlobalSaveShortcutContext`.
 - Regression impact: Touched shortcut registration/context routing only. Normal non-voice priority still resolves to scope-specific `notes.create`; AI voice fallback remains on `Ctrl+Shift+Enter`. Full suite passed.
@@ -1039,13 +1076,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Ctrl/Cmd+Shift+Enter in the notes create editor now creates the note first, then refines the saved note; duplicate save attempts are blocked while the note create request is active.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js tests\gemma-ui.test.js` | Touched source/test files | pass, unchanged | - |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\gemma-ui.test.js` | Touched JS files | pass | - |
-  | tests | `node --test tests\gemma-ui.test.js`; `node --test tests\shortcut-registry.test.js tests\gemma-ui.test.js` | Notes AI source contract and shortcut registry | pass, 29 tests; pass, 48 tests | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 458 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | Gate   | Command                                                                                                    | Scope                                          | Result                         | Exception / risk |
+  | ------ | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------ | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\gemma-ui.test.js`                                          | Touched source/test files                      | pass, unchanged                | -                |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\gemma-ui.test.js`                                  | Touched JS files                               | pass                           | -                |
+  | tests  | `node --test tests\gemma-ui.test.js`; `node --test tests\shortcut-registry.test.js tests\gemma-ui.test.js` | Notes AI source contract and shortcut registry | pass, 29 tests; pass, 48 tests | -                |
+  | tests  | `npm test`                                                                                                 | Full WorkLists suite                           | pass, 458 tests                | -                |
+  | lint   | `npm run lint`                                                                                             | WorkLists formatting gate                      | pass                           | -                |
 
 - Tests added/updated: Updated Gemma UI source-contract assertions for the draft-note save helper, save-before-refine shortcut path, and committed note id/text handoff into `refine-note`.
 - Regression impact: Touched notes-pane draft save and notes AI shortcut only; card edit AI, inline note edit AI, button-based AI note creation, and notes API route behavior remain on existing paths. Full suite passed.
@@ -1063,14 +1100,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Checking a card now visually shows `Completed`; unchecking immediately restores the original status such as `In Progress` or `Blocked`.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\project-status.test.js`; `npx prettier --write tests\project-status.test.js` | Touched source/test files | pass | - |
-  | syntax | `node --check public\todolist2.js`; `node --check public\apiService.js` | Touched/related frontend scripts | pass | - |
-  | tests | `node --test tests\project-status.test.js` | Completion/status UI source contract | pass, 4 tests | - |
-  | tests | `node --test tests\api.test.js tests\project-status.test.js` | Completion/status API and UI source contracts | pass, 89 tests | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 458 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | Gate   | Command                                                                                                                                                                   | Scope                                         | Result          | Exception / risk |
+  | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | --------------- | ---------------- |
+  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\project-status.test.js`; `npx prettier --write tests\project-status.test.js` | Touched source/test files                     | pass            | -                |
+  | syntax | `node --check public\todolist2.js`; `node --check public\apiService.js`                                                                                                   | Touched/related frontend scripts              | pass            | -                |
+  | tests  | `node --test tests\project-status.test.js`                                                                                                                                | Completion/status UI source contract          | pass, 4 tests   | -                |
+  | tests  | `node --test tests\api.test.js tests\project-status.test.js`                                                                                                              | Completion/status API and UI source contracts | pass, 89 tests  | -                |
+  | tests  | `npm test`                                                                                                                                                                | Full WorkLists suite                          | pass, 458 tests | -                |
+  | lint   | `npm run lint`                                                                                                                                                            | WorkLists formatting gate                     | pass            | -                |
 
 - Tests added/updated: Added API regression coverage proving completion PATCH preserves `todo.status`; added UI source-contract coverage proving completion display is separate from `ApiService.updateTaskStatus`, status records, and status selector value.
 - Regression impact: Touched card status rendering and completion DOM sync only. Status CRUD, status visibility, filters keyed to `data-status`, and backend status validation remain on the existing status field. Full suite passed.
@@ -1088,13 +1125,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Settings now controls status availability globally by color tag. If the configured tag list is empty, statuses are available everywhere; if populated, cards need at least one matching color tag to show/use statuses.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\boardData.js`; `node --check public\todolist2.js`; `node --check openapi.js` | Touched JS entry points | pass | - |
-  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\boardData.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\project-status.test.js tests\board-refresh.test.js data\statuses.json data\statuses.example.json data\statusVisibility.json data\statusVisibility.example.json` | Touched source/test/data files | pass | - |
-  | tests | `node --test tests\api.test.js tests\openapi.test.js tests\project-status.test.js tests\board-refresh.test.js` | Status visibility API/OpenAPI/settings/refresh contracts | pass, 103 tests | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 456 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | Gate   | Command                                                                                                                                                                                                                                                                                                                                                 | Scope                                                    | Result          | Exception / risk |
+  | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | --------------- | ---------------- |
+  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\boardData.js`; `node --check public\todolist2.js`; `node --check openapi.js`                                                                                                                                                                 | Touched JS entry points                                  | pass            | -                |
+  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\boardData.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\project-status.test.js tests\board-refresh.test.js data\statuses.json data\statuses.example.json data\statusVisibility.json data\statusVisibility.example.json` | Touched source/test/data files                           | pass            | -                |
+  | tests  | `node --test tests\api.test.js tests\openapi.test.js tests\project-status.test.js tests\board-refresh.test.js`                                                                                                                                                                                                                                          | Status visibility API/OpenAPI/settings/refresh contracts | pass, 103 tests | -                |
+  | tests  | `npm test`                                                                                                                                                                                                                                                                                                                                              | Full WorkLists suite                                     | pass, 456 tests | -                |
+  | lint   | `npm run lint`                                                                                                                                                                                                                                                                                                                                          | WorkLists formatting gate                                | pass            | -                |
 
 - Tests added/updated: Updated API coverage for global status visibility, OpenAPI coverage for `/statuses/visibility` and `statusVisibility`, source-contract coverage for global Settings controls and hidden status selectors, and board refresh coverage for carrying status visibility through snapshots.
 - Regression impact: Touched status persistence, data hydration, card status selector rendering, status validation, Settings status tab, and OpenAPI. Full suite passed.
@@ -1112,13 +1149,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Statuses can now be scoped to color tags in Settings; card status dropdowns hide scoped statuses unless the card has a matching color tag.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | syntax | `node --check dal.js`; `node --check public\todolist2.js`; `node --check openapi.js` | Touched JS entry points | pass | - |
-  | format | `npx prettier --write dal.js openapi.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\project-status.test.js data\statuses.example.json` | Touched source/test/data files | pass, unchanged | - |
-  | tests | `node --test tests\api.test.js tests\openapi.test.js tests\project-status.test.js` | Status API/OpenAPI/settings source contracts | pass, 90 tests | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 456 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | Gate   | Command                                                                                                                                                                                 | Scope                                        | Result          | Exception / risk |
+  | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | --------------- | ---------------- |
+  | syntax | `node --check dal.js`; `node --check public\todolist2.js`; `node --check openapi.js`                                                                                                    | Touched JS entry points                      | pass            | -                |
+  | format | `npx prettier --write dal.js openapi.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\project-status.test.js data\statuses.example.json` | Touched source/test/data files               | pass, unchanged | -                |
+  | tests  | `node --test tests\api.test.js tests\openapi.test.js tests\project-status.test.js`                                                                                                      | Status API/OpenAPI/settings source contracts | pass, 90 tests  | -                |
+  | tests  | `npm test`                                                                                                                                                                              | Full WorkLists suite                         | pass, 456 tests | -                |
+  | lint   | `npm run lint`                                                                                                                                                                          | WorkLists formatting gate                    | pass            | -                |
 
 - Tests added/updated: Added API coverage for tag-scoped status assignment and rejection; updated OpenAPI assertions for `visibleTagIds`; updated settings/source-contract coverage for visibility controls and per-card status filtering.
 - Regression impact: Touched status persistence, status validation, card dropdown rendering, color-tag change handling, Settings UI, and OpenAPI schema. Full suite passed.
@@ -1136,13 +1173,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Settings now includes a Statuses tab where users can add, edit, default, and delete project statuses; card status dropdowns use the configured statuses and remain persisted.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\todolist2.js` | Touched JS entry points | pass | - |
-  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\boardData.js public\todolist2.js tests\api.test.js tests\openapi.test.js tests\project-status.test.js data\statuses.example.json` | Touched source/test/data files | pass | - |
-  | tests | `node --test tests\api.test.js tests\openapi.test.js tests\project-status.test.js`; `node --test tests\board-refresh.test.js` | Status API/OpenAPI/settings and refresh metadata | pass, 102 tests | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 455 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | Gate   | Command                                                                                                                                                                                                         | Scope                                            | Result          | Exception / risk |
+  | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | --------------- | ---------------- |
+  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\todolist2.js`                                                                                        | Touched JS entry points                          | pass            | -                |
+  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\boardData.js public\todolist2.js tests\api.test.js tests\openapi.test.js tests\project-status.test.js data\statuses.example.json` | Touched source/test/data files                   | pass            | -                |
+  | tests  | `node --test tests\api.test.js tests\openapi.test.js tests\project-status.test.js`; `node --test tests\board-refresh.test.js`                                                                                   | Status API/OpenAPI/settings and refresh metadata | pass, 102 tests | -                |
+  | tests  | `npm test`                                                                                                                                                                                                      | Full WorkLists suite                             | pass, 455 tests | -                |
+  | lint   | `npm run lint`                                                                                                                                                                                                  | WorkLists formatting gate                        | pass            | -                |
 
 - Tests added/updated: Added API coverage for status CRUD, duplicate validation, status rename/delete reassignment, and custom status validation. Updated OpenAPI/source-contract coverage for dynamic status schemas, `/statuses` paths, Settings status tab, and API client helpers.
 - Regression impact: Touched status persistence, `/data` hydration, card status validation/dropdowns, board refresh metadata, Settings dialog, and OpenAPI contract. Full suite passed.
@@ -1160,13 +1197,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Card toolbar metadata no longer competes for one narrow row; tags, status, notes, dates, and completion toggle have separated positions.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | syntax | `node --check public\todolist2.js` | Existing card renderer script | pass | - |
-  | format | `npx prettier --write public\todoliststyles2.css tests\project-status.test.js tests\secondary-tags.test.js tests\card-actions.test.js` | Touched CSS/test files | pass | - |
-  | tests | `node --test tests\project-status.test.js tests\secondary-tags.test.js tests\card-actions.test.js` | Toolbar/status/tags/notes layout source contracts | pass, 32 tests | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 450 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | Gate   | Command                                                                                                                                | Scope                                             | Result          | Exception / risk |
+  | ------ | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | --------------- | ---------------- |
+  | syntax | `node --check public\todolist2.js`                                                                                                     | Existing card renderer script                     | pass            | -                |
+  | format | `npx prettier --write public\todoliststyles2.css tests\project-status.test.js tests\secondary-tags.test.js tests\card-actions.test.js` | Touched CSS/test files                            | pass            | -                |
+  | tests  | `node --test tests\project-status.test.js tests\secondary-tags.test.js tests\card-actions.test.js`                                     | Toolbar/status/tags/notes layout source contracts | pass, 32 tests  | -                |
+  | tests  | `npm test`                                                                                                                             | Full WorkLists suite                              | pass, 450 tests | -                |
+  | lint   | `npm run lint`                                                                                                                         | WorkLists formatting gate                         | pass            | -                |
 
 - Tests added/updated: Updated source-contract assertions for the expanded toolbar rows, top-right status/notes placement, bottom-left tag placement, and bottom-right date/toggle placement.
 - Regression impact: CSS-only layout change for card action rows; no API, persistence, tag save, status save, notes, or completion behavior changed. Full suite passed.
@@ -1184,13 +1221,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Every card now shows a centered project status selector before the notes count button, and status changes persist to the card record.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\todolist2.js` | Touched JS files | pass | - |
-  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\project-status.test.js` | Touched source/test files | pass | - |
-  | tests | `node --test tests\api.test.js tests\openapi.test.js tests\project-status.test.js` | Status API, OpenAPI, and dropdown source contract | pass, 87 tests | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 450 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
+  | Gate   | Command                                                                                                                                                                                     | Scope                                             | Result          | Exception / risk |
+  | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | --------------- | ---------------- |
+  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\todolist2.js`                                                                    | Touched JS files                                  | pass            | -                |
+  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\project-status.test.js` | Touched source/test files                         | pass            | -                |
+  | tests  | `node --test tests\api.test.js tests\openapi.test.js tests\project-status.test.js`                                                                                                          | Status API, OpenAPI, and dropdown source contract | pass, 87 tests  | -                |
+  | tests  | `npm test`                                                                                                                                                                                  | Full WorkLists suite                              | pass, 450 tests | -                |
+  | lint   | `npm run lint`                                                                                                                                                                              | WorkLists formatting gate                         | pass            | -                |
 
 - Tests added/updated: Added API coverage for new-card default status, status update, and invalid status rejection. Added OpenAPI assertions for status path/schema. Added dropdown source/CSS coverage and updated card action grid contract for shifted notes/checkbox columns.
 - Regression impact: Touched card action-row layout, todo payload mutation, and Todo API schema. Existing tag, notes, completion, and card action behavior remain covered by full suite.
@@ -1208,13 +1245,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Adding a second or third board link no longer drops earlier board links from the same parent column.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | syntax | `node --check public\todolist2.js` | Touched JS file | pass | - |
-  | format | `npx prettier --write public\todolist2.js tests\column-move-ui.test.js tests\api.test.js` | Touched source/test files | pass | - |
-  | tests | `node --test tests\column-move-ui.test.js tests\api.test.js` | Link Boards durable selection and multi-board API association | pass, 92 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 446 tests | - |
+  | Gate   | Command                                                                                   | Scope                                                         | Result          | Exception / risk |
+  | ------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------- | --------------- | ---------------- |
+  | syntax | `node --check public\todolist2.js`                                                        | Touched JS file                                               | pass            | -                |
+  | format | `npx prettier --write public\todolist2.js tests\column-move-ui.test.js tests\api.test.js` | Touched source/test files                                     | pass            | -                |
+  | tests  | `node --test tests\column-move-ui.test.js tests\api.test.js`                              | Link Boards durable selection and multi-board API association | pass, 92 tests  | -                |
+  | lint   | `npm run lint`                                                                            | WorkLists formatting gate                                     | pass            | -                |
+  | tests  | `npm test`                                                                                | Full WorkLists suite                                          | pass, 446 tests | -                |
 
 - Tests added/updated: Added source coverage proving Link Boards submits durable selection state, not visible checked rows only. Expanded API coverage to keep one shared column linked across three boards.
 - Regression impact: Touched only board-link selection submission and association tests; unlink/delete semantics and OpenAPI route shape unchanged.
@@ -1232,14 +1269,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Opening the column ellipsis on a non-parent linked column now shows `Unlink`, not `Delete`; the operation removes only that board association.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | syntax | `node --check public\columnActions.js`; `node --check public\todolist2.js` | Touched JS files | pass | - |
-  | format | `npx prettier --write public\columnActions.js public\todolist2.js tests\column-actions.test.js` | Touched source/test files | pass | - |
-  | tests | `node --test tests\column-actions.test.js tests\column-move-ui.test.js` | Column action rendering and linked UI source contracts | pass, 34 tests | - |
-  | tests | `node --test tests\api.test.js` | Column delete/unlink API regression coverage | pass, 80 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 445 tests | - |
+  | Gate   | Command                                                                                         | Scope                                                  | Result          | Exception / risk |
+  | ------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------ | --------------- | ---------------- |
+  | syntax | `node --check public\columnActions.js`; `node --check public\todolist2.js`                      | Touched JS files                                       | pass            | -                |
+  | format | `npx prettier --write public\columnActions.js public\todolist2.js tests\column-actions.test.js` | Touched source/test files                              | pass            | -                |
+  | tests  | `node --test tests\column-actions.test.js tests\column-move-ui.test.js`                         | Column action rendering and linked UI source contracts | pass, 34 tests  | -                |
+  | tests  | `node --test tests\api.test.js`                                                                 | Column delete/unlink API regression coverage           | pass, 80 tests  | -                |
+  | lint   | `npm run lint`                                                                                  | WorkLists formatting gate                              | pass            | -                |
+  | tests  | `npm test`                                                                                      | Full WorkLists suite                                   | pass, 445 tests | -                |
 
 - Tests added/updated: Added menu-unit coverage for dynamic delete-action overrides and board-script source coverage for linked child `Unlink` state.
 - Regression impact: Touched menu rendering, linked column action-state resolution, and linked delete feedback only. Backend route/schema unchanged; existing unlink API behavior preserved.
@@ -1257,13 +1294,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: New/deleted boards appear or disappear in the left menu immediately; parent/linked status no longer pushes column header content down; Link Boards is easier to scan; deleting a board no longer destroys linked columns that still belong to another board.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | syntax | `node --check dal.js`; `node --check public\todolist2.js` | Touched JS files | pass | - |
-  | format | `npx prettier --write dal.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\board-refresh.test.js tests\column-actions.test.js tests\column-move-ui.test.js` | Touched source/test files | pass | - |
-  | tests | `node --test tests\api.test.js tests\board-refresh.test.js tests\column-move-ui.test.js tests\column-actions.test.js` | Board menu refresh, linked deletion, icon layout, alphabetical picker | pass, 124 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 443 tests | - |
+  | Gate   | Command                                                                                                                                                                              | Scope                                                                 | Result          | Exception / risk |
+  | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- | --------------- | ---------------- |
+  | syntax | `node --check dal.js`; `node --check public\todolist2.js`                                                                                                                            | Touched JS files                                                      | pass            | -                |
+  | format | `npx prettier --write dal.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\board-refresh.test.js tests\column-actions.test.js tests\column-move-ui.test.js` | Touched source/test files                                             | pass            | -                |
+  | tests  | `node --test tests\api.test.js tests\board-refresh.test.js tests\column-move-ui.test.js tests\column-actions.test.js`                                                                | Board menu refresh, linked deletion, icon layout, alphabetical picker | pass, 124 tests | -                |
+  | lint   | `npm run lint`                                                                                                                                                                       | WorkLists formatting gate                                             | pass            | -                |
+  | tests  | `npm test`                                                                                                                                                                           | Full WorkLists suite                                                  | pass, 443 tests | -                |
 
 - Tests added/updated: Added board-refresh source coverage for forced create/delete refresh, API coverage for preserving linked columns on board delete, column header CSS contract updates, and Link Boards alphabetical/icon-only source contracts.
 - Regression impact: Touched board create/delete refresh paths, linked column parent promotion, side-menu refresh metadata, column header spacing, and board association picker ordering. Full suite passed.
@@ -1281,13 +1318,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Column ellipsis > Link boards opens a searchable multi-select; parent board is locked; linked child boards can remove the column view without deleting cards; parent/linked badges show association state.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\todolist2.js` | Touched JS files | pass | - |
-  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\columnActions.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\column-actions.test.js tests\column-move-ui.test.js` | Touched source/test files | pass | - |
-  | tests | `node --test tests\api.test.js tests\openapi.test.js tests\column-actions.test.js tests\column-move-ui.test.js` | Column association API/OpenAPI/menu/UI contracts | pass, 112 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 439 tests | - |
+  | Gate   | Command                                                                                                                                                                                                                                          | Scope                                            | Result          | Exception / risk |
+  | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ | --------------- | ---------------- |
+  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\todolist2.js`                                                                                                                         | Touched JS files                                 | pass            | -                |
+  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\columnActions.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\column-actions.test.js tests\column-move-ui.test.js` | Touched source/test files                        | pass            | -                |
+  | tests  | `node --test tests\api.test.js tests\openapi.test.js tests\column-actions.test.js tests\column-move-ui.test.js`                                                                                                                                  | Column association API/OpenAPI/menu/UI contracts | pass, 112 tests | -                |
+  | lint   | `npm run lint`                                                                                                                                                                                                                                   | WorkLists formatting gate                        | pass            | -                |
+  | tests  | `npm test`                                                                                                                                                                                                                                       | Full WorkLists suite                             | pass, 439 tests | -                |
 
 - Tests added/updated: Added API coverage for board-link updates, parent preservation, parent destructive-action blocking, and child-board unlink behavior. Updated OpenAPI and column action/move UI source-contract tests for the new association control.
 - Regression impact: Touched shared board/column membership, delete/move semantics, board refresh metadata, context-window closing, and documented API contracts. Full suite passed.
@@ -1305,17 +1342,18 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Checklist rows now use horizontal space consistently with bullet and numbered markdown lists in cards and notes.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | tests | `node --test tests\markdown-renderer.test.js` | Markdown renderer/list CSS source contracts | pass, 22 tests | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 435 tests | - |
+  | Gate  | Command                                       | Scope                                       | Result          | Exception / risk |
+  | ----- | --------------------------------------------- | ------------------------------------------- | --------------- | ---------------- |
+  | tests | `node --test tests\markdown-renderer.test.js` | Markdown renderer/list CSS source contracts | pass, 22 tests  | -                |
+  | lint  | `npm run lint`                                | WorkLists formatting gate                   | pass            | -                |
+  | tests | `npm test`                                    | Full WorkLists suite                        | pass, 435 tests | -                |
 
 - Tests added/updated: Updated `tests/markdown-renderer.test.js` to assert card checklist offset and notes-pane checklist styling contracts.
 - Regression impact: Isolated to rendered markdown checklist CSS under `.task-content` and `.notes-pane .md-body`; renderer output, checkbox persistence handlers, API routes, and stored markdown format unchanged.
 - API docs: Not relevant: CSS-only rendered markdown layout change; no route, method, request/response schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: `npm run lint`, focused markdown renderer test, and full `npm test` passed.
 - Conflicts / exceptions: Pre-existing local edit in `public/todoliststyles2.css` around completed-card background comments was left intact.
+
 ### 2026-06-16T22:48:56Z - WorkLists
 
 - Summary: Corrected tag color behavior and added secondary-tag settings management.
@@ -1326,14 +1364,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Cards now take primary tag color while the visible tag text remains neutral. Existing card tags like Architecture can be edited from Tag Colors. Settings now includes Secondary Tags management with CRUD, delete replacement/removal, and single-source merge.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\gemma-ui.test.js tests\secondary-tags.test.js` | Touched source/test files | pass | - |
-  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\todolist2.js` | Touched JS files | pass | - |
-  | tests | `node --test tests\api.test.js tests\openapi.test.js tests\gemma-ui.test.js tests\secondary-tags.test.js` | Tag APIs, settings UI source contracts, OpenAPI, card color rendering | pass, 123 tests | - |
-  | audit | `npm audit --audit-level=high` | Dependency security gate | pass, 0 vulnerabilities | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 435 tests | - |
+  | Gate   | Command                                                                                                                                                                                                            | Scope                                                                 | Result                  | Exception / risk |
+  | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- | ----------------------- | ---------------- |
+  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\gemma-ui.test.js tests\secondary-tags.test.js` | Touched source/test files                                             | pass                    | -                |
+  | syntax | `node --check dal.js`; `node --check server.js`; `node --check public\apiService.js`; `node --check public\todolist2.js`                                                                                           | Touched JS files                                                      | pass                    | -                |
+  | tests  | `node --test tests\api.test.js tests\openapi.test.js tests\gemma-ui.test.js tests\secondary-tags.test.js`                                                                                                          | Tag APIs, settings UI source contracts, OpenAPI, card color rendering | pass, 123 tests         | -                |
+  | audit  | `npm audit --audit-level=high`                                                                                                                                                                                     | Dependency security gate                                              | pass, 0 vulnerabilities | -                |
+  | lint   | `npm run lint`                                                                                                                                                                                                     | WorkLists formatting gate                                             | pass                    | -                |
+  | tests  | `npm test`                                                                                                                                                                                                         | Full WorkLists suite                                                  | pass, 435 tests         | -                |
 
 - Tests added/updated: Added API coverage for legacy todo-only primary tag hydration, secondary delete replacement, and secondary squash-merge. Updated OpenAPI and settings UI source checks, plus card-rendering source coverage proving primary color applies to cards without coloring `.tag-label`.
 - Regression impact: Touched shared tag hydration, card rendering, settings, secondary tag mutation, and atomic JSON write handling. Full suite passed; request helper now sends `Content-Length` for JSON bodies so DELETE body tests match browser/fetch behavior.
@@ -1351,15 +1389,15 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: The side-panel Settings window now includes a Tag Colors tab where color tags can be added, renamed, recolored, and deleted. Card tag labels, tag chooser rows, and filter menu rows reflect custom colors.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\boardData.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\gemma-ui.test.js tests\board-refresh.test.js data\primaryTags.json data\primaryTags.example.json` | Touched source/test/data files | pass | - |
-  | syntax | `node --check dal.js`; `node --check public\todolist2.js` | Core touched JS after formatting | pass | - |
-  | tests | `node --test tests\api.test.js` | Primary tag API, data migration/read/write, cascades | pass, 74 tests | - |
-  | tests | `node --test tests\openapi.test.js tests\gemma-ui.test.js tests\board-refresh.test.js` | OpenAPI/settings UI/board snapshot contracts | pass, 43 tests | - |
-  | audit | `npm audit --audit-level=high` | Dependency security gate | pass, 0 vulnerabilities | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 431 tests | - |
+  | Gate   | Command                                                                                                                                                                                                                                                                                   | Scope                                                | Result                  | Exception / risk |
+  | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------- | ---------------- |
+  | format | `npx prettier --write dal.js server.js openapi.js public\apiService.js public\boardData.js public\todolist2.js public\todoliststyles2.css tests\api.test.js tests\openapi.test.js tests\gemma-ui.test.js tests\board-refresh.test.js data\primaryTags.json data\primaryTags.example.json` | Touched source/test/data files                       | pass                    | -                |
+  | syntax | `node --check dal.js`; `node --check public\todolist2.js`                                                                                                                                                                                                                                 | Core touched JS after formatting                     | pass                    | -                |
+  | tests  | `node --test tests\api.test.js`                                                                                                                                                                                                                                                           | Primary tag API, data migration/read/write, cascades | pass, 74 tests          | -                |
+  | tests  | `node --test tests\openapi.test.js tests\gemma-ui.test.js tests\board-refresh.test.js`                                                                                                                                                                                                    | OpenAPI/settings UI/board snapshot contracts         | pass, 43 tests          | -                |
+  | audit  | `npm audit --audit-level=high`                                                                                                                                                                                                                                                            | Dependency security gate                             | pass, 0 vulnerabilities | -                |
+  | lint   | `npm run lint`                                                                                                                                                                                                                                                                            | WorkLists formatting gate                            | pass                    | -                |
+  | tests  | `npm test`                                                                                                                                                                                                                                                                                | Full WorkLists suite                                 | pass, 431 tests         | -                |
 
 - Tests added/updated: Added API coverage for primary-tag list/create/update/delete, duplicate and invalid color rejection, and rename/delete cascades into todo primary tags. Updated OpenAPI, settings UI source, and board refresh snapshot contracts for primaryTags.
 - Regression impact: Primary tag changes touch shared data hydration, `/data`, card rendering, filter menu, tag chooser, and settings. Full suite passed; secondary tag CRUD remains separate and covered by existing/new API assertions.
@@ -1377,20 +1415,19 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Settings now includes a Keyboard Shortcuts tab where current mappings can be viewed, rebound, persisted, and reset.
 - Tests run:
 
-  | Gate | Command | Scope | Result | Exception / risk |
-  | ---- | ------- | ----- | ------ | ---------------- |
-  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\shortcut-registry.test.js` | Touched source/test files | pass | - |
-  | syntax | `node --check public\todolist2.js`; `node --check public\shortcutRegistry.js`; `node --check tests\shortcut-registry.test.js` | Shortcut/settings JS | pass | - |
-  | tests | `node --test tests\shortcut-registry.test.js` | Shortcut registry/controller/settings contract | pass, 19 tests | - |
-  | audit | `npm audit --audit-level=high` | Dependency security gate | pass, 0 vulnerabilities | - |
-  | lint | `npm run lint` | WorkLists formatting gate | pass | - |
-  | tests | `npm test` | Full WorkLists suite | pass, 429 tests | - |
+  | Gate   | Command                                                                                                                       | Scope                                          | Result                  | Exception / risk |
+  | ------ | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------- | ---------------- |
+  | format | `npx prettier --write public\todolist2.js public\todoliststyles2.css tests\shortcut-registry.test.js`                         | Touched source/test files                      | pass                    | -                |
+  | syntax | `node --check public\todolist2.js`; `node --check public\shortcutRegistry.js`; `node --check tests\shortcut-registry.test.js` | Shortcut/settings JS                           | pass                    | -                |
+  | tests  | `node --test tests\shortcut-registry.test.js`                                                                                 | Shortcut registry/controller/settings contract | pass, 19 tests          | -                |
+  | audit  | `npm audit --audit-level=high`                                                                                                | Dependency security gate                       | pass, 0 vulnerabilities | -                |
+  | lint   | `npm run lint`                                                                                                                | WorkLists formatting gate                      | pass                    | -                |
+  | tests  | `npm test`                                                                                                                    | Full WorkLists suite                           | pass, 429 tests         | -                |
 
 - Tests added/updated: Added `tests/shortcut-registry.test.js` coverage for override conflict rejection and source-level Settings tab wiring for capture, validation, save, reset, cleanup, and CSS rows.
 - Regression impact: Shortcut registry/controller path remains shared. Existing board, search, voice, modal, task-entry, card-edit, notes-pane, scheduler, AI, and settings-toggle shortcut coverage passed full suite.
 - API docs: Not relevant: client-side settings/keyboard shortcut behavior only; no route, method, request/response schema, status, auth, or OpenAPI metadata changed.
 - Conflicts / exceptions: Existing dirty changes in `public/shortcutController.js`, `tests/card-move-ui.test.js`, and `tests/edit-session.test.js` were present before this session and left intact.
-
 
 ### 2026-06-16T21:14:50Z - WorkLists
 
@@ -1402,14 +1439,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: `Ctrl + Shift + ]` now opens settings from the board and closes settings when pressed again while the settings window is open.
 - Tests run:
 
-  | Gate   | Command                                                                                      | Scope                    | Result          | Exception / risk |
-  | ------ | -------------------------------------------------------------------------------------------- | ------------------------ | --------------- | ---------------- |
-  | format | `npx prettier --write public\shortcutController.js public\todolist2.js tests\shortcut-registry.test.js` | Touched source/test files | pass            | -                |
-  | syntax | `node --check public\shortcutController.js`; `node --check public\todolist2.js`; `node --check tests\shortcut-registry.test.js` | Touched JS/test files    | pass            | -                |
-  | tests  | `node --test tests\shortcut-registry.test.js`                                               | Shortcut contract        | pass, 17 tests  | -                |
-  | audit  | `npm audit --audit-level=high`                                                               | Dependency security gate | pass, 0 vulns   | -                |
-  | lint   | `npm run lint`                                                                               | Formatting gate          | pass            | -                |
-  | tests  | `npm test`                                                                                   | Full WorkLists suite     | pass, 427 tests | -                |
+  | Gate   | Command                                                                                                                         | Scope                     | Result          | Exception / risk |
+  | ------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | --------------- | ---------------- |
+  | format | `npx prettier --write public\shortcutController.js public\todolist2.js tests\shortcut-registry.test.js`                         | Touched source/test files | pass            | -                |
+  | syntax | `node --check public\shortcutController.js`; `node --check public\todolist2.js`; `node --check tests\shortcut-registry.test.js` | Touched JS/test files     | pass            | -                |
+  | tests  | `node --test tests\shortcut-registry.test.js`                                                                                   | Shortcut contract         | pass, 17 tests  | -                |
+  | audit  | `npm audit --audit-level=high`                                                                                                  | Dependency security gate  | pass, 0 vulns   | -                |
+  | lint   | `npm run lint`                                                                                                                  | Formatting gate           | pass            | -                |
+  | tests  | `npm test`                                                                                                                      | Full WorkLists suite      | pass, 427 tests | -                |
 
 - Tests added/updated: Updated `tests/shortcut-registry.test.js` for `settings.toggle`, including a modal-open regression where `.model-settings-overlay` is visible and the same shortcut dispatches again.
 - Regression impact: Isolated to settings shortcut scope/handler. Modal Escape priority still resolves `modal.dismiss`; card/column move overlays continue suppressing global shortcuts; search, board panel, task entry, card edit, notes-pane, voice, and AI shortcuts passed full suite.
@@ -1426,14 +1463,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact: Pressing `Ctrl + Shift + ]` opens the WorkLists settings window without using the side panel. The command remains compatible with existing shortcut override/capture seams for future user rebinding.
 - Tests run:
 
-  | Gate   | Command                                                         | Scope                    | Result          | Exception / risk |
-  | ------ | --------------------------------------------------------------- | ------------------------ | --------------- | ---------------- |
-  | format | `npx prettier --write public\todolist2.js tests\shortcut-registry.test.js` | Touched source/test files | pass            | -                |
-  | syntax | `node --check public\todolist2.js`; `node --check tests\shortcut-registry.test.js` | Touched JS/test files    | pass            | -                |
-  | tests  | `node --test tests\shortcut-registry.test.js`                  | Shortcut contract        | pass, 16 tests  | -                |
-  | audit  | `npm audit --audit-level=high`                                  | Dependency security gate | pass, 0 vulns   | -                |
-  | lint   | `npm run lint`                                                  | Formatting gate          | pass            | -                |
-  | tests  | `npm test`                                                      | Full WorkLists suite     | pass, 426 tests | -                |
+  | Gate   | Command                                                                            | Scope                     | Result          | Exception / risk |
+  | ------ | ---------------------------------------------------------------------------------- | ------------------------- | --------------- | ---------------- |
+  | format | `npx prettier --write public\todolist2.js tests\shortcut-registry.test.js`         | Touched source/test files | pass            | -                |
+  | syntax | `node --check public\todolist2.js`; `node --check tests\shortcut-registry.test.js` | Touched JS/test files     | pass            | -                |
+  | tests  | `node --test tests\shortcut-registry.test.js`                                      | Shortcut contract         | pass, 16 tests  | -                |
+  | audit  | `npm audit --audit-level=high`                                                     | Dependency security gate  | pass, 0 vulns   | -                |
+  | lint   | `npm run lint`                                                                     | Formatting gate           | pass            | -                |
+  | tests  | `npm test`                                                                         | Full WorkLists suite      | pass, 426 tests | -                |
 
 - Tests added/updated: Updated `tests/shortcut-registry.test.js` to assert `settings.open` dispatches from global board context and task-entry context, remains registered in the initial command list, and uses the required default binding.
 - Regression impact: Isolated to ShortcutRegistry command registration. Existing shortcut controller ownership, scope priority, modal Escape behavior, voice/AI commands, search, board panel, task entry, card edit, and notes-pane shortcuts stayed under the same controller path and passed full suite.
@@ -3666,12 +3703,6 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Card move supports same-board and cross-board destinations using board-aware validation.
 - API contract includes board-aware card move request/response metadata (`sourceBoardId`, `destinationBoardId`, `sourceBoard`, `destinationBoard`).
 
-
-
-
-
-
-
 ### 2026-06-22T22:48:00Z - WorkLists
 
 - Summary: Refined card status bar spacing, color, and tag wrapping.
@@ -3747,4 +3778,3 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - API docs: Not relevant; no HTTP route, schema, or contract changes.
 - Tooling gates: syntax, Prettier, focused tests, full test, and lint passed.
 - Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Earlier status-dropdown/action-bar edits remain in the same uncommitted working set.
-
