@@ -177,7 +177,7 @@ Gate commands: Jest backends `npm test -- --runInBand`; Atlas `npx vitest run --
 
 - **Decisions (settled this investigation):**
   1. Reuse the existing `length` → `formatMediaDuration` path; no new UI/format/column.
-  2. Nova probes and emits the **output** duration **only**; the stored source `File.length` is the established reference (Nova does not re-communicate it). Independent measurement is a **legal-deliverable-integrity non-negotiable** (principal-dev ruling): the deliverable length must be *verifiable* against the source, never copied/assumed.
+  2. Nova probes and emits the **output** duration **only**; the stored source `File.length` is the established reference (Nova does not re-communicate it). Independent measurement is a **legal-deliverable-integrity non-negotiable** (dustin ruling): the deliverable length must be *verifiable* against the source, never copied/assumed.
   3. Verification = visual comparison of the stored source length vs the converted length in the existing two-row (original/converted) view — no Atlas change.
   4. Backfill = separate ticket, with the copy≠parity caveat recorded.
   5. Contract change = additive optional `duration` (integer seconds) on the completed event, pending protocol-owner approval.
