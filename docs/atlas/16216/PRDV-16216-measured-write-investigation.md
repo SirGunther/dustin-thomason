@@ -2,7 +2,7 @@
 
 > Delivered results of the `investigation` method, run 2026-07-15 and **re-run the same day under corrected constraints**. This version **overwrites** the first pass, which proposed changing Nova and the protocol package — ruled out by the user: **Nova will not be changed under any circumstances at this point; `orbital-docking-protocol` will not be changed under any circumstances at this point.** The requirement is to **leverage the same method that collects the original file's duration** — the browser probe — to collect the transcoded file's duration, **triggered automatically, always**.
 >
-> **Relationship to prior artifacts:** evidence from `PRDV-16216-transcoded-media-duration.md` (07-13) and `PRDV-16216-lookup-display-investigation.md` (07-14) is cited where still valid. The first pass of this report (Nova-emission "Approach D") is superseded by this overwrite. Risk record: `PRDV-16216-future-development-concerns.md`.
+> **Relationship to prior artifacts:** evidence from the superseded 07-13 and 07-14 investigations (now under `dnu/` — `dnu/PRDV-16216-transcoded-media-duration.md`, `dnu/PRDV-16216-lookup-display-investigation.md`) is cited where still valid. The first pass of this report (Nova-emission "Approach D") is superseded by this overwrite. Risk record: `PRDV-16216-future-development-concerns.md`.
 
 ## Metadata
 - **Status:** planned
