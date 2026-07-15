@@ -239,6 +239,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | Doc | About |
 | --- | ----- |
 | `browser-loop-setup.md` | Browser-loop setup (dustin-thomason) |
+| `current-vs-target-diagram.md` | Current vs Target diagram — a single-diagram delta convention |
 | `investigation-question-coverage.md` | Investigation method — question coverage checklist |
 | `investigation-report.md` | Investigation Report: <short title> |
 | `investigation-software-gaps.md` | Investigation method — software lens: candidate additions (staging) |
