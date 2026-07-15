@@ -11,6 +11,8 @@ modified: 2026-07-15
 > **Context:** Larry's PR ([larry-adams#24](https://github.com/planetdepos/larry-adams/pull/24), branch `PRDV-16216-b`) rewrites the spec from a **read-time lookup** (display fallback, DB untouched) to a **write-time copy** (persist the source file's `length` into the derived file's row at transcode completion). These are my concerns with persisting a copied value, framed around where the system is headed — not just what ships in this story.
 >
 > **Purpose of this document:** a dated, code-verified record that this risk was identified and raised — for discussion with the team and, where needed, escalation up the chain. Code findings below were verified directly against `nova-back-end` and `callisto-back-end` on **2026-07-15**, with file/line references.
+>
+> **Constructive path forward (updated 2026-07-15):** the concerns below are resolved by the **browser-probe write-back** — the browser measures the transcoded file itself on first view (same method that measures originals at upload) and Callisto records it; Nova and the protocol package untouched. Investigated in full in [[PRDV-16216-measured-write-investigation]] (2026-07-15, overwritten same day under the locked constraints; disposition: proceed). Lead the conversation with that report; this document is the risk record behind it.
 
 ---
 
