@@ -10,3 +10,8 @@ Ask the questions one at a time.
 If a question can be answered by exploring the codebase, explore the codebase instead.
 
 After a question is asked, please verify if what you're asking is already a behavior of the system. Declare if it is. For that reason, you might get answers to questions as you go through this that you can confirm in line. I would like to see these decisions. The objective with this instruction is to ensure we understand the deltas, if any exist.
+
+At a minimum, 3 sections:
+1. **Question #:**
+2. **Current behavior:** include if this question contains functionality already present in some way
+3. **My recommended answer:**
