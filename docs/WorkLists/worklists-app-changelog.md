@@ -1,4 +1,4 @@
-# WorkLists App Changelog
+﻿# WorkLists App Changelog
 
 ## Purpose
 
@@ -36,6 +36,20 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-07-16T15:23:43Z - WorkLists
+
+- Summary: Added the Duplicate Card action as a backend-owned card clone flow.
+- Problem: Existing card menu copy actions copied text to the clipboard, but users needed a direct way to create a new persisted card from an existing card's structure and notes.
+- Requirement: Duplicate one persisted card from the shared card ellipsis menu, copy notes with new identities, reset workflow state, preserve structure/tags/status/markdown, refresh immediately, and reveal/focus the new card when visible.
+- Solution: Added `dal.duplicateTodo`, `POST /todos/:id/duplicate`, `ApiService.duplicateTodo`, OpenAPI `TodoDuplicateResponse`, a shared `Duplicate Card` menu action with `fa-clone`, duplicate in-flight disabled state, board and notes-pane handlers, forced server refresh, active-sort reapply, and duplicate reveal/focus scheduling.
+- Files/areas: `dal.js`, `server.js`, `openapi.js`, `public/apiService.js`, `public/cardActions.js`, `public/todolist2.js`, `tests/api.test.js`, `tests/openapi.test.js`, `tests/card-actions.test.js`, canonical changelog.
+- User-visible impact: Users can duplicate a card from the board card menu or notes-pane card menu. The duplicate gets its own card id and copied note ids, appears at the bottom for unsorted columns, respects active sorted-column ordering, and keeps existing search/filter state.
+- Tests run: `node --check dal.js`, `node --check server.js`, and `node --check public\todolist2.js` passed; `node --test tests/api.test.js tests/openapi.test.js tests/card-actions.test.js` passed, 108 tests; `npm test` via `npm.cmd test` passed 529 / failed 1.
+- Tests added/updated: Added API coverage for successful duplicate with markdown/tags/status/notes and no-partial failure paths; OpenAPI coverage for `/todos/{id}/duplicate`; card-action coverage for action order, icon/label, disabled in-flight behavior, and board/notes-pane handler wiring.
+- Regression impact: Existing Copy, Copy All, Move, Edit Notes, Delete, status/tag rendering, notes count, and notes-pane extra-action behavior remain covered by focused card-action tests. No migration or stored schema change.
+- API docs: Added `POST /todos/{id}/duplicate` with no request body, `201/404/409/500` responses, and `TodoDuplicateResponse` carrying `message`, `todo`, `column`, `notes`, `sourceTodoId`, and `destinationIndex`.
+- Tooling gates: Targeted implementation tests passed. Full suite still carries the pre-existing unrelated `tests/gemma-ui.test.js:417` voice-session shortcut scope failure documented in prior changelog entries; the touched `public/todolist2.js` diff does not modify `registerShortcutContextProvider`.
+
 ### 2026-07-14T18:17:13Z - WorkLists
 
 - Summary: Followed up on markdown checklist indentation after the screenshot showed child bullet text still aligned with the parent checklist label.
@@ -69,12 +83,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
 ### 2026-07-01T16:08:26Z - WorkLists
 
 - Summary: Fixed a regression where selecting any item in the notes-pane card action (ellipsis) menu collapsed the entire notes pane.
-- Problem: With the notes pane open, choosing any option in the header "…" menu (Copy, Copy All, Refine, Voice, and the new Collapse all) closed the whole pane, destroying user context. The Collapse-all-in-dropdown change (2026-07-01T15:41:50Z) surfaced a latent bug.
-- Root cause: `bindNotesPaneOutsideDismissal` registers a capture-phase `document` click listener that calls `closeNotesPane` for any click outside `#notes-pane`. The card action menu is appended to `document.body` (via `CardActions.openCardActionMenu`), so it is physically outside the pane. The dismissal allowlist `isNotesPaneOpenTarget` only exempted `.task-notes-indicator`, the single `[data-card-action-id="edit-notes"]` item, and `[data-preserve-notes-pane]` — not the menu as a whole. Capture phase means the menu's own bubble-phase `stopPropagation` fires too late, so every non-exempt item read as an outside click and closed the pane.
+- Problem: With the notes pane open, choosing any option in the header "â€¦" menu (Copy, Copy All, Refine, Voice, and the new Collapse all) closed the whole pane, destroying user context. The Collapse-all-in-dropdown change (2026-07-01T15:41:50Z) surfaced a latent bug.
+- Root cause: `bindNotesPaneOutsideDismissal` registers a capture-phase `document` click listener that calls `closeNotesPane` for any click outside `#notes-pane`. The card action menu is appended to `document.body` (via `CardActions.openCardActionMenu`), so it is physically outside the pane. The dismissal allowlist `isNotesPaneOpenTarget` only exempted `.task-notes-indicator`, the single `[data-card-action-id="edit-notes"]` item, and `[data-preserve-notes-pane]` â€” not the menu as a whole. Capture phase means the menu's own bubble-phase `stopPropagation` fires too late, so every non-exempt item read as an outside click and closed the pane.
 - Requirement: Interacting with any item in the notes-pane card action menu must keep the pane open; only intentional handlers change pane visibility.
-- Solution: Added `.card-action-menu--notes-pane` to the `isNotesPaneOpenTarget` exempt selector (`public/todolist2.js`), so a click anywhere in the notes-pane menu (including future/extra items) is treated as an in-pane interaction. Reuses the existing allowlist seam — no new listener, no `cardActions.js` change, no capture/bubble timing change. The class is applied in `openNotesPaneCardActionMenu`/`toggleNotesPaneCardActionMenu` before any item is clickable and scopes the exemption to the notes-pane menu only (board-card menus untouched). Verified that handlers which should still close the pane do so explicitly and are unaffected: `deleteNotesPaneTask` calls `closeNotesPane` after the card is gone; `startCardMove` opens a dialog (dismissal handler is already guarded by `isAppDialogOpen()`).
+- Solution: Added `.card-action-menu--notes-pane` to the `isNotesPaneOpenTarget` exempt selector (`public/todolist2.js`), so a click anywhere in the notes-pane menu (including future/extra items) is treated as an in-pane interaction. Reuses the existing allowlist seam â€” no new listener, no `cardActions.js` change, no capture/bubble timing change. The class is applied in `openNotesPaneCardActionMenu`/`toggleNotesPaneCardActionMenu` before any item is clickable and scopes the exemption to the notes-pane menu only (board-card menus untouched). Verified that handlers which should still close the pane do so explicitly and are unaffected: `deleteNotesPaneTask` calls `closeNotesPane` after the card is gone; `startCardMove` opens a dialog (dismissal handler is already guarded by `isAppDialogOpen()`).
 - Files/areas: `public/todolist2.js` (`isNotesPaneOpenTarget`), `tests/context-windows.test.js`, canonical changelog.
-- User-visible impact: The notes pane now stays open when you pick Copy, Copy All, Refine, Voice, or Collapse all / Expand all from the card's "…" menu; the action runs with the pane intact. Delete still deletes the card and closes the pane; the × Close button still closes it.
+- User-visible impact: The notes pane now stays open when you pick Copy, Copy All, Refine, Voice, or Collapse all / Expand all from the card's "â€¦" menu; the action runs with the pane intact. Delete still deletes the card and closes the pane; the Ã— Close button still closes it.
 - Tests run:
 
   | Gate   | Command                                                                  | Scope                                 | Result            | Exception / risk                                                                                                         |
@@ -84,7 +98,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | tests  | `node --test tests/context-windows.test.js`                              | Notes-pane context/dismissal contract | pass, 26 tests    | -                                                                                                                        |
   | tests  | `node --test`                                                            | Full WorkLists suite                  | 525 pass / 1 fail | Same pre-existing unrelated `tests/gemma-ui.test.js:417` voice-session shortcut scope failure; not touched by this work. |
 
-- Tests added/updated: `tests/context-windows.test.js` — new case "keeps the card action menu from dismissing the notes pane on item selection" asserting `isNotesPaneOpenTarget`'s allowlist now includes `.card-action-menu--notes-pane`.
+- Tests added/updated: `tests/context-windows.test.js` â€” new case "keeps the card action menu from dismissing the notes pane on item selection" asserting `isNotesPaneOpenTarget`'s allowlist now includes `.card-action-menu--notes-pane`.
 - Regression impact: One-selector addition to the dismissal allowlist; scoped to the notes-pane card action menu. No change to board-card menus, the outside-dismissal listener wiring, or `cardActions.js`. Explicit close paths (Delete, Close button) verified unchanged. Full suite delta is only the +1 new passing test.
 - API docs: Not relevant: UI-only dismissal behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Syntax/format/focused tests passed; full `node --test` carries only the pre-existing unrelated gemma-ui failure. No `npm audit` script exists in this repo.
@@ -92,8 +106,8 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ### 2026-07-01T15:41:50Z - WorkLists
 
-- Summary: Refined the note-collapse feature from user feedback — chevron no longer holds the hover row open, and Collapse-all/Expand-all moved from a standalone header button into the notes-pane ellipsis dropdown.
-- Problem: (1) Clicking the per-note collapse chevron focused it, so `:focus-within` pinned that note's hover action row visible until the user clicked elsewhere — the icons should hide as soon as the pointer leaves. (2) The Collapse-all control was an always-visible header button; the user wanted it tucked into the existing dropdown menu so it only appears on demand.
+- Summary: Refined the note-collapse feature from user feedback â€” chevron no longer holds the hover row open, and Collapse-all/Expand-all moved from a standalone header button into the notes-pane ellipsis dropdown.
+- Problem: (1) Clicking the per-note collapse chevron focused it, so `:focus-within` pinned that note's hover action row visible until the user clicked elsewhere â€” the icons should hide as soon as the pointer leaves. (2) The Collapse-all control was an always-visible header button; the user wanted it tucked into the existing dropdown menu so it only appears on demand.
 - Requirement: Chevron must not retain focus on mouse click (row hides on pointer-out) while staying keyboard-reachable; Collapse-all/Expand-all must be a selectable item in the notes-pane header ellipsis menu, not a persistent button, and only when there are notes to act on.
 - Solution:
   - Focus fix (`public/todolist2.js`): a delegated `mousedown` listener on the notes list calls `event.preventDefault()` for `[data-toggle-note-collapse]`, suppressing focus-on-click (so `:focus-within` never engages) while the click still fires the toggle. Keyboard tab focus is intentionally preserved.
@@ -101,7 +115,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Notes wiring (`public/todolist2.js`): `getNotesPaneCardActionMenuOptions` now passes `extraActions: getNotesPaneCollapseMenuActions()`. That helper returns a single `collapse-all-notes` item only when `getCollapsibleNoteItems()` is non-empty, with label/icon flipping between "Collapse all notes" (`fa-angle-double-up`) and "Expand all notes" (`fa-angle-double-down`) based on current state; `onSelect` calls `toggleCollapseAllNotes()`.
   - Removed the standalone `#notes-pane-collapse-all` header button (`public/index.html`), its `collapseAllButton` element ref, its click binding, and the now-unused `syncCollapseAllButton` helper + its calls in `renderTaskNotes`/`setNoteCollapsed`. The menu computes its label freshly on each open, so no live button sync is needed.
 - Files/areas: `public/todolist2.js`, `public/cardActions.js`, `public/index.html`, `tests/notes-collapse.test.js`, `tests/card-actions.test.js`, `tests/context-windows.test.js`, canonical changelog.
-- User-visible impact: Collapsing a note via its chevron no longer keeps that note's icon row visible — moving the mouse away hides the icons as expected. Collapse-all/Expand-all is now a menu item inside the notes-pane header "…" dropdown (labelled "Collapse all notes" / "Expand all notes"), appearing only when notes are present, instead of an always-visible header button.
+- User-visible impact: Collapsing a note via its chevron no longer keeps that note's icon row visible â€” moving the mouse away hides the icons as expected. Collapse-all/Expand-all is now a menu item inside the notes-pane header "â€¦" dropdown (labelled "Collapse all notes" / "Expand all notes"), appearing only when notes are present, instead of an always-visible header button.
 - Tests run:
 
   | Gate   | Command                                                                                             | Scope                                                      | Result            | Exception / risk                                                                                                                          |
@@ -111,8 +125,8 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | tests  | `node --test tests/notes-collapse.test.js tests/card-actions.test.js tests/context-windows.test.js` | Collapse + card-action-menu + notes-pane context contracts | pass, 51 tests    | -                                                                                                                                         |
   | tests  | `node --test`                                                                                       | Full WorkLists suite                                       | 524 pass / 1 fail | Same pre-existing unrelated `tests/gemma-ui.test.js:417` voice-session shortcut scope failure documented below; not touched by this work. |
 
-- Tests added/updated: `tests/notes-collapse.test.js` reworked — added chevron focus-prevention (mousedown preventDefault) assertion and dropdown-menu assertions (`getNotesPaneCollapseMenuActions`, `collapse-all-notes` id, label flip, `onSelect → toggleCollapseAllNotes`, editing-skip) and negative assertions that the old `notes-pane-collapse-all` button and `syncCollapseAllButton` are gone. `tests/card-actions.test.js` — new case asserting `extraActions` render with `data-card-action-extra`, run their own `onSelect`, close the menu, and are absent from the shared definitions. `tests/context-windows.test.js` — dropped the removed header-button assertion; kept the chevron label assertion.
-- Regression impact: `cardActions.js` change is additive — `extraActions` defaults to none, so board-card menus and their `card-actions.test.js` contracts are unchanged (verified: full card-actions suite green). Notes-pane header menu now carries one contextual item computed at open time. Focus-prevention is scoped to the collapse chevron only. No persistence or API change.
+- Tests added/updated: `tests/notes-collapse.test.js` reworked â€” added chevron focus-prevention (mousedown preventDefault) assertion and dropdown-menu assertions (`getNotesPaneCollapseMenuActions`, `collapse-all-notes` id, label flip, `onSelect â†’ toggleCollapseAllNotes`, editing-skip) and negative assertions that the old `notes-pane-collapse-all` button and `syncCollapseAllButton` are gone. `tests/card-actions.test.js` â€” new case asserting `extraActions` render with `data-card-action-extra`, run their own `onSelect`, close the menu, and are absent from the shared definitions. `tests/context-windows.test.js` â€” dropped the removed header-button assertion; kept the chevron label assertion.
+- Regression impact: `cardActions.js` change is additive â€” `extraActions` defaults to none, so board-card menus and their `card-actions.test.js` contracts are unchanged (verified: full card-actions suite green). Notes-pane header menu now carries one contextual item computed at open time. Focus-prevention is scoped to the collapse chevron only. No persistence or API change.
 - API docs: Not relevant: UI-only menu/focus behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Syntax/format/focused tests passed; full `node --test` carries only the pre-existing unrelated gemma-ui failure. No `npm audit` script exists in this repo.
 - Conflicts / exceptions: Follows the 2026-07-01T15:32:04Z entry below (same uncommitted session); supersedes that entry's standalone header-button approach for Collapse-all. Browser/Playwright verification not run this session (no running :3010 server); source-contract + card-actions unit tests cover the wiring, live focus/hover geometry deferred to manual check. Pre-existing unrelated dirty files remain (the `gemma-ui` shortcut mismatch, `tests/browser-notes-smoke.js`, `tests/shortcut-registry.test.js`).
@@ -123,14 +137,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Problem: Long saved notes render at full height; a few of them push shorter notes out of view and make the notes pane hard to scan.
 - Requirement: A per-note collapse toggle that (a) collapses to header + one clamped preview line, (b) persists only for the current window session and resets on reload, (c) is reachable via a hover-revealed icon, (d) auto-re-expands when the note is opened for edit, plus (e) a header Collapse-all/Expand-all control. Scope confirmed with user: saved notes only (card-text preview untouched); dedicated chevron icon; Collapse-all included this iteration.
 - Solution:
-  - Session state (`public/todolist2.js`): new module-level `collapsedNoteIds = new Set()` keyed by note id. In-memory only — no `localStorage`/`sessionStorage` — which is what makes it reset on reload. State must live in JS (not just a CSS class) because `renderTaskNotes`/`renderNoteItemContent` wipe the DOM on every render, so it is re-applied on render.
-  - `applyNoteCollapsedState(item)` toggles `.notes-pane-note--collapsed` and syncs the chevron's `aria-expanded` + label/title (Collapse note ↔ Expand note) + icon (`fa-chevron-up`/`fa-chevron-down`); called at the end of `renderNoteItemContent`. `setNoteCollapsed(item, collapsed)` updates the Set then re-applies.
-  - Chevron button added to each saved note's `.notes-pane-note-actions` flex row (`notes-pane-collapse-btn`, `data-toggle-note-collapse`) — it inherits the existing hover/focus reveal contract; no card-preview grid change (notes use flex, not the `repeat(5,26px)` grid).
+  - Session state (`public/todolist2.js`): new module-level `collapsedNoteIds = new Set()` keyed by note id. In-memory only â€” no `localStorage`/`sessionStorage` â€” which is what makes it reset on reload. State must live in JS (not just a CSS class) because `renderTaskNotes`/`renderNoteItemContent` wipe the DOM on every render, so it is re-applied on render.
+  - `applyNoteCollapsedState(item)` toggles `.notes-pane-note--collapsed` and syncs the chevron's `aria-expanded` + label/title (Collapse note â†” Expand note) + icon (`fa-chevron-up`/`fa-chevron-down`); called at the end of `renderNoteItemContent`. `setNoteCollapsed(item, collapsed)` updates the Set then re-applies.
+  - Chevron button added to each saved note's `.notes-pane-note-actions` flex row (`notes-pane-collapse-btn`, `data-toggle-note-collapse`) â€” it inherits the existing hover/focus reveal contract; no card-preview grid change (notes use flex, not the `repeat(5,26px)` grid).
   - Toggle wired as the first branch of the `elements.list` click delegation (ahead of the note-content edit branch); chevron lives in the actions row, not `.notes-pane-note-content`, so it never triggers edit.
   - Re-expand on edit: `showNoteInlineEditor` deletes the id from `collapsedNoteIds` and clears the class, so a note opened for edit stays expanded after save/cancel re-render.
   - Collapse-all: new `#notes-pane-collapse-all` header button (`public/index.html`) + `toggleCollapseAllNotes` / `getCollapsibleNoteItems` / `syncCollapseAllButton` (`public/todolist2.js`). Skips notes currently in `.notes-pane-note-editing`; flips the button label/icon to "Expand all" (`fa-angle-double-down`) once everything collapsible is collapsed; synced on list render.
   - CSS (`public/todoliststyles2.css`): `.notes-pane-note--collapsed .notes-pane-note-content` clamps to one line (`-webkit-line-clamp:1`) and the collapsed meta row drops its bottom margin.
-- Evidence used: 2026-07-01T13:46:17Z entry added the inert `notes-pane-more-actions-btn` ellipsis "for future actions" — this feature is that next step but uses a separate chevron so the ellipsis stays free for a future menu. Session-only transient state mirrors the existing Gemma-toast `Map<id,{expanded}>` pattern (state in JS, re-applied on render). Notes Initiative UI/UX checklist: viewport-safe controls, no horizontal overflow, hover-revealed compact icons with accessible labels.
+- Evidence used: 2026-07-01T13:46:17Z entry added the inert `notes-pane-more-actions-btn` ellipsis "for future actions" â€” this feature is that next step but uses a separate chevron so the ellipsis stays free for a future menu. Session-only transient state mirrors the existing Gemma-toast `Map<id,{expanded}>` pattern (state in JS, re-applied on render). Notes Initiative UI/UX checklist: viewport-safe controls, no horizontal overflow, hover-revealed compact icons with accessible labels.
 - Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `public/index.html`, `tests/context-windows.test.js`, `tests/notes-collapse.test.js` (new), canonical changelog.
 - User-visible impact: Hovering a saved note now shows a chevron that collapses it to its timestamp header plus one preview line (and back); clicking a collapsed note's body opens the editor already expanded; a new header button collapses/expands all notes at once and reads "Expand all" when everything is collapsed. All collapse state resets when the window/tab reloads.
 - Tests run:
@@ -142,8 +156,8 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | tests  | `node --test tests/context-windows.test.js tests/notes-collapse.test.js`                                                                           | Notes-pane context + new collapse contract | pass, 32 tests    | -                                                                                                                                                                                                                                      |
   | tests  | `node --test`                                                                                                                                      | Full WorkLists suite                       | 521 pass / 1 fail | Pre-existing unrelated failure `tests/gemma-ui.test.js:417` (voice-session shortcut scope mismatch from an earlier dirty `public/todolist2.js` shortcut edit); documented in the 2026-07-01T13:46:17Z entry. Not touched by this work. |
 
-- Tests added/updated: New `tests/notes-collapse.test.js` (7 source-contract cases — session-only Set with no persistence, chevron markup, re-apply on render, toggle-before-edit ordering, re-expand on edit, Collapse-all skipping edit mode + label/icon flip, collapsed clamp CSS). Extended `tests/context-windows.test.js` for the chevron `aria-label` and the header Collapse-all button. Live DOM geometry (clamp height, hover reveal) left to manual/browser check, consistent with prior notes-pane source-contract coverage.
-- Regression impact: Scoped to saved-note rendering + the notes-pane list click handler and header. The card-text preview render and its `repeat(5,26px)` grid are untouched; note actions use a flex row so the added chevron needs no grid change. New click branch returns early and precedes existing branches; no persistence path or API added. Focused notes-pane suites green; full-suite delta is only the +7 new passing tests (514→521), same single pre-existing failure.
+- Tests added/updated: New `tests/notes-collapse.test.js` (7 source-contract cases â€” session-only Set with no persistence, chevron markup, re-apply on render, toggle-before-edit ordering, re-expand on edit, Collapse-all skipping edit mode + label/icon flip, collapsed clamp CSS). Extended `tests/context-windows.test.js` for the chevron `aria-label` and the header Collapse-all button. Live DOM geometry (clamp height, hover reveal) left to manual/browser check, consistent with prior notes-pane source-contract coverage.
+- Regression impact: Scoped to saved-note rendering + the notes-pane list click handler and header. The card-text preview render and its `repeat(5,26px)` grid are untouched; note actions use a flex row so the added chevron needs no grid change. New click branch returns early and precedes existing branches; no persistence path or API added. Focused notes-pane suites green; full-suite delta is only the +7 new passing tests (514â†’521), same single pre-existing failure.
 - API docs: Not relevant: UI-only notes-pane affordance; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Syntax/format/focused tests passed. Full `node --test` has one pre-existing unrelated failure (gemma-ui voice-shortcut scope) noted above. No `npm audit` script exists in this repo.
 - Conflicts / exceptions: Pre-existing unrelated uncommitted WorkLists edits remain and were not reverted (notably the dirty `public/todolist2.js` shortcut change behind the gemma-ui failure, and `tests/browser-notes-smoke.js` / `tests/shortcut-registry.test.js`). Browser/Playwright verification not run this session (no running :3010 server); source-contract tests cover the wiring, live geometry deferred.
@@ -194,12 +208,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
 ### 2026-06-29T00:30:00Z - WorkLists
 
 - Summary: Completed cards now color the action bar with the "Done" status color (overriding the selected status), and the completion-date slot is fixed-width like the creation date.
-- Problem: Two anomalies on the status-colored action bar. (1) "Completed" is reached only via the completion checkbox — it is not a selectable workflow status and therefore has no status color, so a completed card's bar fell back to its underlying selected-status color (or none) instead of signaling completion. (2) The completion date on the right used `max-width: 78px` with ellipsis and `margin-left: auto`, so depending on the date string it could truncate or crowd/overlap the completion check — the same variable-width problem the creation date had before its fixed slot.
+- Problem: Two anomalies on the status-colored action bar. (1) "Completed" is reached only via the completion checkbox â€” it is not a selectable workflow status and therefore has no status color, so a completed card's bar fell back to its underlying selected-status color (or none) instead of signaling completion. (2) The completion date on the right used `max-width: 78px` with ellipsis and `margin-left: auto`, so depending on the date string it could truncate or crowd/overlap the completion check â€” the same variable-width problem the creation date had before its fixed slot.
 - Requirement: (1) When the completion checkbox is checked, color the whole action bar with whatever color is configured for the "Done" status, and have that take precedence over any selected status for as long as the card is complete (an intentional override, since Completed has no color of its own). (2) Give the completion date a standardized fixed-size block like the creation date so any in-format M/D/YY date sits consistently without truncating or overlapping.
 - Solution:
-  - Done-color override (`public/todolist2.js`): added `COMPLETED_BAR_STATUS_LABEL = "Done"` (documented inline as the borrowed "finished" color). `applyTaskStatusBarTint(actions, statusLabel, completed)` gained a `completed` param and computes `effectiveLabel = completed ? COMPLETED_BAR_STATUS_LABEL : statusLabel` before resolving the color — so a completed card always paints the Done color (with the same luminance-based contrast text), overriding the selected status; uncompleting restores the selected status color. Wired through all three color points: `createTask` (passes `completed`), `refreshTaskStatusDisplay` (passes `Boolean(todo.completed)`), and `applyTodoCompletionToDom` (reads the current select value and passes `completed`, so toggling the checkbox recolors the bar immediately without a full re-render). If the "Done" status has been deleted, the bar simply clears (no color) — acceptable edge case.
+  - Done-color override (`public/todolist2.js`): added `COMPLETED_BAR_STATUS_LABEL = "Done"` (documented inline as the borrowed "finished" color). `applyTaskStatusBarTint(actions, statusLabel, completed)` gained a `completed` param and computes `effectiveLabel = completed ? COMPLETED_BAR_STATUS_LABEL : statusLabel` before resolving the color â€” so a completed card always paints the Done color (with the same luminance-based contrast text), overriding the selected status; uncompleting restores the selected status color. Wired through all three color points: `createTask` (passes `completed`), `refreshTaskStatusDisplay` (passes `Boolean(todo.completed)`), and `applyTodoCompletionToDom` (reads the current select value and passes `completed`, so toggling the checkbox recolors the bar immediately without a full re-render). If the "Done" status has been deleted, the bar simply clears (no color) â€” acceptable edge case.
   - Fixed completion-date slot (`public/todoliststyles2.css`): `.card .actions .completed-date` now uses `flex: 0 0 54px; max-width: 54px; text-align: right` (mirroring the creation-date box, which is `flex: 0 0 54px`), keeping `margin-left: auto` so the slot still pins to the right and the completion check hugs it. The override's `max-width: 54px` beats the base `.completed-date { max-width: 78px }`. Both dates share the M/D/YY format from `displayFormattedDate`, so 54px (sized for the widest `12/12/26`) fits either column.
-  - Completion-check squish fix (`public/todoliststyles2.css`): adding the 54px completion-date slot crowded the `flex-wrap: nowrap` bar, and the round completion check (`.status-checkbox + label`, 16px) had the default `flex-shrink: 1`, so flexbox compressed it into a flattened oval (Playwright measured the label collapsing from 18px to 11.3px wide once a completion date was present). Pinned it with `flex: 0 0 16px` so the check keeps its circular 16px size on a crowded bar (re-measured: stays 18×18 with the border).
+  - Completion-check squish fix (`public/todoliststyles2.css`): adding the 54px completion-date slot crowded the `flex-wrap: nowrap` bar, and the round completion check (`.status-checkbox + label`, 16px) had the default `flex-shrink: 1`, so flexbox compressed it into a flattened oval (Playwright measured the label collapsing from 18px to 11.3px wide once a completion date was present). Pinned it with `flex: 0 0 16px` so the check keeps its circular 16px size on a crowded bar (re-measured: stays 18Ã—18 with the border).
 - Design note (intentional override): "Completed" is deliberately NOT a workflow status and is not selectable; it is only set by the completion checkbox (which also stamps `completedDate`). For action-bar color we intentionally borrow the "Done" status color and let it take precedence over any selected status while `completed` is true. If a distinct "Completed" color is ever wanted, add a dedicated status color and swap `COMPLETED_BAR_STATUS_LABEL` for it.
 - Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/action-bar-consolidation.test.js`, `tests/project-status.test.js`, canonical changelog.
 - User-visible impact: Checking a card's completion box turns its whole action bar the "Done" color (e.g. `#646464`) regardless of the status that was selected, and unchecking restores the prior status color. The completion date on the right always occupies the same fixed-width block as the creation date on the left, so it never truncates or overlaps the completion check no matter the date.
@@ -221,16 +235,16 @@ Track implementation sessions and current delivery status for the WorkLists appl
 ### 2026-06-30T19:40:00Z - WorkLists
 
 - Summary: Added a pinned "Active tags" summary at the top of the card tag chooser, then segmented it into distinct primary/secondary category groups.
-- Problem: Applied tags were only legible by scanning each option row's checkbox or reading the hover tooltip; in long lists, selected state was invisible at a glance. A first pass surfaced them as a flat chip row, but with no category grouping the primary↔secondary association stayed ambiguous (only a color swatch hinted at kind).
+- Problem: Applied tags were only legible by scanning each option row's checkbox or reading the hover tooltip; in long lists, selected state was invisible at a glance. A first pass surfaced them as a flat chip row, but with no category grouping the primaryâ†”secondary association stayed ambiguous (only a color swatch hinted at kind).
 - Requirement: Applied primary + secondary tags must be visible at the chooser top without scanning; the region must reflect add/remove live; categories must be visually delineated with headers/containers; and the structure must stay extensible for future tag types.
 - Solution:
   - New pinned section (`createActiveTagsSection` / `renderActiveTagSummary` in `public/todolist2.js`), appended as the first chooser child so it occupies the first grid row at full width (`.active-tag-section { grid-column: 1 / -1 }`).
-  - Category model is declarative: `getActiveTagGroups(task)` returns one descriptor per kind (`primary` → "Color" with `getPrimaryTagColor` swatch; `secondary` → "Secondary"). `renderActiveTagSummary` renders each populated group as its own labeled, bordered cluster (`.active-tag-group` + `.active-tag-group-title` + `.active-tag-group-chips`), with a kind-specific left accent border. Adding a future tag type is a single descriptor entry — no render/refresh-plumbing change.
-  - Each chip carries an inline remove (×) that toggles the tag off via the existing `updateTaskTag` / `updateTaskSecondaryTags` (`deferSortReapply: true`) paths, then re-renders the matching option list through `rerenderTagOptionList`.
-  - Live sync without event plumbing: `renderPrimaryTagRows` / `renderSecondaryTagRows` call `refreshActiveTagSummaryForList(list, taskId)` on their first line. Every applied-tag mutation (checkbox toggle, chip removal, delete, rename) already ends by re-rendering an option list, so the pinned summary stays in sync from one place. At construction the list isn't yet in the menu (`closest` returns null → no-op); the section renders itself initially.
-- UI/UX preference note: Matches prior WorkLists tagging work — keep applied state legible at a glance, prefer minimal chrome, and make categories self-evident rather than inferred from color alone.
+  - Category model is declarative: `getActiveTagGroups(task)` returns one descriptor per kind (`primary` â†’ "Color" with `getPrimaryTagColor` swatch; `secondary` â†’ "Secondary"). `renderActiveTagSummary` renders each populated group as its own labeled, bordered cluster (`.active-tag-group` + `.active-tag-group-title` + `.active-tag-group-chips`), with a kind-specific left accent border. Adding a future tag type is a single descriptor entry â€” no render/refresh-plumbing change.
+  - Each chip carries an inline remove (Ã—) that toggles the tag off via the existing `updateTaskTag` / `updateTaskSecondaryTags` (`deferSortReapply: true`) paths, then re-renders the matching option list through `rerenderTagOptionList`.
+  - Live sync without event plumbing: `renderPrimaryTagRows` / `renderSecondaryTagRows` call `refreshActiveTagSummaryForList(list, taskId)` on their first line. Every applied-tag mutation (checkbox toggle, chip removal, delete, rename) already ends by re-rendering an option list, so the pinned summary stays in sync from one place. At construction the list isn't yet in the menu (`closest` returns null â†’ no-op); the section renders itself initially.
+- UI/UX preference note: Matches prior WorkLists tagging work â€” keep applied state legible at a glance, prefer minimal chrome, and make categories self-evident rather than inferred from color alone.
 - Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/active-tags-summary.test.js` (new), canonical changelog.
-- User-visible impact: Opening a card's tag chooser now shows an "Active tags" strip at the top listing the tags already applied, split into a "Color" group and a "Secondary" group (each in its own bordered box with an accent edge); chips have an × to remove a tag, and the strip updates instantly as tags are toggled, removed, renamed, or deleted.
+- User-visible impact: Opening a card's tag chooser now shows an "Active tags" strip at the top listing the tags already applied, split into a "Color" group and a "Secondary" group (each in its own bordered box with an accent edge); chips have an Ã— to remove a tag, and the strip updates instantly as tags are toggled, removed, renamed, or deleted.
 - Tests run:
 
   | Gate   | Command                                                                                                 | Scope                                            | Result          | Exception / risk |
@@ -239,11 +253,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | lint   | `npm run lint`                                                                                          | WorkLists formatting gate (`prettier --check .`) | pass            | -                |
   | tests  | `node --test`                                                                                           | Full WorkLists suite                             | pass, 515 tests | -                |
 
-- Tests added/updated: New `tests/active-tags-summary.test.js` (8 cases) asserts the source/CSS contract — pinned-first placement, removable chips, declarative `getActiveTagGroups` category split, deferred-sort removal paths, single-point summary refresh, full-width strip styling, and the per-category bordered/labeled group styling. Follows the repo's established source-contract harness (the chooser is covered this way in `tests/secondary-tags.test.js`); live DOM geometry (chip wrap, group reflow) is left to manual/Playwright check, consistent with prior chooser work. Risk: interaction wiring is asserted by source contract, not a jsdom event simulation.
+- Tests added/updated: New `tests/active-tags-summary.test.js` (8 cases) asserts the source/CSS contract â€” pinned-first placement, removable chips, declarative `getActiveTagGroups` category split, deferred-sort removal paths, single-point summary refresh, full-width strip styling, and the per-category bordered/labeled group styling. Follows the repo's established source-contract harness (the chooser is covered this way in `tests/secondary-tags.test.js`); live DOM geometry (chip wrap, group reflow) is left to manual/Playwright check, consistent with prior chooser work. Risk: interaction wiring is asserted by source contract, not a jsdom event simulation.
 - Regression impact: Scoped to the tag-chooser overlay. `renderPrimaryTagRows` / `renderSecondaryTagRows` gained a leading summary-refresh call that is a no-op when the list is detached (initial construction) or outside a chooser; the search-input rerender path (no data change) re-renders a cheap chip strip. Card rendering, filters, scheduler, and the live batch endpoint paths untouched; full suite (515) green.
 - API docs: Not relevant: UI-only chooser overlay; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Format, lint (`prettier --check .`), and full `node --test` suite passed. No `npm audit` script exists in this repo.
-- Conflicts / exceptions: Pre-existing unrelated uncommitted WorkLists edits remain present and were not reverted (notably the in-flight batch-mode work — `public/batchMode.js`, `tests/batch-*.js`, `tests/action-bar-consolidation.test.js` — and prior notes-pane/search edits).
+- Conflicts / exceptions: Pre-existing unrelated uncommitted WorkLists edits remain present and were not reverted (notably the in-flight batch-mode work â€” `public/batchMode.js`, `tests/batch-*.js`, `tests/action-bar-consolidation.test.js` â€” and prior notes-pane/search edits).
 
 ### 2026-06-30T06:26:07Z - WorkLists
 
@@ -252,19 +266,19 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Requirement: A toggleable "batch mode" (icon to the right of Search, exit via Escape like other modes) that reveals a per-card selection affordance and a floating bar; from the bar, apply status / color (primary) tag / secondary tags / completion on-off to all selected cards in one shot; existing API contracts must not regress; new behavior unit-tested and the batch endpoint contract regression-tested.
 - Solution:
   - New pure module `public/batchMode.js` (UMD, DOM-free, mirrors the `secondaryTags.js`/`cardActions.js` dual-export pattern): owns `{ active, selected:Set }` state, mode toggle, selection ops, and replace-semantics payload builders (`statusPatch`/`primaryTagPatch`/`secondaryTagPatch`/`completionPatch`, `buildBatchUpdates`). Kept DOM-free for unit-testability.
-  - Reused the existing live batch endpoint — `PATCH /todos` → `ApiService.updateMultipleTodos([{ id, updateData }])` → `dal.updateMultipleTodos` (one atomic `writeDB`, validates `status` + `secondaryTagIds`). No new server contract, DAL function, or OpenAPI entry. All four ops are `updateData` field merges: `{status}`, `{tag}`, `{secondaryTagIds}`, `{completed, completedDate}`.
+  - Reused the existing live batch endpoint â€” `PATCH /todos` â†’ `ApiService.updateMultipleTodos([{ id, updateData }])` â†’ `dal.updateMultipleTodos` (one atomic `writeDB`, validates `status` + `secondaryTagIds`). No new server contract, DAL function, or OpenAPI entry. All four ops are `updateData` field merges: `{status}`, `{tag}`, `{secondaryTagIds}`, `{completed, completedDate}`.
   - DOM glue in `public/todolist2.js`: toolbar toggle `#batch-mode-btn` (one icon right of Search, mirrors `#scheduler-open-btn`); `.batch-check` affordance appended in `createTask`, revealed only under `body.batch-mode`; a capture-phase `#board` click handler turns a card into a select target and suppresses its normal click (edit/checkbox/tag) while in mode; bar populated from `statusRecords`/`globalTags`/`secondaryTags`; apply-on-change pickers + Complete/Incomplete/Clear buttons; bulk-apply merges the response todos into local `todos`/`schedulerAllTodos`, clears selection, `updateAndRenderUI()`, re-syncs.
   - Escape via the app's native shortcut registry (not a raw keydown): a `batch-mode` context provider (`allowGlobal:false, replaceScopes:true`) isolates the mode, and a `batch.exit` Escape shortcut does the 2-stage clear-then-exit (matches Countdowns behavior, app-native mechanism).
   - Look-and-feel: ported the Countdowns multi-select pattern (icon, Escape, selection model, floating-bar geometry) and restyled to the WorkLists dark palette (`#303030`/`#4a4a4a`, hover `#6a786d`; fixed/centered/bottom bar).
-  - Scope (confirmed with user): cards-only selection; replace semantics; card/column **moves deferred** to a follow-up (no batch-move endpoint exists and whole-file `writeDB` makes client fan-out unsafe — a future atomic endpoint).
+  - Scope (confirmed with user): cards-only selection; replace semantics; card/column **moves deferred** to a follow-up (no batch-move endpoint exists and whole-file `writeDB` makes client fan-out unsafe â€” a future atomic endpoint).
 - Files/areas: `public/batchMode.js` (new), `public/todolist2.js`, `public/index.html`, `public/todoliststyles2.css`, `.gitignore` (ignore `data-test-batch/`), `tests/batch-mode.test.js` (new), `tests/batch-todos.test.js` (new), canonical changelog.
-- User-visible impact: A new check-double icon sits just right of Search. Clicking it enters batch mode — cards show a selection marker and a floating bar appears; pick cards, then set their status / color tag / secondary tag, or mark them complete/incomplete in one action. Escape clears the selection, then exits; the toggle and Clear also exit/clear.
+- User-visible impact: A new check-double icon sits just right of Search. Clicking it enters batch mode â€” cards show a selection marker and a floating bar appears; pick cards, then set their status / color tag / secondary tag, or mark them complete/incomplete in one action. Escape clears the selection, then exits; the toggle and Clear also exit/clear.
   | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/action-bar-consolidation.test.js tests/project-status.test.js` | Touched files | pass | - |
   | lint | `npm run lint` | WorkLists formatting gate (`prettier --check .`) | pass | - |
   | tests | `node --test` | Full WorkLists suite | pass, 478 tests | - |
   | browser | Playwright against `http://localhost:3010` | 4 existing completed cards all show bar bg `rgb(100,100,100)` == configured Done color `#646464`; in-page sim (no API) of a "Ready" card with `completed=true` painted the Done color + `#f5f5f5` text, overriding Ready; completion-date block measured constant 54px for both `12/12/26` and `1/1/26` | pass | read-only + self-restoring DOM sim; no completion toggled/persisted |
 
-- Tests added/updated: `tests/action-bar-consolidation.test.js` — the "paints the action bar" test updated for the `getStatusByLabel(effectiveLabel)` rename; added "overrides the bar with the 'Done' color while a card is completed" (asserts `COMPLETED_BAR_STATUS_LABEL = "Done"`, the `effectiveLabel` ternary, and the `applyTodoCompletionToDom` recolor call); the completion-cluster test now also asserts the `flex: 0 0 54px` completion-date slot. `tests/project-status.test.js` — updated the `applyTaskStatusBarTint` signature assertion to `(actions, statusLabel, completed)` and added the `effectiveLabel` override assertion.
+- Tests added/updated: `tests/action-bar-consolidation.test.js` â€” the "paints the action bar" test updated for the `getStatusByLabel(effectiveLabel)` rename; added "overrides the bar with the 'Done' color while a card is completed" (asserts `COMPLETED_BAR_STATUS_LABEL = "Done"`, the `effectiveLabel` ternary, and the `applyTodoCompletionToDom` recolor call); the completion-cluster test now also asserts the `flex: 0 0 54px` completion-date slot. `tests/project-status.test.js` â€” updated the `applyTaskStatusBarTint` signature assertion to `(actions, statusLabel, completed)` and added the `effectiveLabel` override assertion.
 - Regression impact: Scoped to the per-card action bar color + completion-date sizing. The Done override only changes bar color while `completed` is true and is reverted on uncomplete; no change to status selection, persistence, or completion data flow. Verified the full suite (478) green.
 - API docs: Not relevant: UI-only color/layout change; completion still flows through `ApiService.toggleTodo` and status through `ApiService.updateTaskStatus`; no route, payload, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Format, lint (`prettier --check .`), and full `node --test` (478) passed. No `npm audit` script exists in this repo.
@@ -273,17 +287,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
 ### 2026-06-28T23:30:00Z - WorkLists
 
 - Summary: Replaced the per-card status circle with the original labelled dropdown and tinted the entire action bar with the card's status color; blended the notes/tag icons.
-- Problem: After the prior session's status circle landed, the at-a-glance status was a small color dot whose label only appeared on hover — the user found that they preferred reading the actual status word on the card, and a dot was a weak association. Separately, the notes indicator still carried a pill/bubble (background + border + 999px radius) that made it visually distinct from the flat tag icon, and the tag icon had no hover affordance.
+- Problem: After the prior session's status circle landed, the at-a-glance status was a small color dot whose label only appeared on hover â€” the user found that they preferred reading the actual status word on the card, and a dot was a weak association. Separately, the notes indicator still carried a pill/bubble (background + border + 999px radius) that made it visually distinct from the flat tag icon, and the tag icon had no hover affordance.
 - Requirement: (1) Remove the status circle and bring back the status words; restore the original status dropdown exactly as it was before the consolidation began. (2) Make the whole action bar take on the status color so the association is obvious. (3) Blend the notes icon to match the tag icon's flat look while giving both a shared hover highlight.
 - Solution:
   - Status dropdown restored (`public/todolist2.js`): `createTaskStatusSelectElement` returns the original plain visible `<select.task-status-select>` (no wrapper, no circle, no transparent overlay); `syncTaskCompletionStatusDisplay` restored to its original behavior (injects a "Completed" label after the select and hides the select on completion). Removed `applyTaskStatusCircleAppearance`.
-  - Bar color (`public/todolist2.js`): new `applyTaskStatusBarTint(actions, statusLabel)` sets `actions.style.backgroundColor` to the **exact** configured status color (`normalizeStatusColor(record.color)`) at full opacity — no alpha blend, so the bar shows precisely the assigned color rather than a mix with the card/tag color. `getReadableStatusTextColor(hex)` picks `#1f1f1f` or `#f5f5f5` by the color's relative luminance, and `setTaskStatusBarTextColor` applies it to the bar's text elements (date, status select, notes, completed-date, completion-status) so labels stay legible on any color; the tag icon is left alone so its tag color stays meaningful. Both background and text color are cleared when the card has no available status. Applied on create (from `createTask`, passing `actionsDiv`) and on every `refreshTaskStatusDisplay` (passing `card.querySelector(".actions")`) — the single recolor point covering status changes and Settings color edits.
+  - Bar color (`public/todolist2.js`): new `applyTaskStatusBarTint(actions, statusLabel)` sets `actions.style.backgroundColor` to the **exact** configured status color (`normalizeStatusColor(record.color)`) at full opacity â€” no alpha blend, so the bar shows precisely the assigned color rather than a mix with the card/tag color. `getReadableStatusTextColor(hex)` picks `#1f1f1f` or `#f5f5f5` by the color's relative luminance, and `setTaskStatusBarTextColor` applies it to the bar's text elements (date, status select, notes, completed-date, completion-status) so labels stay legible on any color; the tag icon is left alone so its tag color stays meaningful. Both background and text color are cleared when the card has no available status. Applied on create (from `createTask`, passing `actionsDiv`) and on every `refreshTaskStatusDisplay` (passing `card.querySelector(".actions")`) â€” the single recolor point covering status changes and Settings color edits.
     - Note: an initial pass used a translucent `rgba(r,g,b,0.32)` wash, but that composited the status color with the card's tag color and read as the wrong color; switched to the exact opaque color + contrast-aware text.
   - CSS (`public/todoliststyles2.css`): removed `.task-status`, `.task-status[hidden]`, and `.task-status-circle`; restored `.task-status-select` to the visible 112px centered dropdown (`min/max-width:112px; text-align-last:center; height:22px`), now `flex:0 0 auto` under the flex bar. Added `border-radius:6px` + `transition:background-color .15s ease` to `.card .actions` so the inline status tint reads as a contained, rounded bar.
   - Notes/tag icon blend (`public/todoliststyles2.css`): `.task-notes-indicator` stripped of its background/border/999px pill down to a flat icon+count (`background:transparent; border:none; border-radius:4px; padding:2px 3px`); `.task-tag-icon` given matching `border-radius:4px; padding:2px 3px; cursor:pointer`. A single shared hover rule (`.task-notes-indicator:hover, :focus, .task-tag-icon:hover`) applies `background: rgba(255,255,255,0.09)`.
   - Notes anchor: `refreshTaskNotesIndicator` now inserts the notes badge before `.task-status-select` (the wrapper is gone), falling back to `.status-checkbox`.
-  - Also removed the now-redundant `color: transparent` from `.task-status-select` (a prior tweak) — it had been leaking into the native dropdown's option text on Windows/Edge.
-- UI/UX preference note: User reversed the icon-only status decision — seeing the status word on the card aids scanning more than a color dot, and coloring the whole bar makes the status association unmistakable. Kept the rest of the consolidation (single line, fixed date box, tag tooltip, blended icons).
+  - Also removed the now-redundant `color: transparent` from `.task-status-select` (a prior tweak) â€” it had been leaking into the native dropdown's option text on Windows/Edge.
+- UI/UX preference note: User reversed the icon-only status decision â€” seeing the status word on the card aids scanning more than a color dot, and coloring the whole bar makes the status association unmistakable. Kept the rest of the consolidation (single line, fixed date box, tag tooltip, blended icons).
 - Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/project-status.test.js`, `tests/action-bar-consolidation.test.js`, canonical changelog.
 - User-visible impact: Each card's action bar shows the status word again (e.g. "Unrefined") in the original centered dropdown, and the whole bar is painted with that status's exact Settings color so status reads at a glance; the bar has rounded corners and its labels auto-switch to dark/light text for legibility. Cards whose tags expose no status show no color and no dropdown. Completed cards show "Completed" in place of the dropdown (original behavior). The notes indicator is now a flat icon+count matching the tag icon, and both light up with the same subtle hover highlight.
 - Tests run:
@@ -294,17 +308,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | lint   | `npm run lint` (`prettier --check .`)                                                                                                                          | Whole project        | pass            | -                |
   | tests  | `node --test`                                                                                                                                                  | Full WorkLists suite | pass, 506 tests | -                |
 
-- Tests added/updated: `tests/batch-mode.test.js` (23 unit cases — mode toggle, selection add/remove/clear/normalize, payload builders for all four ops with replace semantics, two-stage Escape) and `tests/batch-todos.test.js` (API contract regression — `PATCH /todos` batch status/tag/secondaryTagIds/completion across multiple todos, mixed updates in one request, persistence via `GET /data`, unknown-id skip). Both green under the full run.
+- Tests added/updated: `tests/batch-mode.test.js` (23 unit cases â€” mode toggle, selection add/remove/clear/normalize, payload builders for all four ops with replace semantics, two-stage Escape) and `tests/batch-todos.test.js` (API contract regression â€” `PATCH /todos` batch status/tag/secondaryTagIds/completion across multiple todos, mixed updates in one request, persistence via `GET /data`, unknown-id skip). Both green under the full run.
 - Regression impact: New feature is additive. `batchMode.js` is a standalone module; `todolist2.js` changes are additive (one `createTask` append, one init call, one capture-phase listener, two shortcut/provider additions, a new function block) and gated behind `body.batch-mode` / `BatchMode.isActive()` so default board behavior is unchanged. Reused `PATCH /todos` unchanged. Full 506-test suite (prior 468 + pre-existing untracked suites + new 23) passes with 0 failures.
-- API docs: Not relevant — no HTTP surface change. The feature reuses the existing `PATCH /todos` (path, method, `BatchTodoUpdate` body, `TodosMutationResponse`) already documented in `openapi.js`; `tests/openapi.test.js` still green (no new path).
+- API docs: Not relevant â€” no HTTP surface change. The feature reuses the existing `PATCH /todos` (path, method, `BatchTodoUpdate` body, `TodosMutationResponse`) already documented in `openapi.js`; `tests/openapi.test.js` still green (no new path).
 - Tooling gates: format, lint (`prettier --check .`), and full `node --test` suite passed. No `npm audit` script exists in this repo.
-- Conflicts / exceptions: Pre-existing unrelated uncommitted WorkLists edits remain present and were not touched (`tests/project-status.test.js`, untracked `tests/action-bar-consolidation.test.js`, `tests/active-tags-summary.test.js`). Card/column batch **move** is intentionally out of scope this slice (deferred per user); risk: none introduced — moves still use the existing single-item dialogs unchanged.
+- Conflicts / exceptions: Pre-existing unrelated uncommitted WorkLists edits remain present and were not touched (`tests/project-status.test.js`, untracked `tests/action-bar-consolidation.test.js`, `tests/active-tags-summary.test.js`). Card/column batch **move** is intentionally out of scope this slice (deferred per user); risk: none introduced â€” moves still use the existing single-item dialogs unchanged.
   | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/action-bar-consolidation.test.js tests/project-status.test.js` | Touched files | pass | - |
   | lint | `npm run lint` | WorkLists formatting gate (`prettier --check .`) | pass | - |
   | tests | `node --test` | Full WorkLists suite | pass, 477 tests | - |
   | browser | Playwright against `http://localhost:3010` | no circles present; visible 112px dropdown shows the status word; 46 status cards show the **exact** configured color as the inline bar background (computed == inline, e.g. "Unrefined" = `rgb(36,36,36)`) with auto-contrast text (`#f5f5f5` on the dark bar); statusless cards carry no color; bar `border-radius:6px`; screenshot confirms "Unrefined" legible | pass | read-only checks; no status mutated this session |
 
-- Tests added/updated: Updated `tests/action-bar-consolidation.test.js` — replaced the circle/overlay/`applyTaskStatusCircleAppearance` assertions with: visible labelled dropdown (no circle, `return select`), `applyTaskStatusBarTint` painting the exact color (`backgroundColor = color || ""`, no `rgba(`), the luminance-based `getReadableStatusTextColor` / `setTaskStatusBarTextColor` helpers, retint on refresh via `card.querySelector(".actions")`, the restored "Completed" label, and the rounded bar. Updated `tests/project-status.test.js` — the completion test now asserts the "Completed" label is restored and the exact-color bar helper exists (replacing the no-Completed / circle assertions), and the layout test asserts a visible dropdown (`text-align-last:center`, no `.task-status-circle`).
+- Tests added/updated: Updated `tests/action-bar-consolidation.test.js` â€” replaced the circle/overlay/`applyTaskStatusCircleAppearance` assertions with: visible labelled dropdown (no circle, `return select`), `applyTaskStatusBarTint` painting the exact color (`backgroundColor = color || ""`, no `rgba(`), the luminance-based `getReadableStatusTextColor` / `setTaskStatusBarTextColor` helpers, retint on refresh via `card.querySelector(".actions")`, the restored "Completed" label, and the rounded bar. Updated `tests/project-status.test.js` â€” the completion test now asserts the "Completed" label is restored and the exact-color bar helper exists (replacing the no-Completed / circle assertions), and the layout test asserts a visible dropdown (`text-align-last:center`, no `.task-status-circle`).
 - Regression impact: Scoped to the per-card action bar. Behavior reverts: completion again shows "Completed" and hides the status select (matching pre-consolidation behavior); status is selectable on non-completed cards as before. New behavior: the bar background is tinted by status. Verified the full suite green and the notes/secondary-tag base styles intact.
 - API docs: Not relevant: UI-only layout/display change; status updates still go through the existing `ApiService.updateTaskStatus`; no route, payload, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Format, lint (`prettier --check .`), and full `node --test` (477) passed. No `npm audit` script exists in this repo.
@@ -313,18 +327,18 @@ Track implementation sessions and current delivery status for the WorkLists appl
 ### 2026-06-28T21:04:36Z - WorkLists
 
 - Summary: Consolidated the per-card action bar onto a single line with an icon-first, color-coded status indicator.
-- Problem: The action bar (`.card .actions`) was a two-row grid (`grid-template-rows: 22px 18px`) crowded with text — creation date, tag icon + inline tag label + secondary-tag chips, a 112px status `<select>`, notes badge, completion date, completion circle. Two lines added visual noise and made the card slow to scan.
-- Requirement: One line. Tag names readable on demand (tooltip) instead of inline. Status shown as a colored circle (using the per-status color from Settings) that reveals its label on hover and stays selectable. Notes indicator unchanged in look. Reserved room for the completion date so marking done does not shift the bar. Fixed order: creation date › tag icon (tooltip) › notes › status circle › [completion-date space] › completion check (status placed after notes so the layout stays continuous when a card has no status).
+- Problem: The action bar (`.card .actions`) was a two-row grid (`grid-template-rows: 22px 18px`) crowded with text â€” creation date, tag icon + inline tag label + secondary-tag chips, a 112px status `<select>`, notes badge, completion date, completion circle. Two lines added visual noise and made the card slow to scan.
+- Requirement: One line. Tag names readable on demand (tooltip) instead of inline. Status shown as a colored circle (using the per-status color from Settings) that reveals its label on hover and stays selectable. Notes indicator unchanged in look. Reserved room for the completion date so marking done does not shift the bar. Fixed order: creation date â€º tag icon (tooltip) â€º notes â€º status circle â€º [completion-date space] â€º completion check (status placed after notes so the layout stays continuous when a card has no status).
 - Solution:
   - Date box: `.card .actions .creation-date` is `flex: 0 0 54px` (sized for the widest M/D/YY, ~52px), left-aligned, so a short date like `1/1/26` occupies the same slot as `12/12/26` and the tag/notes/status icons stay aligned across cards (verified: constant 58px date box and 71px tag offset across varied dates).
-  - Layout (`public/todoliststyles2.css`): `.card .actions` switched from a 2-row grid to a single-row flex (`display:flex; flex-wrap:nowrap; align-items:center; column-gap:6px`). Inline tag text hidden in the bar via `.card .actions .tag-label, .card .actions .secondary-tag-list { display:none !important }` (kept in the DOM so existing refresh logic is untouched). Completion cluster pinned right: `.completed-date` and the completion `label` both get `margin-left:auto`, with `.completed-date ~ .status-checkbox + label { margin-left:6px }` so the check hugs the date when present — the check stays at the right edge whether or not a date exists, so completing a card never shifts the bar.
-  - Status circle (`public/todolist2.js`): `createTaskStatusSelectElement` now returns a `span.task-status` wrapper holding a `span.task-status-circle` (completion-circle look, 16px, `border-radius:50%`) with the native `<select>` overlaid transparently (`position:absolute; inset:0; opacity:0`) so a click opens the existing native picker and the wired `change → updateTaskStatus` path is unchanged. New `applyTaskStatusCircleAppearance()` tints the circle from `normalizeStatusColor(getStatusByLabel(label).color)`, sets the hover tooltip (`Status: <label>`), and hides the wrapper when the card's tags expose no statuses. `refreshTaskStatusDisplay` recolors the circle after every status refresh.
-  - Tag tooltip: new `buildTaskTagsTooltip()` / `refreshTaskTagTooltip()` put tag names into the tag icon's `title` on labelled separate lines — `Color tag: <primary>` and `Secondary tag(s): <names>` (or "No tags") — so the color (primary) tag is distinguishable from secondary tags; `aria-label` flattens the lines with "; ". Set on create and kept in sync from `refreshTaskPrimaryTagDisplay` and `refreshTaskSecondaryTagDisplay`. Tag icon color and floating-menu click are unchanged.
-  - Bar order: `date › tag › notes › status › completion check`. Status is placed after notes because it is conditionally hidden (tag-gated); keeping it last in the left group keeps the date/tag/notes positions stable card-to-card. `refreshTaskNotesIndicator` re-inserts the notes badge before the `.task-status` wrapper (falling back to the completion check) to match.
+  - Layout (`public/todoliststyles2.css`): `.card .actions` switched from a 2-row grid to a single-row flex (`display:flex; flex-wrap:nowrap; align-items:center; column-gap:6px`). Inline tag text hidden in the bar via `.card .actions .tag-label, .card .actions .secondary-tag-list { display:none !important }` (kept in the DOM so existing refresh logic is untouched). Completion cluster pinned right: `.completed-date` and the completion `label` both get `margin-left:auto`, with `.completed-date ~ .status-checkbox + label { margin-left:6px }` so the check hugs the date when present â€” the check stays at the right edge whether or not a date exists, so completing a card never shifts the bar.
+  - Status circle (`public/todolist2.js`): `createTaskStatusSelectElement` now returns a `span.task-status` wrapper holding a `span.task-status-circle` (completion-circle look, 16px, `border-radius:50%`) with the native `<select>` overlaid transparently (`position:absolute; inset:0; opacity:0`) so a click opens the existing native picker and the wired `change â†’ updateTaskStatus` path is unchanged. New `applyTaskStatusCircleAppearance()` tints the circle from `normalizeStatusColor(getStatusByLabel(label).color)`, sets the hover tooltip (`Status: <label>`), and hides the wrapper when the card's tags expose no statuses. `refreshTaskStatusDisplay` recolors the circle after every status refresh.
+  - Tag tooltip: new `buildTaskTagsTooltip()` / `refreshTaskTagTooltip()` put tag names into the tag icon's `title` on labelled separate lines â€” `Color tag: <primary>` and `Secondary tag(s): <names>` (or "No tags") â€” so the color (primary) tag is distinguishable from secondary tags; `aria-label` flattens the lines with "; ". Set on create and kept in sync from `refreshTaskPrimaryTagDisplay` and `refreshTaskSecondaryTagDisplay`. Tag icon color and floating-menu click are unchanged.
+  - Bar order: `date â€º tag â€º notes â€º status â€º completion check`. Status is placed after notes because it is conditionally hidden (tag-gated); keeping it last in the left group keeps the date/tag/notes positions stable card-to-card. `refreshTaskNotesIndicator` re-inserts the notes badge before the `.task-status` wrapper (falling back to the completion check) to match.
   - Completion display change: `syncTaskCompletionStatusDisplay` no longer injects a "Completed" label over the status or hides the status on completion; completion is conveyed solely by the completion check circle + completion date, and the workflow-status circle stays visible and selectable. It now only toggles status visibility based on `statusAvailable`.
 - UI/UX preference note: User wanted an icon-first, low-reading bar (Atlassian/Trello-style): tags behind a tooltip, status as a hoverable colored dot mirroring the completion circle, and space reserved for the completion date. Consistent with prior sessions' preference for minimal chrome and stable spacing.
 - Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/project-status.test.js`, `tests/action-bar-consolidation.test.js`, canonical changelog.
-- User-visible impact: Each card's action bar is now a single line (~33px vs the old ~42px two-row). Tag text is gone from the bar — hover the tag icon to see all tag names. Status is a colored dot tinted by its Settings color (e.g. Ready = green); hover shows the status label, click opens the picker to change it (and the dot recolors). The notes indicator looks the same, just repositioned. Completing a card shows the completion date in reserved space at the right without shifting the completion check.
+- User-visible impact: Each card's action bar is now a single line (~33px vs the old ~42px two-row). Tag text is gone from the bar â€” hover the tag icon to see all tag names. Status is a colored dot tinted by its Settings color (e.g. Ready = green); hover shows the status label, click opens the picker to change it (and the dot recolors). The notes indicator looks the same, just repositioned. Completing a card shows the completion date in reserved space at the right without shifting the completion check.
 - Tests run:
 
   | Gate    | Command                                                                                                                                   | Scope                                                                                                                                                                                                                                              | Result          | Exception / risk                                                                            |
@@ -332,10 +346,10 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | format  | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/project-status.test.js tests/action-bar-consolidation.test.js` | Touched files                                                                                                                                                                                                                                      | pass            | -                                                                                           |
   | lint    | `npm run lint`                                                                                                                            | WorkLists formatting gate (`prettier --check .`)                                                                                                                                                                                                   | pass            | -                                                                                           |
   | tests   | `node --test`                                                                                                                             | Full WorkLists suite                                                                                                                                                                                                                               | pass, 477 tests | -                                                                                           |
-  | browser | Playwright against `http://localhost:3010`                                                                                                | single-line flex bar (33px), hidden tag text, tag tooltip, status circle tinted (Ready→`rgb(0,148,2)`), tooltip `Status: <label>`, recolor on change, transparent overlay, check pinned right, status hidden on non-status cards, 0 console errors | pass            | mutated one card's status during the click test; restored to original "Unrefined" afterward |
+  | browser | Playwright against `http://localhost:3010`                                                                                                | single-line flex bar (33px), hidden tag text, tag tooltip, status circle tinted (Readyâ†’`rgb(0,148,2)`), tooltip `Status: <label>`, recolor on change, transparent overlay, check pinned right, status hidden on non-status cards, 0 console errors | pass            | mutated one card's status during the click test; restored to original "Unrefined" afterward |
 
-- Tests added/updated: Added `tests/action-bar-consolidation.test.js` (status circle + overlay, color tint + hover tooltip, refresh recolor, tag tooltip wiring, removal of the "Completed" override, single-line flex layout, hidden tag text, right-pinned completion cluster). Updated `tests/project-status.test.js`: the prior assertions pinned the old two-row grid (`grid-template-rows: 22px 18px`, fixed 112px select, `.task-completion-status` grid placement) and the "Completed" label injection; rewrote them to assert the new flex layout, status circle/overlay, and that completion no longer overrides the status display. `tests/secondary-tags.test.js` unchanged — the base `.secondary-tag-list` rule is intact (the bar only adds a card-scoped hide), so its grid assertions still hold.
-- Regression impact: Scoped to the per-card action bar. Behavior change: completion no longer replaces the status with a "Completed" label and no longer hides the status control on completion (status circle stays visible/selectable on completed cards). Verified the full suite green, the notes indicator/secondary-tag base styles unchanged, and status visibility on tag-gated cards still works (46 status-enabled cards showed the circle, non-status cards hid it). Checked surfaces: `refreshTaskNotesIndicator` still inserts before the `.status-checkbox` (a direct child of `.actions`), and `refreshTaskSecondaryTagDisplay` still inserts before `.task-status-select` — both unaffected by the wrapper.
+- Tests added/updated: Added `tests/action-bar-consolidation.test.js` (status circle + overlay, color tint + hover tooltip, refresh recolor, tag tooltip wiring, removal of the "Completed" override, single-line flex layout, hidden tag text, right-pinned completion cluster). Updated `tests/project-status.test.js`: the prior assertions pinned the old two-row grid (`grid-template-rows: 22px 18px`, fixed 112px select, `.task-completion-status` grid placement) and the "Completed" label injection; rewrote them to assert the new flex layout, status circle/overlay, and that completion no longer overrides the status display. `tests/secondary-tags.test.js` unchanged â€” the base `.secondary-tag-list` rule is intact (the bar only adds a card-scoped hide), so its grid assertions still hold.
+- Regression impact: Scoped to the per-card action bar. Behavior change: completion no longer replaces the status with a "Completed" label and no longer hides the status control on completion (status circle stays visible/selectable on completed cards). Verified the full suite green, the notes indicator/secondary-tag base styles unchanged, and status visibility on tag-gated cards still works (46 status-enabled cards showed the circle, non-status cards hid it). Checked surfaces: `refreshTaskNotesIndicator` still inserts before the `.status-checkbox` (a direct child of `.actions`), and `refreshTaskSecondaryTagDisplay` still inserts before `.task-status-select` â€” both unaffected by the wrapper.
 - API docs: Not relevant: UI-only layout/display change; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed (status updates still go through the existing `ApiService.updateTaskStatus`).
 - Tooling gates: Format, lint (`prettier --check .`), and full `node --test` suite (477) passed. No `npm audit` script exists in this repo.
 - Conflicts / exceptions: Pre-existing unrelated uncommitted WorkLists edits remain present and were not reverted.
@@ -344,7 +358,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 - Summary: Made the notes editor expand to fit the pane, with an adjustable card-text splitter.
 - Problem: Inline note editing was locked to a small ~5-6 line box. Naive fixes then introduced their own regressions across iterations: filling the pane fought sibling notes for space and broke list scrolling; a fixed-px cap ignored editor chrome so the tabs/toolbar scrolled out of view while typing; focusing a bottom note triggered a browser auto-scroll to a half-revealed position; and the card-text preview at the top of the pane took too much fixed room and could not be tuned per the user's content.
-- Requirement: Inline note editing must size dynamically to its content and grow up to a cap that keeps the whole editor (tabs, toolbar, action row) inside the visible pane so controls never disappear; multiple notes must stay individually visible and the list scrollable; entering edit mode must land the note at a predictable, consistent scroll position; and the card-text area must collapse for short cards yet be user-resizable up to a max when content is long — without changing the pane's existing spacing.
+- Requirement: Inline note editing must size dynamically to its content and grow up to a cap that keeps the whole editor (tabs, toolbar, action row) inside the visible pane so controls never disappear; multiple notes must stay individually visible and the list scrollable; entering edit mode must land the note at a predictable, consistent scroll position; and the card-text area must collapse for short cards yet be user-resizable up to a max when content is long â€” without changing the pane's existing spacing.
 - Solution:
   - Inline editor sizing (`bindNoteEditAutosize` + `noteEditSurfaceBudget` in `public/todolist2.js`): the active surface (markdown textarea via `autoResizeTextarea`, and the visual contenteditable) grows with content up to `min(list.clientHeight, min(70vh, 640px)) - fitMargin - chrome`, then scrolls internally. Because the whole editor fits the visible pane, the list never auto-scrolls to chase the caret and the top controls stay put. Recomputed on `input` and `focus` (focus covers Visual/Preview->Markdown tab return). CSS backstops: textarea `max-height: min(70vh, 640px)`; visual/preview `min(calc(70vh - 150px), 490px)` at raised specificity to beat the base 320px cap.
   - List scroll preserved: each `.notes-pane-note` is `flex: 0 0 auto` (natural height, never compressed); the editing note is `display:flex; column` but not flex-grow, so siblings stay visible and `.notes-pane-list` keeps scrolling.
@@ -361,7 +375,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | lint   | `npm run lint`                                                                                                        | WorkLists formatting gate (`prettier --check .`) | pass            | -                |
   | tests  | `node --test`                                                                                                         | Full WorkLists suite                             | pass, 468 tests | -                |
 
-- Tests added/updated: Updated `tests/markdown-editor.test.js` to assert the new card-preview cap `max-height: min(19vh, 180px)`. No new behavioral test was added for the JS sizing/splitter logic — the existing suite covers source/CSS contracts and pinned the changed CSS value; the live drag/fit-to-pane geometry depends on real layout measurement (`clientHeight`/`offsetHeight`) not exercised by the jsdom/source-contract harness. Risk: drag clamp and fit-to-pane math are validated by manual browser check, not an automated assertion. Follow-up: add a Playwright case under `tests/browser-notes-smoke.js` for editor fit-to-pane and splitter persistence.
+- Tests added/updated: Updated `tests/markdown-editor.test.js` to assert the new card-preview cap `max-height: min(19vh, 180px)`. No new behavioral test was added for the JS sizing/splitter logic â€” the existing suite covers source/CSS contracts and pinned the changed CSS value; the live drag/fit-to-pane geometry depends on real layout measurement (`clientHeight`/`offsetHeight`) not exercised by the jsdom/source-contract harness. Risk: drag clamp and fit-to-pane math are validated by manual browser check, not an automated assertion. Follow-up: add a Playwright case under `tests/browser-notes-smoke.js` for editor fit-to-pane and splitter persistence.
 - Regression impact: Scoped to the notes-pane inline editor and card-text preview. `.notes-pane-note { flex: 0 0 auto }` is a new base rule affecting all notes' flex behavior in the list; verified read view, multi-note layout, and list scrolling are intact via the full suite and manual check. Card-text edit (`.notes-pane-task-edit`), the new-note form, search, and scheduler paths untouched.
 - API docs: Not relevant: UI-only editor/layout behavior; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 - Tooling gates: Format, lint (`prettier --check .`), and full `node --test` suite passed. No `npm audit` script exists in this repo.
@@ -657,7 +671,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 ### 2026-06-27T00:10:00Z - WorkLists
 
 - Summary: Synced board reserve motion with context-pane pop-out animation.
-- Problem: When a context window (notes pane) pops out, the pane CSS-transitions over 0.24s but the board's right reserve padding was applied instantly in JS — columns snapped while the pane glided, reading as two disjointed motions at different cadence/speed. Left side-panel used a slightly different 0.25s duration.
+- Problem: When a context window (notes pane) pops out, the pane CSS-transitions over 0.24s but the board's right reserve padding was applied instantly in JS â€” columns snapped while the pane glided, reading as two disjointed motions at different cadence/speed. Left side-panel used a slightly different 0.25s duration.
 - Requirement: Board "make room" motion must animate simultaneously, at the same speed and easing, as the pane sliding out; the deliberate held-reserve close behavior (columns stationary during close) must be preserved.
 - Solution: Added `transition: padding-right 0.24s ease` to `#board` so the right reserve glides on the same curve as the notes pane on open. Forced the close reserve drop instant in `finishNotesPaneCloseReserve` (suppress + restore the board transition) so the held-then-drop close is unchanged. Unified the left side-panel transition from 0.25s to 0.24s so left/right panes move at one speed.
 - Files/areas: `public/todoliststyles2.css`, `public/todolist2.js`, `tests/context-windows.test.js`, canonical changelog.
@@ -674,7 +688,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | browser | `npm run test:browser`                                                                              | Notes-pane open/close reserve + scroll stability | pass, 3 tests   | -                |
 
 - Tests added/updated: `tests/context-windows.test.js` now asserts `#board` carries `transition: padding-right 0.24s ease` and that `finishNotesPaneCloseReserve` suppresses the transition for the instant close drop.
-- Regression impact: Held-reserve close geometry (closing/closed padding + scroll) unchanged — guarded by the existing passing browser smoke; only the open-side reserve gains the synced glide. Left-panel overlay padding-left stays instant (stationary-content design untouched). Full suite + browser smoke green.
+- Regression impact: Held-reserve close geometry (closing/closed padding + scroll) unchanged â€” guarded by the existing passing browser smoke; only the open-side reserve gains the synced glide. Left-panel overlay padding-left stays instant (stationary-content design untouched). Full suite + browser smoke green.
 - Known residual: The conditional active-card reveal scroll (only when the active card sits behind the pane) still repositions via rAF + 220ms rather than gliding; the common already-visible case is fully synced.
 - API docs: Not relevant: UI-only animation timing; no HTTP route path/method, payload schema, status, auth, or OpenAPI metadata changed.
 
@@ -683,7 +697,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Summary: Decoupled left side-panel collapse animation from board scroll state.
 - Problem: Collapse forked on scroll-derived mode (origin -> push reflow; offset -> overlay unless protected content forced push). Collapsing while scrolled right could hit the push branch, reflowing columns ~240px = jarring scroll/column "bump" and an animation that looked inconsistent vs the stable overlay slide.
 - Requirement: Collapse must be a pure function of board offset, not the compound scroll + protected-content mode; an offset collapse must never reflow-bump the board; protected-content push on open stays intact.
-- Solution: `closeSidePanelWithoutLayoutBump` now branches on `isBoardScrolledAwayFromLeft` — origin keeps the push collapse, any offset always collapses via the proven-stable overlay slide. Added `convertSidePanelPushToOverlayInPlace` to switch an offset push-mode panel to overlay using measure-and-restore (anchor first board item, cancel residual drift with one scroll correction) so columns hold position through the transition. Open-time mode decision (incl. protected-content push) unchanged.
+- Solution: `closeSidePanelWithoutLayoutBump` now branches on `isBoardScrolledAwayFromLeft` â€” origin keeps the push collapse, any offset always collapses via the proven-stable overlay slide. Added `convertSidePanelPushToOverlayInPlace` to switch an offset push-mode panel to overlay using measure-and-restore (anchor first board item, cancel residual drift with one scroll correction) so columns hold position through the transition. Open-time mode decision (incl. protected-content push) unchanged.
 - Files/areas: `public/todolist2.js`, `tests/search-shortcuts.test.js`, canonical changelog.
 - User-visible impact: Collapsing the menu while scrolled right no longer jumps the columns or horizontal scroll; the collapse animation is consistent regardless of scroll position.
 - Tests run:
@@ -1524,12 +1538,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tests added/updated: Hardened the card edit Escape regression test so `cardEdit.cancel` must not blank `textarea.value` and must force a local `loadBoard(currentBoardId, { refresh: false })` repaint.
 - Regression impact: Card edit Escape only. Save, AI refine, notes-pane Escape, search Escape, and voice-session shortcuts remain on their existing registry commands.
 
-### 2026-06-15T21:10:00Z � WorkLists
+### 2026-06-15T21:10:00Z ï¿½ WorkLists
 
-- Summary: Restored the voice-superseding AI shortcut � pressing the AI chord while voice-to-text is recording now stops dictation and immediately kicks off AI processing in every supported area.
+- Summary: Restored the voice-superseding AI shortcut ï¿½ pressing the AI chord while voice-to-text is recording now stops dictation and immediately kicks off AI processing in every supported area.
 - Problem: The shortcut refactor lost a nuance from the original June 12 capture-phase AI resolver. While voice is active, the context provider replaces the editor scopes with `voice-session` + `global`, so the scope-specific AI commands (`task.aiNormalize`/`card-edit`, `cardEdit.aiRefine`/`card-edit`, `notes.aiRun`/`notes-pane`) are no longer candidates. The result: `Ctrl/Cmd+Shift+Enter` did nothing mid-dictation, so the user could not supersede an in-flight voice operation with AI processing.
-- Requirement: The AI chord must, while voice is recording, hard-stop the active voice session and run the AI action for the focused editor � in task entry, card edit, notes create, notes card edit, and inline note edit � without altering normal (non-voice) AI shortcut behavior.
-- Solution: Added a global `ai.run` registry command bound to `Ctrl/Cmd+Shift+Enter` that resolves the focused editor via the existing `getGlobalAiShortcutContext` (which already covers all five areas), hard-stops voice with `stopActiveVoiceInputRecognition({ hardStop: true })`, then runs the resolved AI action. Because the controller sorts scope-specific candidates ahead of `global`, the existing per-scope AI commands still win in normal use; `ai.run` only fires when no editor scope is active � i.e., during a voice session.
+- Requirement: The AI chord must, while voice is recording, hard-stop the active voice session and run the AI action for the focused editor ï¿½ in task entry, card edit, notes create, notes card edit, and inline note edit ï¿½ without altering normal (non-voice) AI shortcut behavior.
+- Solution: Added a global `ai.run` registry command bound to `Ctrl/Cmd+Shift+Enter` that resolves the focused editor via the existing `getGlobalAiShortcutContext` (which already covers all five areas), hard-stops voice with `stopActiveVoiceInputRecognition({ hardStop: true })`, then runs the resolved AI action. Because the controller sorts scope-specific candidates ahead of `global`, the existing per-scope AI commands still win in normal use; `ai.run` only fires when no editor scope is active ï¿½ i.e., during a voice session.
 - Files/areas: `public/todolist2.js` (registry registration), `tests/shortcut-registry.test.js`, `tests/gemma-ui.test.js`, canonical changelog.
 - User-visible impact: During voice-to-text, the AI chord now stops recording and starts AI processing immediately in all editor areas, matching the documented intent. Non-voice AI shortcuts are unchanged.
 - Tests run:
@@ -1543,14 +1557,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | lint   | `npm run lint`                                                                                    | WorkLists formatting gate          | pass            | -                |
   | audit  | `npm audit --audit-level=high`                                                                    | Dependency security gate           | pass, 0 vulns   | -                |
 
-- Tests added/updated: Added a contract test asserting that, with an active voice session (replaceScopes -> voice-session + global), the AI chord resolves the new global `ai.run` from task entry, card edit, notes create (text and visual), notes card edit, and inline note edit � and that with voice inactive the scope-specific command (`task.aiNormalize`) still wins. Added the `ai.run` command id to the initial-registration integration list and added a gemma-ui source assertion that `ai.run` is a global command that hard-stops voice before `context.run()`.
+- Tests added/updated: Added a contract test asserting that, with an active voice session (replaceScopes -> voice-session + global), the AI chord resolves the new global `ai.run` from task entry, card edit, notes create (text and visual), notes card edit, and inline note edit ï¿½ and that with voice inactive the scope-specific command (`task.aiNormalize`) still wins. Added the `ai.run` command id to the initial-registration integration list and added a gemma-ui source assertion that `ai.run` is a global command that hard-stops voice before `context.run()`.
 - Regression impact: Shortcut dispatch only. The global fallback is gated by `getGlobalAiShortcutContext` and sorts behind scope-specific AI commands, so normal task/card/notes AI shortcuts and Escape/voice-start behavior are unchanged; full suite, lint, and audit are green.
 - API docs: Not relevant; no HTTP route, schema, method, status, auth, or OpenAPI contract changed (client-side keyboard only).
 - Conflicts / exceptions: None.
 
-### 2026-06-15T18:45:00Z � WorkLists
+### 2026-06-15T18:45:00Z ï¿½ WorkLists
 
-- Summary: Finished the shortcut-registry refactor cleanup � locked the notes-pane add-note+AI shortcut, fixed the empty-draft Escape swallow, and removed the now-redundant duplicate element-level shortcut handlers.
+- Summary: Finished the shortcut-registry refactor cleanup ï¿½ locked the notes-pane add-note+AI shortcut, fixed the empty-draft Escape swallow, and removed the now-redundant duplicate element-level shortcut handlers.
 - Problem: CODEX's shortcut refactor was ~80% done. Task-entry, card-edit, and notes element keydown listeners still re-dispatched registry shortcuts via `isRegisteredShortcutEvent` (dead/duplicated logic superseded by the capture-phase controller), an empty create-note draft swallowed Escape because `notes.cancelDraft` was `enabled` regardless of content, and the real notes-AI create chain had no executable lock.
 - Requirement: One dispatch source of truth (registry + controller); Escape with nothing to cancel must fall through to context dismiss; the notes create-area AI chord (`Ctrl/Cmd+Shift+Enter` -> `createNoteWithAiFromPane`) must be pinned across all create surfaces; and the registry/controller override + capture seams must stay intact for the future (deferred) user-rebinding feature.
 - Solution:
@@ -1576,7 +1590,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - API docs: Not relevant; no HTTP route, schema, method, status, auth, or OpenAPI contract changed (client-side keyboard cleanup only).
 - Conflicts / exceptions: None. The user-facing rebinding settings UI was explicitly deferred to future dev; this pass only keeps the codebase building toward it.
 
-### 2026-06-15T18:12:23Z � WorkLists
+### 2026-06-15T18:12:23Z ï¿½ WorkLists
 
 - Summary: Restored notes-pane AI shortcut routing and hardened the full shortcut contract from the changelog.
 - Problem: The shortcut refactor left `getGlobalAiShortcutContext` and the voice context resolver scoped too narrowly to notes textareas/visual editors. `Ctrl/Cmd+Shift+Enter` could miss notes-pane AI create/refine when focus was on composer/editor controls inside the create-note, card-text edit, or inline-note edit surfaces.
@@ -1608,7 +1622,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - API docs: Not relevant; no HTTP route, schema, method, status, auth, or OpenAPI contract changed.
 - Conflicts / exceptions: None.
 
-### 2026-06-15T17:13:02Z � WorkLists
+### 2026-06-15T17:13:02Z ï¿½ WorkLists
 
 - Summary: Fixed voice shortcut stop regression from the shortcut registry refactor.
 - Problem: The refactor put active voice capture into a replacement `voice-session` scope with `allowGlobal: false`; `Ctrl+Shift+\` remained a `global` command, so the documented June 12 stop behavior could not dispatch while recording.
@@ -1633,7 +1647,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - API docs: Not relevant; no HTTP route, schema, method, status, or auth contract changed.
 - Conflicts / exceptions: None.
 
-### 2026-06-15T16:55:29Z � WorkLists
+### 2026-06-15T16:55:29Z ï¿½ WorkLists
 
 - Summary: Centralized keyboard shortcut registration and dispatch.
 - Problem: Keyboard shortcut behavior was split across document-level listeners and feature-owned key matching, blocking future rebinding and command reuse.
@@ -1659,7 +1673,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - API docs: Not relevant; no HTTP route, schema, method, status, or auth contract changed.
 - Conflicts / exceptions: Canonical changelog restored from tracked Git HEAD before this entry; local history search did not recover newer uncommitted changelog entries that may have existed after 2026-06-12.
 
-### 2026-06-12T20:10:00Z � WorkLists
+### 2026-06-12T20:10:00Z ï¿½ WorkLists
 
 - Summary: Fixed voice shortcut stop in editors.
 - Problem: Active voice-to-text stopped with `Escape`, but the configured voice shortcut could be swallowed while focus was inside new-task or card-edit textareas.
@@ -1674,11 +1688,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
   | Gate   | Command                                                                   | Scope                           | Result          | Exception / risk                                                                                                                                                                       |
   | ------ | ------------------------------------------------------------------------- | ------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js`         | Touched UI/test files           | pass, unchanged | �                                                                                                                                                                                      |
-  | syntax | `node --check public/todolist2.js`; `node --check tests/gemma-ui.test.js` | Touched JS/test files           | pass            | �                                                                                                                                                                                      |
+  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js`         | Touched UI/test files           | pass, unchanged | ï¿½                                                                                                                                                                                      |
+  | syntax | `node --check public/todolist2.js`; `node --check tests/gemma-ui.test.js` | Touched JS/test files           | pass            | ï¿½                                                                                                                                                                                      |
   | audit  | `npm audit --audit-level=high`                                            | WorkLists dependencies          | pass            | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                                   |
-  | lint   | `npm run lint`                                                            | WorkLists formatting gate       | pass            | �                                                                                                                                                                                      |
-  | tests  | `node --test tests/gemma-ui.test.js`                                      | Focused voice shortcut coverage | pass, 29 tests  | �                                                                                                                                                                                      |
+  | lint   | `npm run lint`                                                            | WorkLists formatting gate       | pass            | ï¿½                                                                                                                                                                                      |
+  | tests  | `node --test tests/gemma-ui.test.js`                                      | Focused voice shortcut coverage | pass, 29 tests  | ï¿½                                                                                                                                                                                      |
   | tests  | `npm test`                                                                | Full WorkLists suite            | fail            | Unrelated existing failures remain in `tests/card-actions.test.js` note-count active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
 
 - Tests added/updated: Extended `tests/gemma-ui.test.js` source assertions for active voice shortcut stop and capture-phase global binding.
@@ -1687,7 +1701,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Format, syntax, high audit, lint, and focused voice tests passed; full suite remains blocked by known unrelated assertion failures.
 - Conflicts / exceptions: Preserved pre-existing dirty WorkLists changes outside the touched shortcut/test lines.
 
-### 2026-06-12T19:35:00Z � WorkLists
+### 2026-06-12T19:35:00Z ï¿½ WorkLists
 
 - Summary: Added board object modification timestamps.
 - Problem: Boards and related records had no consistent freshness marker for sync verification.
@@ -1705,11 +1719,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
   | Gate   | Command                                                                                                                                            | Scope                              | Result          | Exception / risk                                                                                                                                                                       |
   | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | format | `npx prettier --write dal.js server.js openapi.js tests\api.test.js tests\openapi.test.js`                                                         | Touched backend/test files         | pass, unchanged | �                                                                                                                                                                                      |
-  | syntax | `node --check dal.js`; `node --check server.js`; `node --check openapi.js`; `node --check tests\api.test.js`; `node --check tests\openapi.test.js` | Touched JS/test files              | pass            | �                                                                                                                                                                                      |
+  | format | `npx prettier --write dal.js server.js openapi.js tests\api.test.js tests\openapi.test.js`                                                         | Touched backend/test files         | pass, unchanged | ï¿½                                                                                                                                                                                      |
+  | syntax | `node --check dal.js`; `node --check server.js`; `node --check openapi.js`; `node --check tests\api.test.js`; `node --check tests\openapi.test.js` | Touched JS/test files              | pass            | ï¿½                                                                                                                                                                                      |
   | audit  | `npm audit --audit-level=high`                                                                                                                     | WorkLists dependencies             | pass            | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                                   |
-  | lint   | `npm run lint`                                                                                                                                     | WorkLists formatting gate          | pass            | �                                                                                                                                                                                      |
-  | tests  | `node --test tests\api.test.js tests\openapi.test.js`                                                                                              | API and OpenAPI timestamp coverage | pass, 71 tests  | �                                                                                                                                                                                      |
+  | lint   | `npm run lint`                                                                                                                                     | WorkLists formatting gate          | pass            | ï¿½                                                                                                                                                                                      |
+  | tests  | `node --test tests\api.test.js tests\openapi.test.js`                                                                                              | API and OpenAPI timestamp coverage | pass, 71 tests  | ï¿½                                                                                                                                                                                      |
   | tests  | `npm test`                                                                                                                                         | Full WorkLists suite               | fail            | Unrelated existing failures remain in `tests/card-actions.test.js` note-count active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
 
 - Tests added/updated: Extended `tests/api.test.js` for `lastModified` hydration and mutation propagation; extended `tests/openapi.test.js` for schema exposure.
@@ -1718,7 +1732,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Format, syntax, high audit, lint, and focused API/OpenAPI tests passed; full suite remains blocked by known unrelated source/CSS assertion failures.
 - Conflicts / exceptions: Preserved pre-existing dirty WorkLists changes in `public/markdownRenderer.js`, `public/todolist2.js`, `tests/add-task-entry.test.js`, `tests/context-windows.test.js`, `tests/gemma-ui.test.js`, `tests/markdown-renderer.test.js`, `tests/search-shortcuts.test.js`, and `tests/task-clipboard.test.js`.
 
-### 2026-06-12T18:19:48Z � WorkLists
+### 2026-06-12T18:19:48Z ï¿½ WorkLists
 
 - Summary: Refreshed rendered checkbox card surfaces.
 - Problem: Markdown checkbox toggles updated stored card text but did not force the card read surface to render from the new source.
@@ -1733,12 +1747,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
   | Gate   | Command                                                                                                  | Scope                                           | Result         | Exception / risk                                                                                                                                                            |
   | ------ | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | format | `npx prettier --write public/todolist2.js tests/markdown-renderer.test.js`                               | Touched UI/test files                           | pass           | �                                                                                                                                                                           |
-  | syntax | `node --check public/todolist2.js`                                                                       | Board UI script                                 | pass           | �                                                                                                                                                                           |
-  | syntax | `node --check tests/markdown-renderer.test.js`                                                           | Markdown renderer test file                     | pass           | �                                                                                                                                                                           |
-  | tests  | `node --test tests/markdown-renderer.test.js tests/task-clipboard.test.js tests/context-windows.test.js` | Focused markdown checkbox/card surface coverage | pass, 56 tests | �                                                                                                                                                                           |
+  | format | `npx prettier --write public/todolist2.js tests/markdown-renderer.test.js`                               | Touched UI/test files                           | pass           | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check public/todolist2.js`                                                                       | Board UI script                                 | pass           | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check tests/markdown-renderer.test.js`                                                           | Markdown renderer test file                     | pass           | ï¿½                                                                                                                                                                           |
+  | tests  | `node --test tests/markdown-renderer.test.js tests/task-clipboard.test.js tests/context-windows.test.js` | Focused markdown checkbox/card surface coverage | pass, 56 tests | ï¿½                                                                                                                                                                           |
   | audit  | `npm audit --audit-level=high`                                                                           | WorkLists dependencies                          | pass           | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                        |
-  | lint   | `npm run lint`                                                                                           | WorkLists formatting gate                       | pass           | �                                                                                                                                                                           |
+  | lint   | `npm run lint`                                                                                           | WorkLists formatting gate                       | pass           | ï¿½                                                                                                                                                                           |
   | tests  | `npm test`                                                                                               | Full WorkLists suite                            | fail           | Unrelated existing failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
 
 - Tests added/updated: Extended `tests/markdown-renderer.test.js` for rendered card surface refresh after inline markdown checkbox saves.
@@ -1747,7 +1761,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Formatting, syntax, focused tests, high audit, and lint passed; full suite remains blocked by known unrelated source/CSS assertion failures.
 - Conflicts / exceptions: Preserved pre-existing dirty WorkLists changes in `public/markdownRenderer.js`, `public/todolist2.js`, `tests/add-task-entry.test.js`, `tests/context-windows.test.js`, `tests/gemma-ui.test.js`, `tests/markdown-renderer.test.js`, `tests/search-shortcuts.test.js`, and `tests/task-clipboard.test.js`.
 
-### 2026-06-12T16:20:00Z � WorkLists
+### 2026-06-12T16:20:00Z ï¿½ WorkLists
 
 - Summary: Stopped voice capture on card/note commands.
 - Problem: Active voice-to-text could keep listening after notes-pane create/save paths or card creation/refine commands executed.
@@ -1763,12 +1777,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
   | Gate   | Command                                                                                        | Scope                                | Result         | Exception / risk                                                                                                                                                            |
   | ------ | ---------------------------------------------------------------------------------------------- | ------------------------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | format | `npx prettier --write public\todolist2.js tests\add-task-entry.test.js tests\gemma-ui.test.js` | Touched UI/test files                | pass           | �                                                                                                                                                                           |
-  | syntax | `node --check public\todolist2.js`                                                             | Board UI script                      | pass           | �                                                                                                                                                                           |
-  | syntax | `node --check tests\add-task-entry.test.js`                                                    | Add-task test file                   | pass           | �                                                                                                                                                                           |
-  | syntax | `node --check tests\gemma-ui.test.js`                                                          | Gemma UI test file                   | pass           | �                                                                                                                                                                           |
-  | tests  | `node --test tests\add-task-entry.test.js tests\gemma-ui.test.js`                              | Focused voice/create/refine coverage | pass, 37 tests | �                                                                                                                                                                           |
-  | lint   | `npm run lint`                                                                                 | WorkLists formatting gate            | pass           | �                                                                                                                                                                           |
+  | format | `npx prettier --write public\todolist2.js tests\add-task-entry.test.js tests\gemma-ui.test.js` | Touched UI/test files                | pass           | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check public\todolist2.js`                                                             | Board UI script                      | pass           | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check tests\add-task-entry.test.js`                                                    | Add-task test file                   | pass           | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check tests\gemma-ui.test.js`                                                          | Gemma UI test file                   | pass           | ï¿½                                                                                                                                                                           |
+  | tests  | `node --test tests\add-task-entry.test.js tests\gemma-ui.test.js`                              | Focused voice/create/refine coverage | pass, 37 tests | ï¿½                                                                                                                                                                           |
+  | lint   | `npm run lint`                                                                                 | WorkLists formatting gate            | pass           | ï¿½                                                                                                                                                                           |
   | audit  | `npm audit --audit-level=high`                                                                 | WorkLists dependencies               | pass           | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                        |
   | tests  | `npm test`                                                                                     | Full WorkLists suite                 | fail           | Unrelated existing failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
 
@@ -1778,7 +1792,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Formatting, syntax, focused tests, lint, and high audit passed; full suite remains blocked by known unrelated assertion failures.
 - Conflicts / exceptions: Preserved pre-existing dirty WorkLists changes in `public/markdownRenderer.js`, `public/todolist2.js`, `tests/context-windows.test.js`, `tests/gemma-ui.test.js`, `tests/markdown-renderer.test.js`, `tests/search-shortcuts.test.js`, and `tests/task-clipboard.test.js`.
 
-### 2026-06-12T15:58:14Z � WorkLists
+### 2026-06-12T15:58:14Z ï¿½ WorkLists
 
 - Summary: Expanded AI shortcuts into notes pane.
 - Problem: `Ctrl/Cmd+Shift+Enter` AI commands were scoped to task entry/card edit flows and notes-pane `Ctrl+Enter` handlers could intercept the AI chord as ordinary create/save.
@@ -1797,11 +1811,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                                      | Scope                                           | Result          | Exception / risk                                                                                                                                                            |
   | ------ | -------------------------------------------------------------------------------------------- | ----------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                                               | WorkLists dependencies                          | pass            | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                        |
-  | format | `npx prettier --write public\todolist2.js tests\gemma-ui.test.js`                            | Touched UI/test files                           | pass, unchanged | �                                                                                                                                                                           |
-  | syntax | `node --check public\todolist2.js`                                                           | Board UI script                                 | pass            | �                                                                                                                                                                           |
-  | syntax | `node --check tests\gemma-ui.test.js`                                                        | Gemma UI test file                              | pass            | �                                                                                                                                                                           |
-  | tests  | `node --test tests\gemma-ui.test.js tests\add-task-entry.test.js tests\edit-session.test.js` | Focused AI shortcut/add-task/card-edit coverage | pass, 43 tests  | �                                                                                                                                                                           |
-  | lint   | `npm run lint`                                                                               | WorkLists formatting gate                       | pass            | �                                                                                                                                                                           |
+  | format | `npx prettier --write public\todolist2.js tests\gemma-ui.test.js`                            | Touched UI/test files                           | pass, unchanged | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check public\todolist2.js`                                                           | Board UI script                                 | pass            | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check tests\gemma-ui.test.js`                                                        | Gemma UI test file                              | pass            | ï¿½                                                                                                                                                                           |
+  | tests  | `node --test tests\gemma-ui.test.js tests\add-task-entry.test.js tests\edit-session.test.js` | Focused AI shortcut/add-task/card-edit coverage | pass, 43 tests  | ï¿½                                                                                                                                                                           |
+  | lint   | `npm run lint`                                                                               | WorkLists formatting gate                       | pass            | ï¿½                                                                                                                                                                           |
   | tests  | `npm test`                                                                                   | Full WorkLists suite                            | fail            | Unrelated existing failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
 
 - Tests added/updated: Extended `tests/gemma-ui.test.js` for global AI shortcut notes-pane create/refine/card-edit routing.
@@ -1810,7 +1824,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit, formatting, syntax, focused tests, and lint passed; full suite remains blocked by known unrelated source/CSS assertion failures.
 - Conflicts / exceptions: Preserved pre-existing dirty WorkLists changes in `public/markdownRenderer.js`, `public/todolist2.js`, `tests/context-windows.test.js`, `tests/markdown-renderer.test.js`, `tests/search-shortcuts.test.js`, and `tests/task-clipboard.test.js`.
 
-### 2026-06-11T22:00:41Z � WorkLists
+### 2026-06-11T22:00:41Z ï¿½ WorkLists
 
 - Summary: Stopped notes checklist clicks from editing.
 - Problem: Clicking rendered markdown checklist controls in the notes pane bubbled into the note/card click-to-edit handlers.
@@ -1825,11 +1839,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
   | Gate   | Command                                                                                                  | Scope                                        | Result          | Exception / risk |
   | ------ | -------------------------------------------------------------------------------------------------------- | -------------------------------------------- | --------------- | ---------------- |
-  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js`                                 | Touched UI/test files                        | pass, unchanged | �                |
-  | syntax | `node --check public\todolist2.js`                                                                       | Board UI script                              | pass            | �                |
-  | syntax | `node --check tests\context-windows.test.js`                                                             | Context-window test file                     | pass            | �                |
-  | tests  | `node --test tests\context-windows.test.js tests\markdown-renderer.test.js tests\task-clipboard.test.js` | Focused notes-pane markdown/control coverage | pass, 55 tests  | �                |
-  | lint   | `npm run lint`                                                                                           | WorkLists formatting gate                    | pass            | �                |
+  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js`                                 | Touched UI/test files                        | pass, unchanged | ï¿½                |
+  | syntax | `node --check public\todolist2.js`                                                                       | Board UI script                              | pass            | ï¿½                |
+  | syntax | `node --check tests\context-windows.test.js`                                                             | Context-window test file                     | pass            | ï¿½                |
+  | tests  | `node --test tests\context-windows.test.js tests\markdown-renderer.test.js tests\task-clipboard.test.js` | Focused notes-pane markdown/control coverage | pass, 55 tests  | ï¿½                |
+  | lint   | `npm run lint`                                                                                           | WorkLists formatting gate                    | pass            | ï¿½                |
 
 - Tests added/updated: Extended `tests/context-windows.test.js` to assert notes-pane markdown controls are guarded before inline edit flows.
 - Regression impact: Isolated to notes-pane click handling for rendered markdown controls; ordinary note/card content clicks still enter existing inline editors.
@@ -1837,7 +1851,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Formatting, syntax, focused tests, and lint passed.
 - Conflicts / exceptions: Preserved pre-existing dirty WorkLists changes and known unrelated full-suite failures; did not rerun full suite for this click-guard-only follow-up after focused gates passed.
 
-### 2026-06-11T21:42:54Z � WorkLists
+### 2026-06-11T21:42:54Z ï¿½ WorkLists
 
 - Summary: Fixed nested markdown lists and notes checkboxes.
 - Problem: Rendered markdown flattened indented bullet lists, and markdown task checkboxes inside the notes pane did not persist when clicked.
@@ -1855,13 +1869,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                                                                            | Scope                                                    | Result         | Exception / risk                                                                                                                                                            |
   | ------ | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                                                                                     | WorkLists dependencies                                   | pass           | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                        |
-  | format | `npx prettier --write public\markdownRenderer.js public\todolist2.js tests\markdown-renderer.test.js tests\task-clipboard.test.js` | Touched renderer/UI/test files                           | pass           | �                                                                                                                                                                           |
-  | syntax | `node --check public\markdownRenderer.js`                                                                                          | Markdown renderer                                        | pass           | �                                                                                                                                                                           |
-  | syntax | `node --check public\todolist2.js`                                                                                                 | Board UI script                                          | pass           | �                                                                                                                                                                           |
-  | syntax | `node --check tests\markdown-renderer.test.js`                                                                                     | Markdown renderer tests                                  | pass           | �                                                                                                                                                                           |
-  | syntax | `node --check tests\task-clipboard.test.js`                                                                                        | Clipboard source tests                                   | pass           | �                                                                                                                                                                           |
-  | tests  | `node --test tests\markdown-renderer.test.js tests\task-clipboard.test.js tests\context-windows.test.js`                           | Focused markdown, notes-pane, clipboard/context coverage | pass, 54 tests | �                                                                                                                                                                           |
-  | lint   | `npm run lint`                                                                                                                     | WorkLists formatting gate                                | pass           | �                                                                                                                                                                           |
+  | format | `npx prettier --write public\markdownRenderer.js public\todolist2.js tests\markdown-renderer.test.js tests\task-clipboard.test.js` | Touched renderer/UI/test files                           | pass           | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check public\markdownRenderer.js`                                                                                          | Markdown renderer                                        | pass           | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check public\todolist2.js`                                                                                                 | Board UI script                                          | pass           | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check tests\markdown-renderer.test.js`                                                                                     | Markdown renderer tests                                  | pass           | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check tests\task-clipboard.test.js`                                                                                        | Clipboard source tests                                   | pass           | ï¿½                                                                                                                                                                           |
+  | tests  | `node --test tests\markdown-renderer.test.js tests\task-clipboard.test.js tests\context-windows.test.js`                           | Focused markdown, notes-pane, clipboard/context coverage | pass, 54 tests | ï¿½                                                                                                                                                                           |
+  | lint   | `npm run lint`                                                                                                                     | WorkLists formatting gate                                | pass           | ï¿½                                                                                                                                                                           |
   | tests  | `npm test`                                                                                                                         | Full WorkLists suite                                     | fail           | Unrelated existing failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
 
 - Tests added/updated: Extended `tests/markdown-renderer.test.js` for nested unordered/ordered/task lists and notes-pane checkbox wiring; updated `tests/task-clipboard.test.js` for notes-pane checkbox persistence binding.
@@ -1870,7 +1884,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit, formatting, syntax, focused tests, and lint passed; full suite remains blocked by unrelated existing source assertion failures noted above.
 - Conflicts / exceptions: Preserved pre-existing dirty WorkLists changes in `public/todolist2.js`, `tests/context-windows.test.js`, and `tests/search-shortcuts.test.js`; did not alter unrelated full-suite failures.
 
-### 2026-06-12T00:38:00Z � WorkLists
+### 2026-06-12T00:38:00Z ï¿½ WorkLists
 
 - Summary: Hardened global Escape search dismissal.
 - Problem: Escape could close a focused context surface, such as Filters, without also canceling an active Ctrl+K search, leaving the search bar/results stuck open after focus moved through filter controls.
@@ -1887,12 +1901,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                                                                                                      | Scope                                         | Result         | Exception / risk                                                                                                                                                            |
   | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                                                                                                               | WorkLists dependencies                        | pass           | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                        |
-  | format | `npx prettier --write public\todolist2.js tests\search-shortcuts.test.js tests\context-windows.test.js`                                                      | Touched UI/test files                         | pass           | �                                                                                                                                                                           |
-  | syntax | `node --check public\todolist2.js`                                                                                                                           | Board UI script                               | pass           | �                                                                                                                                                                           |
-  | syntax | `node --check tests\search-shortcuts.test.js`                                                                                                                | Search shortcut test file                     | pass           | �                                                                                                                                                                           |
-  | syntax | `node --check tests\context-windows.test.js`                                                                                                                 | Context-window test file                      | pass           | �                                                                                                                                                                           |
-  | tests  | `node --test tests\search-shortcuts.test.js tests\context-windows.test.js tests\filter-menu.test.js tests\add-task-entry.test.js tests\edit-session.test.js` | Focused Escape/search/context/editor coverage | pass, 56 tests | �                                                                                                                                                                           |
-  | lint   | `npm run lint`                                                                                                                                               | WorkLists formatting gate                     | pass           | �                                                                                                                                                                           |
+  | format | `npx prettier --write public\todolist2.js tests\search-shortcuts.test.js tests\context-windows.test.js`                                                      | Touched UI/test files                         | pass           | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check public\todolist2.js`                                                                                                                           | Board UI script                               | pass           | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check tests\search-shortcuts.test.js`                                                                                                                | Search shortcut test file                     | pass           | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check tests\context-windows.test.js`                                                                                                                 | Context-window test file                      | pass           | ï¿½                                                                                                                                                                           |
+  | tests  | `node --test tests\search-shortcuts.test.js tests\context-windows.test.js tests\filter-menu.test.js tests\add-task-entry.test.js tests\edit-session.test.js` | Focused Escape/search/context/editor coverage | pass, 56 tests | ï¿½                                                                                                                                                                           |
+  | lint   | `npm run lint`                                                                                                                                               | WorkLists formatting gate                     | pass           | ï¿½                                                                                                                                                                           |
   | tests  | `npm test`                                                                                                                                                   | Full WorkLists suite                          | fail           | Unrelated existing failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
 
 - Tests added/updated: Extended `tests/search-shortcuts.test.js` and `tests/context-windows.test.js` for global Escape search cancel, diagnostics, and focused-editor deferral.
@@ -1901,7 +1915,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit, formatting, syntax, focused tests, and lint passed; full suite remains blocked by unrelated existing source assertion failures noted above.
 - Conflicts / exceptions: Preserved pre-existing dirty notes-pane changes in `public/todolist2.js` and `tests/context-windows.test.js`; did not alter unrelated full-suite failures.
 
-### 2026-06-11T20:12:32Z � WorkLists
+### 2026-06-11T20:12:32Z ï¿½ WorkLists
 
 - Summary: Kept note undo actions pane-local.
 - Problem: Clicking the AI note refine Undo toast while a card notes pane was open counted as an outside click and closed the notes context window.
@@ -1917,11 +1931,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
   | Gate   | Command                                                                  | Scope                                      | Result          | Exception / risk                                                                                                                                                            |
   | ------ | ------------------------------------------------------------------------ | ------------------------------------------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js` | Touched UI/test files                      | pass, unchanged | �                                                                                                                                                                           |
-  | syntax | `node --check public\todolist2.js`                                       | Board UI script                            | pass            | �                                                                                                                                                                           |
-  | syntax | `node --check tests\context-windows.test.js`                             | Focused context-window test file           | pass            | �                                                                                                                                                                           |
-  | tests  | `node --test tests\context-windows.test.js`                              | Focused notes-pane/context source coverage | pass, 22 tests  | �                                                                                                                                                                           |
-  | lint   | `npm run lint`                                                           | WorkLists formatting gate                  | pass            | �                                                                                                                                                                           |
+  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js` | Touched UI/test files                      | pass, unchanged | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check public\todolist2.js`                                       | Board UI script                            | pass            | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check tests\context-windows.test.js`                             | Focused context-window test file           | pass            | ï¿½                                                                                                                                                                           |
+  | tests  | `node --test tests\context-windows.test.js`                              | Focused notes-pane/context source coverage | pass, 22 tests  | ï¿½                                                                                                                                                                           |
+  | lint   | `npm run lint`                                                           | WorkLists formatting gate                  | pass            | ï¿½                                                                                                                                                                           |
   | tests  | `npm test`                                                               | Full WorkLists suite                       | fail            | Unrelated existing failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
 
 - Tests added/updated: Extended `tests/context-windows.test.js` to assert note Undo toast actions preserve notes-pane visibility.
@@ -1930,7 +1944,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Formatting, syntax, focused context-window tests, and lint passed; full suite remains blocked by unrelated existing source assertion failures noted above.
 - Conflicts / exceptions: Preserved pre-existing dirty same-card notes-pane toggle changes in `public/todolist2.js` and `tests/context-windows.test.js`; did not alter unrelated failing assertions or CSS.
 
-### 2026-06-11T19:11:47Z � WorkLists
+### 2026-06-11T19:11:47Z ï¿½ WorkLists
 
 - Summary: Restored notes-pane icon toggle close.
 - Problem: Clicking a card's notes icon while that same card's notes pane was already open re-entered the open/load flow instead of closing the pane.
@@ -1945,11 +1959,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
   | Gate   | Command                                                                  | Scope                                      | Result          | Exception / risk                                                                                                                                                            |
   | ------ | ------------------------------------------------------------------------ | ------------------------------------------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js` | Touched UI/test files                      | pass, unchanged | �                                                                                                                                                                           |
-  | syntax | `node --check public\todolist2.js`                                       | Board UI script                            | pass            | �                                                                                                                                                                           |
-  | syntax | `node --check tests\context-windows.test.js`                             | Focused context-window test file           | pass            | �                                                                                                                                                                           |
-  | tests  | `node --test tests\context-windows.test.js`                              | Focused notes-pane/context source coverage | pass, 21 tests  | �                                                                                                                                                                           |
-  | lint   | `npm run lint`                                                           | WorkLists formatting gate                  | pass            | �                                                                                                                                                                           |
+  | format | `npx prettier --write public\todolist2.js tests\context-windows.test.js` | Touched UI/test files                      | pass, unchanged | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check public\todolist2.js`                                       | Board UI script                            | pass            | ï¿½                                                                                                                                                                           |
+  | syntax | `node --check tests\context-windows.test.js`                             | Focused context-window test file           | pass            | ï¿½                                                                                                                                                                           |
+  | tests  | `node --test tests\context-windows.test.js`                              | Focused notes-pane/context source coverage | pass, 21 tests  | ï¿½                                                                                                                                                                           |
+  | lint   | `npm run lint`                                                           | WorkLists formatting gate                  | pass            | ï¿½                                                                                                                                                                           |
   | tests  | `npm test`                                                               | Full WorkLists suite                       | fail            | Unrelated existing failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
 
 - Tests added/updated: Extended `tests/context-windows.test.js` to assert same-card notes icon activation closes the already-open pane.
@@ -1958,7 +1972,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Focused syntax/context-window tests and lint passed; full suite remains blocked by unrelated existing source assertion failures noted above.
 - Conflicts / exceptions: Preserved unrelated dirty-state failures; did not change `tests/card-actions.test.js`, `tests/column-actions.test.js`, or CSS unrelated to the toggle bug.
 
-### 2026-06-11T19:05:48Z � WorkLists
+### 2026-06-11T19:05:48Z ï¿½ WorkLists
 
 - Summary: Prevented notes-pane link clicks from editing.
 - Problem: Clicking rendered hyperlinks in notes-pane card text or saved notes could trigger the notes-pane click-to-edit handlers instead of leaving the link navigation alone.
@@ -1973,9 +1987,9 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
   | Gate   | Command                                      | Scope                                      | Result         | Exception / risk                                                                                                         |
   | ------ | -------------------------------------------- | ------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------ |
-  | syntax | `node --check public\todolist2.js`           | Board UI script                            | pass           | �                                                                                                                        |
-  | syntax | `node --check tests\context-windows.test.js` | Focused context-window test file           | pass           | �                                                                                                                        |
-  | tests  | `node --test tests\context-windows.test.js`  | Focused notes-pane/context source coverage | pass, 20 tests | �                                                                                                                        |
+  | syntax | `node --check public\todolist2.js`           | Board UI script                            | pass           | ï¿½                                                                                                                        |
+  | syntax | `node --check tests\context-windows.test.js` | Focused context-window test file           | pass           | ï¿½                                                                                                                        |
+  | tests  | `node --test tests\context-windows.test.js`  | Focused notes-pane/context source coverage | pass, 20 tests | ï¿½                                                                                                                        |
   | lint   | `npm run lint`                               | WorkLists lint gate                        | exception      | Skipped by explicit user directive; residual risk is formatting/lint issues outside the focused syntax and source tests. |
 
 - Tests added/updated: Extended `tests/context-windows.test.js` to assert notes-pane markdown link clicks are guarded before discard prompts and inline editor creation.
@@ -1984,7 +1998,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Focused syntax and context-window tests passed; lint skipped by explicit directive.
 - Conflicts / exceptions: Skipped linting per user directive. Preserved unrelated dirty WorkLists state and did not run full-suite gates.
 
-### 2026-06-10T18:16:40Z � WorkLists
+### 2026-06-10T18:16:40Z ï¿½ WorkLists
 
 - Summary: Hid notes-pane action icons until hover.
 - Problem: Card-text and saved-note action icons in the notes pane were always visible, adding visual noise around note content.
@@ -2000,9 +2014,9 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                         | Scope                                      | Result         | Exception / risk                                                                                                                                                         |
   | ------ | ------------------------------------------------------------------------------- | ------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
   | audit  | `npm audit --audit-level=high`                                                  | WorkLists dependencies                     | pass           | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                     |
-  | format | `npx prettier --write public\todoliststyles2.css tests\context-windows.test.js` | Touched CSS/test files                     | pass           | �                                                                                                                                                                        |
-  | syntax | `node --check tests\context-windows.test.js`                                    | Focused context-window test file           | pass           | �                                                                                                                                                                        |
-  | tests  | `node --test tests\context-windows.test.js`                                     | Focused notes-pane/context source coverage | pass, 19 tests | �                                                                                                                                                                        |
+  | format | `npx prettier --write public\todoliststyles2.css tests\context-windows.test.js` | Touched CSS/test files                     | pass           | ï¿½                                                                                                                                                                        |
+  | syntax | `node --check tests\context-windows.test.js`                                    | Focused context-window test file           | pass           | ï¿½                                                                                                                                                                        |
+  | tests  | `node --test tests\context-windows.test.js`                                     | Focused notes-pane/context source coverage | pass, 19 tests | ï¿½                                                                                                                                                                        |
   | lint   | `npm run lint`                                                                  | WorkLists formatting gate                  | fail           | Unrelated dirty `tests/task-clipboard.test.js` is not Prettier-formatted; not touched for this notes icon visibility change.                                             |
   | tests  | `npm test`                                                                      | Full WorkLists suite                       | fail           | Unrelated dirty failures remain in `tests/card-actions.test.js` active-card CSS expectation and `tests/column-actions.test.js` legacy commented `toggleTodoFromUI` text. |
 
@@ -2012,7 +2026,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit, formatting, syntax, and focused context-window tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
 - Conflicts / exceptions: Preserved unrelated dirty WorkLists changes already present in `public/todoliststyles2.css`, `tests/context-windows.test.js`, and other files; did not format or alter unrelated failing test files.
 
-### 2026-06-10T17:55:44Z � WorkLists
+### 2026-06-10T17:55:44Z ï¿½ WorkLists
 
 - Summary: Streamlined notes-pane inline editing.
 - Problem: Editing existing note and card text inside the notes pane required explicit edit/save/cancel steps and reused discard confirmation prompts intended for unsaved drafts.
@@ -2033,13 +2047,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | audit                                                                   |
   | pm audit --audit-level=high                                             | WorkLists dependencies                     | pass           | Existing 3 moderate qs/ody-parser/xpress advisories remain with no fix available; high/critical gate passes.                                                                       |
   | format                                                                  |
-  | px prettier --write public\\todolist2.js tests\\context-windows.test.js | Touched UI/test files                      | pass           | �                                                                                                                                                                                  |
+  | px prettier --write public\\todolist2.js tests\\context-windows.test.js | Touched UI/test files                      | pass           | ï¿½                                                                                                                                                                                  |
   | syntax                                                                  |
-  | ode --check public\\todolist2.js                                        | Board UI script                            | pass           | �                                                                                                                                                                                  |
+  | ode --check public\\todolist2.js                                        | Board UI script                            | pass           | ï¿½                                                                                                                                                                                  |
   | syntax                                                                  |
-  | ode --check tests\\context-windows.test.js                              | Focused context-window test file           | pass           | �                                                                                                                                                                                  |
+  | ode --check tests\\context-windows.test.js                              | Focused context-window test file           | pass           | ï¿½                                                                                                                                                                                  |
   | tests                                                                   |
-  | ode --test tests\\context-windows.test.js                               | Focused notes-pane/context source coverage | pass, 18 tests | �                                                                                                                                                                                  |
+  | ode --test tests\\context-windows.test.js                               | Focused notes-pane/context source coverage | pass, 18 tests | ï¿½                                                                                                                                                                                  |
   | lint                                                                    |
   | pm run lint                                                             | WorkLists formatting gate                  | fail           | Unrelated dirty ests/task-clipboard.test.js is not Prettier-formatted; not touched for this notes editing change.                                                                  |
   | tests                                                                   |
@@ -2051,7 +2065,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit, touched-file formatting, syntax, and focused context-window tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
 - Conflicts / exceptions: Preserved unrelated dirty WorkLists changes in public/todolist2.js and other files; did not format or alter ests/task-clipboard.test.js, active-card CSS expectations, or legacy commented column-action text.
 
-### 2026-06-10T17:41:18Z � WorkLists
+### 2026-06-10T17:41:18Z ï¿½ WorkLists
 
 - Summary: Collapsed inactive add-note composer.
 - Problem: The notes-pane add-note composer still consumed multi-line space while inactive because the textarea kept its multi-row height and the action row remained visible even though markdown controls were collapsed.
@@ -2068,10 +2082,10 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                                                                                        | Scope                                   | Result        | Exception / risk                                                                                                                                                                            |
   | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                                                                                                 | WorkLists dependencies                  | pass          | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                                        |
-  | format | `npx prettier --write public/markdownEditor.js public/index.html public/todolist2.js public/todoliststyles2.css tests/markdown-editor.test.js` | Touched UI/test files                   | pass          | �                                                                                                                                                                                           |
-  | syntax | `node --check public\markdownEditor.js`                                                                                                        | Shared markdown editor script           | pass          | �                                                                                                                                                                                           |
-  | syntax | `node --check public\todolist2.js`                                                                                                             | Board UI script                         | pass          | �                                                                                                                                                                                           |
-  | tests  | `node --test tests\markdown-editor.test.js`                                                                                                    | Focused markdown editor/source coverage | pass, 7 tests | �                                                                                                                                                                                           |
+  | format | `npx prettier --write public/markdownEditor.js public/index.html public/todolist2.js public/todoliststyles2.css tests/markdown-editor.test.js` | Touched UI/test files                   | pass          | ï¿½                                                                                                                                                                                           |
+  | syntax | `node --check public\markdownEditor.js`                                                                                                        | Shared markdown editor script           | pass          | ï¿½                                                                                                                                                                                           |
+  | syntax | `node --check public\todolist2.js`                                                                                                             | Board UI script                         | pass          | ï¿½                                                                                                                                                                                           |
+  | tests  | `node --test tests\markdown-editor.test.js`                                                                                                    | Focused markdown editor/source coverage | pass, 7 tests | ï¿½                                                                                                                                                                                           |
   | lint   | `npm run lint`                                                                                                                                 | WorkLists formatting gate               | fail          | Unrelated dirty `tests/task-clipboard.test.js` is not Prettier-formatted; not touched for this notes composer change.                                                                       |
   | tests  | `npm test`                                                                                                                                     | Full WorkLists suite                    | fail          | Same unrelated dirty failures remain: active-card CSS/test mismatch in `tests/card-actions.test.js` and legacy commented `toggleTodoFromUI` text matched by `tests/column-actions.test.js`. |
 
@@ -2081,7 +2095,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit, touched-file formatting, syntax, and focused markdown editor tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
 - Conflicts / exceptions: Preserved unrelated dirty WorkLists changes and did not format or alter `tests/task-clipboard.test.js`, active-card CSS expectations, or legacy commented column-action text.
 
-### 2026-06-10T17:14:37Z � WorkLists
+### 2026-06-10T17:14:37Z ï¿½ WorkLists
 
 - Summary: Opened notes for new-card child notes.
 - Problem: Notes-pane reveal worked for explicit AI note jobs and card refinement, but not for a new AI-created card that also generated a child note.
@@ -2098,10 +2112,10 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                           | Scope                            | Result         | Exception / risk                                                                                                                                                                            |
   | ------ | ----------------------------------------------------------------- | -------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                    | WorkLists dependencies           | pass           | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                                        |
-  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js` | Touched UI/test files            | pass           | �                                                                                                                                                                                           |
-  | syntax | `node --check public\todolist2.js`                                | Board UI script                  | pass           | �                                                                                                                                                                                           |
-  | syntax | `node --check tests\gemma-ui.test.js`                             | Focused Gemma UI test file       | pass           | �                                                                                                                                                                                           |
-  | tests  | `node --test tests\gemma-ui.test.js`                              | Focused Gemma UI source coverage | pass, 28 tests | �                                                                                                                                                                                           |
+  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js` | Touched UI/test files            | pass           | ï¿½                                                                                                                                                                                           |
+  | syntax | `node --check public\todolist2.js`                                | Board UI script                  | pass           | ï¿½                                                                                                                                                                                           |
+  | syntax | `node --check tests\gemma-ui.test.js`                             | Focused Gemma UI test file       | pass           | ï¿½                                                                                                                                                                                           |
+  | tests  | `node --test tests\gemma-ui.test.js`                              | Focused Gemma UI source coverage | pass, 28 tests | ï¿½                                                                                                                                                                                           |
   | lint   | `npm run lint`                                                    | WorkLists formatting gate        | fail           | Unrelated dirty `tests/task-clipboard.test.js` is not Prettier-formatted; not touched for this add-task reveal fix.                                                                         |
   | tests  | `npm test`                                                        | Full WorkLists suite             | fail           | Same unrelated dirty failures remain: active-card CSS/test mismatch in `tests/card-actions.test.js` and legacy commented `toggleTodoFromUI` text matched by `tests/column-actions.test.js`. |
 
@@ -2111,7 +2125,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit, touched-file formatting, syntax, and focused UI tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
 - Conflicts / exceptions: Preserved unrelated dirty WorkLists changes and did not format or alter `tests/task-clipboard.test.js`, active-card CSS expectations, or legacy commented column-action text.
 
-### 2026-06-10T17:10:18Z � WorkLists
+### 2026-06-10T17:10:18Z ï¿½ WorkLists
 
 - Summary: Preserved AI note reveal after reloads.
 - Problem: The notes pane auto-open behavior worked during a fresh in-memory session, but could fail after browser reload or server restart because restored note-refine jobs lost their card id and missing in-memory server job results skipped the reveal path.
@@ -2127,10 +2141,10 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                           | Scope                            | Result         | Exception / risk                                                                                                                                                                            |
   | ------ | ----------------------------------------------------------------- | -------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                    | WorkLists dependencies           | pass           | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                                        |
-  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js` | Touched UI/test files            | pass           | �                                                                                                                                                                                           |
-  | syntax | `node --check public\todolist2.js`                                | Board UI script                  | pass           | �                                                                                                                                                                                           |
-  | syntax | `node --check tests\gemma-ui.test.js`                             | Focused Gemma UI test file       | pass           | �                                                                                                                                                                                           |
-  | tests  | `node --test tests\gemma-ui.test.js`                              | Focused Gemma UI source coverage | pass, 28 tests | �                                                                                                                                                                                           |
+  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js` | Touched UI/test files            | pass           | ï¿½                                                                                                                                                                                           |
+  | syntax | `node --check public\todolist2.js`                                | Board UI script                  | pass           | ï¿½                                                                                                                                                                                           |
+  | syntax | `node --check tests\gemma-ui.test.js`                             | Focused Gemma UI test file       | pass           | ï¿½                                                                                                                                                                                           |
+  | tests  | `node --test tests\gemma-ui.test.js`                              | Focused Gemma UI source coverage | pass, 28 tests | ï¿½                                                                                                                                                                                           |
   | lint   | `npm run lint`                                                    | WorkLists formatting gate        | fail           | Unrelated dirty `tests/task-clipboard.test.js` is not Prettier-formatted; not touched for this persistence fix.                                                                             |
   | tests  | `npm test`                                                        | Full WorkLists suite             | fail           | Same unrelated dirty failures remain: active-card CSS/test mismatch in `tests/card-actions.test.js` and legacy commented `toggleTodoFromUI` text matched by `tests/column-actions.test.js`. |
 
@@ -2140,7 +2154,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit, touched-file formatting, syntax, and focused UI tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
 - Conflicts / exceptions: Preserved unrelated dirty WorkLists changes and did not format or alter `tests/task-clipboard.test.js`, active-card CSS expectations, or legacy commented column-action text.
 
-### 2026-06-10T16:56:43Z � WorkLists
+### 2026-06-10T16:56:43Z ï¿½ WorkLists
 
 - Summary: Auto-opened notes after AI note updates.
 - Problem: AI-created or AI-refined notes could complete in the background while the notes pane stayed closed or focused elsewhere, hiding the generated note content from the user.
@@ -2157,10 +2171,10 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                           | Scope                            | Result         | Exception / risk                                                                                                                                                                            |
   | ------ | ----------------------------------------------------------------- | -------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                    | WorkLists dependencies           | pass           | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                                        |
-  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js` | Touched UI/test files            | pass           | �                                                                                                                                                                                           |
-  | syntax | `node --check public\todolist2.js`                                | Board UI script                  | pass           | �                                                                                                                                                                                           |
-  | syntax | `node --check tests\gemma-ui.test.js`                             | Focused Gemma UI test file       | pass           | �                                                                                                                                                                                           |
-  | tests  | `node --test tests\gemma-ui.test.js`                              | Focused Gemma UI source coverage | pass, 27 tests | �                                                                                                                                                                                           |
+  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js` | Touched UI/test files            | pass           | ï¿½                                                                                                                                                                                           |
+  | syntax | `node --check public\todolist2.js`                                | Board UI script                  | pass           | ï¿½                                                                                                                                                                                           |
+  | syntax | `node --check tests\gemma-ui.test.js`                             | Focused Gemma UI test file       | pass           | ï¿½                                                                                                                                                                                           |
+  | tests  | `node --test tests\gemma-ui.test.js`                              | Focused Gemma UI source coverage | pass, 27 tests | ï¿½                                                                                                                                                                                           |
   | lint   | `npm run lint`                                                    | WorkLists formatting gate        | fail           | Unrelated dirty `tests/task-clipboard.test.js` is not Prettier-formatted; not touched for this notes-pane change.                                                                           |
   | tests  | `npm test`                                                        | Full WorkLists suite             | fail           | Same unrelated dirty failures remain: active-card CSS/test mismatch in `tests/card-actions.test.js` and legacy commented `toggleTodoFromUI` text matched by `tests/column-actions.test.js`. |
 
@@ -2170,7 +2184,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit, touched-file formatting, syntax, and focused UI tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
 - Conflicts / exceptions: Preserved unrelated dirty WorkLists changes and did not format or alter `tests/task-clipboard.test.js`, active-card CSS expectations, or legacy commented column-action text.
 
-### 2026-06-10T16:41:40Z � WorkLists
+### 2026-06-10T16:41:40Z ï¿½ WorkLists
 
 - Summary: Added a global voice-to-text keyboard shortcut.
 - Problem: Starting voice-to-text required mouse interaction across task entry, card editing, and notes-pane editing surfaces.
@@ -2187,9 +2201,9 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                           | Scope                                  | Result         | Exception / risk                                                                                                                                                                            |
   | ------ | ----------------------------------------------------------------- | -------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                    | WorkLists dependencies                 | pass           | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                                        |
-  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js` | Touched UI/test files                  | pass           | �                                                                                                                                                                                           |
-  | syntax | `node --check public\todolist2.js`                                | Board UI script                        | pass           | �                                                                                                                                                                                           |
-  | tests  | `node --test tests\gemma-ui.test.js`                              | Focused voice/Gemma UI source coverage | pass, 26 tests | �                                                                                                                                                                                           |
+  | format | `npx prettier --write public/todolist2.js tests/gemma-ui.test.js` | Touched UI/test files                  | pass           | ï¿½                                                                                                                                                                                           |
+  | syntax | `node --check public\todolist2.js`                                | Board UI script                        | pass           | ï¿½                                                                                                                                                                                           |
+  | tests  | `node --test tests\gemma-ui.test.js`                              | Focused voice/Gemma UI source coverage | pass, 26 tests | ï¿½                                                                                                                                                                                           |
   | lint   | `npm run lint`                                                    | WorkLists formatting gate              | fail           | Unrelated dirty `tests/task-clipboard.test.js` is not Prettier-formatted; not touched for this shortcut change.                                                                             |
   | tests  | `npm test`                                                        | Full WorkLists suite                   | fail           | Same unrelated dirty failures remain: active-card CSS/test mismatch in `tests/card-actions.test.js` and legacy commented `toggleTodoFromUI` text matched by `tests/column-actions.test.js`. |
 
@@ -2199,7 +2213,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit, touched-file formatting, syntax, and focused UI tests passed; repo lint/full tests remain blocked by unrelated dirty-state issues noted above.
 - Conflicts / exceptions: Preserved unrelated dirty WorkLists changes and did not format or alter `tests/task-clipboard.test.js`, active-card CSS expectations, or legacy commented column-action text.
 
-### 2026-06-10T16:07:37Z � WorkLists
+### 2026-06-10T16:07:37Z ï¿½ WorkLists
 
 - Summary: Kept the card notes icon visible for zero-note cards.
 - Problem: Cards without saved notes hid the notes affordance, blocking direct access to the notes pane and its editing flow.
@@ -2214,9 +2228,9 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
   | Gate   | Command                                                                                          | Scope                                | Result              | Exception / risk                                                                                                                                                                                                                                                                              |
   | ------ | ------------------------------------------------------------------------------------------------ | ------------------------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | syntax | `node --check public\todolist2.js`                                                               | Board UI script                      | pass                | �                                                                                                                                                                                                                                                                                             |
-  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/card-actions.test.js` | Touched UI/test files                | pass                | �                                                                                                                                                                                                                                                                                             |
-  | lint   | `npm run lint`                                                                                   | WorkLists formatting gate            | pass                | �                                                                                                                                                                                                                                                                                             |
+  | syntax | `node --check public\todolist2.js`                                                               | Board UI script                      | pass                | ï¿½                                                                                                                                                                                                                                                                                             |
+  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/card-actions.test.js` | Touched UI/test files                | pass                | ï¿½                                                                                                                                                                                                                                                                                             |
+  | lint   | `npm run lint`                                                                                   | WorkLists formatting gate            | pass                | ï¿½                                                                                                                                                                                                                                                                                             |
   | tests  | `node --test tests\card-actions.test.js`                                                         | Focused card actions/source coverage | fail, 14 of 15 pass | Existing dirty active-card CSS/test mismatch remains: `tests/card-actions.test.js` expects `.card.notes-pane-active-card::after` border `2px`, while dirty `public/todoliststyles2.css` currently has `3px`. The new notes-icon assertions were added before that existing failing assertion. |
   | tests  | `npm test`                                                                                       | Full WorkLists suite                 | fail                | Same two known dirty failures remain: the active-card `2px` vs `3px` CSS/test mismatch and `tests/column-actions.test.js` matching legacy commented `toggleTodoFromUI` text.                                                                                                                  |
 
@@ -2226,7 +2240,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Syntax, formatting, and repo lint passed; focused and full test runs remain blocked by pre-existing dirty UI/source-regression assertions.
 - Conflicts / exceptions: Preserved the existing dirty WorkLists files and did not change the unrelated active-card border mismatch.
 
-### 2026-06-09T16:29:38Z � WorkLists
+### 2026-06-09T16:29:38Z ï¿½ WorkLists
 
 - Summary: Removed generated child-note title headings before persistence.
 - Problem: The nested child-note prompt was close, but Gemma could still start the note with a renamed `#` title such as `# Enable Cross-Board Column Data Association` before the actual `## Problem` body.
@@ -2242,12 +2256,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
   | Gate   | Command                                                                                                       | Scope                                                 | Result         | Exception / risk                                                                                                                                                                                                                                                                                             |
   | ------ | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-  | syntax | `node --check server.js`                                                                                      | Server job pipeline and child-note sanitizer          | pass           | �                                                                                                                                                                                                                                                                                                            |
-  | syntax | `node --check tests\gemma-normalize.test.js`                                                                  | Focused Gemma test file                               | pass           | �                                                                                                                                                                                                                                                                                                            |
-  | format | `npx prettier --write server.js tests/gemma-normalize.test.js prompts/gemma-child-note-directive-template.md` | Touched server/test/prompt files                      | pass           | �                                                                                                                                                                                                                                                                                                            |
-  | tests  | `node --test tests\gemma-normalize.test.js`                                                                   | Focused Gemma nested-note prompt and persistence flow | pass, 49 tests | �                                                                                                                                                                                                                                                                                                            |
+  | syntax | `node --check server.js`                                                                                      | Server job pipeline and child-note sanitizer          | pass           | ï¿½                                                                                                                                                                                                                                                                                                            |
+  | syntax | `node --check tests\gemma-normalize.test.js`                                                                  | Focused Gemma test file                               | pass           | ï¿½                                                                                                                                                                                                                                                                                                            |
+  | format | `npx prettier --write server.js tests/gemma-normalize.test.js prompts/gemma-child-note-directive-template.md` | Touched server/test/prompt files                      | pass           | ï¿½                                                                                                                                                                                                                                                                                                            |
+  | tests  | `node --test tests\gemma-normalize.test.js`                                                                   | Focused Gemma nested-note prompt and persistence flow | pass, 49 tests | ï¿½                                                                                                                                                                                                                                                                                                            |
   | audit  | `npm audit --audit-level=high`                                                                                | WorkLists dependencies                                | pass           | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                                                                                                                                                         |
-  | lint   | `npm run lint`                                                                                                | Repo Prettier check                                   | pass           | �                                                                                                                                                                                                                                                                                                            |
+  | lint   | `npm run lint`                                                                                                | Repo Prettier check                                   | pass           | ï¿½                                                                                                                                                                                                                                                                                                            |
   | tests  | `npm test`                                                                                                    | Full WorkLists suite                                  | fail           | Same unrelated dirty UI/source-regression failures remain: `tests/card-actions.test.js` expects `.card.notes-pane-active-card::after` CSS absent from dirty `public/todoliststyles2.css`; `tests/column-actions.test.js` still sees commented legacy `toggleTodoFromUI` text in dirty `public/todolist2.js`. |
 
 - Tests added/updated: Updated the refine-card nested-note regression to include a generated leading `#` title and assert the stored child note strips it while retaining `## Problem`, `## Requirement`, and `## Proposed Solution` body sections.
@@ -2256,7 +2270,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Syntax, formatting, focused Gemma tests, audit threshold, and lint passed; full suite remains blocked by unrelated dirty UI/source-regression failures.
 - Conflicts / exceptions: Pre-existing dirty UI/test files were preserved and not reverted; their unrelated failures are still present in the full suite.
 
-### 2026-06-09T15:20:27Z � WorkLists
+### 2026-06-09T15:20:27Z ï¿½ WorkLists
 
 - Summary: Tightened v1 nested-note prompts and extended the split-card flow to AI card refinement.
 - Problem: Substantial one-card AI requests could still produce detailed Markdown on the parent card, and child notes could repeat the parent title as their first heading; the same parent/child split also needed to work from card refinement while remaining disabled for note creation/refinement.
@@ -2275,14 +2289,14 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                                                                                                                                                                | Scope                                                                                                     | Result         | Exception / risk                                                                                                                                                                                                                                                                                             |
   | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
   | audit  | `npm audit --audit-level=high`                                                                                                                                                                                         | WorkLists dependencies                                                                                    | pass           | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                                                                                                                                                         |
-  | syntax | `node --check gemmaNormalize.js`                                                                                                                                                                                       | Gemma prompt/pipeline module                                                                              | pass           | �                                                                                                                                                                                                                                                                                                            |
-  | syntax | `node --check server.js`                                                                                                                                                                                               | Server job pipeline                                                                                       | pass           | �                                                                                                                                                                                                                                                                                                            |
-  | syntax | `node --check openapi.js`                                                                                                                                                                                              | OpenAPI module                                                                                            | pass           | �                                                                                                                                                                                                                                                                                                            |
-  | syntax | `node --check tests\gemma-normalize.test.js`                                                                                                                                                                           | Focused Gemma test file                                                                                   | pass           | �                                                                                                                                                                                                                                                                                                            |
-  | format | `npx prettier --write gemmaNormalize.js server.js openapi.js tests/gemma-normalize.test.js tests/openapi.test.js prompts/gemma-parent-child-note-directive-template.md prompts/gemma-child-note-directive-template.md` | Touched Gemma/OpenAPI/prompt/test files                                                                   | pass           | �                                                                                                                                                                                                                                                                                                            |
-  | lint   | `npm run lint`                                                                                                                                                                                                         | Repo Prettier check                                                                                       | pass           | �                                                                                                                                                                                                                                                                                                            |
-  | tests  | `node --test tests\gemma-normalize.test.js`                                                                                                                                                                            | Focused Gemma classification, prompt ownership, add-task/refine-card nested-note flow, note-job exclusion | pass, 49 tests | �                                                                                                                                                                                                                                                                                                            |
-  | tests  | `node --test tests\openapi.test.js`                                                                                                                                                                                    | OpenAPI schema coverage                                                                                   | pass, 3 tests  | �                                                                                                                                                                                                                                                                                                            |
+  | syntax | `node --check gemmaNormalize.js`                                                                                                                                                                                       | Gemma prompt/pipeline module                                                                              | pass           | ï¿½                                                                                                                                                                                                                                                                                                            |
+  | syntax | `node --check server.js`                                                                                                                                                                                               | Server job pipeline                                                                                       | pass           | ï¿½                                                                                                                                                                                                                                                                                                            |
+  | syntax | `node --check openapi.js`                                                                                                                                                                                              | OpenAPI module                                                                                            | pass           | ï¿½                                                                                                                                                                                                                                                                                                            |
+  | syntax | `node --check tests\gemma-normalize.test.js`                                                                                                                                                                           | Focused Gemma test file                                                                                   | pass           | ï¿½                                                                                                                                                                                                                                                                                                            |
+  | format | `npx prettier --write gemmaNormalize.js server.js openapi.js tests/gemma-normalize.test.js tests/openapi.test.js prompts/gemma-parent-child-note-directive-template.md prompts/gemma-child-note-directive-template.md` | Touched Gemma/OpenAPI/prompt/test files                                                                   | pass           | ï¿½                                                                                                                                                                                                                                                                                                            |
+  | lint   | `npm run lint`                                                                                                                                                                                                         | Repo Prettier check                                                                                       | pass           | ï¿½                                                                                                                                                                                                                                                                                                            |
+  | tests  | `node --test tests\gemma-normalize.test.js`                                                                                                                                                                            | Focused Gemma classification, prompt ownership, add-task/refine-card nested-note flow, note-job exclusion | pass, 49 tests | ï¿½                                                                                                                                                                                                                                                                                                            |
+  | tests  | `node --test tests\openapi.test.js`                                                                                                                                                                                    | OpenAPI schema coverage                                                                                   | pass, 3 tests  | ï¿½                                                                                                                                                                                                                                                                                                            |
   | tests  | `npm test`                                                                                                                                                                                                             | Full WorkLists suite                                                                                      | fail           | Same unrelated dirty UI/source-regression failures remain: `tests/card-actions.test.js` expects `.card.notes-pane-active-card::after` CSS absent from dirty `public/todoliststyles2.css`; `tests/column-actions.test.js` still sees commented legacy `toggleTodoFromUI` text in dirty `public/todolist2.js`. |
 
 - Tests added/updated: Added focused coverage for parent prompt directive ownership, child-note title/body rules, refine-card nested-note creation and prompt trace stages, note-job nested-note exclusion, and refine-card OpenAPI child-note metadata.
@@ -2291,7 +2305,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit threshold, syntax checks, formatting, repo lint, and focused Gemma/OpenAPI tests passed; full suite failed only on unrelated pre-existing dirty UI/source-regression tests.
 - Conflicts / exceptions: Pre-existing dirty UI/test files were preserved and not reverted; their unrelated failures are still present in the full suite.
 
-### 2026-06-09T14:53:38Z � WorkLists
+### 2026-06-09T14:53:38Z ï¿½ WorkLists
 
 - Summary: Implemented v1 nested note creation for substantial single-card AI add-task requests.
 - Problem: AI-generated cards could either keep long generated detail on the top-level card or require separate manual note creation, leaving no first-class path for a short parent card plus one detailed child note.
@@ -2309,13 +2323,13 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                                                                                                                                                                                                                                                | Scope                                                                      | Result             | Exception / risk                                                                                                                                                                                                                               |
   | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                                                                                                                                                                                                                                                         | WorkLists dependencies                                                     | pass               | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes.                                                                                                                           |
-  | syntax | `node --check gemmaNormalize.js`                                                                                                                                                                                                                                                                       | Gemma prompt/pipeline module                                               | pass               | �                                                                                                                                                                                                                                              |
-  | syntax | `node --check server.js`                                                                                                                                                                                                                                                                               | Server job pipeline                                                        | pass               | �                                                                                                                                                                                                                                              |
-  | format | `npx prettier --write gemmaNormalize.js server.js openapi.js tests/gemma-normalize.test.js tests/openapi.test.js prompts/gemma-classify-instructions.md prompts/gemma-note-directive-template.md prompts/gemma-parent-child-note-directive-template.md prompts/gemma-child-note-directive-template.md` | Touched Gemma/OpenAPI/prompt/test files                                    | pass               | �                                                                                                                                                                                                                                              |
+  | syntax | `node --check gemmaNormalize.js`                                                                                                                                                                                                                                                                       | Gemma prompt/pipeline module                                               | pass               | ï¿½                                                                                                                                                                                                                                              |
+  | syntax | `node --check server.js`                                                                                                                                                                                                                                                                               | Server job pipeline                                                        | pass               | ï¿½                                                                                                                                                                                                                                              |
+  | format | `npx prettier --write gemmaNormalize.js server.js openapi.js tests/gemma-normalize.test.js tests/openapi.test.js prompts/gemma-classify-instructions.md prompts/gemma-note-directive-template.md prompts/gemma-parent-child-note-directive-template.md prompts/gemma-child-note-directive-template.md` | Touched Gemma/OpenAPI/prompt/test files                                    | pass               | ï¿½                                                                                                                                                                                                                                              |
   | format | `npx prettier --write tests\column-actions.test.js`                                                                                                                                                                                                                                                    | Pre-existing dirty test file blocking repo lint                            | pass               | Formatting-only cleanup; assertions unchanged.                                                                                                                                                                                                 |
-  | lint   | `npm run lint`                                                                                                                                                                                                                                                                                         | Repo Prettier check                                                        | pass               | �                                                                                                                                                                                                                                              |
-  | tests  | `node --test tests\gemma-normalize.test.js`                                                                                                                                                                                                                                                            | Focused Gemma classification, nested-note flow, fallback, prompt ownership | pass, 48 tests     | �                                                                                                                                                                                                                                              |
-  | tests  | `node --test tests\openapi.test.js`                                                                                                                                                                                                                                                                    | OpenAPI schema coverage                                                    | pass, 3 tests      | �                                                                                                                                                                                                                                              |
+  | lint   | `npm run lint`                                                                                                                                                                                                                                                                                         | Repo Prettier check                                                        | pass               | ï¿½                                                                                                                                                                                                                                              |
+  | tests  | `node --test tests\gemma-normalize.test.js`                                                                                                                                                                                                                                                            | Focused Gemma classification, nested-note flow, fallback, prompt ownership | pass, 48 tests     | ï¿½                                                                                                                                                                                                                                              |
+  | tests  | `node --test tests\openapi.test.js`                                                                                                                                                                                                                                                                    | OpenAPI schema coverage                                                    | pass, 3 tests      | ï¿½                                                                                                                                                                                                                                              |
   | tests  | `node --test tests\card-actions.test.js tests\column-actions.test.js`                                                                                                                                                                                                                                  | Pre-existing dirty UI/source-regression tests                              | fail, 2 of 36 fail | Existing dirty `tests/card-actions.test.js` expects `.card.notes-pane-active-card::after` CSS not present in dirty `public/todoliststyles2.css`; existing dirty `tests/column-actions.test.js` scans commented legacy `toggleTodoFromUI` code. |
   | tests  | `npm test`                                                                                                                                                                                                                                                                                             | Full WorkLists suite                                                       | fail               | Same two unrelated pre-existing failures above; focused Gemma/OpenAPI coverage passed after the implementation.                                                                                                                                |
 
@@ -2325,7 +2339,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit, syntax, formatting, lint, and focused Gemma/OpenAPI tests passed; full suite failed only on unrelated pre-existing dirty UI/source-regression tests.
 - Conflicts / exceptions: Worktree already contained uncommitted UI/test/prompt logging changes before this task; those were preserved. `tests/column-actions.test.js` received formatting-only cleanup to unblock `npm run lint`.
 
-### 2026-06-08T16:37:53Z � WorkLists
+### 2026-06-08T16:37:53Z ï¿½ WorkLists
 
 - Summary: Moved the active notes-card visual from internal section rings to one full-card perimeter highlight.
 - Problem: The prior border-only correction still highlighted the card text section and bottom action bar as separate internal regions, so the selection looked like an active text box rather than the card itself.
@@ -2342,12 +2356,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                                                   | Scope                               | Result          | Exception / risk                                                                                                     |
   | ------ | --------------------------------------------------------------------------------------------------------- | ----------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                                                            | WorkLists dependencies              | pass            | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
-  | syntax | `node --check public\todolist2.js`                                                                        | Board UI script                     | pass            | �                                                                                                                    |
-  | format | `npx prettier --write public/todoliststyles2.css tests/card-actions.test.js tests/browser-notes-smoke.js` | Touched style/test files            | pass            | �                                                                                                                    |
-  | lint   | `npm run lint`                                                                                            | Repo Prettier check                 | pass            | �                                                                                                                    |
-  | tests  | `node --test tests\card-actions.test.js`                                                                  | Focused card action/source coverage | pass, 15 tests  | �                                                                                                                    |
-  | tests  | `npm run test:browser`                                                                                    | Notes pane browser smoke            | pass, 1 test    | �                                                                                                                    |
-  | tests  | `npm test`                                                                                                | Full WorkLists suite                | pass, 370 tests | �                                                                                                                    |
+  | syntax | `node --check public\todolist2.js`                                                                        | Board UI script                     | pass            | ï¿½                                                                                                                    |
+  | format | `npx prettier --write public/todoliststyles2.css tests/card-actions.test.js tests/browser-notes-smoke.js` | Touched style/test files            | pass            | ï¿½                                                                                                                    |
+  | lint   | `npm run lint`                                                                                            | Repo Prettier check                 | pass            | ï¿½                                                                                                                    |
+  | tests  | `node --test tests\card-actions.test.js`                                                                  | Focused card action/source coverage | pass, 15 tests  | ï¿½                                                                                                                    |
+  | tests  | `npm run test:browser`                                                                                    | Notes pane browser smoke            | pass, 1 test    | ï¿½                                                                                                                    |
+  | tests  | `npm test`                                                                                                | Full WorkLists suite                | pass, 370 tests | ï¿½                                                                                                                    |
 
 - Tests added/updated: Updated active-card source/style assertions and browser smoke computed-style checks to prove the highlight is card-level only, with no internal section highlight rules.
 - Regression impact: Visual styling only; regression is bounded to notes-pane active-card selection chrome and verified by source, browser smoke, and full-suite coverage.
@@ -2355,7 +2369,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit threshold, syntax check, formatting, repo-wide lint, focused tests, browser smoke, and full tests passed.
 - Conflicts / exceptions: Pre-existing uncommitted Gemma prompt/code/test changes remain present and untouched.
 
-### 2026-06-08T16:35:21Z � WorkLists
+### 2026-06-08T16:35:21Z ï¿½ WorkLists
 
 - Summary: Corrected active notes-card styling to use border/perimeter highlights instead of changing card fill colors.
 - Problem: The first active-card highlight changed the whole card and note indicator background, which obscured the card's tag-color context.
@@ -2372,12 +2386,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                                                   | Scope                               | Result          | Exception / risk                                                                                                     |
   | ------ | --------------------------------------------------------------------------------------------------------- | ----------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                                                            | WorkLists dependencies              | pass            | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
-  | syntax | `node --check public\todolist2.js`                                                                        | Board UI script                     | pass            | �                                                                                                                    |
-  | format | `npx prettier --write tests/card-actions.test.js tests/browser-notes-smoke.js public/todoliststyles2.css` | Touched style/test files            | pass            | �                                                                                                                    |
-  | lint   | `npm run lint`                                                                                            | Repo Prettier check                 | pass            | �                                                                                                                    |
-  | tests  | `node --test tests\card-actions.test.js`                                                                  | Focused card action/source coverage | pass, 15 tests  | �                                                                                                                    |
-  | tests  | `npm run test:browser`                                                                                    | Notes pane browser smoke            | pass, 1 test    | �                                                                                                                    |
-  | tests  | `npm test`                                                                                                | Full WorkLists suite                | pass, 370 tests | �                                                                                                                    |
+  | syntax | `node --check public\todolist2.js`                                                                        | Board UI script                     | pass            | ï¿½                                                                                                                    |
+  | format | `npx prettier --write tests/card-actions.test.js tests/browser-notes-smoke.js public/todoliststyles2.css` | Touched style/test files            | pass            | ï¿½                                                                                                                    |
+  | lint   | `npm run lint`                                                                                            | Repo Prettier check                 | pass            | ï¿½                                                                                                                    |
+  | tests  | `node --test tests\card-actions.test.js`                                                                  | Focused card action/source coverage | pass, 15 tests  | ï¿½                                                                                                                    |
+  | tests  | `npm run test:browser`                                                                                    | Notes pane browser smoke            | pass, 1 test    | ï¿½                                                                                                                    |
+  | tests  | `npm test`                                                                                                | Full WorkLists suite                | pass, 370 tests | ï¿½                                                                                                                    |
 
 - Tests added/updated: Updated active-card source/style assertions and browser smoke computed-style checks to prove active highlighting does not repaint semantic card/action backgrounds.
 - Regression impact: Visual styling only; regression is bounded to active notes-pane card selection chrome and verified by source, browser smoke, and full-suite coverage.
@@ -2385,7 +2399,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit threshold, syntax check, formatting, repo-wide lint, focused tests, browser smoke, and full tests passed.
 - Conflicts / exceptions: Pre-existing uncommitted Gemma prompt/code/test changes remain present and untouched.
 
-### 2026-06-08T16:19:58Z � WorkLists
+### 2026-06-08T16:19:58Z ï¿½ WorkLists
 
 - Summary: Added active-card highlighting for the card currently open in the notes pane.
 - Problem: When the notes sidebar is open, the board did not visually identify which card the pane belongs to, making navigation across nearby cards harder to track.
@@ -2402,12 +2416,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                                                                       | Scope                               | Result          | Exception / risk                                                                                                     |
   | ------ | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                                                                                | WorkLists dependencies              | pass            | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
-  | syntax | `node --check public\todolist2.js`                                                                                            | Board UI script                     | pass            | �                                                                                                                    |
-  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/card-actions.test.js tests/browser-notes-smoke.js` | Touched UI/test files               | pass            | �                                                                                                                    |
-  | lint   | `npm run lint`                                                                                                                | Repo Prettier check                 | pass            | �                                                                                                                    |
-  | tests  | `node --test tests\card-actions.test.js`                                                                                      | Focused card action/source coverage | pass, 15 tests  | �                                                                                                                    |
-  | tests  | `npm run test:browser`                                                                                                        | Notes pane browser smoke            | pass, 1 test    | �                                                                                                                    |
-  | tests  | `npm test`                                                                                                                    | Full WorkLists suite                | pass, 370 tests | �                                                                                                                    |
+  | syntax | `node --check public\todolist2.js`                                                                                            | Board UI script                     | pass            | ï¿½                                                                                                                    |
+  | format | `npx prettier --write public/todolist2.js public/todoliststyles2.css tests/card-actions.test.js tests/browser-notes-smoke.js` | Touched UI/test files               | pass            | ï¿½                                                                                                                    |
+  | lint   | `npm run lint`                                                                                                                | Repo Prettier check                 | pass            | ï¿½                                                                                                                    |
+  | tests  | `node --test tests\card-actions.test.js`                                                                                      | Focused card action/source coverage | pass, 15 tests  | ï¿½                                                                                                                    |
+  | tests  | `npm run test:browser`                                                                                                        | Notes pane browser smoke            | pass, 1 test    | ï¿½                                                                                                                    |
+  | tests  | `npm test`                                                                                                                    | Full WorkLists suite                | pass, 370 tests | ï¿½                                                                                                                    |
 
 - Tests added/updated: Updated card action source assertions for active-card sync/style and expanded the notes browser smoke test for selected-card behavior across open, close, switch, and edit flows.
 - Regression impact: Notes-pane state syncing and card render refresh paths were touched; regression is bounded to card DOM selection state and verified by focused source tests, browser smoke coverage, and the full suite.
@@ -2415,7 +2429,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit threshold, syntax check, formatting, repo-wide lint, focused tests, browser smoke, and full tests passed.
 - Conflicts / exceptions: Pre-existing uncommitted Gemma prompt/code/test changes were present in the app repo and were preserved; this session only modified notes-card highlight files.
 
-### 2026-06-08T14:03:36Z � WorkLists
+### 2026-06-08T14:03:36Z ï¿½ WorkLists
 
 - Summary: Moved remaining AI directive prompt copy into prompt-folder templates.
 - Problem: Dynamic classification, tagging, note-context, and user-text prompt fragments were still embedded in `gemmaNormalize.js`, leaving AI-facing instruction text mixed into infrastructure code.
@@ -2433,10 +2447,10 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                                                                                                                                                                                                     | Scope                                    | Result          | Exception / risk                                                                                                     |
   | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                                                                                                                                                                                                              | WorkLists dependencies                   | pass            | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
-  | format | `npx prettier --write .\gemmaNormalize.js .\tests\gemma-normalize.test.js .\prompts\gemma-classification-directive-template.md .\prompts\gemma-tagging-directive-template.md .\prompts\gemma-note-directive-template.md .\prompts\gemma-user-text-label.md` | Touched prompt/code/test files           | pass            | �                                                                                                                    |
-  | lint   | `npm run lint`                                                                                                                                                                                                                                              | Repo Prettier check                      | pass            | �                                                                                                                    |
-  | tests  | `node --test .\tests\gemma-normalize.test.js`                                                                                                                                                                                                               | Focused Gemma prompt/refinement coverage | pass, 42 tests  | �                                                                                                                    |
-  | tests  | `npm test`                                                                                                                                                                                                                                                  | Full WorkLists suite                     | pass, 369 tests | �                                                                                                                    |
+  | format | `npx prettier --write .\gemmaNormalize.js .\tests\gemma-normalize.test.js .\prompts\gemma-classification-directive-template.md .\prompts\gemma-tagging-directive-template.md .\prompts\gemma-note-directive-template.md .\prompts\gemma-user-text-label.md` | Touched prompt/code/test files           | pass            | ï¿½                                                                                                                    |
+  | lint   | `npm run lint`                                                                                                                                                                                                                                              | Repo Prettier check                      | pass            | ï¿½                                                                                                                    |
+  | tests  | `node --test .\tests\gemma-normalize.test.js`                                                                                                                                                                                                               | Focused Gemma prompt/refinement coverage | pass, 42 tests  | ï¿½                                                                                                                    |
+  | tests  | `npm test`                                                                                                                                                                                                                                                  | Full WorkLists suite                     | pass, 369 tests | ï¿½                                                                                                                    |
 
 - Tests added/updated: Added Gemma prompt-file regression coverage for directive template ownership.
 - Regression impact: Prompt assembly infrastructure was touched; regression is bounded to Gemma classification/tagging/note directive rendering and verified with focused Gemma tests plus the full suite.
@@ -2444,7 +2458,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit threshold, targeted formatting, repo-wide lint, focused Gemma tests, and full tests passed.
 - Conflicts / exceptions: WorkLists app repo already had active uncommitted UI/test changes from earlier notes-pane work and prompt-trace changes; this session preserved them.
 
-### 2026-06-08T06:00:47Z � WorkLists
+### 2026-06-08T06:00:47Z ï¿½ WorkLists
 
 - Summary: Documented WorkLists AI refinement prompt locations and model-call integration.
 - Problem: AI refinement behavior had accumulated across prompt files, hard-coded directives, async job routing, note-specific constraints, tagging context, and final-review result shaping, making it hard to remember whether refinement currently uses two model calls or an intended third verifier pass.
@@ -2463,7 +2477,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Not run; Dustin repo documentation-only update, outside app package tooling scope.
 - Conflicts / exceptions: WorkLists app repo already had active uncommitted app/test changes from the prompt-trace investigation; this documentation step did not modify those app files.
 
-### 2026-06-08T05:25:51Z � WorkLists
+### 2026-06-08T05:25:51Z ï¿½ WorkLists
 
 - Summary: Added active-edit discard confirmation for notes pane dismissal.
 - Problem: The outside-click notes pane closer could dismiss or transition away from an active notes-pane edit surface without treating that active edit state as confirm-worthy unless text had already changed.
@@ -2483,12 +2497,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                                               | Scope                                  | Result          | Exception / risk                                                                                                     |
   | ------ | ----------------------------------------------------------------------------------------------------- | -------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                                                        | WorkLists dependencies                 | pass            | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
-  | syntax | `node --check public\todolist2.js`                                                                    | Board UI script                        | pass            | �                                                                                                                    |
-  | format | `npx prettier --write public/todolist2.js tests/context-windows.test.js tests/browser-notes-smoke.js` | Touched UI/test files                  | pass            | �                                                                                                                    |
-  | lint   | `npm run lint`                                                                                        | Repo Prettier check                    | pass            | �                                                                                                                    |
-  | tests  | `npm test -- tests\context-windows.test.js`                                                           | Focused context-window source coverage | pass, 17 tests  | �                                                                                                                    |
-  | tests  | `npm run test:browser`                                                                                | Notes pane browser smoke               | pass, 1 test    | �                                                                                                                    |
-  | tests  | `npm test`                                                                                            | Full unit suite                        | pass, 368 tests | �                                                                                                                    |
+  | syntax | `node --check public\todolist2.js`                                                                    | Board UI script                        | pass            | ï¿½                                                                                                                    |
+  | format | `npx prettier --write public/todolist2.js tests/context-windows.test.js tests/browser-notes-smoke.js` | Touched UI/test files                  | pass            | ï¿½                                                                                                                    |
+  | lint   | `npm run lint`                                                                                        | Repo Prettier check                    | pass            | ï¿½                                                                                                                    |
+  | tests  | `npm test -- tests\context-windows.test.js`                                                           | Focused context-window source coverage | pass, 17 tests  | ï¿½                                                                                                                    |
+  | tests  | `npm run test:browser`                                                                                | Notes pane browser smoke               | pass, 1 test    | ï¿½                                                                                                                    |
+  | tests  | `npm test`                                                                                            | Full unit suite                        | pass, 368 tests | ï¿½                                                                                                                    |
 
 - Tests added/updated: Updated context-window source assertions for active-state discard detection and outside-action replay; expanded the notes browser smoke test for Cancel and Discard behavior while an edit surface is active.
 - Regression impact: Notes-pane dismissal, active edit guard behavior, card action menu click sequencing, and note-to-note switching were touched; regression is bounded to notes pane context-window behavior and verified by focused source tests, browser smoke coverage, and the full suite.
@@ -2496,7 +2510,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit threshold, syntax check, formatting, repo-wide lint, focused tests, browser smoke, and full tests passed.
 - Conflicts / exceptions: No unrelated app-repo worktree changes were present. Audit still reports existing moderate advisories below the configured high/critical gate.
 
-### 2026-06-08T05:16:21Z � WorkLists
+### 2026-06-08T05:16:21Z ï¿½ WorkLists
 
 - Summary: Fixed notes pane blur dismissal and note-to-note switching.
 - Problem: The notes pane stayed open after outside clicks, and switching from one card's notes to another did not explicitly close the current context pane first.
@@ -2516,12 +2530,12 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                                               | Scope                                  | Result          | Exception / risk                                                                                                     |
   | ------ | ----------------------------------------------------------------------------------------------------- | -------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                                                        | WorkLists dependencies                 | pass            | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
-  | syntax | `node --check public\todolist2.js`                                                                    | Board UI script                        | pass            | �                                                                                                                    |
-  | format | `npx prettier --write public/todolist2.js tests/context-windows.test.js tests/browser-notes-smoke.js` | Touched UI/test files                  | pass            | �                                                                                                                    |
-  | lint   | `npm run lint`                                                                                        | Repo Prettier check                    | pass            | �                                                                                                                    |
-  | tests  | `npm test -- tests\context-windows.test.js`                                                           | Focused context-window source coverage | pass, 17 tests  | �                                                                                                                    |
-  | tests  | `npm run test:browser`                                                                                | Notes pane browser smoke               | pass, 1 test    | �                                                                                                                    |
-  | tests  | `npm test`                                                                                            | Full unit suite                        | pass, 368 tests | �                                                                                                                    |
+  | syntax | `node --check public\todolist2.js`                                                                    | Board UI script                        | pass            | ï¿½                                                                                                                    |
+  | format | `npx prettier --write public/todolist2.js tests/context-windows.test.js tests/browser-notes-smoke.js` | Touched UI/test files                  | pass            | ï¿½                                                                                                                    |
+  | lint   | `npm run lint`                                                                                        | Repo Prettier check                    | pass            | ï¿½                                                                                                                    |
+  | tests  | `npm test -- tests\context-windows.test.js`                                                           | Focused context-window source coverage | pass, 17 tests  | ï¿½                                                                                                                    |
+  | tests  | `npm run test:browser`                                                                                | Notes pane browser smoke               | pass, 1 test    | ï¿½                                                                                                                    |
+  | tests  | `npm test`                                                                                            | Full unit suite                        | pass, 368 tests | ï¿½                                                                                                                    |
 
 - Tests added/updated: Added context-window source assertions for outside-click dismissal and close-before-switch behavior; expanded the notes browser smoke test with a second noted card, first-click card-menu dismissal, and note-to-note switching.
 - Regression impact: Notes-pane context-window behavior and card action menu interaction were touched; regression is bounded to notes pane open/close sequencing and verified by focused source tests, browser smoke coverage, and the full suite.
@@ -2529,7 +2543,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit threshold, syntax check, formatting, repo-wide lint, focused tests, browser smoke, and full tests passed.
 - Conflicts / exceptions: No unrelated worktree changes were present. Audit still reports existing moderate advisories below the configured high/critical gate.
 
-### 2026-06-07T16:51:54Z � WorkLists
+### 2026-06-07T16:51:54Z ï¿½ WorkLists
 
 - Summary: Standardized reset/filter/scheduler header controls around compact icon buttons.
 - Problem: The column reset control used an ambiguous `O`/circle marker, and the top-right filter/scheduler buttons spent too much toolbar space on visible labels.
@@ -2548,11 +2562,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
   | Gate   | Command                                                                                                                                                                                            | Scope                                           | Result          | Exception / risk                                                                                                     |
   | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
   | audit  | `npm audit --audit-level=high`                                                                                                                                                                     | WorkLists dependencies                          | pass            | Existing 3 moderate `qs`/`body-parser`/`express` advisories remain with no fix available; high/critical gate passes. |
-  | syntax | `node --check public\todolist2.js`                                                                                                                                                                 | Board UI script                                 | pass            | �                                                                                                                    |
+  | syntax | `node --check public\todolist2.js`                                                                                                                                                                 | Board UI script                                 | pass            | ï¿½                                                                                                                    |
   | format | `npx prettier --write public/index.html public/todolist2.js public/todoliststyles2.css tests/column-actions.test.js tests/filter-menu.test.js tests/search-scopes.test.js tests/scheduler.test.js` | Touched UI/test files                           | pass            | Files were unchanged by formatting.                                                                                  |
-  | lint   | `npm run lint`                                                                                                                                                                                     | Repo Prettier check                             | pass            | �                                                                                                                    |
-  | tests  | `npm test -- tests\column-actions.test.js tests\filter-menu.test.js tests\search-scopes.test.js tests\scheduler.test.js`                                                                           | Focused column/header filter/scheduler coverage | pass, 41 tests  | �                                                                                                                    |
-  | tests  | `npm test`                                                                                                                                                                                         | Full suite                                      | pass, 366 tests | �                                                                                                                    |
+  | lint   | `npm run lint`                                                                                                                                                                                     | Repo Prettier check                             | pass            | ï¿½                                                                                                                    |
+  | tests  | `npm test -- tests\column-actions.test.js tests\filter-menu.test.js tests\search-scopes.test.js tests\scheduler.test.js`                                                                           | Focused column/header filter/scheduler coverage | pass, 41 tests  | ï¿½                                                                                                                    |
+  | tests  | `npm test`                                                                                                                                                                                         | Full suite                                      | pass, 366 tests | ï¿½                                                                                                                    |
 
 - Tests added/updated: Updated source-regression tests to assert the refresh reset icon, compact filter/scheduler markup, accessible labels/tooltips, and compact toolbar CSS.
 - Regression impact: Column header and top navigation controls were touched; regression is bounded to button markup/styling and verified by focused source tests plus the full suite.
@@ -2560,7 +2574,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - Tooling gates: Audit threshold, syntax check, formatting, repo-wide lint, focused tests, and full tests passed.
 - Conflicts / exceptions: Worktree already contained active-board/session-storage edits in `public/todolist2.js`, `tests/board-refresh.test.js`, and this changelog; this session preserved and layered on top of them. Audit still reports existing moderate advisories below the configured gate.
 
-### 2026-06-06T17:53:42Z � WorkLists
+### 2026-06-06T17:53:42Z ï¿½ WorkLists
 
 - Summary: Made active board selection persist per browser tab/window.
 - Problem: Active board selection was stored as `localStorage.currentBoardId`, so refreshing one tab could adopt the most recently selected board from another tab and disrupt separate WorkLists contexts.
@@ -2575,19 +2589,19 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Switching boards in one tab no longer changes another tab's refresh target.
   - Shared board data updates still load from the server for the active tab context.
 - Tests run:
-  - `npm audit --audit-level=high` � pass for high/critical threshold; reports 3 moderate `qs`/`body-parser`/`express` advisories with no fix available.
-  - `node --check public\todolist2.js` � pass.
-  - `npx prettier --check public/todolist2.js tests/board-refresh.test.js` � pass.
-  - `npm test -- tests\board-refresh.test.js` � pass, 6 tests.
-  - `npm run lint` � pass.
-  - `npm test` � pass, 366 tests.
+  - `npm audit --audit-level=high` ï¿½ pass for high/critical threshold; reports 3 moderate `qs`/`body-parser`/`express` advisories with no fix available.
+  - `node --check public\todolist2.js` ï¿½ pass.
+  - `npx prettier --check public/todolist2.js tests/board-refresh.test.js` ï¿½ pass.
+  - `npm test -- tests\board-refresh.test.js` ï¿½ pass, 6 tests.
+  - `npm run lint` ï¿½ pass.
+  - `npm test` ï¿½ pass, 366 tests.
 - Tests added/updated: Added board-refresh regression coverage proving active board persistence uses `sessionStorage`, no longer reads/writes `localStorage.currentBoardId`, and retains refresh behavior from the fetched server snapshot.
 - Regression impact: Active board selection and board refresh routing were touched; regression is bounded to `currentBoardId` resolution/storage and verified by focused board-refresh tests plus the full test suite.
 - API docs: Not affected; UI/session-storage behavior only, with no HTTP route, method, request body, response shape, status, or auth contract changed.
 - Tooling gates: Audit threshold, syntax check, targeted Prettier, repo-wide lint, focused tests, and full tests passed.
 - Conflicts / exceptions: `npm audit` still reports existing moderate advisories with no fix available; high/critical threshold passes.
 
-### 2026-06-05T18:45:11Z � WorkLists
+### 2026-06-05T18:45:11Z ï¿½ WorkLists
 
 - Summary: Matched the notes-pane card-description toolbar to saved-note actions.
 - Problem: The notes pane now allowed copying card text, but the card-description block still had fewer actions than saved notes, making the top block feel inconsistent with the rest of the pane.
@@ -2602,19 +2616,19 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Deleting from the card-description toolbar deletes the card and keeps the existing `Undo` toast recovery.
   - AI refine from the card-description toolbar uses the same model-backed card refine path as the board card menu.
 - Tests run:
-  - `npm audit --audit-level=high` � pass for high/critical threshold; reports 3 moderate `qs`/`body-parser`/`express` advisories with no fix available.
-  - `node --check public\todolist2.js` � pass.
-  - `npx prettier --check public/todolist2.js tests/context-windows.test.js tests/gemma-ui.test.js` � pass.
-  - `npm test -- tests/context-windows.test.js tests/task-clipboard.test.js tests/markdown-renderer.test.js tests/gemma-ui.test.js` � pass, 67 tests.
-  - `npm test` � pass, 365 tests.
-  - `npm run lint` � blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files pass targeted Prettier.
+  - `npm audit --audit-level=high` ï¿½ pass for high/critical threshold; reports 3 moderate `qs`/`body-parser`/`express` advisories with no fix available.
+  - `node --check public\todolist2.js` ï¿½ pass.
+  - `npx prettier --check public/todolist2.js tests/context-windows.test.js tests/gemma-ui.test.js` ï¿½ pass.
+  - `npm test -- tests/context-windows.test.js tests/task-clipboard.test.js tests/markdown-renderer.test.js tests/gemma-ui.test.js` ï¿½ pass, 67 tests.
+  - `npm test` ï¿½ pass, 365 tests.
+  - `npm run lint` ï¿½ blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files pass targeted Prettier.
 - Tests added/updated: Added source regression coverage for the card-description edit/AI/copy/delete toolbar, AI refine routing, delete routing, accessible labels, and notes-pane AI in-flight sync.
 - Regression impact: Notes-pane card-description action wiring and AI state sync were touched; focused context/clipboard/markdown/AI tests and full unit tests passed.
 - API docs: Not affected; this is UI-only and no HTTP route, method, request body, response shape, status, or auth contract changed.
 - Tooling gates: Audit threshold, syntax check, targeted Prettier, focused tests, and full tests passed; repo-wide lint remains blocked only by the existing prompt formatting warning.
 - Conflicts / exceptions: Worktree contains pre-existing unrelated modifications/untracked files; this session did not revert them. Lint exception is unrelated to this session and remains in `prompts/gemma-classify-instructions.md`.
 
-### 2026-06-05T18:37:56Z � WorkLists
+### 2026-06-05T18:37:56Z ï¿½ WorkLists
 
 - Summary: Added notes-pane copy actions and fixed notes-pane markdown code-block copy styling.
 - Problem: Card descriptions and individual notes could be read from the notes pane, but users could not copy those full bodies there, and fenced-code copy controls rendered with the wrong placement because their styling was only scoped to board cards.
@@ -2630,19 +2644,19 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Copied card/note content preserves authored markdown and line breaks.
   - Fenced code blocks in the notes pane show the same correctly positioned copy affordance as board card markdown.
 - Tests run:
-  - `npm audit --audit-level=high` � pass for high/critical threshold; reports 3 moderate `qs`/`body-parser`/`express` advisories with no fix available.
-  - `node --check public\todolist2.js` � pass.
-  - `npx prettier --check public/todolist2.js public/todoliststyles2.css tests/task-clipboard.test.js tests/context-windows.test.js` � pass.
-  - `npm test -- tests/task-clipboard.test.js tests/context-windows.test.js tests/markdown-renderer.test.js` � pass, 41 tests.
-  - `npm test` � pass, 364 tests.
-  - `npm run lint` � blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files pass targeted Prettier.
+  - `npm audit --audit-level=high` ï¿½ pass for high/critical threshold; reports 3 moderate `qs`/`body-parser`/`express` advisories with no fix available.
+  - `node --check public\todolist2.js` ï¿½ pass.
+  - `npx prettier --check public/todolist2.js public/todoliststyles2.css tests/task-clipboard.test.js tests/context-windows.test.js` ï¿½ pass.
+  - `npm test -- tests/task-clipboard.test.js tests/context-windows.test.js tests/markdown-renderer.test.js` ï¿½ pass, 41 tests.
+  - `npm test` ï¿½ pass, 364 tests.
+  - `npm run lint` ï¿½ blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files pass targeted Prettier.
 - Tests added/updated: Added source regression coverage for notes-pane copy buttons, note-specific copy toasts, raw-source attributes, notes-pane code-copy binding, and accessible copy labels.
 - Regression impact: Notes-pane read rendering, copy behavior, and markdown code-block controls were touched; focused clipboard/context/markdown tests and full unit tests passed.
 - API docs: Not affected; this is UI-only and no HTTP route, method, request body, response shape, status, or auth contract changed.
 - Tooling gates: Audit threshold, syntax check, targeted Prettier, focused tests, and full tests passed; repo-wide lint remains blocked only by the existing prompt formatting warning.
 - Conflicts / exceptions: Worktree contains pre-existing unrelated modifications/untracked files; this session did not revert them. Lint exception is unrelated to this session and remains in `prompts/gemma-classify-instructions.md`.
 
-### 2026-06-03T16:15:21Z � WorkLists
+### 2026-06-03T16:15:21Z ï¿½ WorkLists
 
 - Summary: Added toast feedback and undo actions for card API operations.
 - Problem: User-triggered API mutations could complete silently or without a nearby recovery path, especially card moves, deletes, and completion toggles.
@@ -2657,18 +2671,18 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Moved, deleted, and completed cards can be restored from the toast `Undo` action.
   - Inline card editing now includes a compact AI refine wand button in addition to the existing hotkey.
 - Tests run:
-  - `npm audit --audit-level=high` � pass for high/critical threshold; reports 3 moderate `qs`/`body-parser`/`express` advisories with no fix available.
-  - `node --check public/todolist2.js` � pass.
-  - `npm test -- tests/card-actions.test.js tests/card-move-ui.test.js tests/task-clipboard.test.js tests/edit-session.test.js tests/gemma-ui.test.js` � pass, 61 tests.
-  - `npm test` � pass, 362 tests.
-  - `npm run lint` � blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files were formatted with Prettier.
+  - `npm audit --audit-level=high` ï¿½ pass for high/critical threshold; reports 3 moderate `qs`/`body-parser`/`express` advisories with no fix available.
+  - `node --check public/todolist2.js` ï¿½ pass.
+  - `npm test -- tests/card-actions.test.js tests/card-move-ui.test.js tests/task-clipboard.test.js tests/edit-session.test.js tests/gemma-ui.test.js` ï¿½ pass, 61 tests.
+  - `npm test` ï¿½ pass, 362 tests.
+  - `npm run lint` ï¿½ blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files were formatted with Prettier.
 - Tests added/updated: Added source regression coverage for edit-context AI refine wiring, undo-capable delete/complete/move toasts, manual add-card toast feedback, and the shared edit refine helper.
 - Regression impact: Card action feedback, inline edit AI controls, card move handling, delete handling, and completion toggling were touched; focused UI tests and the full suite passed.
 - API docs: Not affected; no HTTP route, method, request body, response shape, status, or auth contract changed.
 - Tooling gates: Audit threshold, syntax check, focused tests, and full tests passed; repo lint remains blocked only by the existing prompt formatting warning.
 - Conflicts / exceptions: Worktree contains pre-existing unrelated modifications/untracked files; this session did not revert them. Lint exception is unrelated to this session and remains in `prompts/gemma-classify-instructions.md`.
 
-### 2026-06-03T16:05:13Z � WorkLists
+### 2026-06-03T16:05:13Z ï¿½ WorkLists
 
 - Summary: Enhanced column counter tooltip styling.
 - Problem: The column item counter exposed useful metrics through the browser's native tooltip, but the default tooltip was visually plain and hard to scan.
@@ -2682,17 +2696,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Hovering or focusing the column counter now shows a styled dark metrics panel instead of a native tooltip.
   - Metrics are grouped into open/complete/tag tiles plus compact untagged and creation-date rows.
 - Tests run:
-  - `node --check public/todolist2.js` � pass.
-  - `npm test -- tests/column-actions.test.js` � pass, 20 tests.
-  - `npm test` � pass, 358 tests.
-  - `npm run lint` � blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files pass after targeted Prettier formatting.
+  - `node --check public/todolist2.js` ï¿½ pass.
+  - `npm test -- tests/column-actions.test.js` ï¿½ pass, 20 tests.
+  - `npm test` ï¿½ pass, 358 tests.
+  - `npm run lint` ï¿½ blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files pass after targeted Prettier formatting.
 - Tests added/updated: Updated column header regression coverage for the structured tooltip markup and CSS reveal rules.
 - Regression impact: Column counter rendering and tooltip styling were touched; focused column tests and full unit tests passed.
 - API docs: Not affected; this is UI-only and no HTTP contract changed.
 - Tooling gates: Syntax check, focused tests, and full tests passed; repo lint remains blocked only by the existing prompt formatting warning.
 - Conflicts / exceptions: Lint exception is unrelated to this session and remains in `prompts/gemma-classify-instructions.md`.
 
-### 2026-06-03T16:01:05Z � WorkLists
+### 2026-06-03T16:01:05Z ï¿½ WorkLists
 
 - Summary: Added subtle column item counters with hover metrics.
 - Problem: Column headers showed controls but did not provide quick at-a-glance task volume or contextual column health.
@@ -2706,17 +2720,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Column headers now show a compact grey item counter to the left of the existing reset and ellipsis buttons.
   - Hovering the counter shows detailed column metrics using the browser tooltip.
 - Tests run:
-  - `node --check public/todolist2.js` � pass.
-  - `npm test -- tests/column-actions.test.js` � pass, 20 tests.
-  - `npm test` � pass, 358 tests.
-  - `npm run lint` � blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files pass after targeted Prettier formatting.
+  - `node --check public/todolist2.js` ï¿½ pass.
+  - `npm test -- tests/column-actions.test.js` ï¿½ pass, 20 tests.
+  - `npm test` ï¿½ pass, 358 tests.
+  - `npm run lint` ï¿½ blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files pass after targeted Prettier formatting.
 - Tests added/updated: Extended column header regression coverage for counter creation, placement order, and CSS spacing.
 - Regression impact: Column header rendering and spacing were touched; focused column tests and full unit tests passed.
 - API docs: Not affected; this is UI-only and no HTTP contract changed.
 - Tooling gates: Syntax check, focused tests, and full tests passed; repo lint remains blocked only by the existing prompt formatting warning.
 - Conflicts / exceptions: Lint exception is unrelated to this session and remains in `prompts/gemma-classify-instructions.md`.
 
-### 2026-06-01T16:33:08-04:00 � WorkLists
+### 2026-06-01T16:33:08-04:00 ï¿½ WorkLists
 
 - Summary: Matched notes line-break rendering to card markdown rendering.
 - Files/areas: `public/todoliststyles2.css`, `tests/markdown-editor.test.js`, `tests/browser-notes-smoke.js`, `docs/worklists/worklists-app-changelog.md`.
@@ -2725,16 +2739,16 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Single newlines in notes continue to render as visible line breaks through the shared card markdown renderer.
   - The browser smoke test now creates a multiline note and verifies both `<br>` line breaks and visible blank-line spacing in the notes pane.
 - Tests run:
-  - `npm test -- tests/markdown-editor.test.js tests/markdown-renderer.test.js` � pass, 25 tests.
-  - `npm run test:browser` � pass, 1 browser smoke test.
-  - `npm test` � pass, 358 tests.
+  - `npm test -- tests/markdown-editor.test.js tests/markdown-renderer.test.js` ï¿½ pass, 25 tests.
+  - `npm run test:browser` ï¿½ pass, 1 browser smoke test.
+  - `npm test` ï¿½ pass, 358 tests.
 - Tests added/updated: Added notes CSS coverage for `.markdown-blank-line` and browser coverage for notes line-break/blank-line rendering parity.
 - Regression impact: Notes markdown display spacing was touched; focused markdown tests, browser smoke, and full unit tests passed.
 - API docs: Not affected; no HTTP contract changed.
 - Tooling gates: Focused markdown tests, browser smoke, and full unit tests passed.
 - Conflicts / exceptions: Notes already used the shared card renderer; this change fills the notes-specific CSS and browser-regression gap.
 
-### 2026-06-01T17:32:27Z � WorkLists
+### 2026-06-01T17:32:27Z ï¿½ WorkLists
 
 - Summary: Tightened voice-to-text context entry and AI refine hotkey persistence.
 - Problem: Voice context added during editing could continue existing list/checklist formatting, and the `Ctrl+Shift+Enter` refine shortcut could invoke AI before the current card draft was saved to the server.
@@ -2749,18 +2763,18 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Voice-to-text additions behave like clean supplemental context instead of inheriting list/checklist formatting from the existing card.
   - `Ctrl+Shift+Enter` from an inline card edit now commits the draft before starting AI refinement, reducing skipped/stale refine results.
 - Tests run:
-  - `npm audit --audit-level=high` � pass for high/critical threshold; reports 3 moderate `qs`/`body-parser`/`express` advisories with no fix available.
-  - `node --check public/todolist2.js` � pass.
-  - `npm test -- tests/gemma-ui.test.js tests/edit-session.test.js` � pass, 31 tests.
-  - `npm test` � pass, 358 tests.
-  - `npm run lint` � blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files pass after formatting.
+  - `npm audit --audit-level=high` ï¿½ pass for high/critical threshold; reports 3 moderate `qs`/`body-parser`/`express` advisories with no fix available.
+  - `node --check public/todolist2.js` ï¿½ pass.
+  - `npm test -- tests/gemma-ui.test.js tests/edit-session.test.js` ï¿½ pass, 31 tests.
+  - `npm test` ï¿½ pass, 358 tests.
+  - `npm run lint` ï¿½ blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files pass after formatting.
 - Tests added/updated: Added source coverage for clean voice context paragraph composition, formatting-prefix stripping, and save-before-refine hotkey behavior.
 - Regression impact: Shared voice transcript composition and inline edit AI shortcut flow were touched; focused UI/edit tests and full unit tests passed.
 - API docs: Not affected; no HTTP route or request/response contract changed.
 - Tooling gates: Audit threshold, syntax check, focused tests, and full unit tests passed; repo lint remains blocked only by the existing prompt formatting warning.
 - Conflicts / exceptions: Lint exception is unrelated to this session and remains in `prompts/gemma-classify-instructions.md`.
 
-### 2026-06-01T17:13:06Z � WorkLists
+### 2026-06-01T17:13:06Z ï¿½ WorkLists
 
 - Summary: Made completed AI refinements directly reversible through timeout-based undo toasts.
 - Problem: AI refine completions can overwrite or replace saved card/note data, and undo affordances were either incomplete or buried in the AI activity details.
@@ -2775,20 +2789,20 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - AI card replacements can be undone from the completion toast, restoring the original card content and associated notes.
   - Waiting out the toast acts as confirmation; no extra modal is added to the refinement flow.
 - Tests run:
-  - `npm audit --audit-level=high` � pass for high/critical threshold; reports 3 moderate `qs`/`body-parser`/`express` advisories with no fix available.
-  - `node --check public/todolist2.js` � pass.
-  - `node --check server.js` � pass.
-  - `node --test tests/gemma-ui.test.js tests/gemma-normalize.test.js` � pass, 66 tests.
-  - `npm test -- tests/gemma-ui.test.js tests/gemma-normalize.test.js` � pass, 66 tests.
-  - `npm test` � pass, 358 tests.
-  - `npm run lint` � blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files passed after formatting `tests/gemma-ui.test.js`.
+  - `npm audit --audit-level=high` ï¿½ pass for high/critical threshold; reports 3 moderate `qs`/`body-parser`/`express` advisories with no fix available.
+  - `node --check public/todolist2.js` ï¿½ pass.
+  - `node --check server.js` ï¿½ pass.
+  - `node --test tests/gemma-ui.test.js tests/gemma-normalize.test.js` ï¿½ pass, 66 tests.
+  - `npm test -- tests/gemma-ui.test.js tests/gemma-normalize.test.js` ï¿½ pass, 66 tests.
+  - `npm test` ï¿½ pass, 358 tests.
+  - `npm run lint` ï¿½ blocked by pre-existing formatting warning in `prompts/gemma-classify-instructions.md`; touched files passed after formatting `tests/gemma-ui.test.js`.
 - Tests added/updated: Added UI source coverage for direct timeout-based undo toasts, card replacement undo wiring, note refine undo toast emission, and server result coverage for previous card snapshots.
 - Regression impact: AI job completion toast handling, card refine undo, and refine-card server result payloads were touched; focused AI tests and full unit tests passed.
 - API docs: Not affected; existing `/api/gemma-normalize/jobs` response payloads were extended with undo metadata for UI recovery, but no new route or request contract was introduced.
 - Tooling gates: Audit threshold, syntax checks, focused AI tests, and full unit tests passed; repo lint remains blocked only by the existing prompt formatting warning.
 - Conflicts / exceptions: Lint exception is unrelated to this session and remains in `prompts/gemma-classify-instructions.md`.
 
-### 2026-06-01T12:04:04-04:00 � WorkLists
+### 2026-06-01T12:04:04-04:00 ï¿½ WorkLists
 
 - Summary: Restored reliable Escape-key dismissal for filters and notes context surfaces.
 - Files/areas: `public/todolist2.js`, `tests/filter-menu.test.js`, `tests/context-windows.test.js`, `tests/browser-notes-smoke.js`, `docs/worklists/worklists-app-changelog.md`.
@@ -2797,17 +2811,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Pressing plain `Escape` now closes the notes side pane even when focus is inside pane controls that could previously bypass the search shortcut listener.
   - App confirmation dialogs and active voice transcription keep priority so Escape can still cancel the dialog or stop transcription without also closing underlying context panes.
 - Tests run:
-  - `node --check public/todolist2.js` � pass.
-  - `npm test -- tests/filter-menu.test.js tests/context-windows.test.js tests/search-shortcuts.test.js` � pass, 31 tests.
-  - `npm test` � pass, 358 tests.
-  - `npm run test:browser` � pass, 1 browser smoke test.
+  - `node --check public/todolist2.js` ï¿½ pass.
+  - `npm test -- tests/filter-menu.test.js tests/context-windows.test.js tests/search-shortcuts.test.js` ï¿½ pass, 31 tests.
+  - `npm test` ï¿½ pass, 358 tests.
+  - `npm run test:browser` ï¿½ pass, 1 browser smoke test.
 - Tests added/updated: Added regression coverage proving filters and notes close through the dedicated global Escape handler; extended the browser smoke test to press `Escape` against both the filters menu and notes pane.
 - Regression impact: Global keyboard handling for context-window dismissal was touched; focused keyboard/context tests, full unit tests, and browser smoke passed.
 - API docs: Not affected; no HTTP contract changed.
 - Tooling gates: Focused tests, full unit tests, and browser smoke passed.
 - Conflicts / exceptions: Existing notes discard confirmation behavior is preserved when closing the pane with unsaved drafts.
 
-### 2026-05-31T17:19:31-04:00 � WorkLists
+### 2026-05-31T17:19:31-04:00 ï¿½ WorkLists
 
 - Summary: Verified and tightened active-model usage for AI calls.
 - Files/areas: `modelProviderClient.js`, `tests/gemma-normalize.test.js`, `tests/model-provider-client.test.js`, `docs/worklists/worklists-app-changelog.md`.
@@ -2816,16 +2830,16 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Async jobs record the active model id in job context when queued, so status responses expose which model was selected for the job.
   - Non-Google active models no longer silently fall back to `GEMINI_API_KEY` when no model-specific key or env var is configured.
 - Tests run:
-  - `node --check modelProviderClient.js` � pass.
-  - `npm test -- tests/model-provider-client.test.js tests/gemma-normalize.test.js` � pass, 43 tests.
-  - `npm test` � pass, 356 tests.
+  - `node --check modelProviderClient.js` ï¿½ pass.
+  - `npm test -- tests/model-provider-client.test.js tests/gemma-normalize.test.js` ï¿½ pass, 43 tests.
+  - `npm test` ï¿½ pass, 356 tests.
 - Tests added/updated: Added coverage proving direct and async AI calls pass the active model id/api key into provider calls; added provider-key coverage preventing Gemini fallback for non-Google active models.
 - Regression impact: Provider API-key resolution and AI model-selection tests were touched; focused backend/provider tests and full unit tests passed.
 - API docs: Not affected; schemas did not change.
 - Tooling gates: Focused tests and full unit tests passed.
 - Conflicts / exceptions: Historical `Gemma` naming remains in routes/functions, but model selection is active-model driven.
 
-### 2026-05-31T15:48:38-04:00 � WorkLists
+### 2026-05-31T15:48:38-04:00 ï¿½ WorkLists
 
 - Summary: Added undo support for completed AI note refinement.
 - Files/areas: `public/todolist2.js`, `tests/gemma-ui.test.js`, `docs/worklists/worklists-app-changelog.md`.
@@ -2834,16 +2848,16 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Undo restores the note through the existing notes API and refreshes the open notes pane when the restored note belongs to the active card.
   - AI note creation remains unchanged and does not show an undo refine action.
 - Tests run:
-  - `node --check public/todolist2.js` � pass.
-  - `npm test -- tests/gemma-ui.test.js tests/context-windows.test.js` � pass, 38 tests.
-  - `npm test` � pass, 353 tests.
+  - `node --check public/todolist2.js` ï¿½ pass.
+  - `npm test -- tests/gemma-ui.test.js tests/context-windows.test.js` ï¿½ pass, 38 tests.
+  - `npm test` ï¿½ pass, 353 tests.
 - Tests added/updated: Added source coverage for AI note refine undo wiring, toast action creation, notes API restoration, and active-pane refresh.
 - Regression impact: Note AI completion toast handling and note update API usage were touched; focused UI/context tests and full unit tests passed.
 - API docs: Not affected; this uses the existing note update API.
 - Tooling gates: Focused tests and full unit tests passed.
 - Conflicts / exceptions: Card refine undo behavior was left unchanged.
 
-### 2026-05-31T13:12:46-04:00 � WorkLists
+### 2026-05-31T13:12:46-04:00 ï¿½ WorkLists
 
 - Summary: Tightened AI note generation so explicit Markdown lists are preserved as one note.
 - Files/areas: `gemmaNormalize.js`, `server.js`, `tests/gemma-normalize.test.js`, `docs/worklists/worklists-app-changelog.md`.
@@ -2853,17 +2867,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Notes now extract the returned `cleaned_text` as one full note body instead of using the card task splitter, which was dropping markdown bullet content after the heading.
   - Card AI prompting and card task extraction were not changed.
 - Tests run:
-  - `node --check gemmaNormalize.js` � pass.
-  - `node --check server.js` � pass.
-  - `npm test -- tests/gemma-normalize.test.js` � pass, 40 tests.
-  - `npm test` � pass, 352 tests.
+  - `node --check gemmaNormalize.js` ï¿½ pass.
+  - `node --check server.js` ï¿½ pass.
+  - `npm test -- tests/gemma-normalize.test.js` ï¿½ pass, 40 tests.
+  - `npm test` ï¿½ pass, 352 tests.
 - Tests added/updated: Added Alfredo-style recipe coverage proving a header plus explicit markdown bullets persists as one note, even when classification returns a multi-card count; added prompt coverage for note context injection.
 - Regression impact: Note-only AI prompt/extraction logic and shared prompt option plumbing were touched; focused backend AI tests and full unit tests passed.
 - API docs: Not affected; request/response schemas did not change.
 - Tooling gates: Focused tests and full unit tests passed.
 - Conflicts / exceptions: Existing card prompts and card extraction behavior were intentionally left unchanged.
 
-### 2026-05-31T11:32:15-04:00 � WorkLists
+### 2026-05-31T11:32:15-04:00 ï¿½ WorkLists
 
 - Summary: Added voice-to-text controls to note creation and note editing.
 - Files/areas: `public/index.html`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/gemma-ui.test.js`, `docs/worklists/worklists-app-changelog.md`.
@@ -2874,17 +2888,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Starting note AI create/refine now hard-stops any active voice transcription first so partial speech capture does not continue underneath model work.
   - Voice input normalizes the markdown editor back to Markdown mode before dictation, preserving current Visual-mode content and keeping the saved source coherent.
 - Tests run:
-  - `node --check public/todolist2.js` � pass.
-  - `npm test -- tests/gemma-ui.test.js tests/markdown-editor.test.js tests/context-windows.test.js` � pass, 44 tests.
-  - `npm test` � pass, 350 tests.
-  - `npm run lint` � fails only on the existing `prompts/gemma-classify-instructions.md` Prettier warning.
+  - `node --check public/todolist2.js` ï¿½ pass.
+  - `npm test -- tests/gemma-ui.test.js tests/markdown-editor.test.js tests/context-windows.test.js` ï¿½ pass, 44 tests.
+  - `npm test` ï¿½ pass, 350 tests.
+  - `npm run lint` ï¿½ fails only on the existing `prompts/gemma-classify-instructions.md` Prettier warning.
 - Tests added/updated: Added source coverage for note voice create/edit controls and for stopping active voice capture before note AI actions.
 - Regression impact: Shared voice button state, notes editor controls, and note AI start paths were touched; focused UI/notes editor tests and full unit tests passed.
 - API docs: Not affected; this is a client-side voice/editor integration.
 - Tooling gates: Focused tests and full unit tests passed; lint still reports the known prompt formatting exception.
 - Conflicts / exceptions: Voice support depends on browser speech recognition availability, matching existing card behavior.
 
-### 2026-05-31T11:21:07-04:00 � WorkLists
+### 2026-05-31T11:21:07-04:00 ï¿½ WorkLists
 
 - Summary: Added model-backed AI create/refine actions for notes.
 - Files/areas: `server.js`, `openapi.js`, `public/index.html`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/gemma-normalize.test.js`, `tests/gemma-ui.test.js`, `tests/openapi.test.js`, `docs/worklists/worklists-app-changelog.md`.
@@ -2894,22 +2908,22 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Note AI jobs reuse the existing async job polling and progress toast flow, but new note-facing labels use generic `AI` naming instead of adding more model-specific Gemma copy.
   - Note AI create/refine actions disable their controls while work is in flight and refresh the active notes pane when the job completes.
 - Tests run:
-  - `node --check public/todolist2.js` � pass.
-  - `node --check server.js` � pass.
-  - `node --check openapi.js` � pass.
-  - `npm test -- tests/gemma-normalize.test.js tests/gemma-ui.test.js` � pass, 60 tests.
-  - `npm test -- tests/context-windows.test.js tests/markdown-editor.test.js` � pass, 20 tests.
-  - `npm test -- tests/openapi.test.js tests/gemma-normalize.test.js tests/gemma-ui.test.js` � pass, 63 tests.
-  - `npm test` � pass, 348 tests.
-  - `npm run test:browser` � pass, 1 browser smoke test.
-  - `npm run lint` � fails only on the existing `prompts/gemma-classify-instructions.md` Prettier warning.
+  - `node --check public/todolist2.js` ï¿½ pass.
+  - `node --check server.js` ï¿½ pass.
+  - `node --check openapi.js` ï¿½ pass.
+  - `npm test -- tests/gemma-normalize.test.js tests/gemma-ui.test.js` ï¿½ pass, 60 tests.
+  - `npm test -- tests/context-windows.test.js tests/markdown-editor.test.js` ï¿½ pass, 20 tests.
+  - `npm test -- tests/openapi.test.js tests/gemma-normalize.test.js tests/gemma-ui.test.js` ï¿½ pass, 63 tests.
+  - `npm test` ï¿½ pass, 348 tests.
+  - `npm run test:browser` ï¿½ pass, 1 browser smoke test.
+  - `npm run lint` ï¿½ fails only on the existing `prompts/gemma-classify-instructions.md` Prettier warning.
 - Tests added/updated: Added source coverage for generic AI note UI naming, pending-job tracking, note controls, and server job wiring; added persistence coverage for AI-created and AI-refined notes through the notes store; added OpenAPI coverage for note job request/status/result schemas.
 - Regression impact: Shared AI/Gemma pending-job tracking, notes pane controls, and server job execution were touched; focused tests, full tests, and browser smoke passed.
 - API docs: Updated OpenAPI job request/status/result schemas for the existing `/api/gemma-normalize/jobs` endpoint so `add-note` and `refine-note` are documented with note context and result payloads.
 - Tooling gates: Full unit tests and browser smoke passed; lint still reports the known prompt formatting exception.
 - Conflicts / exceptions: Existing card/task AI internals still use the historical `Gemma` function names; new note-facing UI copy is generic `AI` to reflect model-swappable behavior.
 
-### 2026-05-31T11:12:49-04:00 � WorkLists
+### 2026-05-31T11:12:49-04:00 ï¿½ WorkLists
 
 - Summary: Moved notes-pane draft discard prompts onto the in-app dialog flow and added AI notes parity to the initiative checklist.
 - Files/areas: `docs/worklists/worklists-app-changelog.md`, `public/todolist2.js`, `tests/context-windows.test.js`.
@@ -2918,18 +2932,18 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Notes-pane close, cancel, Escape, edit-switch, and card-switch guard paths now await the same dialog confirmation flow.
   - The initiative checklist now explicitly requires AI note creation and AI note refinement parity with card-level AI actions.
 - Tests run:
-  - `node --check public/todolist2.js` � pass.
-  - `npm test -- tests/context-windows.test.js tests/card-actions.test.js tests/markdown-editor.test.js` � pass, 33 tests.
-  - `npm test` � pass, 344 tests.
-  - `npm run test:browser` � pass, 1 browser smoke test.
-  - `npm run lint` � fails only on the existing `prompts/gemma-classify-instructions.md` Prettier warning.
+  - `node --check public/todolist2.js` ï¿½ pass.
+  - `npm test -- tests/context-windows.test.js tests/card-actions.test.js tests/markdown-editor.test.js` ï¿½ pass, 33 tests.
+  - `npm test` ï¿½ pass, 344 tests.
+  - `npm run test:browser` ï¿½ pass, 1 browser smoke test.
+  - `npm run lint` ï¿½ fails only on the existing `prompts/gemma-classify-instructions.md` Prettier warning.
 - Tests added/updated: Updated context-window coverage for async discard prompts, in-app dialog usage, and async notes-pane close behavior.
 - Regression impact: Notes-pane close/cancel/Escape/edit-switch timing was touched; focused tests, full tests, and browser smoke passed.
-- API docs: Not relevant � no HTTP contract or OpenAPI surface changed.
+- API docs: Not relevant ï¿½ no HTTP contract or OpenAPI surface changed.
 - Tooling gates: Full unit tests and browser smoke passed; lint still reports the known prompt formatting exception.
 - Conflicts / exceptions: Shared context-window closer remains synchronous for non-notes callers; it now safely fires the async notes close path without forcing a broad app-wide async refactor.
 
-### 2026-05-31T11:07:28-04:00 � WorkLists
+### 2026-05-31T11:07:28-04:00 ï¿½ WorkLists
 
 - Summary: Added the Countdowns-style in-app dialog helper and used it for note deletion confirmation.
 - Files/areas: `public/dialogs.js`, `public/index.html`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/context-windows.test.js`.
@@ -2938,17 +2952,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - The dialog supports Countdowns-parity cancel behavior through the backdrop and `Escape`.
   - The destructive confirm action uses a distinct danger style while preserving keyboard focus behavior.
 - Tests run:
-  - `npm test -- tests/context-windows.test.js tests/markdown-editor.test.js` � pass.
-  - `npm test` � pass, 344 tests.
-  - `npm run test:browser` � pass, 1 browser smoke test.
-  - `npm run lint` � fails only on the existing `prompts/gemma-classify-instructions.md` Prettier warning.
+  - `npm test -- tests/context-windows.test.js tests/markdown-editor.test.js` ï¿½ pass.
+  - `npm test` ï¿½ pass, 344 tests.
+  - `npm run test:browser` ï¿½ pass, 1 browser smoke test.
+  - `npm run lint` ï¿½ fails only on the existing `prompts/gemma-classify-instructions.md` Prettier warning.
 - Tests added/updated: Updated context-window coverage for the dialog script order, dialog API, backdrop/Escape cancellation, and danger styling.
 - Regression impact: Notes delete confirmation now matches the Countdowns app pattern without changing the notes pane layout or backend API.
-- API docs: Not relevant � no HTTP contract or OpenAPI surface changed.
+- API docs: Not relevant ï¿½ no HTTP contract or OpenAPI surface changed.
 - Tooling gates: Full unit tests and browser smoke passed; lint still reports the known prompt formatting exception.
 - Conflicts / exceptions: Draft-discard prompts still use the native sync confirm until the broader async context-window close flow is refactored.
 
-### 2026-05-31T14:56:00Z � WorkLists
+### 2026-05-31T14:56:00Z ï¿½ WorkLists
 
 - Summary: Added a Playwright browser smoke test for the notes pane and card note indicators.
 - Files/areas: `package.json`, `package-lock.json`, `tests/browser-notes-smoke.js`, `docs/worklists/worklists-app-changelog.md`.
@@ -2957,16 +2971,16 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - The smoke test opens the real app, verifies the note-count indicator, opens the notes pane, edits the original card text, adds a note, and checks the pane remains inside desktop and mobile viewports.
   - Browser testing uses a temporary `DATA_DIR`, so it does not touch the user's real WorkLists data.
 - Tests run:
-  - `npm run test:browser` � pass, 1 browser smoke test.
-  - `npm test` � pass, 343 tests.
-  - `npx prettier --check package.json tests\browser-notes-smoke.js` � pass.
+  - `npm run test:browser` ï¿½ pass, 1 browser smoke test.
+  - `npm test` ï¿½ pass, 343 tests.
+  - `npx prettier --check package.json tests\browser-notes-smoke.js` ï¿½ pass.
 - Tests added/updated: Added `tests/browser-notes-smoke.js` and a `test:browser` package script.
 - Regression impact: Browser smoke coverage now exercises the notes pane, note-count indicator, card text edit path, add-note path, and desktop/mobile viewport fit.
-- API docs: Not relevant � no HTTP contract or OpenAPI surface changed.
+- API docs: Not relevant ï¿½ no HTTP contract or OpenAPI surface changed.
 - Tooling gates: Full `npm test` passed; browser smoke passed; targeted Prettier passed.
 - Conflicts / exceptions: Installed Playwright as a dev dependency and downloaded Chromium locally for the browser run; worktree had many pre-existing dirty files before this session; no unrelated changes were reverted.
 
-### 2026-05-31T14:39:37Z � WorkLists
+### 2026-05-31T14:39:37Z ï¿½ WorkLists
 
 - Summary: Added card-level notes count indicators.
 - Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/card-actions.test.js`.
@@ -2976,17 +2990,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - The card action menu now shows the note count beside `Edit Notes` when notes exist.
   - Counts are seeded from the existing `event-notes` data and refresh when the active notes pane reloads after create/delete.
 - Tests run:
-  - `node --check public\todolist2.js` � pass.
-  - `node --test tests\card-actions.test.js tests\context-windows.test.js` � pass, 25 tests.
-  - `npx prettier --check public\todolist2.js public\todoliststyles2.css tests\card-actions.test.js` � pass.
-  - `npm test` � pass, 343 tests.
+  - `node --check public\todolist2.js` ï¿½ pass.
+  - `node --test tests\card-actions.test.js tests\context-windows.test.js` ï¿½ pass, 25 tests.
+  - `npx prettier --check public\todolist2.js public\todoliststyles2.css tests\card-actions.test.js` ï¿½ pass.
+  - `npm test` ï¿½ pass, 343 tests.
 - Tests added/updated: Extended card action integration assertions for notes count state, card-level indicator rendering, menu status text, data seeding from `event-notes`, and indicator refresh after note loads.
 - Regression impact: Card render/action row and card action state were touched; focused card/context tests and the full suite passed.
-- API docs: Not relevant � reused existing notes data and APIs without changing HTTP contracts or OpenAPI.
+- API docs: Not relevant ï¿½ reused existing notes data and APIs without changing HTTP contracts or OpenAPI.
 - Tooling gates: Full `npm test` passed; targeted Prettier passed.
 - Conflicts / exceptions: Worktree had many pre-existing dirty files before this session; no unrelated changes were reverted.
 
-### 2026-05-31T13:27:05Z � WorkLists
+### 2026-05-31T13:27:05Z ï¿½ WorkLists
 
 - Summary: Added unsaved-change protection for notes pane editing surfaces.
 - Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`.
@@ -2996,17 +3010,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Starting another notes-pane edit checks for unsaved text in the other pane surfaces first.
   - Opening notes for another card now preserves the current pane when the user declines to discard unsaved changes.
 - Tests run:
-  - `node --check public\todolist2.js` � pass.
-  - `node --test tests\context-windows.test.js tests\markdown-editor.test.js` � pass, 19 tests.
-  - `npx prettier --check public\todolist2.js tests\context-windows.test.js` � pass.
-  - `npm test` � pass, 342 tests.
+  - `node --check public\todolist2.js` ï¿½ pass.
+  - `node --test tests\context-windows.test.js tests\markdown-editor.test.js` ï¿½ pass, 19 tests.
+  - `npx prettier --check public\todolist2.js tests\context-windows.test.js` ï¿½ pass.
+  - `npm test` ï¿½ pass, 342 tests.
 - Tests added/updated: Extended context-window assertions for notes pane draft detection, discard confirmation, and guarded cancel/close/switch paths.
 - Regression impact: Notes pane close, cancel, edit-switch, and open-card flows were touched; focused context/editor tests and the full suite passed.
-- API docs: Not relevant � no HTTP contract or OpenAPI surface changed.
+- API docs: Not relevant ï¿½ no HTTP contract or OpenAPI surface changed.
 - Tooling gates: Full `npm test` passed; targeted Prettier passed.
 - Conflicts / exceptions: Worktree had many pre-existing dirty files before this session; no unrelated changes were reverted.
 
-### 2026-05-31T01:29:39Z � WorkLists
+### 2026-05-31T01:29:39Z ï¿½ WorkLists
 
 - Summary: Added in-pane editing for the original card text from the notes side pane.
 - Files/areas: `public/todolist2.js`, `public/todoliststyles2.css`, `tests/context-windows.test.js`, `tests/markdown-editor.test.js`.
@@ -3016,17 +3030,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Saving updates the card text through the existing todo API, refreshes the board, and updates the pane title/content without closing the pane.
   - The card text area has more room than the previous compact preview while keeping overflow contained inside the side pane.
 - Tests run:
-  - `node --check public\todolist2.js` � pass.
-  - `node --test tests\context-windows.test.js tests\markdown-editor.test.js` � pass, 18 tests.
-  - `npx prettier --check public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\markdown-editor.test.js` � pass.
-  - `npm test` � pass, 341 tests.
+  - `node --check public\todolist2.js` ï¿½ pass.
+  - `node --test tests\context-windows.test.js tests\markdown-editor.test.js` ï¿½ pass, 18 tests.
+  - `npx prettier --check public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js tests\markdown-editor.test.js` ï¿½ pass.
+  - `npm test` ï¿½ pass, 341 tests.
 - Tests added/updated: Extended notes pane context and markdown editor integration assertions for original card text editing, shared editor wiring, save behavior, accessible labels, and pane overflow sizing.
 - Regression impact: Notes pane card preview/editing, task text persistence, and pane sizing were touched; focused context/editor tests and the full suite passed.
-- API docs: Not relevant � reused the existing todo update API and did not change the HTTP contract or OpenAPI surface.
+- API docs: Not relevant ï¿½ reused the existing todo update API and did not change the HTTP contract or OpenAPI surface.
 - Tooling gates: Full `npm test` passed; targeted Prettier passed.
 - Conflicts / exceptions: Worktree had many pre-existing dirty files before this session; no unrelated changes were reverted.
 
-### 2026-05-31T01:20:51Z � WorkLists
+### 2026-05-31T01:20:51Z ï¿½ WorkLists
 
 - Summary: Added a guarded delete path and accessible compact note actions for the notes pane.
 - Files/areas: `public/todolist2.js`, `tests/context-windows.test.js`.
@@ -3034,17 +3048,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Deleting a note from the side pane now asks for confirmation before removing it.
   - Compact edit and delete icon buttons now expose explicit accessible labels while retaining their visual layout.
 - Tests run:
-  - `node --check public\todolist2.js` � pass.
-  - `node --test tests\context-windows.test.js` � pass, 10 tests.
-  - `npx prettier --check public\todolist2.js tests\context-windows.test.js` � pass.
-  - `npm test` � pass, 340 tests.
+  - `node --check public\todolist2.js` ï¿½ pass.
+  - `node --test tests\context-windows.test.js` ï¿½ pass, 10 tests.
+  - `npx prettier --check public\todolist2.js tests\context-windows.test.js` ï¿½ pass.
+  - `npm test` ï¿½ pass, 340 tests.
 - Tests added/updated: Extended context-window assertions for note delete confirmation and accessible compact note actions.
 - Regression impact: Notes pane delete clicks and note action markup were touched; focused context tests and the full suite passed.
-- API docs: Not relevant � no HTTP contract or OpenAPI surface changed; existing `/api/notes` contract was unchanged.
+- API docs: Not relevant ï¿½ no HTTP contract or OpenAPI surface changed; existing `/api/notes` contract was unchanged.
 - Tooling gates: Full `npm test` passed; targeted Prettier passed.
 - Conflicts / exceptions: Worktree had many pre-existing dirty files before this session; no unrelated changes were reverted.
 
-### 2026-05-31T01:18:20Z � WorkLists
+### 2026-05-31T01:18:20Z ï¿½ WorkLists
 
 - Summary: Improved notes pane accessibility and focus continuity.
 - Files/areas: `public/index.html`, `public/todolist2.js`, `tests/context-windows.test.js`, `tests/card-actions.test.js`.
@@ -3053,17 +3067,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Opening notes from a card action records the triggering ellipsis button as the return-focus target.
   - Closing the notes pane restores focus to the opener when it still exists, keeping keyboard users oriented after the side pane closes.
 - Tests run:
-  - `node --check public\todolist2.js` � pass.
-  - `node --test tests\context-windows.test.js tests\card-actions.test.js` � pass, 21 tests.
-  - `npx prettier --check public\index.html public\todolist2.js tests\context-windows.test.js tests\card-actions.test.js` � pass.
-  - `npm test` � pass, 339 tests.
+  - `node --check public\todolist2.js` ï¿½ pass.
+  - `node --test tests\context-windows.test.js tests\card-actions.test.js` ï¿½ pass, 21 tests.
+  - `npx prettier --check public\index.html public\todolist2.js tests\context-windows.test.js tests\card-actions.test.js` ï¿½ pass.
+  - `npm test` ï¿½ pass, 339 tests.
 - Tests added/updated: Extended context-window and card-action integration assertions for notes pane dialog semantics, opener tracking, and focus restoration.
 - Regression impact: Notes pane close behavior and card action notes wiring were touched; focused context/card-action tests and the full suite passed.
-- API docs: Not relevant � no HTTP contract or OpenAPI surface changed; existing `/api/notes` contract was unchanged.
+- API docs: Not relevant ï¿½ no HTTP contract or OpenAPI surface changed; existing `/api/notes` contract was unchanged.
 - Tooling gates: Full `npm test` passed; targeted Prettier passed.
 - Conflicts / exceptions: Worktree had many pre-existing dirty files before this session; no unrelated changes were reverted.
 
-### 2026-05-31T01:14:44Z � WorkLists
+### 2026-05-31T01:14:44Z ï¿½ WorkLists
 
 - Summary: Added the notes initiative UI/UX checklist and polished notes pane controls/layout.
 - Files/areas: `docs/worklists/worklists-app-changelog.md`, `public/markdownEditor.js`, `public/index.html`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/markdown-editor.test.js`.
@@ -3073,18 +3087,18 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Markdown toolbar commands use compact icons where familiar icons exist, while preserving text symbols for heading/bold/italic/quote.
   - Notes pane content now guards horizontal overflow across pane, cards, timestamps, editor surfaces, toolbar rows, markdown code blocks, tables, and narrow mobile widths.
 - Tests run:
-  - `node --check public\markdownEditor.js` � pass.
-  - `node --check public\todolist2.js` � pass.
-  - `node --test tests\markdown-editor.test.js tests\context-windows.test.js` � pass, 15 tests.
-  - `npx prettier --check docs\worklists\worklists-app-changelog.md public\markdownEditor.js public\index.html public\todolist2.js public\todoliststyles2.css tests\markdown-editor.test.js tests\context-windows.test.js` � pass.
-  - `npm test` � pass, 338 tests.
+  - `node --check public\markdownEditor.js` ï¿½ pass.
+  - `node --check public\todolist2.js` ï¿½ pass.
+  - `node --test tests\markdown-editor.test.js tests\context-windows.test.js` ï¿½ pass, 15 tests.
+  - `npx prettier --check docs\worklists\worklists-app-changelog.md public\markdownEditor.js public\index.html public\todolist2.js public\todoliststyles2.css tests\markdown-editor.test.js tests\context-windows.test.js` ï¿½ pass.
+  - `npm test` ï¿½ pass, 338 tests.
 - Tests added/updated: Extended markdown editor tests for toolbar icon metadata and notes-pane layout/overflow/style guardrails.
 - Regression impact: Notes pane layout, editor toolbar rendering, and note edit action markup were touched; focused editor/context tests and the full suite passed.
-- API docs: Not relevant � no HTTP contract or OpenAPI surface changed; existing `/api/notes` contract was unchanged.
+- API docs: Not relevant ï¿½ no HTTP contract or OpenAPI surface changed; existing `/api/notes` contract was unchanged.
 - Tooling gates: Full `npm test` passed; targeted Prettier passed.
 - Conflicts / exceptions: Worktree had many pre-existing dirty files before this session; no unrelated changes were reverted.
 
-### 2026-05-30T18:26:00Z � WorkLists
+### 2026-05-30T18:26:00Z ï¿½ WorkLists
 
 - Summary: Ported Countdowns-style markdown editor modes and toolbar controls into WorkLists notes.
 - Files/areas: `public/markdownEditor.js`, `public/index.html`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/markdown-editor.test.js`, `tests/markdown-authoring.test.js`, `tests/context-windows.test.js`.
@@ -3094,18 +3108,18 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Inline note edits use the same tabbed editor modes and toolbar controls as the add-note editor.
   - Visual and Preview modes use the existing WorkLists markdown renderer so authored notes stay aligned with card markdown behavior.
 - Tests run:
-  - `node --check public\markdownEditor.js` � pass.
-  - `node --check public\todolist2.js` � pass.
-  - `node --test tests\markdown-editor.test.js tests\markdown-authoring.test.js tests\context-windows.test.js` � pass, 20 tests.
-  - `npx prettier --check public\markdownEditor.js public\index.html public\todolist2.js public\todoliststyles2.css tests\markdown-editor.test.js tests\markdown-authoring.test.js tests\context-windows.test.js` � pass.
-  - `npm test` � pass, 336 tests.
+  - `node --check public\markdownEditor.js` ï¿½ pass.
+  - `node --check public\todolist2.js` ï¿½ pass.
+  - `node --test tests\markdown-editor.test.js tests\markdown-authoring.test.js tests\context-windows.test.js` ï¿½ pass, 20 tests.
+  - `npx prettier --check public\markdownEditor.js public\index.html public\todolist2.js public\todoliststyles2.css tests\markdown-editor.test.js tests\markdown-authoring.test.js tests\context-windows.test.js` ï¿½ pass.
+  - `npm test` ï¿½ pass, 336 tests.
 - Tests added/updated: Added `tests/markdown-editor.test.js` for toolbar syntax helpers and notes editor integration; extended markdown authoring and context-window assertions for the new editor helper and keyboard paths.
 - Regression impact: Shared notes pane editing behavior and script ordering were touched; focused editor/context tests and the full suite passed.
-- API docs: Not relevant � no HTTP contract or OpenAPI surface changed; existing `/api/notes` contract was unchanged.
+- API docs: Not relevant ï¿½ no HTTP contract or OpenAPI surface changed; existing `/api/notes` contract was unchanged.
 - Tooling gates: Full `npm test` passed; targeted Prettier passed.
 - Conflicts / exceptions: Worktree had many pre-existing dirty files before this session; no unrelated changes were reverted.
 
-### 2026-05-30T18:13:15Z � WorkLists
+### 2026-05-30T18:13:15Z ï¿½ WorkLists
 
 - Summary: Added persisted resizing for the notes side pane.
 - Files/areas: `public/index.html`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/context-windows.test.js`.
@@ -3114,17 +3128,17 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - The chosen pane width is saved in `localStorage` and restored when reopening the pane.
   - Width is clamped to sensible desktop and viewport bounds so the pane stays usable on smaller screens.
 - Tests run:
-  - `node --check public\todolist2.js` � pass.
-  - `node --test tests\context-windows.test.js` � pass, 8 tests.
-  - `npx prettier --check public\index.html public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js` � pass.
-  - `npm test` � pass, 331 tests.
+  - `node --check public\todolist2.js` ï¿½ pass.
+  - `node --test tests\context-windows.test.js` ï¿½ pass, 8 tests.
+  - `npx prettier --check public\index.html public\todolist2.js public\todoliststyles2.css tests\context-windows.test.js` ï¿½ pass.
+  - `npm test` ï¿½ pass, 331 tests.
 - Tests added/updated: Extended context-window source/CSS assertions to cover the notes pane resize handle, persisted width key, pointer drag behavior, and resizing styles.
 - Regression impact: Notes pane layout and window resize behavior were touched; focused context tests and the full suite passed.
-- API docs: Not relevant � no HTTP contract or OpenAPI surface changed.
+- API docs: Not relevant ï¿½ no HTTP contract or OpenAPI surface changed.
 - Tooling gates: Full `npm test` passed; targeted Prettier passed.
 - Conflicts / exceptions: Worktree had many pre-existing dirty files before this session; no unrelated changes were reverted.
 
-### 2026-05-30T18:00:06Z � WorkLists
+### 2026-05-30T18:00:06Z ï¿½ WorkLists
 
 - Summary: Added lifecycle cleanup for notes associated to deleted cards.
 - Files/areas: `dal.js`, `tests/api.test.js`.
@@ -3133,18 +3147,18 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Notes tied to cards removed by deleting a column or board are now removed with the same cascade.
   - Notes associated to unrelated card IDs are preserved.
 - Tests run:
-  - `node --check dal.js` � pass.
-  - `node --test tests\api.test.js` � pass, 67 tests.
-  - `npx prettier --check dal.js tests/api.test.js` � pass.
-  - `npm test` � pass, 330 tests.
-  - `npm run lint` � blocked: repo-wide Prettier check still reports pre-existing formatting in `prompts/gemma-classify-instructions.md`; touched notes cleanup files passed targeted Prettier check.
+  - `node --check dal.js` ï¿½ pass.
+  - `node --test tests\api.test.js` ï¿½ pass, 67 tests.
+  - `npx prettier --check dal.js tests/api.test.js` ï¿½ pass.
+  - `npm test` ï¿½ pass, 330 tests.
+  - `npm run lint` ï¿½ blocked: repo-wide Prettier check still reports pre-existing formatting in `prompts/gemma-classify-instructions.md`; touched notes cleanup files passed targeted Prettier check.
 - Tests added/updated: Extended delete board/column/todo API assertions to verify associated notes are removed and unrelated notes remain.
 - Regression impact: Delete cascades were touched; focused API tests and the full suite passed.
-- API docs: Not relevant � no HTTP contract or OpenAPI surface changed.
+- API docs: Not relevant ï¿½ no HTTP contract or OpenAPI surface changed.
 - Tooling gates: Full `npm test` passed; full `npm run lint` remains blocked by the pre-existing `prompts/gemma-classify-instructions.md` formatting warning.
 - Conflicts / exceptions: Worktree had many pre-existing dirty files before this session; no unrelated changes were reverted.
 
-### 2026-05-30T17:46:35Z � WorkLists
+### 2026-05-30T17:46:35Z ï¿½ WorkLists
 
 - Summary: Improved notes pane keyboard and markdown authoring interactions.
 - Files/areas: `public/todolist2.js`, `tests/markdown-authoring.test.js`, `tests/context-windows.test.js`.
@@ -3153,18 +3167,18 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - `Ctrl+Enter` submits a new note or saves an inline note edit.
   - `Escape` clears a draft note with text or cancels an inline note edit without collapsing the notes pane.
 - Tests run:
-  - `node --check public\todolist2.js` � pass.
-  - `node --test tests\markdown-authoring.test.js tests\context-windows.test.js` � pass, 14 tests.
-  - `npx prettier --check public/todolist2.js tests/markdown-authoring.test.js tests/context-windows.test.js` � pass.
-  - `npm test` � pass, 330 tests.
-  - `npm run lint` � blocked: repo-wide Prettier check still reports pre-existing formatting in `prompts/gemma-classify-instructions.md`; touched notes interaction files passed targeted Prettier check.
+  - `node --check public\todolist2.js` ï¿½ pass.
+  - `node --test tests\markdown-authoring.test.js tests\context-windows.test.js` ï¿½ pass, 14 tests.
+  - `npx prettier --check public/todolist2.js tests/markdown-authoring.test.js tests/context-windows.test.js` ï¿½ pass.
+  - `npm test` ï¿½ pass, 330 tests.
+  - `npm run lint` ï¿½ blocked: repo-wide Prettier check still reports pre-existing formatting in `prompts/gemma-classify-instructions.md`; touched notes interaction files passed targeted Prettier check.
 - Tests added/updated: Extended markdown authoring integration assertions for notes textareas and context-window assertions for note pane keyboard containment.
 - Regression impact: Shared keyboard/context behavior was touched; focused context/markdown tests and the full suite passed.
-- API docs: Not relevant � no HTTP contract or OpenAPI surface changed.
+- API docs: Not relevant ï¿½ no HTTP contract or OpenAPI surface changed.
 - Tooling gates: Full `npm test` passed; full `npm run lint` remains blocked by the pre-existing `prompts/gemma-classify-instructions.md` formatting warning.
 - Conflicts / exceptions: Worktree had many pre-existing dirty files before this session; no unrelated changes were reverted.
 
-### 2026-05-30T17:35:25Z � WorkLists
+### 2026-05-30T17:35:25Z ï¿½ WorkLists
 
 - Summary: Added the first UI integration for notes by wiring card actions to a notes side popout.
 - Files/areas: `public/apiService.js`, `public/cardActions.js`, `public/index.html`, `public/todolist2.js`, `public/todoliststyles2.css`, `tests/api-client-resilience.test.js`, `tests/card-actions.test.js`, `tests/context-windows.test.js`.
@@ -3173,18 +3187,18 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Selecting `Edit Notes` opens a right-side notes pane for the card, loads existing notes through `/api/notes?eventId=<cardId>`, renders note content with existing markdown rendering, and supports add/edit/delete note flows.
   - The notes pane participates in the shared context-window close behavior and can be closed with its header close button or the existing Escape context close path.
 - Tests run:
-  - `node --check public\apiService.js`, `node --check public\cardActions.js`, `node --check public\todolist2.js` � pass.
-  - `node --test tests\card-actions.test.js tests\context-windows.test.js tests\api-client-resilience.test.js` � pass, 25 tests.
-  - `npx prettier --check public/apiService.js public/cardActions.js public/todolist2.js public/todoliststyles2.css public/index.html tests/card-actions.test.js tests/context-windows.test.js tests/api-client-resilience.test.js` � pass.
-  - `npm test` � pass, 329 tests.
-  - `npm run lint` � blocked: repo-wide Prettier check still reports pre-existing formatting in `prompts/gemma-classify-instructions.md`; notes UI files passed targeted Prettier check.
+  - `node --check public\apiService.js`, `node --check public\cardActions.js`, `node --check public\todolist2.js` ï¿½ pass.
+  - `node --test tests\card-actions.test.js tests\context-windows.test.js tests\api-client-resilience.test.js` ï¿½ pass, 25 tests.
+  - `npx prettier --check public/apiService.js public/cardActions.js public/todolist2.js public/todoliststyles2.css public/index.html tests/card-actions.test.js tests/context-windows.test.js tests/api-client-resilience.test.js` ï¿½ pass.
+  - `npm test` ï¿½ pass, 329 tests.
+  - `npm run lint` ï¿½ blocked: repo-wide Prettier check still reports pre-existing formatting in `prompts/gemma-classify-instructions.md`; notes UI files passed targeted Prettier check.
 - Tests added/updated: Added card action coverage for `Edit Notes`, context-pane source/CSS assertions, and API client notes helper assertions.
 - Regression impact: Shared card action and context close surfaces were touched; focused card action/context tests and the full suite passed.
 - API docs: Not relevant for this UI/client slice; the `/api/notes` OpenAPI contract was already added in the prior backend slice and was not changed here.
 - Tooling gates: Full `npm test` passed; full `npm run lint` remains blocked by the pre-existing `prompts/gemma-classify-instructions.md` formatting warning.
 - Conflicts / exceptions: Worktree had many pre-existing dirty files before this session; no unrelated changes were reverted.
 
-### 2026-05-30T16:34:36Z � WorkLists
+### 2026-05-30T16:34:36Z ï¿½ WorkLists
 
 - Summary: Ported the Countdowns notes API into WorkLists as the first backend step for card notes.
 - Files/areas: `dal.js`, `server.js`, `openapi.js`, `data/event-notes.json`, `data/event-notes.example.json`, `tests/api.test.js`, `tests/openapi.test.js`.
@@ -3192,11 +3206,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - WorkLists now exposes the Countdowns-compatible `/api/notes` API for listing, filtering by `eventId`, creating, updating, and deleting notes.
   - Notes persist to `data/event-notes.json` with `noteId`, `eventId`, `text`, and `createdAt`.
 - Tests run:
-  - `node --check server.js`, `node --check dal.js`, `node --check openapi.js` � pass.
-  - `node --test tests\api.test.js tests\openapi.test.js` � pass, 70 tests.
-  - `npx prettier --check dal.js server.js openapi.js tests/api.test.js tests/openapi.test.js data/event-notes.json data/event-notes.example.json` � pass.
-  - `npm test` � pass, 326 tests.
-  - `npm run lint` � blocked: repo-wide Prettier check still reports pre-existing formatting in `prompts/gemma-classify-instructions.md`; notes API files passed targeted Prettier check.
+  - `node --check server.js`, `node --check dal.js`, `node --check openapi.js` ï¿½ pass.
+  - `node --test tests\api.test.js tests\openapi.test.js` ï¿½ pass, 70 tests.
+  - `npx prettier --check dal.js server.js openapi.js tests/api.test.js tests/openapi.test.js data/event-notes.json data/event-notes.example.json` ï¿½ pass.
+  - `npm test` ï¿½ pass, 326 tests.
+  - `npm run lint` ï¿½ blocked: repo-wide Prettier check still reports pre-existing formatting in `prompts/gemma-classify-instructions.md`; notes API files passed targeted Prettier check.
 - Tests added/updated: Added notes API coverage in `tests/api.test.js` for list/filter/create/validation/update/not-found/delete and updated OpenAPI assertions in `tests/openapi.test.js`.
 - Regression impact: Isolated to the new `event-notes` data section and `/api/notes` routes; existing data migration/read/write paths were updated and verified by full API tests.
 - API docs: Updated `openapi.js` with `/api/notes`, `/api/notes/{noteId}`, note schemas, `NoteId` parameter, and `event-notes` on `DataStore`.
@@ -3216,7 +3230,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Scheduled tasks show a description preview, full description on hover, primary tags, secondary tags, and source color cues.
   - The saved scheduler sequence reopens in the same manual order and stays separate from board/column sorting.
   - Missing external dependencies, incomplete dependency data, conflicts, and circular relationships are not automatically included or resolved.
-- API docs check: Updated � added `/scheduler` GET/PUT, scheduler request/response schemas, and `schedulerTaskIds` on the shared `DataStore` schema.
+- API docs check: Updated ï¿½ added `/scheduler` GET/PUT, scheduler request/response schemas, and `schedulerTaskIds` on the shared `DataStore` schema.
 - Verification:
   - `node --check public/todolist2.js`, `node --check public/columnActions.js` (pass).
   - `node --test tests/scheduler.test.js tests/column-actions.test.js tests/context-windows.test.js tests/filter-menu.test.js tests/gemma-ui.test.js` (pass).
@@ -3233,7 +3247,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Markdown checklist items render as focusable checkboxes that update the stored markdown source through the existing task save endpoint.
   - Fenced code blocks now show a code-block copy control with immediate inline copied/failure feedback.
   - Card-level copy continues to preserve raw markdown while ignoring rendered code-copy controls when raw source is unavailable.
-- API docs check: N/A � reused existing `PATCH /todos/:id` task update contract; no new HTTP/OpenAPI surface.
+- API docs check: N/A ï¿½ reused existing `PATCH /todos/:id` task update contract; no new HTTP/OpenAPI surface.
 - Verification:
   - `node --check public/markdownRenderer.js`, `node --check public/taskClipboard.js`, `node --check public/todolist2.js` (pass).
   - `npm test -- tests/markdown-renderer.test.js tests/task-clipboard.test.js tests/api.test.js` (pass).
@@ -3251,7 +3265,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Existing cards can keep, change, expand, or remove tag assignments during refinement; create flows can apply zero, one, or multiple tags.
   - Proposed new secondary tags are persisted only when no existing tag name/id matches; matched existing tags are reused even if the model labels them as new.
   - Gemma process toasts now include lightweight tag-review notes for primary tags, secondary tags, and proposed new tags.
-- API docs check: Updated � added Gemma tag context/decision/result schemas, documented tagging on normalize responses and job results, and added `tagContext` to normalize job request bodies.
+- API docs check: Updated ï¿½ added Gemma tag context/decision/result schemas, documented tagging on normalize responses and job results, and added `tagContext` to normalize job request bodies.
 - Verification:
   - `node --check server.js`, `node --check gemmaNormalize.js`, `node --check public/todolist2.js`, `node --check openapi.js` (pass).
   - `node --test tests/gemma-normalize.test.js tests/gemma-ui.test.js tests/openapi.test.js` (pass).
@@ -3267,7 +3281,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Removing sorting clears the column `sortState` so future card updates no longer auto-reapply that sort.
   - The current visible card order is kept as-is when sorting is removed.
   - The sort submenu now marks `Remove sorting` as selected when no sort is active.
-- API docs check: N/A � UI behavior change only; no HTTP/OpenAPI surface change.
+- API docs check: N/A ï¿½ UI behavior change only; no HTTP/OpenAPI surface change.
 - Verification:
   - `node --test tests/column-sort.test.js tests/column-actions.test.js` (pass).
 
@@ -3279,7 +3293,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Voice capture now reports specific failure reasons (for example `no-speech`, `audio-capture`, `network`, and permission blocks) instead of only generic failure messaging.
   - When listening starts and then ends without transcript capture, the app now surfaces a clearer stop toast and emits detailed diagnostic context.
   - Browser diagnostics are now available as `[VoiceInput]` console entries and in-memory `window.__voiceInputDiagnostics` logs.
-- API docs check: N/A � browser-side diagnostics only; no HTTP/OpenAPI contract change.
+- API docs check: N/A ï¿½ browser-side diagnostics only; no HTTP/OpenAPI contract change.
 - Verification:
   - `node --check public/todolist2.js` (pass).
   - `node --test tests/gemma-ui.test.js` (pass).
@@ -3292,11 +3306,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Long multiline normalize requests with explicit single-card intent now create one normalized card instead of multiple fragmented cards.
   - Classification still runs first, but add-task normalization now uses the full input in one pass when `input` is present.
   - Existing multi-card extraction behavior remains available from a single normalization result via classified `items`/text extraction.
-- API docs check: N/A � no new endpoint or schema change in this follow-up fix.
+- API docs check: N/A ï¿½ no new endpoint or schema change in this follow-up fix.
 - Verification:
   - `npm test -- tests/gemma-normalize.test.js` (pass).
   - `npm test -- tests/openapi.test.js` (pass).
-  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this session�s code changes).
+  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this sessionï¿½s code changes).
 
 ### 2026-05-26
 
@@ -3306,11 +3320,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - `POST /api/gemma-normalize` now returns `finalReview` with a resolved `output`, `originalOutput`, `updatedOutput`, and fallback flags.
   - Completed `refine-card` job results now include a standardized `finalReview` payload even when the underlying job executor returns legacy fields.
   - Refine multi-card replacements now carry `createdTaskTexts` so final-review output can represent updated multi-output cases.
-- API docs check: Updated � added `GemmaFinalReviewPayload`, documented `finalReview` on direct normalize responses and refine job results, and aligned refine-result required fields with replacement scenarios where `nextText` can be absent.
+- API docs check: Updated ï¿½ added `GemmaFinalReviewPayload`, documented `finalReview` on direct normalize responses and refine job results, and aligned refine-result required fields with replacement scenarios where `nextText` can be absent.
 - Verification:
   - `npm test -- tests/gemma-normalize.test.js` (pass).
   - `npm test -- tests/openapi.test.js` (pass).
-  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this session�s code changes).
+  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this sessionï¿½s code changes).
 
 ### 2026-05-26
 
@@ -3321,11 +3335,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Pin, unpin, and pinned-order changes now sync to the server so they appear consistently across devices connected to the same WorkLists backend.
   - Existing local pinned boards automatically bootstrap to server storage when server-side pinned state is empty.
   - Invalid/stale pinned IDs are normalized and filtered against existing boards during sync.
-- API docs check: Updated � added `/boards/pinned` GET/PUT, new pinned-board request/response schemas, and expanded `DataStore` schema with `pinnedBoardIds`.
+- API docs check: Updated ï¿½ added `/boards/pinned` GET/PUT, new pinned-board request/response schemas, and expanded `DataStore` schema with `pinnedBoardIds`.
 - Verification:
   - `node --test tests/api.test.js tests/openapi.test.js tests/pinned-board-sync.test.js` (pass).
-  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this session�s code changes).
-  - `npm test` (fails in pre-existing `tests/gemma-normalize.test.js` model expectation mismatch, unrelated to this session�s pinned-board sync changes).
+  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this sessionï¿½s code changes).
+  - `npm test` (fails in pre-existing `tests/gemma-normalize.test.js` model expectation mismatch, unrelated to this sessionï¿½s pinned-board sync changes).
 
 ### 2026-05-26
 
@@ -3336,10 +3350,10 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - `Search filters` section now only contains `Current board only`.
   - Typing a tag name in search no longer matches cards by tag assignment; tag filtering now occurs only through the color/secondary tag filter sections.
   - `Show completed`, color tag filters, and secondary tag filters remain unchanged.
-- API docs check: N/A � UI/search behavior only; no HTTP or OpenAPI contract changes.
+- API docs check: N/A ï¿½ UI/search behavior only; no HTTP or OpenAPI contract changes.
 - Verification:
   - `node --test tests/filter-menu.test.js tests/search-scopes.test.js tests/secondary-tags.test.js tests/context-windows.test.js` (pass).
-  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this session�s code changes).
+  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this sessionï¿½s code changes).
 
 ### 2026-05-26
 
@@ -3349,10 +3363,10 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - The separate tag filter trigger/menu was removed from the top nav.
   - The existing `Filters` dropdown now contains multiple sections: search filters, completion toggle, color tag filters, and secondary tag filters.
   - `Select all` / `Clear all` actions for color and secondary tags remain available inside this consolidated menu.
-- API docs check: N/A � UI-only menu/layout consolidation; no HTTP or OpenAPI contract changes.
+- API docs check: N/A ï¿½ UI-only menu/layout consolidation; no HTTP or OpenAPI contract changes.
 - Verification:
   - `node --test tests/filter-menu.test.js tests/search-scopes.test.js tests/secondary-tags.test.js tests/context-windows.test.js` (pass).
-  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this session�s code changes).
+  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this sessionï¿½s code changes).
 
 ### 2026-05-26
 
@@ -3363,11 +3377,11 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - The filter menu now includes both color-tag and secondary-tag sections with independent multi-select checkboxes.
   - Each tag section includes `Select all` and `Clear all` actions for faster filtering workflows.
   - Legacy fixed bottom-right filter controls were removed.
-- API docs check: N/A � UI-only filtering/menu updates; no HTTP or OpenAPI contract changes.
+- API docs check: N/A ï¿½ UI-only filtering/menu updates; no HTTP or OpenAPI contract changes.
 - Verification:
   - `node --test tests/filter-menu.test.js tests/secondary-tags.test.js tests/context-windows.test.js` (pass).
-  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this session�s code changes).
-  - `npm test` (fails in pre-existing `tests/gemma-normalize.test.js` model expectation, unrelated to this session�s filter changes).
+  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this sessionï¿½s code changes).
+  - `npm test` (fails in pre-existing `tests/gemma-normalize.test.js` model expectation, unrelated to this sessionï¿½s filter changes).
 
 ### 2026-05-25
 
@@ -3378,10 +3392,10 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Users can view configured models, add new models, edit model metadata, delete models, and activate a model from the new settings dialog.
   - Normalization and background normalize jobs now run against the active model configuration rather than a hardcoded model.
   - Provider adapter support now includes `google-genai` and `openai-compatible`, with schema paths prepared for additional providers.
-- API docs check: Updated � added `/api/models`, `/api/models/{modelId}`, `/api/models/{modelId}/activate`, expanded normalization response schemas with model metadata, and updated `DataStore` schema to include `models`.
+- API docs check: Updated ï¿½ added `/api/models`, `/api/models/{modelId}`, `/api/models/{modelId}/activate`, expanded normalization response schemas with model metadata, and updated `DataStore` schema to include `models`.
 - Verification:
   - `npm test` (pass).
-  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this session�s code changes).
+  - `npm run lint` (fails due pre-existing formatting issue in `prompts/gemma-classify-instructions.md`, unrelated to this sessionï¿½s code changes).
 
 ### 2026-05-25
 
@@ -3391,7 +3405,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Column context menu now shifts left of the trigger near the right screen edge instead of clipping off-screen.
   - Sort submenu now repositions leftward when needed and clamps within viewport boundaries (including bottom edge).
   - Root column menu width is reduced while keeping long sort labels in the wider submenu.
-- API docs check: N/A � UI behavior and styling only; no HTTP/OpenAPI contract change.
+- API docs check: N/A ï¿½ UI behavior and styling only; no HTTP/OpenAPI contract change.
 - Verification:
   - `node --test tests/column-actions.test.js tests/context-windows.test.js` (pass).
   - `npm test` (pass).
@@ -3405,7 +3419,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Card, column, and board context menus now reposition near viewport edges so they are not clipped off-screen near the bottom.
   - Tag chooser open flow now closes active inline edit state first, preventing stuck/orphaned tag context windows when transitioning from edit mode.
   - Context/menu text now stays on one line with wider menu surfaces instead of wrapping.
-- API docs check: N/A � UI behavior and styling only; no HTTP/OpenAPI contract change.
+- API docs check: N/A ï¿½ UI behavior and styling only; no HTTP/OpenAPI contract change.
 - Verification:
   - `npm test` (pass).
 
@@ -3416,7 +3430,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - User-visible impact:
   - Gemma normalization behavior is now driven by a single editable prompt file without additional in-code schema/system prompt instructions.
   - Missing/empty Gemma prompt instruction files now return a clear configuration error instead of silently falling back to hardcoded instructions.
-- API docs check: N/A � no HTTP surface change.
+- API docs check: N/A ï¿½ no HTTP surface change.
 - Verification:
   - `npm run lint` (pass).
   - `npm test -- tests/gemma-normalize.test.js` (pass).
@@ -3430,7 +3444,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Gemma normalization now returns a deterministic timeout failure when the model does not respond, instead of waiting indefinitely.
   - Add-task Gemma fallback now prioritizes server-returned `verbatimInput` for failed candidates so original wording from task entry (including voice-to-text phrasing) is preserved more accurately.
   - When Gemma background jobs fail or time out, fallback task creation continues to save original task text verbatim.
-- API docs check: Updated � documented `504` for `/api/gemma-normalize`, optional `verbatimCandidates` in Gemma add-task job start payload, and expanded add-task failure item fields (`candidateIndex`, `verbatimInput`).
+- API docs check: Updated ï¿½ documented `504` for `/api/gemma-normalize`, optional `verbatimCandidates` in Gemma add-task job start payload, and expanded add-task failure item fields (`candidateIndex`, `verbatimInput`).
 - Verification:
   - `npm run lint` (pass).
   - `npm test -- tests/gemma-normalize.test.js` (pass).
@@ -3444,7 +3458,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Collapsed Gemma process toast now shows only `Gemma normalization running in background...` while processing.
   - Sent/processing/received chips, per-item rows, dismiss controls, fallback details, and refine undo actions are only visible after expanding the toast.
   - Terminal Gemma states remain minimal in the collapsed toast while fallback details stay available inside the expanded panel.
-- API docs check: N/A � UI-only toast behavior; no HTTP or OpenAPI contract change.
+- API docs check: N/A ï¿½ UI-only toast behavior; no HTTP or OpenAPI contract change.
 - Verification:
   - `npm run lint` (pass).
   - `node --test tests\gemma-ui.test.js` (pass).
@@ -3459,7 +3473,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Card `Refine with Gemma` now runs as a background job with the same non-blocking behavior.
   - Add-task and card-level `Gemma running...` states now persist through UI rerenders and full page refreshes, then clear automatically when the job reaches a terminal status.
   - Completed background jobs refresh board data and emit completion/failure toasts without echoing full task content.
-- API docs check: Updated � added documented Gemma background job endpoints and schemas (`/api/gemma-normalize/jobs`, `/api/gemma-normalize/jobs/{jobId}`).
+- API docs check: Updated ï¿½ added documented Gemma background job endpoints and schemas (`/api/gemma-normalize/jobs`, `/api/gemma-normalize/jobs/{jobId}`).
 - Verification:
   - `npm test -- tests/gemma-ui.test.js tests/gemma-normalize.test.js tests/openapi.test.js` (pass).
   - `npm test -- tests/add-task-entry.test.js tests/edit-session.test.js tests/card-actions.test.js tests/search-shortcuts.test.js` (pass).
@@ -3472,7 +3486,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Task-entry `Normalize with Gemma` success notifications no longer echo full task text.
   - Normalize now force-stops active voice-to-text and still runs in the same button press/hotkey action.
   - Card-edit Gemma normalize hotkey now stops active voice capture before refinement runs.
-- API docs check: N/A � no HTTP or OpenAPI contract change.
+- API docs check: N/A ï¿½ no HTTP or OpenAPI contract change.
 - Verification:
   - `npm test -- tests/gemma-ui.test.js` (pass).
   - `npm test -- tests/add-task-entry.test.js tests/search-shortcuts.test.js` (pass).
@@ -3485,7 +3499,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Voice-to-text no longer re-appends previously recognized phrases after each pause.
   - In-progress speech now appears in the input immediately (interim transcript updates) instead of waiting for a long pause.
   - Finalized chunks continue to settle into the same input stream without duplicating already-committed sections.
-- API docs check: N/A � no HTTP or OpenAPI contract change.
+- API docs check: N/A ï¿½ no HTTP or OpenAPI contract change.
 - Verification:
   - `npm run lint` (pass).
   - `npm test -- tests/gemma-ui.test.js tests/add-task-entry.test.js tests/board-refresh.test.js` (pass).
@@ -3500,7 +3514,7 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - Task-entry drafts are now restored after UI refreshes by board/column context, preventing idle refresh from wiping in-progress work.
   - Idle/background board refresh now pauses while voice-to-text is actively listening, avoiding dictation interruption.
   - Active voice-to-text control state is reattached after board rerenders so `Stop Listening` remains available on the recreated controls.
-- API docs check: N/A � no HTTP or OpenAPI contract change.
+- API docs check: N/A ï¿½ no HTTP or OpenAPI contract change.
 - Verification:
   - `npm run lint` (pass).
   - `npm test -- tests/add-task-entry.test.js tests/board-refresh.test.js tests/gemma-ui.test.js` (pass).
@@ -3778,3 +3792,5 @@ Track implementation sessions and current delivery status for the WorkLists appl
 - API docs: Not relevant; no HTTP route, schema, or contract changes.
 - Tooling gates: syntax, Prettier, focused tests, full test, and lint passed.
 - Conflicts / exceptions: App repo changelog remains a pointer; entry written to canonical personal WorkLists changelog. Earlier status-dropdown/action-bar edits remain in the same uncommitted working set.
+
+
