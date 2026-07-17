@@ -1,0 +1,937 @@
+diff --git a/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/__specs__/update-proceeding-file-length.action.spec.ts b/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/__specs__/update-proceeding-file-length.action.spec.ts
+new file mode 100644
+index 00000000..6729509c
+--- /dev/null
++++ b/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/__specs__/update-proceeding-file-length.action.spec.ts
+@@ -0,0 +1,82 @@
++import { Test, TestingModule } from '@nestjs/testing';
++import { UpdateProceedingFileLengthAction } from '../update-proceeding-file-length.action';
++import { ProceedingService } from 'src/proceedings/domain/services/proceeding-service/proceeding.service';
++import { ReadProceedingFileAuthGuard } from 'src/proceedings/application/guards/permissions/single-proceeding-file-auth-guard/read-proceeding-file-auth.guard';
++import { FileId } from 'src/shared/shared-entities/entities/files/file.entity';
++import { createMock, createMockId } from 'src/test-utils/test-utils';
++import { createMockAuthUser } from 'src/generic/auth/test-utils';
++import { UpdateProceedingFileLengthRequestDTO } from '../update-proceeding-file-length.request.dto';
++
++describe('given: UpdateProceedingFileLengthAction', () => {
++	let target: UpdateProceedingFileLengthAction;
++	let proceedingServiceMock: jest.Mocked<ProceedingService>;
++
++	const mockUser = createMockAuthUser();
++
++	beforeEach(async () => {
++		proceedingServiceMock = createMock<ProceedingService>({
++			updateProceedingFileLength: jest.fn(),
++		});
++		const module: TestingModule = await Test.createTestingModule({
++			providers: [
++				UpdateProceedingFileLengthAction,
++				{
++					provide: ProceedingService,
++					useValue: proceedingServiceMock,
++				},
++			],
++		})
++			.overrideGuard(ReadProceedingFileAuthGuard)
++			.useValue({ canActivate: () => true })
++			.compile();
++		target = module.get<UpdateProceedingFileLengthAction>(
++			UpdateProceedingFileLengthAction,
++		);
++	});
++
++	describe('when: applying the action', () => {
++		test('then: should delegate the file id, measured length, and user to the service', async () => {
++			// Arrange
++			const fileId = createMockId<FileId>();
++			const dto: UpdateProceedingFileLengthRequestDTO = {
++				length: 8040,
++				trackTypeId: 2,
++			};
++			const expectedProjection = {
++				id: fileId as number,
++				length: 8040,
++				updated: true,
++			};
++			proceedingServiceMock.updateProceedingFileLength.mockResolvedValue(
++				expectedProjection,
++			);
++
++			// Act
++			const result = await target.apply(fileId, dto, mockUser);
++
++			// Assert
++			expect(
++				proceedingServiceMock.updateProceedingFileLength,
++			).toHaveBeenNthCalledWith(1, fileId, dto.length, mockUser);
++			expect(result).toBe(expectedProjection);
++		});
++
++		test('then: should propagate service errors', async () => {
++			// Arrange
++			const fileId = createMockId<FileId>();
++			const dto: UpdateProceedingFileLengthRequestDTO = {
++				length: 8040,
++				trackTypeId: 2,
++			};
++			const expectedError = new Error('File not found');
++			proceedingServiceMock.updateProceedingFileLength.mockRejectedValue(
++				expectedError,
++			);
++
++			// Act & Assert
++			await expect(target.apply(fileId, dto, mockUser)).rejects.toThrow(
++				expectedError,
++			);
++		});
++	});
++});
+diff --git a/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/__specs__/update-proceeding-file-length.request.dto.spec.ts b/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/__specs__/update-proceeding-file-length.request.dto.spec.ts
+new file mode 100644
+index 00000000..2b092cc6
+--- /dev/null
++++ b/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/__specs__/update-proceeding-file-length.request.dto.spec.ts
+@@ -0,0 +1,98 @@
++import 'reflect-metadata';
++import { plainToInstance } from 'class-transformer';
++import { validate } from 'class-validator';
++import { UpdateProceedingFileLengthRequestDTO } from '../update-proceeding-file-length.request.dto';
++
++const buildDto = (
++	overrides: Record<string, unknown>,
++): UpdateProceedingFileLengthRequestDTO =>
++	plainToInstance(UpdateProceedingFileLengthRequestDTO, {
++		length: 8040,
++		trackTypeId: 2,
++		...overrides,
++	});
++
++const findErrorProperties = async (
++	dto: UpdateProceedingFileLengthRequestDTO,
++): Promise<string[]> => {
++	const errors = await validate(dto);
++	return errors.map((error) => error.property);
++};
++
++describe('given: UpdateProceedingFileLengthRequestDTO', () => {
++	describe('when: the payload is a whole-second measurement', () => {
++		test('then: should pass validation', async () => {
++			// Arrange
++			const dto = buildDto({ length: 8040 });
++
++			// Act
++			const errors = await validate(dto);
++
++			// Assert
++			expect(errors).toHaveLength(0);
++		});
++	});
++
++	describe('when: length is not an integer', () => {
++		test('then: should fail validation', async () => {
++			// Arrange
++			const dto = buildDto({ length: 8040.7 });
++
++			// Act
++			const properties = await findErrorProperties(dto);
++
++			// Assert
++			expect(properties).toContain('length');
++		});
++	});
++
++	describe('when: length is zero or negative', () => {
++		test('then: should fail validation for zero', async () => {
++			// Arrange
++			const dto = buildDto({ length: 0 });
++
++			// Act
++			const properties = await findErrorProperties(dto);
++
++			// Assert
++			expect(properties).toContain('length');
++		});
++
++		test('then: should fail validation for a negative value', async () => {
++			// Arrange
++			const dto = buildDto({ length: -5 });
++
++			// Act
++			const properties = await findErrorProperties(dto);
++
++			// Assert
++			expect(properties).toContain('length');
++		});
++	});
++
++	describe('when: length is missing', () => {
++		test('then: should fail validation', async () => {
++			// Arrange
++			const dto = buildDto({ length: undefined });
++
++			// Act
++			const properties = await findErrorProperties(dto);
++
++			// Assert
++			expect(properties).toContain('length');
++		});
++	});
++
++	describe('when: trackTypeId is missing', () => {
++		test('then: should fail validation', async () => {
++			// Arrange
++			const dto = buildDto({ trackTypeId: undefined });
++
++			// Act
++			const properties = await findErrorProperties(dto);
++
++			// Assert
++			expect(properties).toContain('trackTypeId');
++		});
++	});
++});
+diff --git a/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/update-proceeding-file-length.action.swagger.ts b/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/update-proceeding-file-length.action.swagger.ts
+new file mode 100644
+index 00000000..c8b433d7
+--- /dev/null
++++ b/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/update-proceeding-file-length.action.swagger.ts
+@@ -0,0 +1,83 @@
++import { applyDecorators } from '@nestjs/common';
++import { ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
++import { UpdateProceedingFileLengthRequestDTO } from './update-proceeding-file-length.request.dto';
++import { UpdateProceedingFileLengthResponseDTO } from './update-proceeding-file-length.response.dto';
++
++export const UpdateProceedingFileLengthSwagger = () => {
++	return applyDecorators(
++		ApiOperation({
++			summary: 'Record a proceeding file’s media duration',
++			description:
++				'Records a browser-measured media duration (whole seconds) on a proceeding file. The value is written only while the file’s length is still null, so an existing value is never overwritten. Used to backfill Nova-transcoded files, whose rows are created without a duration.',
++		}),
++		ApiParam({
++			name: 'fileId',
++			type: 'number',
++			description: 'The unique identifier of the file to record a length for',
++			example: 12345,
++		}),
++		ApiBody({
++			type: UpdateProceedingFileLengthRequestDTO,
++			description: 'The measured media duration in whole seconds',
++		}),
++		ApiResponse({
++			status: 200,
++			description: 'Length recorded (or left unchanged if already set)',
++			type: UpdateProceedingFileLengthResponseDTO,
++		}),
++		ApiResponse({
++			status: 400,
++			description: 'Invalid request',
++			schema: {
++				type: 'object',
++				properties: {
++					statusCode: { type: 'number', example: 400 },
++					message: {
++						type: 'string',
++						example: 'length must be greater than 0',
++					},
++					error: { type: 'string', example: 'Bad Request' },
++				},
++			},
++		}),
++		ApiResponse({
++			status: 403,
++			description: 'Caller is not authorized to read this file',
++			schema: {
++				type: 'object',
++				properties: {
++					statusCode: { type: 'number', example: 403 },
++					message: { type: 'string', example: 'Forbidden' },
++					error: { type: 'string', example: 'Forbidden' },
++				},
++			},
++		}),
++		ApiResponse({
++			status: 404,
++			description: 'File not found',
++			schema: {
++				type: 'object',
++				properties: {
++					statusCode: { type: 'number', example: 404 },
++					message: { type: 'string', example: 'File not found' },
++					error: { type: 'string', example: 'Not Found' },
++				},
++			},
++		}),
++		ApiResponse({
++			status: 500,
++			description: 'Internal server error',
++			schema: {
++				type: 'object',
++				properties: {
++					statusCode: { type: 'number', example: 500 },
++					message: {
++						type: 'string',
++						example: 'Failed to record file length',
++					},
++					error: { type: 'string', example: 'Internal Server Error' },
++				},
++			},
++		}),
++	);
++};
+diff --git a/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/update-proceeding-file-length.action.ts b/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/update-proceeding-file-length.action.ts
+new file mode 100644
+index 00000000..c0f582c0
+--- /dev/null
++++ b/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/update-proceeding-file-length.action.ts
+@@ -0,0 +1,31 @@
++import { Patch, Param, Body, ParseIntPipe, UseGuards } from '@nestjs/common';
++
++import { ProceedingsController } from 'src/proceedings/application/controllers/proceedings.controller';
++import { ProceedingService } from 'src/proceedings/domain/services/proceeding-service/proceeding.service';
++import { UpdateProceedingFileLengthRequestDTO } from './update-proceeding-file-length.request.dto';
++import { VerifiedUserDecorator } from 'src/generic/auth/application/decorators/verified-user.decorator';
++import { AuthUser } from 'src/generic/auth/constants';
++import { FileId } from 'src/shared/shared-entities/entities/files/file.entity';
++import { ReadProceedingFileAuthGuard } from 'src/proceedings/application/guards/permissions/single-proceeding-file-auth-guard/read-proceeding-file-auth.guard';
++import { UpdateProceedingFileLengthSwagger } from './update-proceeding-file-length.action.swagger';
++
++@ProceedingsController()
++export class UpdateProceedingFileLengthAction {
++	constructor(private readonly service: ProceedingService) {}
++
++	@Patch('/file/:fileId/length')
++	@UpdateProceedingFileLengthSwagger()
++	@UseGuards(ReadProceedingFileAuthGuard)
++	async apply(
++		@Param('fileId', new ParseIntPipe({ errorHttpStatusCode: 400 }))
++		fileId: FileId,
++		@Body() dto: UpdateProceedingFileLengthRequestDTO,
++		@VerifiedUserDecorator() user: AuthUser,
++	) {
++		return await this.service.updateProceedingFileLength(
++			fileId,
++			dto.length,
++			user,
++		);
++	}
++}
+diff --git a/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/update-proceeding-file-length.request.dto.ts b/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/update-proceeding-file-length.request.dto.ts
+new file mode 100644
+index 00000000..60ce5b39
+--- /dev/null
++++ b/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/update-proceeding-file-length.request.dto.ts
+@@ -0,0 +1,26 @@
++import { ApiProperty } from '@nestjs/swagger';
++import { Transform } from 'class-transformer';
++import { IsInt, IsNotEmpty, IsNumber, Min } from 'class-validator';
++import { transformToInt } from 'src/generic/application/transforms/parse-int.transform';
++
++export class UpdateProceedingFileLengthRequestDTO {
++	@ApiProperty({
++		description:
++			'Browser-measured media duration of this file’s own bytes, in whole seconds. Must be a genuine measurement of the file in this row — never a value copied from another file.',
++		example: 8040,
++		minimum: 1,
++	})
++	@IsNotEmpty({ message: 'length must not be empty' })
++	@IsInt({ message: 'length must be an integer number of seconds' })
++	@Min(1, { message: 'length must be greater than 0' })
++	length!: number;
++
++	@ApiProperty({
++		description: 'The track type ID for the file',
++		example: 2,
++	})
++	@IsNotEmpty({ message: 'trackTypeId must not be empty' })
++	@Transform(transformToInt)
++	@IsNumber({ allowNaN: false, allowInfinity: false })
++	trackTypeId!: number;
++}
+diff --git a/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/update-proceeding-file-length.response.dto.ts b/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/update-proceeding-file-length.response.dto.ts
+new file mode 100644
+index 00000000..27ecdc03
+--- /dev/null
++++ b/src/proceedings/application/controllers/actions/update-proceeding-file-length-action/update-proceeding-file-length.response.dto.ts
+@@ -0,0 +1,22 @@
++import { ApiProperty } from '@nestjs/swagger';
++
++export class UpdateProceedingFileLengthResponseDTO {
++	@ApiProperty({
++		description: 'The ID of the file whose length was recorded',
++		example: 12345,
++	})
++	id!: number;
++
++	@ApiProperty({
++		description: 'The media duration now stored on the file, in whole seconds',
++		example: 8040,
++	})
++	length!: number;
++
++	@ApiProperty({
++		description:
++			'Whether this request wrote the value. False when the file already had a length and was left unchanged.',
++		example: true,
++	})
++	updated!: boolean;
++}
+diff --git a/src/proceedings/application/guards/permissions/single-proceeding-file-auth-guard/read-proceeding-file-auth.guard.ts b/src/proceedings/application/guards/permissions/single-proceeding-file-auth-guard/read-proceeding-file-auth.guard.ts
+new file mode 100644
+index 00000000..23ea6928
+--- /dev/null
++++ b/src/proceedings/application/guards/permissions/single-proceeding-file-auth-guard/read-proceeding-file-auth.guard.ts
+@@ -0,0 +1,13 @@
++import { Injectable } from '@nestjs/common';
++import { ACTIONS_TYPES } from 'src/generic/auth/domain/entities/permission.entity';
++import { AbstractSingleProceedingFileAuthGuard } from './abstract-single-proceeding-file-auth.guard';
++
++/**
++ * Read-level authorization for single-file endpoints. Matches the access level
++ * of file download, so any viewer who can fetch a file's bytes to measure them
++ * can also record the measured duration back to it.
++ */
++@Injectable()
++export class ReadProceedingFileAuthGuard extends AbstractSingleProceedingFileAuthGuard {
++	protected requiredAccessLevel = ACTIONS_TYPES.READ;
++}
+diff --git a/src/proceedings/domain/services/proceeding-service/__specs__/proceeding.service.spec.ts b/src/proceedings/domain/services/proceeding-service/__specs__/proceeding.service.spec.ts
+index ca78be57..8c2cae77 100644
+--- a/src/proceedings/domain/services/proceeding-service/__specs__/proceeding.service.spec.ts
++++ b/src/proceedings/domain/services/proceeding-service/__specs__/proceeding.service.spec.ts
+@@ -21,6 +21,7 @@ import { RenameProceedingTS } from 'src/proceedings/domain/transaction-scripts/r
+ import { ProceedingFileAuditAggregator } from 'src/proceedings/domain/sub-domains/proceeding-file-audit/domain/aggregators/proceeding-file-audit.aggregator';
+ import { ProceedingAuditAggregator } from 'src/proceedings/domain/sub-domains/proceeding-audit/domain/aggregators/proceeding-audit.aggregator';
+ import { RenameProceedingFileTS } from 'src/proceedings/domain/transaction-scripts/rename-proceeding-file-ts/rename-proceeding-file.transaction.script';
++import { UpdateProceedingFileLengthTS } from 'src/proceedings/domain/transaction-scripts/update-proceeding-file-length-ts/update-proceeding-file-length.transaction.script';
+ import { ProceedingIsClientDeliverableValidator } from '../proceeding-is-client-deliverable.validator';
+ import { ProceedingFileRepository } from 'src/proceedings/infrastructure/repositories/proceeding-file.repository';
+ import { FetchProceedingsRestrictionLevelTS } from 'src/proceedings/domain/transaction-scripts/fetch-proceedings-restriction-level-ts/fetch-proceedings-restriction-level.transaction.script';
+@@ -42,6 +43,7 @@ describe('given: ProceedingService', () => {
+ 	let proceedingFileAuditAggregatorMock: jest.Mocked<ProceedingFileAuditAggregator>;
+ 	let proceedingAuditAggregatorMock: jest.Mocked<ProceedingAuditAggregator>;
+ 	let renameProceedingFileTSMock: jest.Mocked<RenameProceedingFileTS>;
++	let updateProceedingFileLengthTSMock: jest.Mocked<UpdateProceedingFileLengthTS>;
+ 	let proceedingIsClientDeliverableValidatorMock: jest.Mocked<ProceedingIsClientDeliverableValidator>;
+ 	let proceedingFileRepositoryMock: jest.Mocked<ProceedingFileRepository>;
+ 	let fetchProceedingsRestrictionLevelTSMock: jest.Mocked<FetchProceedingsRestrictionLevelTS>;
+@@ -76,6 +78,8 @@ describe('given: ProceedingService', () => {
+ 			createMock<ProceedingFileAuditAggregator>();
+ 		proceedingAuditAggregatorMock = createMock<ProceedingAuditAggregator>();
+ 		renameProceedingFileTSMock = createApplyMock<RenameProceedingFileTS>();
++		updateProceedingFileLengthTSMock =
++			createApplyMock<UpdateProceedingFileLengthTS>();
+ 		proceedingIsClientDeliverableValidatorMock =
+ 			createApplyMock<ProceedingIsClientDeliverableValidator>();
+ 		proceedingFileRepositoryMock = createMock<ProceedingFileRepository>();
+@@ -120,6 +124,10 @@ describe('given: ProceedingService', () => {
+ 					provide: RenameProceedingFileTS,
+ 					useValue: renameProceedingFileTSMock,
+ 				},
++				{
++					provide: UpdateProceedingFileLengthTS,
++					useValue: updateProceedingFileLengthTSMock,
++				},
+ 				{
+ 					provide: ProceedingAuditAggregator,
+ 					useValue: proceedingAuditAggregatorMock,
+@@ -307,6 +315,52 @@ describe('given: ProceedingService', () => {
+ 		});
+ 	});
+ 
++	describe('when: recording a proceeding file length', () => {
++		const fileId = createMockId<FileId>();
++		const length = 8040;
++
++		it('should delegate to UpdateProceedingFileLengthTS with the acting user identity', async () => {
++			// Arrange
++			const expectedProjection = {
++				id: fileId as number,
++				length,
++				updated: true,
++			};
++			updateProceedingFileLengthTSMock.apply.mockResolvedValue(
++				expectedProjection,
++			);
++
++			// Act
++			const result = await target.updateProceedingFileLength(
++				fileId,
++				length,
++				mockUser,
++			);
++
++			// Assert
++			expect(result).toBe(expectedProjection);
++			expect(
++				updateProceedingFileLengthTSMock.apply,
++			).toHaveBeenNthCalledWith(
++				1,
++				fileId,
++				length,
++				mockUser.identity.userId,
++			);
++		});
++
++		it('should propagate errors', async () => {
++			// Arrange
++			const mockError = new Error('File not found');
++			updateProceedingFileLengthTSMock.apply.mockRejectedValue(mockError);
++
++			// Act & Assert
++			await expect(
++				target.updateProceedingFileLength(fileId, length, mockUser),
++			).rejects.toThrow(mockError);
++		});
++	});
++
+ 	describe('when: fetching files by proceeding id', () => {
+ 		const proceedingId = '123';
+ 		const isDeliverable = true;
+diff --git a/src/proceedings/domain/services/proceeding-service/proceeding.service.ts b/src/proceedings/domain/services/proceeding-service/proceeding.service.ts
+index e707aacc..47f27dfd 100644
+--- a/src/proceedings/domain/services/proceeding-service/proceeding.service.ts
++++ b/src/proceedings/domain/services/proceeding-service/proceeding.service.ts
+@@ -9,6 +9,8 @@ import { AuthUser } from 'src/generic/auth/constants';
+ import { ProceedingFileAuditAggregator } from '../../sub-domains/proceeding-file-audit/domain/aggregators/proceeding-file-audit.aggregator';
+ import { ProceedingAuditAggregator } from '../../sub-domains/proceeding-audit/domain/aggregators/proceeding-audit.aggregator';
+ import { RenameProceedingFileTS } from '../../transaction-scripts/rename-proceeding-file-ts/rename-proceeding-file.transaction.script';
++import { UpdateProceedingFileLengthTS } from '../../transaction-scripts/update-proceeding-file-length-ts/update-proceeding-file-length.transaction.script';
++import { UpdateProceedingFileLengthProjection } from '../../transaction-scripts/update-proceeding-file-length-ts/update-proceeding-file-length.projection';
+ import { FetchProceedingsRestrictionLevelTS } from '../../transaction-scripts/fetch-proceedings-restriction-level-ts/fetch-proceedings-restriction-level.transaction.script';
+ import { ProceedingAggregator } from '../../aggregators/proceeding.aggregator';
+ import { ProceedingFileMustBeSubmissionValidator } from 'src/proceedings/validators/proceeding-file-must-be-submission.validator';
+@@ -25,6 +27,7 @@ export class ProceedingService {
+ 		private readonly proceedingFileAuditAggregator: ProceedingFileAuditAggregator,
+ 		private readonly proceedingAuditAggregator: ProceedingAuditAggregator,
+ 		private readonly renameProceedingFileTS: RenameProceedingFileTS,
++		private readonly updateProceedingFileLengthTS: UpdateProceedingFileLengthTS,
+ 		private readonly fetchProceedingsRestrictionLevelTS: FetchProceedingsRestrictionLevelTS,
+ 		private readonly proceedingFileMustBeSubmissionValidator: ProceedingFileMustBeSubmissionValidator,
+ 	) {}
+@@ -118,6 +121,18 @@ export class ProceedingService {
+ 		};
+ 	}
+ 
++	async updateProceedingFileLength(
++		fileId: number,
++		length: number,
++		user: AuthUser,
++	): Promise<UpdateProceedingFileLengthProjection> {
++		return await this.updateProceedingFileLengthTS.apply(
++			fileId,
++			length,
++			user.identity.userId,
++		);
++	}
++
+ 	async fetchProceedingsRestrictionLevel(id: number) {
+ 		return await this.fetchProceedingsRestrictionLevelTS.apply(id);
+ 	}
+diff --git a/src/proceedings/domain/transaction-scripts/update-proceeding-file-length-ts/__specs__/update-proceeding-file-length.transaction.script.spec.ts b/src/proceedings/domain/transaction-scripts/update-proceeding-file-length-ts/__specs__/update-proceeding-file-length.transaction.script.spec.ts
+new file mode 100644
+index 00000000..20b0a557
+--- /dev/null
++++ b/src/proceedings/domain/transaction-scripts/update-proceeding-file-length-ts/__specs__/update-proceeding-file-length.transaction.script.spec.ts
+@@ -0,0 +1,169 @@
++import { Test, TestingModule } from '@nestjs/testing';
++import { NotFoundException } from '@nestjs/common';
++import { UpdateProceedingFileLengthTS } from '../update-proceeding-file-length.transaction.script';
++import { ProceedingFileRepository } from 'src/proceedings/infrastructure/repositories/proceeding-file.repository';
++import { FileId } from 'src/shared/shared-entities/entities/files/file.entity';
++import {
++	createMock,
++	createMockId,
++	createMockFile,
++} from 'src/test-utils/test-utils';
++import { createLoggerMockProvider } from '@planetdepos/pathfinder-observability-pkg';
++
++const MODIFIED_USER_IDENTITY = 'directory-user-identity';
++const MEASURED_LENGTH = 8040;
++
++describe('given: UpdateProceedingFileLengthTS', () => {
++	let target: UpdateProceedingFileLengthTS;
++	let proceedingFileRepositoryMock: jest.Mocked<ProceedingFileRepository>;
++
++	beforeEach(async () => {
++		proceedingFileRepositoryMock = createMock<ProceedingFileRepository>({
++			fetchFileById: jest.fn(),
++			updateFileLengthWhenNull: jest.fn(),
++		});
++		const module: TestingModule = await Test.createTestingModule({
++			providers: [
++				UpdateProceedingFileLengthTS,
++				createLoggerMockProvider(UpdateProceedingFileLengthTS.name),
++				{
++					provide: ProceedingFileRepository,
++					useValue: proceedingFileRepositoryMock,
++				},
++			],
++		}).compile();
++		target = module.get<UpdateProceedingFileLengthTS>(
++			UpdateProceedingFileLengthTS,
++		);
++	});
++
++	describe('when: the file has no length yet', () => {
++		test('then: should write the measured length and report updated', async () => {
++			// Arrange
++			const fileId = createMockId<FileId>();
++			const mockFile = createMockFile({ id: fileId, length: null });
++			proceedingFileRepositoryMock.fetchFileById.mockResolvedValue(
++				mockFile,
++			);
++			proceedingFileRepositoryMock.updateFileLengthWhenNull.mockResolvedValue(
++				true,
++			);
++
++			// Act
++			const result = await target.apply(
++				fileId,
++				MEASURED_LENGTH,
++				MODIFIED_USER_IDENTITY,
++			);
++
++			// Assert
++			expect(
++				proceedingFileRepositoryMock.updateFileLengthWhenNull,
++			).toHaveBeenNthCalledWith(
++				1,
++				fileId,
++				MEASURED_LENGTH,
++				MODIFIED_USER_IDENTITY,
++			);
++			expect(result).toEqual({
++				id: fileId,
++				length: MEASURED_LENGTH,
++				updated: true,
++			});
++		});
++
++		test('then: should report not updated when another writer won the race', async () => {
++			// Arrange
++			const fileId = createMockId<FileId>();
++			const mockFile = createMockFile({ id: fileId, length: null });
++			proceedingFileRepositoryMock.fetchFileById.mockResolvedValue(
++				mockFile,
++			);
++			proceedingFileRepositoryMock.updateFileLengthWhenNull.mockResolvedValue(
++				false,
++			);
++
++			// Act
++			const result = await target.apply(
++				fileId,
++				MEASURED_LENGTH,
++				MODIFIED_USER_IDENTITY,
++			);
++
++			// Assert
++			expect(result).toEqual({
++				id: fileId,
++				length: MEASURED_LENGTH,
++				updated: false,
++			});
++		});
++	});
++
++	describe('when: the file already has a length', () => {
++		test('then: should not write and should return the existing value', async () => {
++			// Arrange
++			const fileId = createMockId<FileId>();
++			const existingLength = 3600;
++			const mockFile = createMockFile({
++				id: fileId,
++				length: existingLength,
++			});
++			proceedingFileRepositoryMock.fetchFileById.mockResolvedValue(
++				mockFile,
++			);
++
++			// Act
++			const result = await target.apply(
++				fileId,
++				MEASURED_LENGTH,
++				MODIFIED_USER_IDENTITY,
++			);
++
++			// Assert
++			expect(
++				proceedingFileRepositoryMock.updateFileLengthWhenNull,
++			).not.toHaveBeenCalled();
++			expect(result).toEqual({
++				id: fileId,
++				length: existingLength,
++				updated: false,
++			});
++		});
++	});
++
++	describe('when: the file does not exist', () => {
++		test('then: should throw NotFoundException and not write', async () => {
++			// Arrange
++			const fileId = createMockId<FileId>();
++			proceedingFileRepositoryMock.fetchFileById.mockResolvedValue(null);
++
++			// Act & Assert
++			await expect(
++				target.apply(fileId, MEASURED_LENGTH, MODIFIED_USER_IDENTITY),
++			).rejects.toThrow(new NotFoundException('File not found'));
++			expect(
++				proceedingFileRepositoryMock.updateFileLengthWhenNull,
++			).not.toHaveBeenCalled();
++		});
++	});
++
++	describe('when: the repository fails', () => {
++		test('then: should propagate the error', async () => {
++			// Arrange
++			const fileId = createMockId<FileId>();
++			const mockFile = createMockFile({ id: fileId, length: null });
++			const expectedError = new Error('db down');
++			proceedingFileRepositoryMock.fetchFileById.mockResolvedValue(
++				mockFile,
++			);
++			proceedingFileRepositoryMock.updateFileLengthWhenNull.mockRejectedValue(
++				expectedError,
++			);
++
++			// Act & Assert
++			await expect(
++				target.apply(fileId, MEASURED_LENGTH, MODIFIED_USER_IDENTITY),
++			).rejects.toThrow(expectedError);
++		});
++	});
++});
+diff --git a/src/proceedings/domain/transaction-scripts/update-proceeding-file-length-ts/update-proceeding-file-length.projection.ts b/src/proceedings/domain/transaction-scripts/update-proceeding-file-length-ts/update-proceeding-file-length.projection.ts
+new file mode 100644
+index 00000000..7d626115
+--- /dev/null
++++ b/src/proceedings/domain/transaction-scripts/update-proceeding-file-length-ts/update-proceeding-file-length.projection.ts
+@@ -0,0 +1,5 @@
++export type UpdateProceedingFileLengthProjection = {
++	readonly id: number;
++	readonly length: number;
++	readonly updated: boolean;
++};
+diff --git a/src/proceedings/domain/transaction-scripts/update-proceeding-file-length-ts/update-proceeding-file-length.transaction.script.ts b/src/proceedings/domain/transaction-scripts/update-proceeding-file-length-ts/update-proceeding-file-length.transaction.script.ts
+new file mode 100644
+index 00000000..831189d0
+--- /dev/null
++++ b/src/proceedings/domain/transaction-scripts/update-proceeding-file-length-ts/update-proceeding-file-length.transaction.script.ts
+@@ -0,0 +1,50 @@
++import { Injectable, NotFoundException } from '@nestjs/common';
++import {
++	InjectLogger,
++	LoggerPort,
++} from '@planetdepos/pathfinder-observability-pkg';
++import { ProceedingFileRepository } from 'src/proceedings/infrastructure/repositories/proceeding-file.repository';
++import { UpdateProceedingFileLengthProjection } from './update-proceeding-file-length.projection';
++
++/**
++ * Records a browser-measured media duration on an existing file row. The value
++ * is written only while the file's length is still null, so a value already set
++ * by the upload path (originals) or an earlier viewer (transcoded files) is
++ * never overwritten. The measured-only, whole-seconds contract mirrors the
++ * upload capture path — the only other writer of files.length.
++ */
++@Injectable()
++export class UpdateProceedingFileLengthTS {
++	constructor(
++		@InjectLogger(UpdateProceedingFileLengthTS.name)
++		private readonly logger: LoggerPort,
++		private readonly proceedingFileRepository: ProceedingFileRepository,
++	) {}
++
++	async apply(
++		fileId: number,
++		length: number,
++		modifiedUserIdentity: string,
++	): Promise<UpdateProceedingFileLengthProjection> {
++		try {
++			const file =
++				await this.proceedingFileRepository.fetchFileById(fileId);
++			if (!file) {
++				throw new NotFoundException('File not found');
++			}
++			if (file.length != null) {
++				return { id: fileId, length: file.length, updated: false };
++			}
++			const updated =
++				await this.proceedingFileRepository.updateFileLengthWhenNull(
++					fileId,
++					length,
++					modifiedUserIdentity,
++				);
++			return { id: fileId, length, updated };
++		} catch (error) {
++			this.logger.error(error);
++			throw error;
++		}
++	}
++}
+diff --git a/src/proceedings/infrastructure/repositories/__specs__/proceeding-file.repository.spec.ts b/src/proceedings/infrastructure/repositories/__specs__/proceeding-file.repository.spec.ts
+index 612aadf3..28e96728 100644
+--- a/src/proceedings/infrastructure/repositories/__specs__/proceeding-file.repository.spec.ts
++++ b/src/proceedings/infrastructure/repositories/__specs__/proceeding-file.repository.spec.ts
+@@ -1,4 +1,4 @@
+-import { Repository } from 'typeorm';
++import { IsNull, Repository } from 'typeorm';
+ import { ProceedingFileRepository } from '../proceeding-file.repository';
+ import { File } from 'src/shared/shared-entities/entities/files/file.entity';
+ import { TransactionContext } from 'src/typeorm/domain/contexts/transaction-context';
+@@ -139,4 +139,57 @@ describe('given: ProceedingFileRepository', () => {
+ 			);
+ 		});
+ 	});
++
++	describe('when: updateFileLengthWhenNull', () => {
++		let target: ProceedingFileRepository;
++		let repoMock: jest.Mocked<Pick<Repository<File>, 'update'>>;
++
++		beforeEach(() => {
++			repoMock = {
++				update: jest.fn(),
++			};
++			target = new ProceedingFileRepository(
++				repoMock as unknown as Repository<File>,
++				new TransactionContext(),
++			);
++		});
++
++		test('then: should update only rows whose length is still null and report the write', async () => {
++			// Arrange
++			repoMock.update.mockResolvedValue({ affected: 1 } as never);
++
++			// Act
++			const actual = await target.updateFileLengthWhenNull(
++				123,
++				8040,
++				'user-identity',
++			);
++
++			// Assert
++			expect(actual).toBe(true);
++			expect(repoMock.update).toHaveBeenNthCalledWith(
++				1,
++				{ id: 123, length: IsNull() },
++				expect.objectContaining({
++					length: 8040,
++					modifiedUserIdentity: 'user-identity',
++				}),
++			);
++		});
++
++		test('then: should report no write when the row already had a length', async () => {
++			// Arrange
++			repoMock.update.mockResolvedValue({ affected: 0 } as never);
++
++			// Act
++			const actual = await target.updateFileLengthWhenNull(
++				123,
++				8040,
++				'user-identity',
++			);
++
++			// Assert
++			expect(actual).toBe(false);
++		});
++	});
+ });
+diff --git a/src/proceedings/infrastructure/repositories/proceeding-file.repository.ts b/src/proceedings/infrastructure/repositories/proceeding-file.repository.ts
+index 7fb2aec6..efb892de 100644
+--- a/src/proceedings/infrastructure/repositories/proceeding-file.repository.ts
++++ b/src/proceedings/infrastructure/repositories/proceeding-file.repository.ts
+@@ -1,6 +1,6 @@
+ import { Injectable } from '@nestjs/common';
+ import { InjectRepository } from '@nestjs/typeorm';
+-import { In, Repository } from 'typeorm';
++import { In, IsNull, Repository } from 'typeorm';
+ import {
+ 	ATTACHED_TO_TYPES,
+ 	FileAttachment,
+@@ -137,6 +137,25 @@ export class ProceedingFileRepository {
+ 		});
+ 	}
+ 
++	/**
++	 * Records a browser-measured media duration on a file, but only while the
++	 * column is still null. The `length IS NULL` predicate lives in the UPDATE
++	 * itself so the database — not application code — picks a single winner when
++	 * two viewers measure the same file concurrently; the losing write matches no
++	 * row and is a no-op. Returns whether this call was the one that wrote.
++	 */
++	async updateFileLengthWhenNull(
++		id: number,
++		length: number,
++		modifiedUserIdentity: string,
++	): Promise<boolean> {
++		const result = await this.repo.update(
++			{ id: id as FileId, length: IsNull() },
++			{ length, modifiedUserIdentity, updatedAt: new Date() },
++		);
++		return (result.affected ?? 0) > 0;
++	}
++
+ 	async create(file: File): Promise<File> {
+ 		return this.repo.save(file);
+ 	}
+diff --git a/src/proceedings/registries/action.registry.ts b/src/proceedings/registries/action.registry.ts
+index 45ab3ddb..c684e4a3 100644
+--- a/src/proceedings/registries/action.registry.ts
++++ b/src/proceedings/registries/action.registry.ts
+@@ -10,6 +10,7 @@ import { UploadPartAction } from '../application/controllers/actions/multi-part-
+ import { UploadAbortProceedingFileAction } from '../application/controllers/actions/multi-part-upload-proceeding-file-action/upload-abort-proceeding-file.action';
+ import { DownloadProceedingFilesAction } from '../application/controllers/actions/download-proceeding-files-action/download-proceeding-files.action';
+ import { RenameProceedingFileAction } from '../application/controllers/actions/rename-proceeding-file-action/rename-proceeding-file.action';
++import { UpdateProceedingFileLengthAction } from '../application/controllers/actions/update-proceeding-file-length-action/update-proceeding-file-length.action';
+ import { UnapproveFilesForDeliveryAction } from '../application/controllers/actions/unapprove-files-for-delivery-action/unapprove-files-for-delivery.action';
+ import { FetchProceedingsRestrictionLevelAction } from '../application/controllers/actions/fetch-proceedings-restriction-level-action/fetch-proceedings-restriction-level.action';
+ import { UploadStartSubmissionFileAction } from '../application/controllers/actions/multi-part-upload-proceeding-file-action/upload-start-submission-file-action/upload-start-submission-file.action';
+@@ -27,6 +28,7 @@ export const actionRegistry = [
+ 	UploadAbortProceedingFileAction,
+ 	DownloadProceedingFilesAction,
+ 	RenameProceedingFileAction,
++	UpdateProceedingFileLengthAction,
+ 	ApproveFilesForDeliveryAction,
+ 	UnapproveFilesForDeliveryAction,
+ 	FetchProceedingsRestrictionLevelAction,
+diff --git a/src/proceedings/registries/guard.registry.ts b/src/proceedings/registries/guard.registry.ts
+index c7322833..8ae00188 100644
+--- a/src/proceedings/registries/guard.registry.ts
++++ b/src/proceedings/registries/guard.registry.ts
+@@ -4,12 +4,14 @@ import { SingleProceedingFileAuthorizeRole } from '../application/guards/permiss
+ import { CreateProceedingFileAuthGuard } from '../application/guards/permissions/single-proceeding-file-auth-guard/create-proceeding-file-auth.guard';
+ import { DeleteProceedingFileAuthGuard } from '../application/guards/permissions/single-proceeding-file-auth-guard/delete-proceeding-file-auth.guard';
+ import { UpdateProceedingFileAuthGuard } from '../application/guards/permissions/single-proceeding-file-auth-guard/update-proceeding-file-auth.guard';
++import { ReadProceedingFileAuthGuard } from '../application/guards/permissions/single-proceeding-file-auth-guard/read-proceeding-file-auth.guard';
+ import { CreateMultiProceedingFileAuthGuard } from '../application/guards/permissions/multi-proceeding-file-auth-guard/create-multi-proceeding-file-auth.guard';
+ 
+ export const guardRegistry = [
+ 	CreateProceedingFileAuthGuard,
+ 	DeleteProceedingFileAuthGuard,
+ 	UpdateProceedingFileAuthGuard,
++	ReadProceedingFileAuthGuard,
+ 	CreateMultiProceedingFileAuthGuard,
+ 	ReadMultiProceedingFileAuthGuard,
+ 	MultiProceedingFileAuthorizeRole,
+diff --git a/src/proceedings/registries/transaction-script.registry.ts b/src/proceedings/registries/transaction-script.registry.ts
+index 2bac85ef..36d23ae4 100644
+--- a/src/proceedings/registries/transaction-script.registry.ts
++++ b/src/proceedings/registries/transaction-script.registry.ts
+@@ -6,6 +6,7 @@ import { FetchProceedingsByJobIdTS } from '../domain/transaction-scripts/fetch-p
+ import { FetchProceedingsByProceedingIdsTS } from '../domain/transaction-scripts/fetch-proceedings-by-proceeding-ids-ts/fetch-proceedings-by-proceeding-ids.transaction.script';
+ import { FetchProceedingFileByIdTS } from '../domain/transaction-scripts/fetch-proceeding-file-by-id-ts/fetch-proceeding-file-by-id.transaction.script';
+ import { RenameProceedingFileTS } from '../domain/transaction-scripts/rename-proceeding-file-ts/rename-proceeding-file.transaction.script';
++import { UpdateProceedingFileLengthTS } from '../domain/transaction-scripts/update-proceeding-file-length-ts/update-proceeding-file-length.transaction.script';
+ import { CreateFileAttacmentFileTagConverter } from '../domain/transaction-scripts/multi-part-upload-proceeding-file-ts/upload-complete-proceeding-file-ts/create-proceeding-file-mapper/create-file-attacment-file-tag.converter';
+ import { CreateFileTagConverter } from '../domain/transaction-scripts/multi-part-upload-proceeding-file-ts/upload-complete-proceeding-file-ts/create-proceeding-file-mapper/create-file-tag.converter';
+ import { CreateProceedingFileMapper } from '../domain/transaction-scripts/multi-part-upload-proceeding-file-ts/upload-complete-proceeding-file-ts/create-proceeding-file-mapper/create-proceeding-file.mapper';
+@@ -39,6 +40,7 @@ export const transactionScriptRegistry = [
+ 	FetchProceedingFileByIdTS,
+ 	FetchProceedingsByJobIdTS,
+ 	RenameProceedingFileTS,
++	UpdateProceedingFileLengthTS,
+ 	ApproveFilesForDeliveryTS,
+ 	ValidateSingleTrackTypeInBatch,
+ 	RemoveDeliverableTagTS,

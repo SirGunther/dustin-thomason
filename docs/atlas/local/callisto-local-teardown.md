@@ -15,17 +15,17 @@ Proves you can rebuild from nothing. Deletes the Postgres and RabbitMQ container
 #  Callisto + Atlas — FULL teardown  ⚠ DESTROYS containers + local data
 # ============================================================
 CALLISTO=/c/Users/dustin.thomason/callisto-back-end
-PORT=$(grep -E '^APP_PORT=' "$CALLISTO/.env" | cut -d= -f2 | tr -d '[:space:]')
 
-# stop both servers: Callisto (APP_PORT) + Atlas (9000)
-for p in "$PORT" 9000; do
-  netstat -ano | grep -E ":$p .*LISTENING" | awk '{print $5}' | sort -u | while read pid; do taskkill //PID $pid //F 2>/dev/null; done
-done
+# stop ALL dev servers AND their children (quasar/vite spawn esbuild + sass-embedded
+# workers that a port-only kill misses and that then lock node_modules).
+# In a teardown, killing every node/sass/esbuild is exactly what we want:
+taskkill //F //IM node.exe //IM dart-sass.exe //IM sass-embedded.exe //IM esbuild.exe 2>/dev/null
+sleep 2
 
 # remove the containers entirely
 docker rm -f callisto-postgres callisto-rabbitmq
 
-# (optional deepest clean — forces a fresh npm ci on rebuild)
+# (optional deepest clean — safe now that the file locks are gone; forces fresh npm ci)
 # rm -rf "$CALLISTO/node_modules" /c/Users/dustin.thomason/atlas-front-end/node_modules
 ```
 
@@ -41,13 +41,9 @@ Normal stop/restart. Containers and DB data survive; rebuild is fast.
 # ============================================================
 #  Callisto + Atlas — SOFT shutdown (Git Bash)
 # ============================================================
-CALLISTO=/c/Users/dustin.thomason/callisto-back-end
-PORT=$(grep -E '^APP_PORT=' "$CALLISTO/.env" | cut -d= -f2 | tr -d '[:space:]')
-
-# stop both servers
-for p in "$PORT" 9000; do
-  netstat -ano | grep -E ":$p .*LISTENING" | awk '{print $5}' | sort -u | while read pid; do taskkill //PID $pid //F 2>/dev/null; done
-done
+# stop ALL dev servers + their children (see Part 1 note on why port-only kills miss them)
+taskkill //F //IM node.exe //IM dart-sass.exe //IM sass-embedded.exe //IM esbuild.exe 2>/dev/null
+sleep 2
 
 # stop (not remove) the containers
 docker stop callisto-postgres callisto-rabbitmq
