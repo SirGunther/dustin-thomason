@@ -2,7 +2,7 @@
 
 A running record of outdated references, superseded files, and structural warts across the `agents/` workspace, so cleanup is a worked list instead of a vague intention.
 
-**Sequencing:** cleanup begins **after** the `orchestrate` integration has landed and proven out, using [agents-file-reference.md](./agents-file-reference.md) as the table of contents/map of what exists and why. Until then this file only accumulates candidates.
+**Sequencing:** cleanup begins **after** the `orchestrate` integration has landed and proven out, using the un-synced index/TOC at `agents/README.md` as the table of contents/map of what exists and why. Until then this file only accumulates candidates.
 
 **Feeding it:** Phase 6 of every orchestrated run performs a cruft check ("did this run surface outdated references, superseded docs, or dead weight?") and appends findings here. Anyone may add a row anytime.
 

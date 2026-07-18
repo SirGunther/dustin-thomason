@@ -120,7 +120,7 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 | Path | When |
 | ---- | ---- |
 | [original-ticket-artifact.md](./original-ticket-artifact.md) | Capture the baseline request as `original-ticket.md` before investigation/spec work |
-| [agents-file-reference.md](./agents-file-reference.md) | Why each `agents/` file exists + the orchestration flow at a glance |
+| `agents/README.md` (un-synced) | Why each `agents/` file exists + the orchestration flow at a glance — root TOC, never mirrored |
 | [cleanup-candidates.md](./cleanup-candidates.md) | Archive/consolidation ledger - fed by orchestrated runs' cruft checks |
 | [investigation-coverage-ledger.md](./investigation-coverage-ledger.md) | Per-ticket visited-state map: template + consult/reopen protocol |
 | [investigation-diagrams.md](./investigation-diagrams.md) | Standalone diagrams artifact (delta, flows, sequences) for investigations |
@@ -250,7 +250,6 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 
 | Doc | About |
 | --- | ----- |
-| `agents-file-reference.md` | Agents file reference — why each file exists |
 | `browser-loop-setup.md` | Browser-loop setup (dustin-thomason) |
 | `cleanup-candidates.md` | Cleanup candidates — archive and consolidation ledger |
 | `current-vs-target-diagram.md` | Current vs Target diagram — a single-diagram delta convention |

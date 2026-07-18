@@ -1,6 +1,8 @@
-# Agents file reference — why each file exists
+# Agents folder — index / table of contents
 
-The curated companion to the **generated inventory** in [workflow-index.md](./workflow-index.md): the inventory auto-lists *what exists* (refreshed by `sync-rules.ps1`, so it can never go stale); this doc records *what each file represents and why it's kept* — the half a generator can't write. It is also the table of contents that the post-integration cleanup pass works from (see [cleanup-candidates.md](./cleanup-candidates.md)).
+Why each file under `agents/` exists — what it represents, in one or two sentences — plus the orchestration flow at a glance.
+
+**This file is deliberately un-synced.** `sync-rules.ps1` mirrors only `agents/rules/`, `agents/skills/`, and `agents/docs/`; this root README is never copied into `.cursor/`, `.claude/`, or the `agents-*.md` compilations, and never enters agent context. It is the human-facing map — and the table of contents the post-integration cleanup pass works from (see [cleanup-candidates](docs/cleanup-candidates.md)). The **generated inventory** in [workflow-index](docs/workflow-index.md) is the synced, auto-refreshed *what exists* list; this file is the hand-curated *why*.
 
 **Maintenance rule:** adding a file under `agents/` requires adding its row here in the same session. A file with no row here is a cleanup candidate by definition.
 
@@ -8,7 +10,7 @@ The curated companion to the **generated inventory** in [workflow-index.md](./wo
 
 ## Orchestration flow at a glance
 
-The standard ticket lifecycle, run end-to-end by the [`orchestrate` skill](../skills/orchestrate/SKILL.md). Modes are user-controlled; the skill stops with a handoff block at every mode boundary and gates every phase exit.
+The standard ticket lifecycle, run end-to-end by the [`orchestrate` skill](skills/orchestrate/SKILL.md). Modes are user-controlled; the skill stops with a handoff block at every mode boundary and gates every phase exit.
 
 | Phase | Name | Mode | What happens | Artifacts produced |
 | --- | --- | --- | --- | --- |
@@ -61,8 +63,7 @@ Mirrored verbatim to `.cursor/docs/` and `.claude/docs/`.
 
 | Doc | What it represents / why we have it |
 | --- | --- |
-| `README.md` | Router table mapping a task to the playbook doc to load. Entry point for humans browsing `docs/`. |
-| `agents-file-reference.md` | This file — the curated why-it-exists catalog and the orchestration flow index. |
+| `README.md` | Router table mapping a task to the playbook doc to load. Entry point for agents/humans browsing `docs/` (distinct from this root README, which is the un-synced why-catalog). |
 | `browser-loop-setup.md` | The wiring playbook for driving/observing a live browser during front-end debugging (capabilities, setup, tools); pairs with `browser-loop-guardrails`. |
 | `cleanup-candidates.md` | The archive/consolidation ledger: known cruft, proposed fates, blockers. Fed by Phase 6 cruft checks; worked after the orchestrate integration proves out. |
 | `current-vs-target-diagram.md` | The single-diagram delta convention: current and target in one Mermaid figure, lanes = owners, color = change status. Referenced by the diagrams artifact. |
@@ -91,6 +92,12 @@ Mirrored verbatim to `.cursor/docs/` and `.claude/docs/`.
 | `bootstrap.ps1` | One-time per-machine wiring: hook, `~/.claude/CLAUDE.md` import, optional skills mirror. |
 | `sync-rules.ps1` | The single generator: builds `.cursor/`, `.claude/`, `AGENTS.md`, and the workflow-index inventory from `agents/`; `-Check` fails on stale output. The reason hand-edited and generated content never mix. |
 | `sync-agents-md.ps1` | Backwards-compatible shim to `sync-rules.ps1`; deletion tracked in cleanup-candidates. |
+
+## Root of `agents/`
+
+| File | What it represents / why we have it |
+| --- | --- |
+| `README.md` | This file — the un-synced index/TOC: why every `agents/` file exists, plus the orchestration flow at a glance. |
 
 ## Repo-level `scripts/` (used by the flow, not part of `agents/`)
 
