@@ -2,6 +2,106 @@
 
 Source: `agents/docs/**`. Regenerate with `.\agents\scripts\sync-rules.ps1`.
 
+## agents-file-reference.md
+
+# Agents file reference — why each file exists
+
+The curated companion to the **generated inventory** in [workflow-index.md](./workflow-index.md): the inventory auto-lists *what exists* (refreshed by `sync-rules.ps1`, so it can never go stale); this doc records *what each file represents and why it's kept* — the half a generator can't write. It is also the table of contents that the post-integration cleanup pass works from (see [cleanup-candidates.md](./cleanup-candidates.md)).
+
+**Maintenance rule:** adding a file under `agents/` requires adding its row here in the same session. A file with no row here is a cleanup candidate by definition.
+
+---
+
+## Orchestration flow at a glance
+
+The standard ticket lifecycle, run end-to-end by the [`orchestrate` skill](../skills/orchestrate/SKILL.md). Modes are user-controlled; the skill stops with a handoff block at every mode boundary and gates every phase exit.
+
+| Phase | Name | Mode | What happens | Artifacts produced |
+| --- | --- | --- | --- | --- |
+| 0 | Capture | Working | The request is preserved verbatim as the source-of-truth artifact; the phase ledger is scaffolded; changelog aligned | `original-ticket.md`, `orchestration.md` |
+| 1 | Investigate | Plan | Prior coverage ledgers consulted first; the investigation method runs with the software lens; an investigation plan is built for approval | approved plan (staged coverage rows) |
+| 2 | Report | Working | The investigation report is written; coverage ledger, diagrams artifact, and test-plan seed materialize | `<slug>-investigation.md`, `<slug>-coverage-ledger.md`, `<slug>-diagrams.md`, `<slug>-test-plan.md` |
+| 3 | Probe & spec | Working | grill-me resolves open variables under the traceability workflow; locked decisions inform the spec | locked-decision ledger, `<slug>-spec.md`, refined test plan, concerns entries |
+| 4 | Prep | Plan | Brief implementation plan from the artifacts — no re-investigation | approved implementation plan |
+| 5 | Implement | Working | Build under the guardrails; execute the test plan; session log + gates before commit; PR | code, executed test plan, PR |
+| 6 | Manual review | Idle | Review summary citing test results; cruft check feeds cleanup-candidates; ledger closed; completion notification | closed ledger |
+
+Per-ticket artifacts live in `docs/<Project>/tickets/<slug>/` (layout defined in the skill); superseded material moves to that ticket's `dnu/`.
+
+---
+
+## `agents/rules/` — always-on and scoped behavior rules
+
+Tool-neutral rule sources; `sync-rules.ps1` generates the `.cursor/rules/`, `.claude/rules/`, and `AGENTS.md` outputs from them.
+
+| File | What it represents / why we have it |
+| --- | --- |
+| `agent-completion-notification.md` | Ends every substantive session with a Power Automate ping (`notify-agent-complete.ps1`) so finished agent work is visible without watching the terminal. |
+| `agents-sync.md` | The source-of-truth doctrine: `agents/` is hand-edited, everything downstream is generated; defines when and how to regenerate. Exists so nobody hand-edits a mirror. |
+| `browser-loop-guardrails.md` | Boundary rules for runtime browser debugging and any CSS/layout fix — fix the responsible rule not the symptom, explain magic constants, escalate instead of tuning forever. Exists because a fast observe-fix loop makes symptom-patching fast too. |
+| `build-implementation-guardrails.md` | The shipping obligations for substantive builds: tests as part of shipping, regression posture, layered graceful degradation, architecture fit, the §5 checklist. The quality floor for Phase 5. |
+| `context-fanout.md` | Prefer read-only exploration subagents for multi-area investigation so the parent context stays compact. Exists because serial deep-reading burns the context that planning needs. |
+| `git-commit-workflow.md` | The landing sequence: audit → lint → serial tests → status/add/commit/push → paste SHA; never tag reviewers. Exists so every commit clears the same gates in the same order. |
+| `personal-methodology.md` | The router: maps plain-language intent ("write spec", "commit", "open PR") to the right rule or playbook in any workspace repo, and defines repo-rules-vs-personal-rules precedence. |
+| `problem-requirement-solution.md` | The framing philosophy: reason Problem → Requirement → Solution, in that order, anywhere a change is explained. Exists because a solution without a stated problem isn't reviewable. |
+| `source-truth.md` | The stop rule: source-dependent answers (exact labels, mappings, evidence) come from the artifact or not at all — never from memory or reconstruction. |
+| `spec-writing.md` | The required sections for epic/story specs (classes, entities, migrations, DTOs, projections, cross-cutting callouts). The standard a Phase 3 spec is judged against. |
+| `ticket-changelog.md` | Cross-session ticket memory: changelog alignment at task start, session log before every commit, Plans table discipline, verification-gate reporting standard. |
+| `workflow-housekeeping.md` | Scoped rule: after workflow files change, sync the index and run `validate-workflows.ps1`. Keeps the meta-layer honest. |
+
+## `agents/skills/` — invocable workflows
+
+Folder name = invocation name. Mirrored verbatim to `.cursor/skills/` and `.claude/skills/`.
+
+| Skill | What it represents / why we have it |
+| --- | --- |
+| `grill-me` | The interview method: one question at a time, current-behavior check, recommended answer — until a plan or design reaches shared understanding. The probe half of Phase 3. |
+| `investigation` | The investigation method: ground in instances, classify, lock the contract, trace origin, stress-test, emit the Investigation Report. The engine Phase 1 executes. |
+| `orchestrate` | The end-to-end ticket lifecycle conductor: seven phases, exit gates, mode handoffs, per-ticket ledger, full-rigor artifacts. The standard way to run a ticket when completeness matters. |
+| `workflow-housekeeping` | The audit workflow for this meta-layer itself: drift, duplicates, missing index entries. |
+| `write-spec` | Guided authoring of PRDV epic/story specs and dev notes against the wiki conventions. The PRDV route for Phase 3's spec output. |
+
+## `agents/docs/` — playbooks, methods, and artifact templates
+
+Mirrored verbatim to `.cursor/docs/` and `.claude/docs/`.
+
+| Doc | What it represents / why we have it |
+| --- | --- |
+| `README.md` | Router table mapping a task to the playbook doc to load. Entry point for humans browsing `docs/`. |
+| `agents-file-reference.md` | This file — the curated why-it-exists catalog and the orchestration flow index. |
+| `browser-loop-setup.md` | The wiring playbook for driving/observing a live browser during front-end debugging (capabilities, setup, tools); pairs with `browser-loop-guardrails`. |
+| `cleanup-candidates.md` | The archive/consolidation ledger: known cruft, proposed fates, blockers. Fed by Phase 6 cruft checks; worked after the orchestrate integration proves out. |
+| `current-vs-target-diagram.md` | The single-diagram delta convention: current and target in one Mermaid figure, lanes = owners, color = change status. Referenced by the diagrams artifact. |
+| `future-development-concerns.md` | Template + rules for the per-ticket risk record: dated, code-verified concerns that ship out of scope but must stay findable and escalation-ready. |
+| `investigation-coverage-ledger.md` | Template + consult protocol for the per-ticket visited-state map: where the agent looked, how deeply, what it found or ruled out — so later agents reuse instead of re-traversing. |
+| `investigation-diagrams.md` | Defines the standalone diagrams artifact (current-vs-target, flows, sequences for race conditions) so reports link visuals instead of embedding them. |
+| `investigation-question-coverage.md` | Meta-audit proving the investigation method covers a collected question list. Historical justification, not operational input — an archive candidate. |
+| `investigation-report.md` | The Investigation Report artifact template (§0 verdict through §12 definition of done). What Phase 2 fills in. |
+| `investigation-software-gaps.md` | The adopted software lens for investigations: contract alignment, surface enumeration, protect-the-neighbors, detection gap, red→green test, repro recipe. Mandatory in Phase 1 for software tickets. |
+| `new-branch-get-started.md` | The steps to start a `PRDV-*` branch and pick up a ticket. Referenced by Phase 4's branch step. |
+| `original-ticket-artifact.md` | Template + rules for `original-ticket.md`: preserve the request verbatim as the baseline fact before any investigation or spec work. What Phase 0 executes. |
+| `problem-check.md` | The framing lens (Asked / Answered / Should-ask + Conflation / Thin / Off) run on every investigation's problem statement; embedded in the investigation method's Step 1. |
+| `pull-request-workflow.md` | The PR playbook: branch, commit evidence, body format, Slack post. Referenced by Phase 5. |
+| `qa-to-spec-traceability.md` | The locked-decision workflow: every answered question becomes a cited, non-reaskable decision that lands in the spec. Governs Phase 3's grill-me pass. |
+| `session-start.md` | Optional copy-paste snippets to point a fresh agent thread at a ticket/changelog. |
+| `test-plan-artifact.md` | Template + lifecycle for the per-ticket test plan: seeded from the report's validation plan, refined by the spec, executed at implementation, cited at review. |
+| `ticket-changelog-workflow.md` | The end-to-end changelog playbook behind the `ticket-changelog` rule. |
+| `ticket-orchestration.md` | Pointer stub → the `orchestrate` skill (the original prompt sheet was folded into it). Tracked for eventual deletion. |
+| `wiki-spec-authoring.md` | PRDV wiki conventions: naming, frontmatter, Obsidian wiring, dev notes. Pairs with `write-spec` and the `spec-writing` rule. |
+| `workflow-index.md` | The master map: layers, what-to-@ routing, and the generated complete inventory. |
+
+## `agents/scripts/` — the generator layer
+
+| Script | What it represents / why we have it |
+| --- | --- |
+| `bootstrap.ps1` | One-time per-machine wiring: hook, `~/.claude/CLAUDE.md` import, optional skills mirror. |
+| `sync-rules.ps1` | The single generator: builds `.cursor/`, `.claude/`, `AGENTS.md`, and the workflow-index inventory from `agents/`; `-Check` fails on stale output. The reason hand-edited and generated content never mix. |
+| `sync-agents-md.ps1` | Backwards-compatible shim to `sync-rules.ps1`; deletion tracked in cleanup-candidates. |
+
+## Repo-level `scripts/` (used by the flow, not part of `agents/`)
+
+`validate-workflows.ps1` (wiring audit + stale-output check), `new-ticket-changelog.ps1` (changelog scaffold), `notify-agent-complete.ps1` (completion ping), `gitcommit.ps1` / `git-maintenance.ps1` (commit helpers), `git-hooks/pre-commit` (runs the sync at commit time), `browser/*.mjs` (browser-loop tooling). Their authoritative list lives in the generated inventory.
+
 ## browser-loop-setup.md
 
 # Browser-loop setup (dustin-thomason)
@@ -103,6 +203,29 @@ The six boundary rules in [browser-loop-guardrails.mdc](../rules/browser-loop-gu
 - [x] Boundary rules loaded as enforced agent rules **before** the loop is used — `browser-loop-guardrails` (alwaysApply).
 
 Per-machine activation still required: `npm install` + `npx playwright install chromium` in `scripts/browser/` (see One-time setup).
+
+## cleanup-candidates.md
+
+# Cleanup candidates — archive and consolidation ledger
+
+A running record of outdated references, superseded files, and structural warts across the `agents/` workspace, so cleanup is a worked list instead of a vague intention.
+
+**Sequencing:** cleanup begins **after** the `orchestrate` integration has landed and proven out, using [agents-file-reference.md](./agents-file-reference.md) as the table of contents/map of what exists and why. Until then this file only accumulates candidates.
+
+**Feeding it:** Phase 6 of every orchestrated run performs a cruft check ("did this run surface outdated references, superseded docs, or dead weight?") and appends findings here. Anyone may add a row anytime.
+
+**Rules:** rows are proposals, not decisions — nothing is deleted or moved on the strength of a row alone. When a candidate is resolved, mark the Fate column done with a date; do not delete the row.
+
+## Candidates
+
+| Item | Why it's cruft | Proposed fate | Blocked by |
+| --- | --- | --- | --- |
+| `agents/docs/ticket-orchestration.md` (stub) | Superseded by the `orchestrate` skill; stub kept only to redirect previously circulated prompts | Delete after the skill proves out over a few real tickets | Skill adoption |
+| `agents/docs/investigation-question-coverage.md` | Meta-audit proving the investigation SKILL covers a collected question list — documentation *about* the method, not operational input; not loaded by any flow | Archive (move under a `dnu/` or `archive/` convention for `agents/docs/`) | Decide the archive convention for agents/docs |
+| `agents/skills/write-spec/SKILL.md` path references | Contains `.cursor/skills/grill-me/SKILL.md` and `../../rules/spec-writing.mdc` style links that only resolve in the `.cursor` tree — broken in `agents/` and `.claude/` mirrors | Switch to portable relative forms (`../grill-me/SKILL.md`; rules named in prose) | — |
+| `agents/skills/investigation/` folder vs `name: investigate` frontmatter | Folder name (the actual invocation name) and frontmatter `name` disagree | Align frontmatter `name` to `investigation` | Confirm nothing keys off `investigate` |
+| `agents/scripts/sync-agents-md.ps1` | Backwards-compatible shim to `sync-rules.ps1` | Delete once nothing invokes it | Validator's expected-scripts list includes it |
+| `agents/docs/workflow-index.md` hand-written Skills table | Now complete (all 5 skills) but duplicates the generated inventory below it | Decide: slim the hand-written table to a pointer at the generated inventory, or keep maintaining both | — |
 
 ## current-vs-target-diagram.md
 
@@ -325,8 +448,275 @@ To make this a referenced standard (the way the investigation method references 
 
 1. Keep this file as the single source in `agents/docs/`.
 2. From the rule/skill that should use it, link it: *"When the change has a before/after across parts, include one current-vs-target diagram per [current-vs-target-diagram.md](../docs/current-vs-target-diagram.md)."*
-3. If you add it to the investigation flow, the attach point is **Report §5** (data paths) — state "single diagram, current vs target, deltas legible" as the done-when.
+3. If you add it to the investigation flow, the attach point is **Report §5** (data paths) — state "single diagram, current vs target, deltas legible" as the done-when. In orchestrated tickets the diagram lives in the **standalone diagrams artifact** ([investigation-diagrams.md](./investigation-diagrams.md)) and §5 links out to it rather than embedding it.
 4. Regenerate the tool mirrors (`.claude/`, `.cursor/`, `AGENTS.md`) with `agents/scripts/sync-rules.ps1` after editing — never hand-edit the generated copies.
+
+## future-development-concerns.md
+
+# Future-development concerns — the risk record artifact
+
+Use this instruction when work on a ticket surfaces a concern that will NOT be resolved in scope: a decision that cuts against best practice, a risk consciously accepted, or a gap deliberately deferred. The concerns file is a **dated, evidence-backed record that the risk was identified and raised** — kept out of the report and spec so they stay lean, but findable when the risk lands.
+
+Reference shape: `docs/atlas/16216/PRDV-16216-future-development-concerns.md`.
+
+## Output location
+
+```text
+docs/<Project>/tickets/<ticket-slug>/<ticket-slug>-future-development-concerns.md
+```
+
+Create the file on the **first** concern; append after that. Many tickets never need one — do not create it empty.
+
+## When to record a concern
+
+During investigation, grill-me / Q and A, spec writing, or spec review, whenever:
+
+- a chosen direction goes against best practice and is being shipped anyway;
+- a risk is consciously scoped out ("future companion ticket", "accepted for now");
+- a locked decision accepts a failure mode someone may later ask "was this known?" about;
+- a proposed change contradicts a documented prior rejection.
+
+## Relationship to the locked-decision ledger
+
+A risk-accepting answer produces **both** records: a locked-decision row per [qa-to-spec-traceability.md](./qa-to-spec-traceability.md) (the **what**: decision, source, spec destination) and a concern entry here (the **why**: risk rationale, evidence, escalation context). The locked-decision row cites the concern entry. Neither substitutes for the other.
+
+## Core rules
+
+- **Dated and code-verified.** Every factual claim about system behavior carries file:line evidence and the date it was verified. An unverified worry is labeled as such.
+- **Framed around where the system is headed**, not just what ships in this story — the record exists for the future reader deciding whether the risk has now matured.
+- **Escalation-ready.** The executive summary must stand alone for a reader with authority but no context: the vulnerability, why it matters (fallout, not probability), and the decision being requested with explicit options.
+- **Concerns are not blockers.** Recording one does not stop the work; it prevents "why wasn't this considered?" later. If the concern SHOULD block, say so in the summary and route it to the person with authority to own it.
+- **Never let it bloat the report or spec** — they link here.
+
+## Artifact template
+
+```markdown
+---
+ticket: <PRDV-XXXXX or slug>
+tags: [<system>, <area>, concerns]
+author: <name>
+created: YYYY-MM-DD
+modified: YYYY-MM-DD
+---
+
+# <Ticket> — Future-development concerns (<short subject>)
+
+> **Context:** <what decision/direction these concerns attach to, one or two sentences>
+> **Purpose of this document:** a dated, code-verified record that these risks were identified and raised — for team discussion and, where needed, escalation.
+> **Constructive path forward:** <if one exists, name it and link the artifact; else "none identified yet">
+
+## Executive summary (for escalation)
+
+<The vulnerability in plain language. Why it matters even if rare — fallout, not probability.
+The decision being requested, from someone with authority to own it, with explicit options (a) / (b) / (c).>
+
+## Concern 1 — <one-line title>
+
+<What the concern is. Why the current direction makes it worse or leaves it open.>
+
+- **Evidence (verified YYYY-MM-DD):** <file:line refs, config, contract fields>
+- **What would resolve it:** <the smallest change or companion ticket that closes it>
+
+## Concern 2 — ...
+
+## Decision history
+
+<Dated chronology of how the direction got here — proposals, rejections, reversals — each step pointing at a dated artifact, not memory.>
+
+## Open questions to settle
+
+1. <question> — owner: <who>
+```
+
+## Definition of done
+
+An entry is done when a future reader can answer: what was the risk, who raised it and when, what evidence supported it, what decision was made (or requested) in response, and what would resolve it.
+
+## investigation-coverage-ledger.md
+
+# Investigation coverage ledger — the visited-state map
+
+Use this instruction when an investigation begins, resumes, or hands off. The ledger is a durable record of **where the agent has already looked, how deeply, and what it learned there** — coverage AND outcome, not just conclusions.
+
+The problem it solves: an agent that forgets its visited set repeatedly traverses the same branches, consumes enormous context, and still believes it is making progress. Compaction turns deep investigation into repeated exploration. Without the coverage half, a later agent sees only "the database may be involved" and reopens every file; with it, the agent sees the adapter was already inspected, which methods were checked, and why it was ruled out.
+
+**Relationship to [qa-to-spec-traceability.md](./qa-to-spec-traceability.md):** complementary halves of the same don't-redo principle. That workflow preserves **decisions** (what was answered, locked, and where it lands in the spec). This ledger preserves **traversal** (where the agent looked in code and what it found or ruled out). This is the traversal counterpart to its reconcile-before-asking rule. Do not merge the two artifacts.
+
+## Output location
+
+```text
+docs/<Project>/tickets/<ticket-slug>/investigations/<ticket-slug>-coverage-ledger.md
+```
+
+One ledger per ticket. Do **not** maintain a single ever-growing project-wide coverage document — at scale that document becomes its own million-token problem. Discovery across tickets is grep-based (see the consult protocol).
+
+## Core rules
+
+- Record coverage **as you investigate**, not retroactively. An entry costs one table row at the moment of inspection; reconstructing it later costs a re-read.
+- Every entry is keyed to a **commit** (short SHA) and date. "This function was investigated" is only reusable while the code is materially unchanged; an inspection against commit A does not silently govern commit B.
+- Every entry carries a **status** from the fixed vocabulary below. No free-form status values.
+- The **Not yet inspected** section is mandatory. It is the frontier — the most valuable part of the ledger for whoever resumes.
+- Entries are structured tables and bullets, never prose narratives. The investigation report tells the story; the ledger is the index.
+
+## Status vocabulary
+
+| Status | Meaning |
+| --- | --- |
+| `fully-inspected` | Examined completely for the stated question; findings recorded |
+| `partial` | Examined, but stated aspects remain unchecked (name them in Notes) |
+| `ruled-out` | Examined and eliminated as a cause/factor for the stated question |
+| `contributing` | Examined and confirmed as a contributing condition |
+| `not-inspected` | Identified as relevant but not yet examined (lives in the frontier section) |
+
+## Consult protocol (before opening a new investigative branch)
+
+Before investigating area X:
+
+1. **Search prior ledgers** for X and its surrounding subsystem:
+
+   ```powershell
+   # from the repo holding docs/<Project>/
+   Get-ChildItem docs/<Project>/tickets/*/investigations/*-coverage-ledger.md
+   # then grep those files for the file path, symbol, or subsystem name
+   ```
+
+2. **If already covered, reuse the prior result** — cite the ledger entry instead of re-reading the code.
+3. **Reopen only if** at least one holds:
+   - new evidence contradicts the prior finding;
+   - the code changed since the recorded commit (`git log <sha>..HEAD -- <path>` is non-empty);
+   - the prior inspection was `partial` for the aspect now in question;
+   - the current question concerns a **different behavior** than the one inspected.
+4. **Record why it was reopened** in the new ledger's entry (`Reopened: <reason>`). Re-checking without a stated reason is the exact waste this ledger exists to stop.
+
+**Mandatory consult log line:** the ledger's `Consulted` section must record what was searched and what came of it — even when nothing was found. This line is the auditable evidence that the consult happened. Example: `Consulted: docs/WorkLists/tickets/*/investigations/*-coverage-ledger.md for "cardActions"; found duplicate-card-option ledger; reused its ruled-out entry for dal.js.` or `Consulted: <glob>; none found.`
+
+## Ledger template
+
+```markdown
+# Coverage ledger — <Project>/<ticket-slug>
+
+Investigation question: <one sentence — the behavioral question this coverage is FOR>
+Repo(s): <repo names>  ·  Baseline commit: <short SHA>  ·  Started: YYYY-MM-DD
+
+## Consulted
+
+- <glob searched> for "<terms>" — <found + reused | found + reopened (reason) | none found>
+
+## Areas examined
+
+### 1. <area — file, module, table, endpoint>
+
+| Field | Value |
+| --- | --- |
+| Inspected | <functions / callers / columns / queries — the concrete items> |
+| Findings | <what was found, one clause per finding> |
+| Status | fully-inspected / partial / ruled-out / contributing |
+| Commit | <short SHA> · YYYY-MM-DD |
+| Evidence | <file:line refs, grep results, test names> |
+| Notes | <partial: what remains unchecked · reopened: reason> |
+
+### 2. <next area>
+
+...
+
+## Not yet inspected (frontier)
+
+- <area> — <why it's relevant / what question it would answer>
+```
+
+## What belongs here
+
+- Files, functions, callers, adapters, schemas, tables, constraints, queries, logs, tests, and call paths examined — with the specific items named.
+- What was found, ruled out, or left unresolved in each area.
+- Completeness claims and how they were established ("`useUnapproveFlow` imported only by X and Y — grep clean").
+- The frontier: relevant areas not yet examined.
+
+## What does not belong here
+
+- The investigation narrative, verdict, or recommendation (that is the investigation report).
+- Locked decisions from Q and A (that is the qa-to-spec-traceability ledger).
+- Speculation without an inspection behind it.
+
+## Definition of done
+
+The ledger is serving its purpose when a future agent can answer, without re-reading code: Has this subsystem been inspected at all? Was this file inspected? Was this symbol inspected **for this particular question**? Was it inspected at a commit that still matches the current code?
+
+## investigation-diagrams.md
+
+# Investigation diagrams — the standalone visuals artifact
+
+Use this instruction when an investigation's findings need diagrams. Diagrams are a **standalone artifact**, not sections embedded in the investigation report — combining everything into one file creates reference and context-length problems (a single report carrying 70 lines of inline Mermaid is the failure mode this replaces). The report links out; the diagrams file renders.
+
+## Output location
+
+```text
+docs/<Project>/tickets/<ticket-slug>/investigations/<ticket-slug>-diagrams.md
+```
+
+The investigation report's data-paths section (§5) carries a one-line link to this file instead of an inline diagram.
+
+## When it is produced
+
+The diagrams artifact is a **todo appended to the investigation**: the investigation plan (Phase 1) includes it; the report phase (Phase 2) produces it alongside the report. It can also be created or extended later — during spec review or PR writing — whenever a picture would settle what prose is failing to.
+
+## The three diagram kinds
+
+Include only the kinds the ticket needs; state a one-line N/A for kinds deliberately skipped.
+
+### 1. Current vs target delta (`flowchart`)
+
+The "what changes, where, and what stays frozen" picture. Follow the single-diagram convention in [current-vs-target-diagram.md](./current-vs-target-diagram.md) — one figure, lanes = owners, color = change status, two chains through shared lanes, constraints named. Use when there is a before/after that crosses parts.
+
+### 2. Flow diagrams (`flowchart`)
+
+Data or control paths that the delta diagram doesn't cover: how a request travels, where a value originates and lands, which branch points exist. Use when the investigation traced a path whose shape matters and prose keeps re-explaining it.
+
+### 3. Sequence diagrams (`sequenceDiagram`)
+
+Workflow and timing representations — **hugely beneficial for edge cases like race conditions**: concurrent viewers, retry overlap, double-write windows, event ordering. Use when *when* matters as much as *what*: two actors touching shared state, an idempotency guard, anything where the failure only exists in an interleaving.
+
+```mermaid
+sequenceDiagram
+    participant A as Browser tab 1
+    participant B as Browser tab 2
+    participant S as Server
+    A->>S: write-back (length=8040)
+    B->>S: write-back (length=8040)
+    S->>S: update WHERE length IS NULL (first wins)
+    S-->>A: 200 (row updated)
+    S-->>B: 200 (no-op - already set)
+```
+
+## Artifact template
+
+````markdown
+# Diagrams — <Project>/<ticket-slug>
+
+> Companion to [<ticket-slug>-investigation.md](./<ticket-slug>-investigation.md). Each diagram states what question it answers.
+
+## Current vs target
+
+<one line: what this shows>  (or: N/A — <reason>)
+
+```mermaid
+...
+```
+
+## Flows
+
+<one line per diagram: what this shows>  (or: N/A — <reason>)
+
+## Sequences
+
+<one line per diagram: which interleaving / edge case this exposes>  (or: N/A — <reason>)
+````
+
+## Rules
+
+- **Every diagram answers a named question.** A diagram nobody can caption is decoration; cut it.
+- **Validate the render before committing** — silent Mermaid parse failures are common. The syntax gotchas in [current-vs-target-diagram.md](./current-vs-target-diagram.md) (no colons in edge labels, no raw angle brackets, quote node labels, `<br/>` for line breaks) apply to every diagram kind here.
+- **Keep the report lean.** If a diagram earns a place in the report or a spec, link it; do not paste it back inline.
+- One diagrams file per ticket; superseded diagrams move to the ticket's `dnu/` folder with the rest of the superseded material.
 
 ## investigation-question-coverage.md
 
@@ -587,9 +977,9 @@ Don't move past investigation until each is answered:
 
 ## investigation-software-gaps.md
 
-# Investigation method — software lens: candidate additions (staging)
+# Investigation method — software lens
 
-> **Status:** staging / not yet adopted. These are questions the current method (`agents/skills/investigation/SKILL.md` + `agents/docs/investigation-report.md`) does **not** force, that a real software investigation needs. Parked here to review and possibly fold into the software branch / Steps 4 & 6 later. Nothing here is live yet.
+> **Status:** adopted (2026-07-18) — the mandatory software-lens questions in Phase 1 of the `orchestrate` skill (`../skills/orchestrate/SKILL.md`); also usable standalone alongside `agents/skills/investigation/SKILL.md`. These are questions the base method does **not** force, that a real software investigation needs.
 > **Companion:** [investigation-question-coverage.md](./investigation-question-coverage.md) audits the questions we already had; this doc holds the net-new ones.
 
 ## The organizing idea: ground *sideways*, not just down and up
@@ -722,6 +1112,121 @@ Use your repo’s PR template. Title: **`PRDV-15263: Same short description`**. 
 ---
 
 That’s the starting point. For PR body text, screenshots, and commit hash in the description, use [pull-request-workflow.md](./pull-request-workflow.md) when you’re ready to open the PR—not before.
+
+## original-ticket-artifact.md
+
+# Original Ticket Artifact
+
+Use this instruction when a request needs a stable source-of-truth artifact before investigation, Q and A, spec writing, or implementation planning begins.
+
+The purpose of `original-ticket.md` is to establish one fact:
+
+> This is the original ticket/request as it was provided.
+
+It is not an investigation, not a spec, not a decision log, and not a place to infer missing requirements.
+
+When invoked, create or update the canonical `original-ticket.md` artifact before generating investigation, Q and A, spec, or implementation-plan artifacts.
+
+## Output location
+
+Default path:
+
+```text
+docs/<Project>/tickets/<ticket-slug>/original-ticket.md
+```
+
+Sibling artifacts should live under the same ticket folder when created later:
+
+```text
+docs/<Project>/tickets/<ticket-slug>/investigations/<ticket-slug>-investigation.md
+docs/<Project>/tickets/<ticket-slug>/specs/<ticket-slug>-spec.md
+```
+
+Example:
+
+```text
+docs/WorkLists/tickets/prompt-injection-note-refinement/original-ticket.md
+```
+
+## Core rules
+
+- Preserve the original request as the baseline fact.
+- Keep the user's wording intact wherever practical.
+- Record only minimal provenance metadata.
+- Do not add investigation findings.
+- Do not add agent recommendations.
+- Do not add later Q and A decisions.
+- Do not rewrite the ticket to match later clarifications.
+- If later clarifications conflict with the original request, preserve the original here and record the clarification in the Q and A ledger or spec.
+
+## Required contents
+
+An `original-ticket.md` artifact should contain only:
+
+1. Title.
+2. Capture metadata.
+3. Original request.
+4. Explicit constraints present in the original request.
+5. Context paths or links present in the original request.
+
+Downstream artifact links are optional and should stay factual, for example `Not created yet` or a direct path once the file exists.
+
+## Artifact template
+
+```markdown
+# <Ticket Title> - Original Ticket
+
+## Capture Metadata
+
+| Field | Value |
+| --- | --- |
+| Project |  |
+| Ticket slug / ID |  |
+| Captured on | YYYY-MM-DD |
+| Source | User-provided request / backlog item / chat prompt / external ticket |
+| Formatting | Verbatim / lightly formatted for Markdown |
+
+## Original Request
+
+<Preserve the original request text here. Keep headings, bullets, estimates, and phase instructions intact.>
+
+## Explicit Constraints In Original Request
+
+- 
+
+## Context Paths In Original Request
+
+- 
+
+## Downstream Artifacts
+
+- Investigation: Not created yet
+- Spec: Not created yet
+- Q and A ledger: Not created yet
+```
+
+## What belongs here
+
+- The initial problem statement.
+- The initial requirement statement.
+- The initial proposed solution, if one was provided.
+- Initial estimate or phase structure, if provided.
+- Original constraints such as "do not change code yet" or "do not pull broad modules."
+- Original links and file paths provided as context.
+
+## What does not belong here
+
+- Investigation findings.
+- Open questions.
+- Answered grill-me questions.
+- Later locked decisions.
+- Implementation recommendations.
+- Test plans.
+- Acceptance criteria unless they were part of the original request text.
+
+## Definition of done
+
+This artifact is done when a future agent can open it and know exactly what was originally asked, where it came from, and when it was captured.
 
 ## problem-check.md
 
@@ -997,6 +1502,140 @@ a1b2c3d4e5f678901234567890abcd1234567890
 
 Swap ticket title, ClickUp URL, GitHub PR URL, and commit hash per task. The inner triple-backtick block is the **commit hash code block** (easy to copy in Slack/Teams).
 
+## qa-to-spec-traceability.md
+
+# Q and A to Spec Traceability
+
+Use this workflow when a requirements conversation, grill-me pass, investigation review, or user correction needs to become durable spec content. Its job is to prevent settled answers from being re-asked, diluted, or lost between conversation and implementation.
+
+This document is a process guardrail. It does not replace `agents/skills/grill-me/SKILL.md`, `agents/docs/investigation-report.md`, or `agents/rules/spec-writing.md`. Load it alongside those documents when the task moves from questions into a spec or implementation plan.
+
+## How to reference it
+
+Use any of these phrases:
+
+- `@qa-to-spec-traceability`
+- "Use Q and A to Spec Traceability for this ticket."
+- "Run the locked-decision ledger before the spec."
+- "Audit the spec against the Q and A ledger."
+- "Do not ask again; reconcile against Q and A traceability."
+
+When invoked, the agent must create or update a locked-decision ledger before continuing the spec or implementation plan.
+
+## When to use it
+
+Use this workflow when:
+
+- A user answers design questions that affect behavior, scope, UI, contracts, state, tests, or rollout.
+- A user corrects the agent's interpretation of requirements.
+- A grill-me session produces decisions that must feed a spec.
+- A Phase 3 probe/spec pass follows a Phase 1 investigation report.
+- A spec seems to contain open questions that may already be answered in the ticket, investigation, changelog, or conversation.
+
+Do not use this workflow to invent new requirements. It preserves and reconciles requirements that already exist.
+
+## Core rule
+
+Every user answer that changes, narrows, rejects, or locks behavior becomes a locked decision before the next question, spec update, or implementation plan proceeds.
+
+A locked decision is no longer an open design option. If later source material conflicts with it, the latest explicit user correction wins unless the user reopens the decision.
+
+## Required workflow
+
+1. Gather only relevant sources.
+   - Original ticket or request.
+   - Investigation report or canonical project artifact.
+   - Changelog entries that directly affect the feature.
+   - Current Q and A transcript or user corrections.
+   - Spec-writing rule when a spec is being created.
+
+2. Build the current answer ledger.
+   - Record the decision in direct, implementation-shaped language.
+   - Cite the source: original ticket, investigation artifact, changelog, or user clarification.
+   - Mark whether it supersedes an earlier assumption.
+   - Name where the decision must appear in the spec.
+
+3. Reconcile before asking.
+   - Search the ticket, investigation, changelog, existing artifact, and ledger first.
+   - If the answer exists, cite it instead of asking.
+   - If the user says the answer was already discussed, stop the question path and reconcile immediately.
+
+4. Ask only material unresolved questions.
+   - Ask one question at a time.
+   - Do not ask about behavior already locked by the ticket or ledger.
+   - Do not ask preference questions when the implementation path is implied by the requirement and existing system behavior.
+
+5. Commit each answer immediately.
+   - Add the answer to the ledger in the artifact being produced.
+   - If the answer rejects a prior path, record the rejected path so it does not return later as an option.
+   - If the answer narrows scope, record what is out of scope.
+
+6. Transfer decisions into the spec.
+   - Add a section named `Locked Decisions From Q and A` near the top of the spec.
+   - Map implementation requirements and acceptance criteria back to the locked decisions.
+   - Keep open variables separate from locked decisions.
+
+7. Audit before finalizing.
+   - No locked decision may remain as `TBD`, `open`, or `needs confirmation`.
+   - No rejected path may reappear as a recommended option.
+   - Every acceptance criterion must trace to the ticket, investigation, changelog, or locked-decision ledger.
+   - The Problem, Requirement, and Solution sections must reflect the locked decisions.
+
+## Locked-decision ledger template
+
+| ID | Locked decision | Source | Supersedes or rejects | Spec destination |
+| --- | --- | --- | --- | --- |
+| LD-001 |  |  |  |  |
+
+## Spec section template
+
+```markdown
+## Locked Decisions From Q and A
+
+| Decision | Source | Implementation consequence |
+| --- | --- | --- |
+|  |  |  |
+```
+
+## Question gate template
+
+Use this gate before asking a question during grill-me or spec writing:
+
+```markdown
+### Question Gate
+
+- Proposed question:
+- Existing answer check:
+- Current behavior evidence:
+- Recommendation:
+- Ask only if still unresolved:
+```
+
+If `Existing answer check` finds an answer, do not ask the question. Cite the answer and update the ledger.
+
+## Correction handling
+
+When the user says a question was already answered:
+
+1. Stop asking that question.
+2. Pull the original ticket, current artifact, or conversation context that answers it.
+3. Cite the answer back briefly.
+4. Add or update the locked-decision ledger.
+5. Continue from the reconciled decision.
+
+When the user says "no" or rejects a path, record the rejection as a locked decision. Do not bring the rejected path back as an option unless the user explicitly reopens it.
+
+## Definition of done
+
+This workflow is done when:
+
+- The ledger exists in the generated artifact or spec.
+- Each locked decision has a source and implementation consequence.
+- The spec has a `Locked Decisions From Q and A` section.
+- Acceptance criteria and test scenarios reflect the locked decisions.
+- Open questions contain only genuinely unresolved variables.
+- The agent can proceed without re-asking answered questions.
+
 ## README.md
 
 # Cursor docs (playbooks)
@@ -1046,6 +1685,83 @@ Working on PRDV-XXXXX (atlas). Scaffold changelog and capture requirements verba
 ```text
 Working on Countdowns. Project log: @docs/countdowns/countdowns-app-changelog.mdc
 ```
+
+## test-plan-artifact.md
+
+# Test plan artifact — how to test the implementation
+
+Use this instruction to make "how we will prove it works" a durable artifact of its own, **built in from the investigation step** — not reconstructed at implementation time. The investigation report's validation plan (§9) already produces the content; this artifact makes it executable and trackable through implementation and review.
+
+## Output location
+
+```text
+docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-test-plan.md
+```
+
+## Lifecycle
+
+| Phase | Action |
+| --- | --- |
+| Investigation report (Phase 2) | **Seed** the test plan from report §9: happy path, negative paths, test map, gates |
+| Probe & spec (Phase 3) | **Refine** as locked decisions land — resolved open variables become concrete assertions |
+| Implementation (Phase 5) | **Execute**: check off scenarios, fill the results log with exact commands + scope + result |
+| Manual review (Phase 6) | **Cite**: the review summary references this file's results, not a prose claim of "tests passed" |
+
+## Core rules
+
+- Scenarios are **falsifiable**: each states the setup, the action, and the observable outcome that passes or fails it.
+- Negative paths are first-class — what must fail **visibly** instead of corrupting silently (invalid input, unauthorized caller, concurrent actors, boundary values).
+- The results log follows the verification-gate reporting standard (see the `ticket-changelog` rule): exact gate command, scope, result. "Tests passed" by itself is not sufficient. Gates run serially (`--runInBand` / `--maxWorkers 1`) and are reported for the **final post-change state only**.
+- If a scenario cannot be executed, record it as **blocked** with the reason, residual risk, and follow-up — never silently drop it.
+
+## Artifact template
+
+```markdown
+# Test plan — <Project>/<ticket-slug>
+
+> Seeded from [<ticket-slug>-investigation.md](../investigations/<ticket-slug>-investigation.md) §9 on YYYY-MM-DD. Refined by spec: <link or "pending">.
+
+Status: seeded / refined / in-execution / complete
+
+## Scope and surfaces under test
+
+- <the behavior being proven, and the surfaces (components, endpoints, tables) it renders/executes on>
+
+## Happy path
+
+- [ ] HP-1: <setup> → <action> → <observable outcome>
+
+## Negative paths
+
+- [ ] NP-1: <invalid input / unauthorized / concurrent case> → <the visible failure required>
+
+## Edge cases
+
+- [ ] EC-1: <boundary / empty / extreme> → <expected behavior>
+
+## Test map
+
+| Repo | Suite | Asserts |
+| --- | --- | --- |
+| <repo> | <spec file or suite path> | <what it proves> |
+
+## Gates
+
+| Gate | Command |
+| --- | --- |
+| audit | `npm audit --audit-level=high` |
+| lint | `npm run lint` |
+| tests | `<repo's serial test command>` |
+
+## Results log (filled at execution)
+
+| Date | Gate/Scenario | Command | Scope | Result | Exception / risk |
+| --- | --- | --- | --- | --- | --- |
+```
+
+## Definition of done
+
+The test plan is done when every scenario is checked off or explicitly blocked-with-reason, the results log holds the final post-change gate runs, and the manual review can cite this file instead of restating evidence.
 
 ## ticket-changelog-workflow.md
 
@@ -1201,6 +1917,18 @@ When drafting a PR ([pull-request-workflow.md](../.cursor/docs/pull-request-work
 - One changelog per ticket, even if you touch multiple repos — use **Session log** to note which repo each slice landed in.
 - For long tickets, keep **Attempt history** so you do not retry dead ends across sessions.
 - Link **Plans** when a Cursor plan or external spec exists — future agents check there before re-proposing the same approach.
+
+## ticket-orchestration.md
+
+# Ticket orchestration — superseded by the `orchestrate` skill
+
+> **This doc is a pointer.** The phase-by-phase prompt sheet that lived here has been folded into the invocable skill [`../skills/orchestrate/SKILL.md`](../skills/orchestrate/SKILL.md) — say "orchestrate" (optionally with a ticket id or project + slug) instead of copy-pasting phase prompts.
+>
+> The high-level phase index (what the phases are, at a glance) lives in [agents-file-reference.md](./agents-file-reference.md) under "Orchestration flow at a glance".
+>
+> The standing constraint from the original sheet — **DO NOT PULL IN MODULES UNLESS ABSOLUTELY NECESSARY. WE WANT CONTEXT TO BE SIGNAL, NOT NOISE.** — now lives in the skill and governs every phase.
+>
+> This stub exists only to redirect muscle memory from previously circulated prompts; its eventual deletion is tracked in [cleanup-candidates.md](./cleanup-candidates.md).
 
 ## wiki-spec-authoring.md
 
@@ -1372,7 +2100,7 @@ Short bullets on the riskiest or most uncertain pieces.
 
 ## workflow-index.md
 
-# Workflow index — what to @ in Cursor
+# Workflow index â€” what to @ in Cursor
 
 One map for **dustin-thomason** personal workflows. When `@` shows too many matches, start here or type a filename from the table (e.g. `@new-branch`).
 
@@ -1383,31 +2111,31 @@ One map for **dustin-thomason** personal workflows. When `@` shows too many matc
 | Repo in workspace | Role |
 | ----------------- | ---- |
 | `callisto-back-end`, `atlas-front-end`, etc. | Code + **their** `.cursor/rules/` (Vue, Nest, `PRDV-X:` format) |
-| `dustin-thomason` | **Your** methodology — rules load for the **entire** session |
+| `dustin-thomason` | **Your** methodology â€” rules load for the **entire** session |
 
-### One rule: do you have to `@` or say “use dustin-thomason”?
+### One rule: do you have to `@` or say â€œuse dustin-thomasonâ€?
 
 | Kind | Loads automatically? | You must `@`? |
 | ---- | -------------------- | ------------- |
-| **Personal rules** (`alwaysApply: true` in dustin-thomason) | **Yes** — if `dustin-thomason` is in the workspace | **No** — say “write a spec” / “commit” / “open a PR” and [personal-methodology](../.cursor/rules/personal-methodology.mdc) routes to the right rule or playbook |
-| **Ticket changelog** (data for one PRDV) | **Partially** — agents resolve + read at **task start** per `ticket-changelog` | **Optional** on new threads — `@` still helps when multiple tickets/repos are open |
-| **Playbooks** (branch steps, PR template) | Yes when you use those **words** (router reads the `.md`) | No — unless the agent ignored you |
+| **Personal rules** (`alwaysApply: true` in dustin-thomason) | **Yes** â€” if `dustin-thomason` is in the workspace | **No** â€” say â€œwrite a specâ€ / â€œcommitâ€ / â€œopen a PRâ€ and [personal-methodology](../.cursor/rules/personal-methodology.mdc) routes to the right rule or playbook |
+| **Ticket changelog** (data for one PRDV) | **Partially** â€” agents resolve + read at **task start** per `ticket-changelog` | **Optional** on new threads â€” `@` still helps when multiple tickets/repos are open |
+| **Playbooks** (branch steps, PR template) | Yes when you use those **words** (router reads the `.md`) | No â€” unless the agent ignored you |
 
 **You do not copy** `spec-writing.mdc` (or any personal rule) into Callisto. Keep one copy in dustin-thomason only.
 
-**Example:** In Callisto you say *“Write the story spec for PRDV-15263.”* → `spec-writing` applies. You do **not** say *“@ spec-writing from dustin-thomason.”*
+**Example:** In Callisto you say *â€œWrite the story spec for PRDV-15263.â€* â†’ `spec-writing` applies. You do **not** say *â€œ@ spec-writing from dustin-thomason.â€*
 
-**Example:** You say *“Commit.”* → `git-commit-workflow` + `ticket-changelog` apply; changelog file must still be updated under `dustin-thomason/docs/…`.
+**Example:** You say *â€œCommit.â€* â†’ `git-commit-workflow` + `ticket-changelog` apply; changelog file must still be updated under `dustin-thomason/docs/â€¦`.
 
 ### When app rules and personal rules both apply
 
-- **Spec sections / tests / commit gates** → your dustin-thomason rules.
-- **`PRDV-12345:` commit prefix** on app branches → app repo rule.
-- **Nest/Vue architecture** → app repo rules **plus** `build-implementation-guardrails`.
+- **Spec sections / tests / commit gates** â†’ your dustin-thomason rules.
+- **`PRDV-12345:` commit prefix** on app branches â†’ app repo rule.
+- **Nest/Vue architecture** â†’ app repo rules **plus** `build-implementation-guardrails`.
 
 ### Housekeeping
 
-After you change workflow files: **“run workflow housekeeping”** or `@workflow-housekeeping`. Script: `.\scripts\validate-workflows.ps1`
+After you change workflow files: **â€œrun workflow housekeepingâ€** or `@workflow-housekeeping`. Script: `.\scripts\validate-workflows.ps1`
 
 ---
 
@@ -1416,11 +2144,11 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 | Layer | Location | Loads how? |
 | ----- | -------- | ------------ |
 | **Rules** | `.cursor/rules/*.mdc` (generated from `rules/*.md`) | **Automatic** when `dustin-thomason` is in workspace (`alwaysApply: true`) |
-| **Router** | `personal-methodology.mdc` | **Automatic** — maps “write spec” / “commit” / “open PR” to the right rule or playbook |
+| **Router** | `personal-methodology.mdc` | **Automatic** â€” maps â€œwrite specâ€ / â€œcommitâ€ / â€œopen PRâ€ to the right rule or playbook |
 | **Playbooks** | `.cursor/docs/*.md` | **Automatic** when you name the task (router); not via `@` |
 | **Artifacts** | `docs/**/PRDV-*-changelog.md`, `docs/<project>/*-changelog*` | Agents **read at task start** when substantive work begins; **`@`** optional pointer on new threads |
 
-**Authoritative long content** lives in `docs/`. `.cursor/docs/` holds short, task-oriented playbooks that link into `docs/`. `.github/*.md` files are **stubs for GitHub browsing only** — do not `@` them.
+**Authoritative long content** lives in `docs/`. `.cursor/docs/` holds short, task-oriented playbooks that link into `docs/`. `.github/*.md` files are **stubs for GitHub browsing only** â€” do not `@` them.
 
 ---
 
@@ -1430,47 +2158,49 @@ After you change workflow files: **“run workflow housekeeping”** or `@workfl
 
 | Output | Consumer | Committed? | Shape |
 | ------ | -------- | ---------- | ----- |
-| `.cursor/rules/*.mdc` | Cursor | **Yes** — machine-neutral | description + globs + alwaysApply |
-| `.claude/rules/*.md` | Claude Code | **Yes** — machine-neutral | full body (always) or `paths:`-scoped (on-demand) |
-| `AGENTS.md` | Codex (any AGENTS.md reader) | **Yes** — machine-neutral | concatenated bodies |
+| `.cursor/rules/*.mdc` | Cursor | **Yes** â€” machine-neutral | description + globs + alwaysApply |
+| `.claude/rules/*.md` | Claude Code | **Yes** â€” machine-neutral | full body (always) or `paths:`-scoped (on-demand) |
+| `AGENTS.md` | Codex (any AGENTS.md reader) | **Yes** â€” machine-neutral | concatenated bodies |
 
-All three are committed, so `git pull` distributes rule changes to every machine. Claude Code loads `.claude/rules/` in-repo automatically, and in **other** project dirs via a one-time junction `~/.claude/rules/dustin-thomason` → this repo's `.claude/rules`. Each rule's `scope`/`globs`/`codex` frontmatter (in `rules/`) drives how it lands in each output. **Never hand-edit a generated file** — edit `rules/` and run `sync-rules.ps1` (the pre-commit hook does this automatically). See `README.md` for one-time machine setup.
+All three are committed, so `git pull` distributes rule changes to every machine. Claude Code loads `.claude/rules/` in-repo automatically, and in **other** project dirs via a one-time junction `~/.claude/rules/dustin-thomason` â†’ this repo's `.claude/rules`. Each rule's `scope`/`globs`/`codex` frontmatter (in `rules/`) drives how it lands in each output. **Never hand-edit a generated file** â€” edit `rules/` and run `sync-rules.ps1` (the pre-commit hook does this automatically). See `README.md` for one-time machine setup.
 
 ---
 
 ## What to `@` by task
 
-| I want to… | What you say or do | `@` needed? |
+| I want toâ€¦ | What you say or do | `@` needed? |
 | ---------- | ------------------ | ----------- |
 | **Pick a workflow** (unsure) | `@workflow-index` | Optional |
-| **Write epic/story spec** (any repo) | “Write the story spec …” | **No** — `spec-writing` + `wiki-spec-authoring`; `@write-spec` for guided workflow |
-| **Start ticket / branch** | “Start branch for PRDV-…” | **No** — router reads `new-branch-get-started` |
-| **Commit or push** | “Commit” / “push using git workflow” | **No** — `git-commit-workflow` + `ticket-changelog` |
-| **Open a PR** | “Open PR for PRDV-…” | **No** — router reads `pull-request-workflow` |
-| **Implement code** | (normal implementation chat) | **No** — agent resolves changelog at **task start**; then `problem-requirement-solution` + `build-implementation-guardrails` + app repo rules |
-| **Fix bug / regression** | (normal fix chat) | **No** — same **task-start** changelog alignment when a ticket or project log exists |
-| **Debug front-end** layout/CSS/interaction at runtime | (drive/observe the live browser) | **No** — `browser-loop-guardrails` + [browser-loop-setup](../.cursor/docs/browser-loop-setup.md) |
-| **Ticket context (new thread)** | `@docs/atlas/PRDV-XXXXX-changelog` | **Optional** — explicit pointer; agent should still resolve changelog from branch/ticket id |
+| **Write epic/story spec** (any repo) | â€œWrite the story spec â€¦â€ | **No** â€” `spec-writing` + `wiki-spec-authoring`; `@write-spec` for guided workflow |
+| **Capture original ticket** | "Generate the original ticket artifact" / `@original-ticket-artifact` | Optional — creates `docs/<Project>/tickets/<slug>/original-ticket.md` before investigation/spec work |
+| **Start ticket / branch** | â€œStart branch for PRDV-â€¦â€ | **No** â€” router reads `new-branch-get-started` |
+| **Commit or push** | â€œCommitâ€ / â€œpush using git workflowâ€ | **No** â€” `git-commit-workflow` + `ticket-changelog` |
+| **Open a PR** | â€œOpen PR for PRDV-â€¦â€ | **No** â€” router reads `pull-request-workflow` |
+| **Implement code** | (normal implementation chat) | **No** â€” agent resolves changelog at **task start**; then `problem-requirement-solution` + `build-implementation-guardrails` + app repo rules |
+| **Fix bug / regression** | (normal fix chat) | **No** â€” same **task-start** changelog alignment when a ticket or project log exists |
+| **Debug front-end** layout/CSS/interaction at runtime | (drive/observe the live browser) | **No** â€” `browser-loop-guardrails` + [browser-loop-setup](../.cursor/docs/browser-loop-setup.md) |
+| **Ticket context (new thread)** | `@docs/atlas/PRDV-XXXXX-changelog` | **Optional** â€” explicit pointer; agent should still resolve changelog from branch/ticket id |
+| **Run a ticket end-to-end** | `orchestrate PRDV-...` / `orchestrate <project> <slug>` | No (skill by name) - seven phases, exit gates, mode handoffs, resumable ledger |
 | **Stress-test a plan** | `@grill-me` | Yes (skill) |
-| **Audit workflow docs** | “run workflow housekeeping” | Optional `@workflow-housekeeping` |
+| **Audit workflow docs** | â€œrun workflow housekeepingâ€ | Optional `@workflow-housekeeping` |
 
-`@` a **rule** only when the agent **ignored** you — not as your normal habit.
+`@` a **rule** only when the agent **ignored** you â€” not as your normal habit.
 
 ---
 
-## Personal rules (automatic — `alwaysApply: true`)
+## Personal rules (automatic â€” `alwaysApply: true`)
 
 | Rule file | Purpose |
 | --------- | ------- |
-| `personal-methodology` | Routes intent → spec / commit / PR / branch (no copy into app repos) |
+| `personal-methodology` | Routes intent â†’ spec / commit / PR / branch (no copy into app repos) |
 | `spec-writing` | Epic/story sections in **Callisto, Atlas, anywhere** |
-| `git-commit-workflow` | audit → lint → tests → git → paste SHA |
+| `git-commit-workflow` | audit â†’ lint â†’ tests â†’ git â†’ paste SHA |
 | `ticket-changelog` | task-start alignment + session log before commit |
-| `build-implementation-guardrails` | §5 shipping checklist: tests/regression, changelog (PRDV + personal projects), Swagger when applicable |
+| `build-implementation-guardrails` | Â§5 shipping checklist: tests/regression, changelog (PRDV + personal projects), Swagger when applicable |
 | `context-fanout` | read-only exploration subagents for multi-area context compaction |
 | `browser-loop-guardrails` | boundary rules for runtime browser observation + CSS/layout/interaction debugging |
-| `problem-requirement-solution` | frame implementation/plans/specs as Problem → Requirement → Solution |
-| `agent-completion-notification` | end of substantive sessions — `notify-agent-complete.ps1` → Power Automate |
+| `problem-requirement-solution` | frame implementation/plans/specs as Problem â†’ Requirement â†’ Solution |
+| `agent-completion-notification` | end of substantive sessions â€” `notify-agent-complete.ps1` â†’ Power Automate |
 
 Not always-on: `workflow-housekeeping` (only when editing workflow files here); `agents-sync` (regenerate `AGENTS.md` + `.claude/rules` after rule/skill edits).
 
@@ -1491,16 +2221,23 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 
 | Path | When |
 | ---- | ---- |
+| [original-ticket-artifact.md](./original-ticket-artifact.md) | Capture the baseline request as `original-ticket.md` before investigation/spec work |
+| [agents-file-reference.md](./agents-file-reference.md) | Why each `agents/` file exists + the orchestration flow at a glance |
+| [cleanup-candidates.md](./cleanup-candidates.md) | Archive/consolidation ledger - fed by orchestrated runs' cruft checks |
+| [investigation-coverage-ledger.md](./investigation-coverage-ledger.md) | Per-ticket visited-state map: template + consult/reopen protocol |
+| [investigation-diagrams.md](./investigation-diagrams.md) | Standalone diagrams artifact (delta, flows, sequences) for investigations |
+| [future-development-concerns.md](./future-development-concerns.md) | Per-ticket risk record: dated, code-verified concerns shipped out of scope |
+| [test-plan-artifact.md](./test-plan-artifact.md) | Per-ticket test plan: seeded from the report, executed at implementation |
 | [ticket-changelog-workflow.md](./ticket-changelog-workflow.md) | How changelogs work end-to-end |
 | [wiki-spec-authoring.md](./wiki-spec-authoring.md) | PRDV wiki naming, Obsidian wiring, dev notes, author checklist |
 | [docs/atlas/local/callisto-local.mdc](./atlas/local/callisto-local.mdc) | Callisto backend local runbook (Docker, migrations, DBeaver) |
 | [docs/atlas/local/triton-local.mdc](./atlas/local/triton-local.mdc) | Triton backend local runbook |
 | [docs/atlas/local/europa-local.mdc](./atlas/local/europa-local.mdc) | Europa backend local runbook |
-| `docs/<system>/PRDV-XXXXX-changelog.md` | **This ticket’s** memory in **dustin-thomason** only — `@` every new agent thread. `larry-adams` = read-only spec links in **Plans**, not a push target |
-| [\_templates/TICKET-changelog.template.md](./_templates/TICKET-changelog.template.md) | Rarely — use `scripts/new-ticket-changelog.ps1` instead |
+| `docs/<system>/PRDV-XXXXX-changelog.md` | **This ticketâ€™s** memory in **dustin-thomason** only â€” `@` every new agent thread. `larry-adams` = read-only spec links in **Plans**, not a push target |
+| [\_templates/TICKET-changelog.template.md](./_templates/TICKET-changelog.template.md) | Rarely â€” use `scripts/new-ticket-changelog.ps1` instead |
 | `docs/WorkLists/` | One-off personal work lists |
 
-**Do not** keep ticket changelogs under `.cursor/docs/` — only `docs/<system>/` to avoid duplicate `@` suggestions.
+**Do not** keep ticket changelogs under `.cursor/docs/` â€” only `docs/<system>/` to avoid duplicate `@` suggestions.
 
 ---
 
@@ -1516,21 +2253,23 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 ## Narrowing `@` suggestions in Cursor
 
 1. Type more characters: `@new-branch`, `@pull-request`, `@PRDV-12264`.
-2. Prefer **one playbook** or **one changelog** per message — not the whole repo.
+2. Prefer **one playbook** or **one changelog** per message â€” not the whole repo.
 3. Do not `@` `.github/` stubs or duplicate paths.
-4. Rules with `alwaysApply: true` → trust them; `@` only on failure.
+4. Rules with `alwaysApply: true` â†’ trust them; `@` only on failure.
 
 ---
 
 ## Skills (`.cursor/skills/`)
 
-Skills are **not** `alwaysApply` — the user `@`’s the skill or asks in plain language.
+Skills are **not** `alwaysApply` â€” the user `@`â€™s the skill or asks in plain language.
 
 | Skill | Invoke when |
 | ----- | ----------- |
 | `write-spec` | Author/update PRDV specs or dev notes (see [wiki-spec-authoring.md](./wiki-spec-authoring.md)) |
 | `grill-me` | Stress-test a plan or design |
 | `workflow-housekeeping` | Audit rules/playbooks/index after you change workflow files |
+| `investigation` | Investigate a problem + proposed fix before committing to it (emits an Investigation Report) |
+| `orchestrate` | Run a ticket end-to-end through all seven phases with full-rigor artifacts, gates, and a per-ticket ledger |
 
 ## Scripts (`scripts/`)
 
@@ -1538,11 +2277,11 @@ Skills are **not** `alwaysApply` — the user `@`’s the skill or asks in plain
 | ------ | ------- |
 | `new-ticket-changelog.ps1` | Create `docs/<system>/PRDV-XXXXX-changelog.md` |
 | `notify-agent-complete.ps1` | Post session completion to Power Automate (`agent-completion-notification` rule) |
-| `validate-workflows.ps1` | Wiring audit (incl. generated-output staleness) — run after changing rules/docs |
-| `sync-rules.ps1` | **Primary generator** — rebuilds `.cursor/rules/` (Cursor) + `.claude/rules/` (Claude Code) + `AGENTS.md` (Codex) from `rules/*.md`. `-Check` fails on stale output. |
-| `sync-agents-md.ps1` | Backwards-compatible shim → `sync-rules.ps1` |
+| `validate-workflows.ps1` | Wiring audit (incl. generated-output staleness) â€” run after changing rules/docs |
+| `sync-rules.ps1` | **Primary generator** â€” rebuilds `.cursor/rules/` (Cursor) + `.claude/rules/` (Claude Code) + `AGENTS.md` (Codex) from `rules/*.md`. `-Check` fails on stale output. |
+| `sync-agents-md.ps1` | Backwards-compatible shim â†’ `sync-rules.ps1` |
 
-## GitHub (stubs only — never `@`)
+## GitHub (stubs only â€” never `@`)
 
 | File | Points to |
 | ---- | --------- |
@@ -1569,11 +2308,11 @@ Checks: required `alwaysApply` rules, expected scripts, playbooks, router links,
 | Commit | `git-commit-workflow` + `ticket-changelog` rules |
 | PR | `pull-request-workflow` (via `personal-methodology` router) |
 | Code quality | `build-implementation-guardrails` + app repo rules |
-| Framing implementation | `problem-requirement-solution` — Problem → Requirement → Solution |
-| Multi-area exploration | `context-fanout` — read-only subagent fanout |
+| Framing implementation | `problem-requirement-solution` â€” Problem â†’ Requirement â†’ Solution |
+| Multi-area exploration | `context-fanout` â€” read-only subagent fanout |
 | Front-end runtime debugging | `browser-loop-guardrails` + `browser-loop-setup` playbook |
 | Spec | `spec-writing` + `wiki-spec-authoring`; `@write-spec` for guided flow |
-| Agent finished substantive work | `agent-completion-notification` → `notify-agent-complete.ps1` |
+| Agent finished substantive work | `agent-completion-notification` â†’ `notify-agent-complete.ps1` |
 
 If a new workflow type appears (e.g. release, hotfix), add **one row** above, **one** playbook, update `personal-methodology.mdc`, run `validate-workflows.ps1`.
 
@@ -1605,6 +2344,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | ----- | ------- |
 | `grill-me` | Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when user wants to stress-test a plan, get grilled on their design, or mentions "grill me". |
 | `investigation` | The method for investigating a problem and its proposed fix before committing to it — in any domain (software, workflow, policy, process, etc.). Ground in real instances, classify the problem, lock acceptance criteria, trace why it exists, re-confirm the class, then stress-test the solution against scale, generalization, and fit. Emits an Investigation Report (see the investigation-report template): verdict, problem class, assumptions-to-test, a happy/negative validation plan, recommendation with gates, and open variables to collect. Use when scoping a change, validating assumptions, writing a spec, or when the user says "investigate". |
+| `orchestrate` | Conduct a ticket end-to-end through the seven-phase lifecycle — capture original ticket, investigate, report, probe and spec, prep for implementation, implement, manual review — with full-rigor artifacts, phase exit gates, and a standardized handoff at every mode boundary. Resumable from the per-ticket ledger. Use when the user says "orchestrate", "orchestrate PRDV-XXXXX", "run the ticket workflow", "take this ticket through the phases", or "resume/continue orchestration". |
 | `workflow-housekeeping` | Audit dustin-thomason workflow docs, rules, and index for drift, duplicates, and missing entries. Use when user asks to housekeeping workflows, sync workflow-index, validate personal Cursor setup, or after adding a new playbook or rule. |
 | `write-spec` | Create or update epic/story specs and dev notes for Callisto/Atlas. Use when the user asks to write a spec, author PRDV ticket documentation, create a dev note for estimation, or extend specs under a systems/ wiki tree. |
 
@@ -1612,17 +2352,26 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 
 | Doc | About |
 | --- | ----- |
+| `agents-file-reference.md` | Agents file reference — why each file exists |
 | `browser-loop-setup.md` | Browser-loop setup (dustin-thomason) |
+| `cleanup-candidates.md` | Cleanup candidates — archive and consolidation ledger |
 | `current-vs-target-diagram.md` | Current vs Target diagram — a single-diagram delta convention |
+| `future-development-concerns.md` | Future-development concerns — the risk record artifact |
+| `investigation-coverage-ledger.md` | Investigation coverage ledger — the visited-state map |
+| `investigation-diagrams.md` | Investigation diagrams — the standalone visuals artifact |
 | `investigation-question-coverage.md` | Investigation method — question coverage checklist |
 | `investigation-report.md` | Investigation Report: <short title> |
-| `investigation-software-gaps.md` | Investigation method — software lens: candidate additions (staging) |
+| `investigation-software-gaps.md` | Investigation method — software lens |
 | `new-branch-get-started.md` | Start a new branch |
+| `original-ticket-artifact.md` | Original Ticket Artifact |
 | `problem-check.md` | Problem Check — is the question even the right question? |
 | `pull-request-workflow.md` | Pull request workflow (reference) |
+| `qa-to-spec-traceability.md` | Q and A to Spec Traceability |
 | `README.md` | Cursor docs (playbooks) |
 | `session-start.md` | Session start (optional) |
+| `test-plan-artifact.md` | Test plan artifact — how to test the implementation |
 | `ticket-changelog-workflow.md` | Ticket changelog workflow |
+| `ticket-orchestration.md` | Ticket orchestration — superseded by the `orchestrate` skill |
 | `wiki-spec-authoring.md` | Wiki spec authoring (Callisto / Atlas) |
 
 ### Scripts (`scripts/`, `agents/scripts/`)

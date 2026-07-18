@@ -1,6 +1,6 @@
-# Investigation method — software lens: candidate additions (staging)
+# Investigation method — software lens
 
-> **Status:** staging / not yet adopted. These are questions the current method (`agents/skills/investigation/SKILL.md` + `agents/docs/investigation-report.md`) does **not** force, that a real software investigation needs. Parked here to review and possibly fold into the software branch / Steps 4 & 6 later. Nothing here is live yet.
+> **Status:** adopted (2026-07-18) — the mandatory software-lens questions in Phase 1 of the `orchestrate` skill (`../skills/orchestrate/SKILL.md`); also usable standalone alongside `agents/skills/investigation/SKILL.md`. These are questions the base method does **not** force, that a real software investigation needs.
 > **Companion:** [investigation-question-coverage.md](./investigation-question-coverage.md) audits the questions we already had; this doc holds the net-new ones.
 
 ## The organizing idea: ground *sideways*, not just down and up

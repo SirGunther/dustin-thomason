@@ -12,6 +12,7 @@ The steps below are ordered by dependency: each locks in something the next step
 ## Standing disciplines (apply from the first sentence, not a later phase)
 
 - **Evidence first.** If a question can be answered by gathering evidence yourself, do that instead of asking. Only ask me what the evidence can't tell you.
+- **Maintain the coverage ledger.** Consult prior coverage ledgers before opening an investigative branch, and record coverage (area, items inspected, findings, status, commit) as you traverse — per `agents/docs/investigation-coverage-ledger.md`.
 - **Every claim falsifiable.** Write each claim — including problem statements and classifications — so it could be refuted, then go look for the refutation. Log each into the assumptions ledger as you make it, not retroactively.
 - **Log unknowns as they surface.** Any value, mapping, threshold, owner, or boundary you can't pin down goes into the open-variables list the moment you notice it.
 - **Offer candidates cheaply, drop misses without ceremony.** Never defend a bad instance or framing.
