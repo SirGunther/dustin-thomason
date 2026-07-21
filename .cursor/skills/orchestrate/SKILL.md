@@ -126,13 +126,14 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 
 ## Phase 0 — Capture the original ticket (Working)
 
-- **Reads:** `../../docs/original-ticket-artifact.md`; the canonical changelog per the `ticket-changelog` rule (task-start alignment — resolve or scaffold it; personal projects use `docs/<project>/`'s project changelog).
+- **Reads:** `../../docs/original-ticket-artifact.md`; the canonical changelog per the `ticket-changelog` rule (task-start alignment — resolve or scaffold it; personal projects use `docs/<project>/`'s project changelog). For ClickUp-backed tickets, also read `../../docs/browser-loop-setup.md` and load the browser-loop guardrails before using Playwright/browser observation.
 - **Do:**
   1. Create the ticket folder in the canonical layout.
-  2. Create `original-ticket.md` per the artifact doc — the request **verbatim**, capture metadata, explicit constraints, context paths. No findings, no recommendations.
-  3. Scaffold `orchestration.md` from the template above; mark Phase 0 `done`.
-  4. Align with the changelog's Current state / Plans / Attempt history before anything downstream.
-- **Gate evidence:** `original-ticket.md` Original Request section is verbatim; changelog named.
+  2. For ClickUp-backed tickets, use Playwright/browser observation as the preferred capture path: open the active ClickUp ticket page, identify the visible ticket fields and metadata from the rendered UI, and export the captured ticket to Markdown as `{ticket-id}-original-ticket.md`. Use API access only as a fallback or cross-check, not as the default source of truth.
+  3. Create `original-ticket.md` (or `{ticket-id}-original-ticket.md` for PRDV tickets) per the artifact doc — the request **verbatim**, capture metadata, explicit constraints, context paths. No findings, no recommendations.
+  4. Scaffold `orchestration.md` from the template above; mark Phase 0 `done`.
+  5. Align with the changelog's Current state / Plans / Attempt history before anything downstream.
+- **Gate evidence:** original-ticket artifact Original Request section is verbatim; ClickUp capture path or user-provided source is named; changelog named.
 - **Advance:** handoff → Phase 1 (Plan).
 
 ## Phase 1 — Investigation (Plan)
