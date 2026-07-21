@@ -63,6 +63,24 @@ node baseline.mjs compare  --url http://localhost:5173 --selectors ".panel,.pane
 
 The trajectory sampler takes a `--config <file>` too (fields: `url`, `handle`, `delta:{dx,dy}`, `steps`, `watch:[…]`, `threshold`, `trigger:{action,selector}`) — use it for boundary conditions and multi-step scenarios.
 
+## Attaching to an authenticated browser session (ClickUp, or any logged-in site)
+
+**A freshly Playwright-launched browser has no cookies and no login.** For any site that requires authentication (ClickUp task pages, an internal admin panel, anything behind SSO), `chromium.launch()` or a stock MCP's own browser instance opens a blank, logged-out session — it will not see the page you're trying to inspect, and an agent that doesn't recognize this will start guessing selectors against a login wall or an empty shell. This happened once against a live ClickUp task: the agent attempted Playwright without an authenticated context and had to be manually rescued.
+
+**The fix is to attach to a real, already-logged-in Chrome instead of launching a new one:**
+
+1. Close any Chrome windows you want to keep isolated from this (the debug port exposes the whole browser to CDP), or use a dedicated profile as shown below.
+2. Launch Chrome with remote debugging enabled and a **dedicated user-data directory** so this doesn't disturb your normal profile, and log in once — the profile persists the session across future attaches:
+
+   ```powershell
+   Start-Process chrome.exe -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\temp\<project>-cdp-profile','<the authenticated page URL>'
+   ```
+
+3. Log in normally in that window (once — the dedicated profile keeps the session for next time).
+4. Point the agent's tools at the CDP port instead of launching a fresh browser: `--cdp http://localhost:9222` (the custom scripts already support this — see the `css-provenance.mjs` example above), or configure the Playwright MCP to connect over CDP rather than launch.
+
+**Do not** substitute a fresh incognito/headless launch and try to work around the login wall with guessed selectors or API fallbacks — attach to the authenticated session instead. This recipe is referenced from the `orchestrate` skill's Phase 0 for ClickUp-backed tickets.
+
 ## Method (from the spec)
 
 - **Provenance over guessing.** Use matched styles to get *who won* and *what it overrode*, not just the final computed value.

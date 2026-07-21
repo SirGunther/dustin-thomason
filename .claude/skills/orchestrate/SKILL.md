@@ -23,25 +23,34 @@ If the ticket folder already exists, follow **State ledger and resume** below in
 
 ## Ticket folder layout
 
-Every artifact this skill produces lives in one canonical layout — organized, obvious by filename:
+Every artifact this skill produces lives in one canonical layout, rooted at **`C:\dustin-thomason\docs\<Project>\tickets\<slug>\`** — organized, obvious by filename:
 
 ```text
-docs/<Project>/tickets/<slug>/
+docs/<Project>/tickets/<slug>/            (always under the dustin-thomason repo — see Repo boundary below)
   original-ticket.md                              Phase 0
   orchestration.md                                phase-state ledger (Phase 0 scaffolds)
   <slug>-future-development-concerns.md           Phases 1–4, created on first concern only
   investigations/
-    <slug>-investigation.md                       Phase 2
+    <slug>-investigation.md                       Phase 2 (§13+ addenda appended, never rewritten — see Phase 2)
     <slug>-coverage-ledger.md                     Phases 1–2
     <slug>-diagrams.md                            Phase 2
   specs/
     <slug>-spec.md                                Phase 3
+    <slug>-locked-decisions.md                    Phase 3 — standard once decisions exceed a handful (see Phase 3)
   testing/
     <slug>-test-plan.md                           Phase 2 seed → Phase 3 refine → Phase 5 execute
   dnu/                                            superseded artifacts move here, names unchanged
 ```
 
 PRDV tickets may prefix artifact filenames with `PRDV-XXXXX-` instead of the slug; personal projects use the slug. Superseded or redone artifacts **move to `dnu/`** — never deleted, never renamed.
+
+## Repo boundary (docs vs implementation)
+
+**Every orchestration artifact lives in `dustin-thomason`, always — never inside the implementation repo or folder, regardless of where `<Project>`'s actual code lives.** This mirrors the `ticket-changelog` rule's boundary ("all changelog and Plans data stays in this repo"). A ticket whose code lives at `C:\Users\<user>\...\Browser Extensions\<Project>\` or in an app repo like `atlas-front-end` still gets its `original-ticket.md`, ledger, report, spec, and every other artifact under `C:\dustin-thomason\docs\<Project>\tickets\<slug>\`.
+
+The implementation location is **recorded**, not used as a docs root: capture it in `original-ticket.md`'s Context Paths and in the orchestration ledger's Artifacts column (Phase 5 onward) when code changes land there. If the target repo has no `.git` (e.g. a loose extension folder), say so in the ledger notes and skip the branch step — do not relocate docs there instead.
+
+If this boundary is ever unclear at invocation (a free brief naming a folder that could be mistaken for the docs root), ask once before creating anything — this was reached only by a live user correction in a prior run, not caught by the skill itself.
 
 ## The phase map
 
@@ -61,6 +70,23 @@ PRDV tickets may prefix artifact filenames with `PRDV-XXXXX-` instead of the slu
 - **Claude Code exception:** if a plan-mode tool (EnterPlanMode) is available in the session, you MAY use it to cross a Working→Plan boundary without stopping — but still print the handoff block first, so the ledger and the user stay synchronized.
 - Handoff boundaries: 0→1, 3→4, 5→6. The 1→2 and 4→5 boundaries are crossed by **plan approval** itself (approving the plan is the handoff) — print the phase gate at the start of the following phase instead.
 - Same-mode boundary 2→3: **auto-advance, no stop** — but the Phase 2 exit gate still prints.
+- **Open, untested assumption — whether scripts/messages can run *while in* Plan mode at all** (some harnesses restrict non-readonly tool calls, including shell/Bash, during Plan mode). Status: open. Confirm/revise by: attempt a script call while genuinely in Plan mode in each harness in use and record the observed result (allowed / blocked / silently no-op) as a coverage-ledger or ledger-notes entry. Until confirmed either way, the design below never depends on running anything during a Plan phase — see Progress notifications.
+
+## Progress notifications
+
+**Because handoffs stop and wait, and the user may not be watching, every phase completion sends a push notification** — not only Phase 6 — per the `agent-completion-notification` rule. This directly works around the open Plan-mode question above rather than resolving it: notifications are sent only from **Working**-mode moments, never attempted from inside a Plan phase.
+
+- **Working-phase completions (0, 2, 3, 5, 6) notify immediately**, before printing that phase's handoff block (or, for the auto-advancing Phase 2, alongside its printed gate).
+- **Plan-phase completions (1, 4) defer their notification** to the first action of the next Working phase, batched with that phase's own "starting" notice — the same deferred pattern already used for their ledger writes (`deferred (plan mode)`).
+- Resolve the dustin-thomason repo root the same way `agent-completion-notification` does, then run (adjust for cwd):
+
+  ```powershell
+  # from the dustin-thomason repo root
+  .\scripts\notify-agent-complete.ps1 -Status "Completed" -Message "<Project>/<slug>: Phase <N> done, next is Phase <M> (<mode>)"
+
+  # from elsewhere in the workspace (e.g. the implementation repo)
+  & "<dustin-thomason>\scripts\notify-agent-complete.ps1" -Status "Completed" -Message "<Project>/<slug>: Phase <N> done, next is Phase <M> (<mode>)"
+  ```
 
 ## The handoff block
 
@@ -92,6 +118,8 @@ Phase <N> gate:
 ```
 
 A failed gate blocks the advance — state what is missing and complete it first. Confidence is not a substitute for the check. Plan-mode phases (1, 4) cannot write files; their ledger rows and file outputs are written as the **first action** of the next Working phase, and the gate says `deferred (plan mode)`.
+
+**Entry check — before touching anything, not just before leaving.** A prior orchestrated run edited implementation-repo files during Phase 0/1, before capture and investigation existed, and was only caught because the user noticed and reverted it — the gate above didn't stop it, because it only checks a phase on the way *out*. Before doing **any** work in Phase 2 or later, confirm every earlier phase's ledger row reads `done` or `skipped (reason)` — if it does not, stop and close the gap first. Concretely: do not create, edit, or run anything in the target implementation repo/folder until Phase 0 and Phase 1's gates have both printed `done`. Do not mark a phase `done` in the ledger — especially Phase 5 — on the strength of drafted code or an unproven claim; `done` means the phase's own gate evidence is real, not pending (this was also missed once: implementation was nearly called complete before live proof existed, per Phase 5's own evidence requirement below).
 
 ## State ledger and resume
 
@@ -129,12 +157,12 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 - **Reads:** `../../docs/original-ticket-artifact.md`; the canonical changelog per the `ticket-changelog` rule (task-start alignment — resolve or scaffold it; personal projects use `docs/<project>/`'s project changelog). For ClickUp-backed tickets, also read `../../docs/browser-loop-setup.md` and load the browser-loop guardrails before using Playwright/browser observation.
 - **Do:**
   1. Create the ticket folder in the canonical layout.
-  2. For ClickUp-backed tickets, use Playwright/browser observation as the preferred capture path: open the active ClickUp ticket page, identify the visible ticket fields and metadata from the rendered UI, and export the captured ticket to Markdown as `{ticket-id}-original-ticket.md`. Use API access only as a fallback or cross-check, not as the default source of truth.
+  2. For ClickUp-backed tickets, use Playwright/browser observation as the preferred capture path: open the active ClickUp ticket page, identify the visible ticket fields and metadata from the rendered UI, and export the captured ticket to Markdown as `{ticket-id}-original-ticket.md`. Use API access only as a fallback or cross-check, not as the default source of truth. **ClickUp requires an authenticated session** — a freshly Playwright-launched browser context has no login and cannot see the page. Attach to a real, already-logged-in Chrome instead, per browser-loop-setup.md's "Attaching to an authenticated browser session" recipe; do not attempt a fresh headless/incognito launch against ClickUp and fall back to guessing selectors when it fails to load — that already happened once and cost a manual recovery.
   3. Create `original-ticket.md` (or `{ticket-id}-original-ticket.md` for PRDV tickets) per the artifact doc — the request **verbatim**, capture metadata, explicit constraints, context paths. No findings, no recommendations.
   4. Scaffold `orchestration.md` from the template above; mark Phase 0 `done`.
   5. Align with the changelog's Current state / Plans / Attempt history before anything downstream.
-- **Gate evidence:** original-ticket artifact Original Request section is verbatim; ClickUp capture path or user-provided source is named; changelog named.
-- **Advance:** handoff → Phase 1 (Plan).
+- **Gate evidence:** original-ticket artifact Original Request section is verbatim; ClickUp capture path or user-provided source is named; changelog named; no implementation-repo file has been touched yet.
+- **Advance:** notify (Progress notifications), then handoff → Phase 1 (Plan).
 
 ## Phase 1 — Investigation (Plan)
 
@@ -144,7 +172,7 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
   2. Execute the investigation method steps 1–6 on the ticket. Stage coverage rows (area, items inspected, findings, status, commit) as you traverse — they become the coverage ledger in Phase 2.
   3. Build the investigation plan. It must include todos to: reconcile against every point of the software lens; emit the report per the template; materialize the coverage ledger (with the consult line); produce the diagrams artifact per `../../docs/investigation-diagrams.md`; seed the test plan per `../../docs/test-plan-artifact.md`; record any surfaced concerns per `../../docs/future-development-concerns.md`.
 - **Gate evidence:** the plan contains the consult results and the reconcile-per-lens todos; open variables have owners.
-- **Advance:** plan approval (this is the handoff). Ledger row updates at Phase 2's first action.
+- **Advance:** plan approval (this is the handoff). Ledger row updates and the deferred Phase 1 notification both fire at Phase 2's first action.
 
 ## Phase 2 — Investigation report (Working)
 
@@ -157,7 +185,8 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
   5. Seed `testing/<slug>-test-plan.md` from report §9.
   6. Update `original-ticket.md` Downstream Artifacts; add a Plans row to the changelog.
 - **Gate evidence:** consult log line present in the coverage ledger; report §5 links (not embeds) the diagrams; test plan status `seeded`.
-- **Advance:** AUTO-ADVANCE to Phase 3 (same mode) — print the gate, keep going.
+- **Advance:** notify (Progress notifications; deferred Phase 1 notice batches in here too), AUTO-ADVANCE to Phase 3 (same mode) — print the gate, keep going.
+- **Reopening a "done" report:** if later work (a fast-follow answer, a live-DOM proof, a corrected assumption) needs to change this report after it's marked done, **append a numbered addendum section** (e.g. "§13. Post-Investigation Addendum — <what>") dated and evidenced — never rewrite the verdict or earlier sections in place. This preserves the original reasoning trail the same way the coverage ledger and locked-decision ledger already do.
 
 ## Phase 3 — Probe and spec (Working)
 
@@ -165,17 +194,17 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 - **Do:**
   1. Run grill-me against the report's open variables and assumptions — **under the qa-to-spec-traceability workflow**: question gate before each question, one question at a time, each answer committed to the locked-decision ledger before the next, rejected paths recorded.
   2. Risk-accepting answers produce BOTH records: the locked-decision row and a concern entry in `<slug>-future-development-concerns.md` (create on first concern); the row cites the entry.
-  3. Write `specs/<slug>-spec.md`: grill-me output **informs** the spec, it is not the spec. Include the `Locked Decisions From Q and A` section; satisfy the spec-writing rule's sections (N/A lines where a section does not apply); frame Problem → Requirement → Solution.
+  3. Materialize the locked-decision ledger as its own file, `specs/<slug>-locked-decisions.md` (question gates resolved + the full `LD-###` table with source / supersedes-or-rejects / spec destination) — the standard from the first real run, once decisions run past a handful the way they will on any non-trivial ticket. Write `specs/<slug>-spec.md`: grill-me output **informs** the spec, it is not the spec. Its required `Locked Decisions From Q and A` section (per `spec-writing` / `qa-to-spec-traceability`) becomes a short summary table that **links to** `<slug>-locked-decisions.md` for the full ledger, rather than repeating it — satisfy the spec-writing rule's sections (N/A lines where a section does not apply); frame Problem → Requirement → Solution.
   4. Refine the test plan — resolved variables become concrete assertions; status `refined`.
-- **Gate evidence:** spec's locked-decisions section traces to the ledger; no locked decision remains open; audit per the traceability doc's definition of done.
-- **Advance:** handoff → Phase 4 (Plan).
+- **Gate evidence:** spec's locked-decisions section links to a `<slug>-locked-decisions.md` whose ledger traces every entry to a source; no locked decision remains open; supersessions are recorded (never a silent overwrite); audit per the traceability doc's definition of done.
+- **Advance:** notify (Progress notifications), then handoff → Phase 4 (Plan).
 
 ## Phase 4 — Prep for implementation (Plan)
 
 - **Reads:** the spec; report §11 (handoff table); the test plan. **No re-investigation** — plan from the artifacts.
 - **Do:** build a brief implementation plan: Problem → Requirement → Solution framing; ordered steps; branch step per `../../docs/new-branch-get-started.md` when repo work begins; test execution mapped to the test plan; the shipping checklist obligations (tests, regression, API docs, gates) named up front per the `build-implementation-guardrails` rule.
 - **Gate evidence:** every plan step traces to spec/report/test-plan; a Plans row for this plan is staged for the changelog.
-- **Advance:** plan approval (this is the handoff). Ledger + changelog Plans row update at Phase 5's first action.
+- **Advance:** plan approval (this is the handoff). Ledger + changelog Plans row update, and the deferred Phase 4 notification, all fire at Phase 5's first action.
 
 ## Phase 5 — Implement (Working)
 
@@ -185,8 +214,8 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
   2. Implement per the plan, inside the `build-implementation-guardrails` obligations (tests as part of shipping, architecture fit, graceful degradation by layer).
   3. Execute `testing/<slug>-test-plan.md`: check off scenarios, fill the results log with exact command + scope + result (serial runs).
   4. Before every commit: changelog session log, then audit → lint → tests per the `git-commit-workflow` rule. PR per `../../docs/pull-request-workflow.md` when requested.
-- **Gate evidence:** test plan status `complete` (or blocked items carry reason + residual risk + follow-up); session log written; gate results reported as a table.
-- **Advance:** handoff → Phase 6 (Idle).
+- **Gate evidence:** test plan status `complete` (or blocked items carry reason + residual risk + follow-up); session log written; gate results reported as a table. **Do not mark this phase `done` on drafted-but-unproven code** — the evidence must be an actual observed result (a run, a manual check, a passing suite), not a claim of what should happen.
+- **Advance:** notify (Progress notifications), then handoff → Phase 6 (Idle).
 
 ## Phase 6 — Manual review (Idle)
 
@@ -194,7 +223,7 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
   1. Produce the review summary: what to review, where, citing the test plan's results log — no unfalsifiable "tests passed" claims.
   2. **Cruft check:** did this run surface outdated references, superseded docs, or dead weight? Append findings to `../../docs/cleanup-candidates.md`; write "cruft check: nothing surfaced" in the ledger notes if clean.
   3. Close the ledger: Phase 6 `done`, `Resume: complete`; set the changelog Plans row to `implemented` when the work landed.
-  4. Run `notify-agent-complete.ps1` per the `agent-completion-notification` rule.
+  4. Notify per Progress notifications — this is the final one, matching the standard `agent-completion-notification` rule usage.
 - **Advance:** END. The user reviews manually; you are done.
 
 ---
@@ -216,3 +245,8 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 - Do not rewrite `original-ticket.md`'s Original Request, ever.
 - Do not put the orchestration ledger anywhere except the ticket folder.
 - Do not emit anything after a handoff block.
+- Do not put any orchestration artifact outside `C:\dustin-thomason\docs\<Project>\tickets\<slug>\`, even when the implementation lives in a different repo or folder — see Repo boundary.
+- Do not touch implementation-repo files before Phase 0 and Phase 1 both show `done` in the ledger.
+- Do not mark a phase `done` — Phase 5 especially — on a claim or drafted code; the gate evidence must be an observed result.
+- Do not rewrite a "done" investigation report to incorporate later findings; append a dated addendum section instead.
+- Do not assume a notification or script can run while genuinely in Plan mode; use the deferred-to-next-Working-action pattern in Progress notifications instead.
