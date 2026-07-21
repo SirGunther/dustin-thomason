@@ -769,6 +769,16 @@ Software-specific questions the method doesn't ask at all are tracked separately
 - **Urgency** (date or trigger event when it bites next):
 - **Wedge** (smallest reusable issue *within the confirmed class* that opens the space):
 
+### Problem Check (required — run the lens per `problem-check.md`; feeds §1, §2 Distinct problems, §8, §10)
+> The framing claims above and here **cite the words that justify them** — trimmed quotes from the ticket/request text or discussion, not only code evidence. "Nothing here" is a valid finding for any flag; never manufacture one to look thorough. This subsection is not optional: it is where evidence-grounded framing and conflation live, and a report without it has skipped the method's Step 1 discipline.
+
+- **Asked:** <what the request says it's working on> — *evidence:* "<trimmed quote>"
+- **Answered:** <what it's actually working on; name the drift if any> — *evidence:* "<trimmed quote>"
+- **Should-ask:** <sharper/upstream question, or "the asked question is the right one"> — *why:* <what it decides>
+- **Conflation:** <distinct problems named apart + whether solving one touches the other> | nothing here — *evidence:* "<trimmed quote>"
+- **Thin:** <undefined term / unstated "what does solved look like" / unsupported claim> | nothing here — *evidence:* "<trimmed quote>"
+- **Off:** <internal contradiction> | nothing here — *evidence:* "<fragment A>" → "<contradicting fragment B>"
+
 ## 3. The contract (locked before any solutioning)
 ### Acceptance criteria
 | Criterion | Status | What's needed to close it |
@@ -809,6 +819,8 @@ Software-specific questions the method doesn't ask at all are tracked separately
 
 ## 8. Assumptions ledger
 > Populated throughout the investigation as claims are made — not backfilled at the end. Each is a falsifiable claim with a test. "Confirmed directionally" still owes proof of performance, accuracy, and parity.
+>
+> **This is the home for facts to be discovered** — uncertainties with an answer already in the evidence (code, source text, observed behavior). They resolve by *discovery*, so resolve them here, now, by going to look — never park a discoverable fact in §10 as an "open variable for discussion." (The distinction from §10: a fact resolves by finding it; a decision resolves by someone choosing. See §10.)
 
 - **Claim:** <…>
   - **Status:** open | confirmed | confirmed directionally | revised | refuted
@@ -834,8 +846,12 @@ Software-specific questions the method doesn't ask at all are tracked separately
 
 ### Open variables to collect
 > Logged as they surfaced during the investigation. Assign an owner where possible.
+>
+> **This is the home for decisions to be made** — resolved by an owner *choosing* (scope, product, ownership, a change to the current structure), not by discovery. If an item has **both halves** — a discoverable fact and a decision riding on it — **split it**: resolve the fact in §8 by evidence now, and leave only the decision here. What lands here after Step 7's reconcile is only true decisions. When a question is open because the *current structure cannot answer it*, record the evidence that proves that (the missing seam / absent field / state the system can't distinguish) so the reader sees it's a decision or a change, not an un-run lookup.
+>
+> On a software ticket this fact-vs-decision axis is *code vs workflow*; on policy it's *source-text/precedent vs judgment call* — the axis is domain-agnostic.
 
-- [ ] <value / mapping / threshold / owner / boundary> — owner:
+- [ ] <decision / mapping / threshold / owner / boundary> — owner:
 - [ ] <…> — owner:
 
 ---
@@ -881,6 +897,7 @@ Software-specific questions the method doesn't ask at all are tracked separately
 ## 12. Definition of done (investigation gate)
 Don't move past investigation until each is answered:
 - [ ] **Class derived from instances, re-confirmed against root cause — and "reframed?" answered with a justification either way (Section 1)**
+- [ ] Problem Check pass recorded (§2) — flags grounded in trimmed quotes, or an explicit "nothing here"; framing claims cite the request's words, not only code
 - [ ] Problem in one plain sentence
 - [ ] Named blocked instance
 - [ ] Date it bites next
@@ -890,7 +907,7 @@ Don't move past investigation until each is answered:
 - [ ] 30-second happy-path story
 - [ ] Metric that proves it works + how fast it arrives
 - [ ] Verdict + disposition stated
-- [ ] Open variables each have an owner
+- [ ] Every open question reconciled (Step 7): discoverable facts resolved by evidence in §8; only genuine decisions remain in §10, each with an owner — and any "the structure can't answer this" carries the evidence that proves it
 - [ ] Tracked action with a falsifiable done-when
 
 ## investigation-software-gaps.md
