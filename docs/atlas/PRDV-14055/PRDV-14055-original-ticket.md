@@ -116,6 +116,9 @@ As an Ops Atlas User, I want the upload manager to have the number of uploading 
 
 ## Downstream Artifacts
 
-- Investigation: Not created yet
-- Spec: Not created yet
-- Q and A ledger: Not created yet
+- Investigation: `investigations/PRDV-14055-investigation.md` (Phase 2, done)
+- Coverage ledger: `investigations/PRDV-14055-coverage-ledger.md`
+- Diagrams: `investigations/PRDV-14055-diagrams.md`
+- Test plan: `testing/PRDV-14055-test-plan.md` (seeded)
+- Spec: Not created yet (Phase 3)
+- Q and A ledger: Not created yet (Phase 3)

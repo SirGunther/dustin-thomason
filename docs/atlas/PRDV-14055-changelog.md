@@ -37,11 +37,20 @@
 
 | Added | Plan (path or link) | Status | One-line approach |
 | ----- | ------------------- | ------ | ----------------- |
-| 2026-07-20 | Orchestration Phase 1 investigation plan | `active` | Investigate Upload Manager runtime behavior with Playwright/browser-loop before writing the implementation spec. |
+| 2026-07-20 | Orchestration Phase 1 investigation plan | `implemented` | Investigate Upload Manager runtime behavior before writing the implementation spec. |
+| 2026-07-21 | `investigations/PRDV-14055-investigation.md` (Phase 2 report) | `active` | Root cause: first number = `activeUploadsCount` (remaining, counts down) in two parallel impls (Callisto store + Triton local). Fix = new "started-or-done" display computed feeding the title; leave neighbors untouched. Disposition: proceed with conditions (semantics + scope locked in Phase 3). |
 
 ---
 
 ## Session log
+
+### 2026-07-21T00:00:00Z - dustin-thomason (atlas-front-end)
+
+- **Summary:** Orchestration Phases 1–2. Investigated the Upload Manager count defect from source (not Playwright — the count is a pure computed with no runtime unknown; deviation from the recorded browser-loop direction, browser confirmation deferred to Phase 5). Root-caused to `activeUploadsCount` (remaining count) in two parallel implementations. Emitted the investigation report, coverage ledger, diagrams, and seeded test plan. Verdict: proceed with conditions.
+- **Plan used:** `~/.claude/plans/mellow-knitting-cloud.md` (approved Phase 1 investigation plan).
+- **Files:** `docs/atlas/PRDV-14055/investigations/PRDV-14055-investigation.md`, `.../PRDV-14055-coverage-ledger.md`, `.../PRDV-14055-diagrams.md`, `docs/atlas/PRDV-14055/testing/PRDV-14055-test-plan.md`, `orchestration.md`, `PRDV-14055-original-ticket.md`, this changelog. No atlas-front-end code touched.
+- **Commits:** Not committed.
+- **Notes:** Two user-flagged audit corrections to the report (dated addenda, not rewrites): §13 adds the mandated Step-1 **Problem Check** lens (evidence-cited; Thin finding = "in progress"/failure handling undefined; Conflation = nothing here); §14 reclassifies uncertainties on a **workflow-vs-code** axis and resolves the code halves evidence-first — concurrency gating is wired so `percentCompleted > 0` is the only clean "in progress" signal (open var #1 code half); both Callisto (App.vue `isCallistoRoute`) and Triton (TritonAppContainer) managers are live in separate apps (open var #2 code half); Triton i18n reuses existing `common.*` keys (open var #3 code half). Remaining Phase 3 grill-me decisions narrowed to: (Q1) mid-batch error/cancel count treatment; (Q2) which app(s) in scope; (Q3) Triton i18n now vs defer.
 
 ### 2026-07-20 - dustin-thomason
 
@@ -63,7 +72,7 @@
 
 ## Root cause analysis
 
-_Not started._
+The first number in "Uploading N of M files" is `activeUploadsCount = uploadQueue.filter(f => !f.isComplete && !f.isCancelled && !f.error).length` — a count of **remaining (non-terminal)** files, so it **decreases** as uploads finish. Present in two independent implementations: Callisto (`src/callisto/stores/uploadManagerStore.ts:43-48`, rendered via i18n `uploadingProgressTxt`) and Triton (`src/triton/layouts/MainLayout/FileUploadWrapper/shared/UploadManager/UploadManager.vue:244-248`, rendered as a hardcoded string). Fix = feed the title a "started-or-done" count (`isComplete || percentCompleted > 0`) that rises to the total; leave `activeUploadsCount`/`hasActiveUploads`/`totalProgress` untouched. Detection gap: existing Callisto specs assert the down-behavior; Triton has no spec. Full detail in `docs/atlas/PRDV-14055/investigations/PRDV-14055-investigation.md`.
 
 ---
 
@@ -83,9 +92,9 @@ _Not started._
 
 ---
 
-## Current state (as of 2026-07-20)
+## Current state (as of 2026-07-21)
 
-Phase 0 capture is complete. Phase 1 should plan a browser-based investigation of the Upload Manager UI using Playwright and the browser-loop setup/guardrails.
+Phases 0–2 complete. Root cause confirmed in source: the first number is a "remaining" count (`activeUploadsCount`) in two parallel implementations (Callisto store + Triton local). Investigation report, coverage ledger, diagrams, and seeded test plan are on disk under `docs/atlas/PRDV-14055/`. Next: Phase 3 (probe & spec) — resolve 4 open variables via grill-me, then write the spec. No atlas-front-end code changed yet; branch `PRDV-14055` not yet created (repo currently on `PRDV-16047` @ `ef217844`).
 
 ---
 
