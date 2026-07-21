@@ -3,9 +3,9 @@
 ## Ticket
 
 - **ClickUp:** [PRDV-16216](https://app.clickup.com/t/43227262/PRDV-16216)
-- **Repo:** `atlas-front-end`
+- **Repo:** `callisto-back-end`
 - **Branch:** `PRDV-16216`
-- **PR:** _(link when opened)_
+- **PR:** https://github.com/planetdepos/callisto-back-end/pull/383
 
 ---
 
@@ -64,6 +64,31 @@ When a Cursor/agent **plan** is generated for this ticket, add a row the same da
 ## Session log
 
 _Newest first. Add one block before each commit (agents) or end of work session (you)._
+
+### 2026-07-17T03:52:00Z — callisto-back-end: strip mapper risk comment; rewrite commit
+
+- **Summary:** Removed the inline trade-off/risk comment from `persist-video-transcode-derivative.mapper.ts`. Soft-reset the prior PR commit and force-pushed a single replacement commit so the commented version is no longer on the branch.
+- **Plan used:** Plans row 2026-07-16 (PR #24 copy).
+- **Files:** mapper only (comment removal); branch history rewrite on `PRDV-16216`.
+- **Commits:** `8743948b` replaced `ea24e827` via `--force-with-lease`.
+- **Notes / checklist:** Tests run — not re-run full suite this pass (comment-only deletion; behavior unchanged). Lint/audit deferred same reason. Residual risk: none beyond prior copy-length trade-off (unchanged).
+
+### 2026-07-17T03:45:00Z — callisto-back-end: commit, push, open PR
+
+- **Summary:** Committed the persist-time source-length copy (5 files), pushed `PRDV-16216`, opened GitHub PR using the Atlas PR template sections only. Excluded untracked `scripts/` local tooling. PR description summarizes ticket AC; Testing and Verification left for Dustin's screenshot.
+- **Plan used:** Plans row 2026-07-16 (PR #24 copy).
+- **Files:** param/service/mapper + 2 specs; changelog metadata (repo → callisto-back-end).
+- **Commits:** superseded — rewritten as `8743948b` (comment stripped)
+- **PR:** https://github.com/planetdepos/callisto-back-end/pull/383
+- **Notes / checklist:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | callisto-back-end | pass (exit 0; moderate-only) | — |
+| lint | `npm run lint` | callisto-back-end | pass | — |
+| tests | `npm test -- --runInBand src/proceedings/domain/transaction-scripts/persist-proceeding-video-transcode-derivative-ts src/proceedings/domain/services/process-proceeding-video-transcode-completed-service` | transcode persist path | pass (4 suites, 25 tests) | — |
+
+Tests added/updated: mapper + service specs (already on branch). Regression — isolated: transcode-completed persist path only. API docs — not relevant: no HTTP surface change. Conflicts/exceptions: none this session.
 
 ### 2026-07-16T21:30:00Z — callisto-back-end: pivot to PR #24 persist-time copy (implemented)
 
