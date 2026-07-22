@@ -5,7 +5,7 @@
 - **ClickUp:** [PRDV-14055](https://app.clickup.com/t/43227262/PRDV-14055)
 - **Repo:** `atlas-front-end`
 - **Branch:** `PRDV-14055`
-- **PR:** _(link when opened)_
+- **PR:** [atlas-front-end #548](https://github.com/planetdepos/atlas-front-end/pull/548) (no reviewer; awaiting video evidence + per-file comments)
 
 ---
 
@@ -50,7 +50,18 @@
 - **midnjerry:** "0-byte is an easily testable known issue. I would also like AC criteria against offline mode mid upload. if yo upload 20 files at 10MB each and in process you turn off network, what should expected result be?"
 - **Resolution (2026-07-21):** fold failure handling into this ticket — mark failed uploads terminal so they're counted, toasted, and resolve the batch; add an offline/interruption AC (expected: fail gracefully — mark failed, count up, resolve, toast; not retry). Spec updated + pushed (larry-adams `f4f4dab`).
 
+## Contingencies (not scheduled)
+
+- **DRY / config refactor** — if a PR #548 reviewer flags the repeated terminal/active predicate in `uploadManagerStore.ts` (or the scattered upload constants), execute `PRDV-14055-dry-refactor-contingency.md`. Pure cleanup, no behavior change; do not do proactively.
+
 ## Session log
+
+### 2026-07-22 - Implementation reviewed + narrowed; opening PR (atlas-front-end)
+
+- **Summary:** Reviewed Codex's implementation. It had expanded beyond the approved Callisto-only spec (10s upload watchdog + axios request `timeout` + a guarded global `apiClient`/`useApiRequest` change). Recommended and planned a narrowing: keep the abort-based watchdog (the real mechanism; aborted requests reject `ERR_CANCELED`, not in the retryable list), drop the redundant axios-timeout belt + global changes. Codex executed the narrowing plan.
+- **Verified (final state):** `globalApi/apiClient.ts` + `useApiRequest.ts` reverted to main; `useUploadChunk.ts` back to main; new chunk timeout-spec deleted; `useUploadComplete.spec.ts` back to main. Kept: watchdog, `completedOrActiveUploadsCount`, all-failed closeout fix, `constants.ts`, `types.ts` `signal?`, `useUploadComplete` `signal`. Diff is now entirely `src/callisto/`.
+- **Gates:** `npm run lint` pass; `npx vitest run --maxWorkers 1` over store/title/manager/upload-item/request specs — 6 files, 51 tests pass. `npm audit --audit-level=high` unchanged pre-existing blocker (93 vulns, no deps changed).
+- **PR:** opening on `atlas-front-end` `PRDV-14055` → main (no reviewer); body from `PRDV-14055-pr-draft.md` with per-scenario video headers. Per-file "why" comments to be posted on GitHub Files-changed tab (not in code).
 
 ### 2026-07-22 - Deduplicate failed-upload notifications
 
