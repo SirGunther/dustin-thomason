@@ -4,7 +4,7 @@
 
 ## Current vs target
 
-What this shows: the first number's source computed changes from a "remaining" count (falls) to a "started-or-done" count (rises); the render surfaces and the second number stay frozen. Two owning lanes (Callisto, Triton) share the same delta.
+What this shows: the first number's source computed changes from a "remaining" count (falls) to a "started-or-done" count (rises); the render surfaces and the second number stay frozen. Scope is **Callisto only** (LD-002); the Triton lane carries the identical defect but is **deferred to a follow-up ticket**, shown greyed.
 
 ```mermaid
 flowchart TB
@@ -25,11 +25,10 @@ flowchart TB
     C_TITLE["UploadManagerTitle - active slot of<br/>'Uploading active of total files' - render unchanged"]
   end
 
-  subgraph SG_TRITON["Triton - local computed + title (scope pending)"]
+  subgraph SG_TRITON["Triton - FOLLOW-UP ticket, NOT this scope (LD-002)"]
     direction TB
-    T_C1["CURRENT: local activeUploadsCount<br/>identical DOWN formula"]
-    T_T1["TARGET: same UP formula, applied locally"]
-    T_TITLE["UploadManagerTitle - hardcoded string<br/>i18n conversion OUT of scope"]
+    T_C1["Triton local activeUploadsCount<br/>identical DOWN defect - LEFT AS-IS, deferred"]
+    T_TITLE["UploadManagerTitle - hardcoded string<br/>count + i18n both go in the follow-up"]
   end
 
   OUT["First number rises to total<br/>end state first equals second equals total"]
@@ -37,13 +36,11 @@ flowchart TB
   Q1 --> C_C1 --> C_TITLE
   Q1 --> C_T1 --> C_TITLE
   Q1 --> T_C1 --> T_TITLE
-  Q1 --> T_T1 --> T_TITLE
   C_T1 --> OUT
-  T_T1 --> OUT
 
-  class C_C1,T_C1 current
-  class C_T1,T_T1 delta
-  class Q1,C_TITLE,T_TITLE shared
+  class C_C1 current
+  class C_T1 delta
+  class Q1,C_TITLE,T_TITLE,T_C1 shared
   class OUT ok
 
   style SG_QUEUE    fill:#f1f3f5,stroke:#868e96,color:#212529
@@ -66,7 +63,7 @@ flowchart LR
   S_WAIT["queued, waiting for slot<br/>percentCompleted 0 - NOT counted"]
   S_UP["uploading<br/>percentCompleted gt 0 - COUNTED (in progress)"]
   S_DONE["isComplete<br/>COUNTED (completed)"]
-  S_ERR["error or cancelled<br/>treatment = open var #1"]
+  S_ERR["error or cancelled AFTER start<br/>LD-001: stays counted, number never drops back"]
 
   S_PREP --> S_WAIT --> S_UP --> S_DONE
   S_UP -. failure .-> S_ERR
