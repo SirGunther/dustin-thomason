@@ -68,6 +68,7 @@ Mirrored verbatim to `.cursor/docs/` and `.claude/docs/`.
 | `cleanup-candidates.md` | The archive/consolidation ledger: known cruft, proposed fates, blockers. Fed by Phase 6 cruft checks; worked after the orchestrate integration proves out. |
 | `current-vs-target-diagram.md` | The single-diagram delta convention: current and target in one Mermaid figure, lanes = owners, color = change status. Referenced by the diagrams artifact. |
 | `future-development-concerns.md` | Template + rules for the per-ticket risk record: dated, code-verified concerns that ship out of scope but must stay findable and escalation-ready. |
+| `why-these-changes.md` | Template for the per-ticket living **"Why"** doc — created Phase 1, updated every phase, finalized at close. Heart is the class of problem; logs the reasoning arc (obvious/not/changed/noise) and ends as the "why these changes" review. High-level; distinct from the testing-implementation scenarios. |
 | `investigation-coverage-ledger.md` | Template + consult protocol for the per-ticket visited-state map: where the agent looked, how deeply, what it found or ruled out — so later agents reuse instead of re-traversing. |
 | `investigation-diagrams.md` | Defines the standalone diagrams artifact (current-vs-target, flows, sequences for race conditions) so reports link visuals instead of embedding them. |
 | `investigation-question-coverage.md` | Meta-audit proving the investigation method covers a collected question list. Historical justification, not operational input — an archive candidate. |

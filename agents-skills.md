@@ -154,6 +154,10 @@ Load only the current phase's listed inputs plus the orchestration ledger. Never
 
 Harness step-visibility differs: Cursor's plan mode shows a checklist natively, but the Codex and Claude Code harnesses surface no step list during a working run. So **maintain an explicit todo list visible in the chat regardless of harness**, and check items off as you complete them — this is the user's window into where the run is. Use the harness's native todo tool where one exists; otherwise print the checklist inline. Keep one item in progress at a time; refresh it at every phase transition and every gate. At minimum the list carries one item per phase (0–6) plus the sub-steps of the phase currently in progress. This is a quality-of-life requirement, not optional narration.
 
+## The ticket's Why (living doc — every phase)
+
+The ticket carries a living **"Why" doc** (`<slug>-why-these-changes.md`, per `../../docs/why-these-changes.md`) — the overarching *why* of the whole ticket, whose heart is the **class of problem** being solved. It is **created early (Phase 1)** so the understanding is established before the work runs ahead of it, and it is **always open for update through every phase**. At each phase, check whether the why moved — the problem, the class, the bug, the code, an assumption — and if it did, **log it in the why-log, explicitly labeled with the phase and whether it's a new understanding, a course change, or a discarded path**. Capture the reasoning trail (what was obvious, what wasn't, what changed after learning more, what got us to the solution, what was noise), not just conclusions. This is high-level and distinct from the testing-implementation doc's scenarios. If nothing moved in a phase, that is fine; an *unlogged* change is not.
+
 ## Invocation and inputs
 
 Resolve the ticket in this order:
@@ -173,6 +177,7 @@ Every artifact this skill produces lives in one canonical layout, rooted at **`C
 docs/<Project>/tickets/<slug>/            (always under the dustin-thomason repo — see Repo boundary below)
   original-ticket.md                              Phase 0
   orchestration.md                                phase-state ledger (Phase 0 scaffolds)
+  <slug>-why-these-changes.md                     Phase 1 created → updated every phase (why-log) → Phase 6 finalized
   <slug>-future-development-concerns.md           Phases 1–4, created on first concern only
   <slug>-pr-draft.md                              Phase 2 shell (empty template) → Phase 5 filled
   investigations/
@@ -260,6 +265,7 @@ Agents deprioritize instructions they judge redundant. These gates exist to stop
 Phase <N> gate:
 - Artifacts on disk: <each required path — exists / MISSING>
 - Ledger row updated: <yes / deferred (plan mode) / MISSING>
+- Why-log: <updated this phase, labeled | unchanged this phase | deferred (plan mode)>
 - Phase evidence: <the phase-specific proof named below>
 ```
 
@@ -317,14 +323,15 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
   1. **Consult prior coverage ledgers FIRST** — before opening any investigative branch, run the consult protocol (grep `docs/<Project>/tickets/*/investigations/*-coverage-ledger.md` for the subsystems in play). Reuse covered ground; reopen only per the four reopen conditions, with the reason recorded. Stage the mandatory consult log line for the ledger.
   2. Execute the investigation method steps 1–7 on the ticket (everything but the emit). Two disciplines this phase must not skip: (a) the **Problem Check lens** (method Step 1) — its Asked / Answered / Should-ask + Conflation / Thin / Off findings, each grounded in a trimmed quote from the ticket text ("nothing here" is a valid flag, silence is not), carry into report §2; (b) the **Step 7 reconcile** — classify every open question on the fact-vs-decision axis, resolve the code-discoverable ones by tracing the evidence *now*, and for any question the current structure genuinely can't answer, capture the code evidence that proves why. Stage coverage rows (area, items inspected, findings, status, commit) as you traverse — they become the coverage ledger in Phase 2.
   3. Build the investigation plan. It must include todos to: reconcile against every point of the software lens; emit the report per the template; materialize the coverage ledger (with the consult line); produce the diagrams artifact per `../../docs/investigation-diagrams.md`; seed the test plan per `../../docs/test-plan-artifact.md`; record any surfaced concerns per `../../docs/future-development-concerns.md`.
-- **Gate evidence:** the plan contains the consult results and the reconcile-per-lens todos; the Problem Check pass is present (flags may read "nothing here"); every open question is split into facts (resolved via evidence) vs decisions (owner) — no code-discoverable fact left parked as a decision; open variables have owners.
+  4. **Surface the ticket's Why early.** Establish the **class of problem** and the high-level problems we're solving, and stage the Phase 1 why-log entry (obvious / not obvious / assumptions) for `<slug>-why-these-changes.md` (per `../../docs/why-these-changes.md`). This is the heart of the Why doc — get it on the record before the work runs ahead of the understanding. Plan mode can't write, so the file is materialized at Phase 2's first action.
+- **Gate evidence:** the plan contains the consult results and the reconcile-per-lens todos; the Problem Check pass is present (flags may read "nothing here"); every open question is split into facts (resolved via evidence) vs decisions (owner) — no code-discoverable fact left parked as a decision; open variables have owners; the problem class and Phase 1 why-log entry are staged for the Why doc.
 - **Advance:** plan approval (this is the handoff). Ledger row updates and the deferred Phase 1 notification both fire at Phase 2's first action.
 
 ## Phase 2 — Investigation report (Working)
 
 - **Reads:** the approved plan; `../../docs/investigation-report.md` (template); `../../docs/investigation-diagrams.md`; `../../docs/test-plan-artifact.md`.
 - **Do:**
-  1. Update the ledger (Phase 1 `done`, Phase 2 `in-progress`).
+  1. Update the ledger (Phase 1 `done`, Phase 2 `in-progress`), and materialize the deferred Phase 1 write: create `<slug>-why-these-changes.md` (problem class + Phase 1 why-log entry) per `../../docs/why-these-changes.md`.
   2. Write `investigations/<slug>-investigation.md` from the template — this path **overrides** the template's default `docs/investigations/` location for orchestrated tickets. The report **links out** to the diagrams artifact from §5; do not embed large diagrams inline.
   3. Materialize `investigations/<slug>-coverage-ledger.md` — Consulted line first, then every staged area entry, then the Not-yet-inspected frontier.
   4. Produce `investigations/<slug>-diagrams.md` — current-vs-target, flows, sequences (race conditions and timing edge cases) as applicable; N/A lines for kinds skipped.
@@ -370,10 +377,11 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 ## Phase 6 — Manual review (Idle)
 
 - **Do:**
-  1. Produce the review summary: what to review, where, citing the test plan's results log — no unfalsifiable "tests passed" claims.
-  2. **Cruft check:** did this run surface outdated references, superseded docs, or dead weight? Append findings to `../../docs/cleanup-candidates.md`; write "cruft check: nothing surfaced" in the ledger notes if clean.
-  3. Close the ledger: Phase 6 `done`, `Resume: complete`; set the changelog Plans row to `implemented` when the work landed.
-  4. Notify per Progress notifications — this is the final one, matching the standard `agent-completion-notification` rule usage.
+  1. **Finalize the Why doc:** complete the reviewer-facing review in `<slug>-why-these-changes.md` — the **categorized change breakdown** (requested change / bug fix / workflow change / capability gap / other, with a headline count and Before / After / Why per change), **"why it shipped together"** tied to the acceptance criteria, **Scope**, **Net**, and **Verified** (gates + PR link). Confirm the why-log captured every phase where the why moved.
+  2. Produce the review summary: what to review, where, citing the test plan's results log and the Why doc — no unfalsifiable "tests passed" claims.
+  3. **Cruft check:** did this run surface outdated references, superseded docs, or dead weight? Append findings to `../../docs/cleanup-candidates.md`; write "cruft check: nothing surfaced" in the ledger notes if clean.
+  4. Close the ledger: Phase 6 `done`, `Resume: complete`; set the changelog Plans row to `implemented` when the work landed.
+  5. Notify per Progress notifications — this is the final one, matching the standard `agent-completion-notification` rule usage.
 - **Advance:** END. The user reviews manually; you are done.
 
 ---

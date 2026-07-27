@@ -125,6 +125,7 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 | [investigation-coverage-ledger.md](./investigation-coverage-ledger.md) | Per-ticket visited-state map: template + consult/reopen protocol |
 | [investigation-diagrams.md](./investigation-diagrams.md) | Standalone diagrams artifact (delta, flows, sequences) for investigations |
 | [future-development-concerns.md](./future-development-concerns.md) | Per-ticket risk record: dated, code-verified concerns shipped out of scope |
+| [why-these-changes.md](./why-these-changes.md) | Per-ticket living "Why" doc — class of problem + reasoning arc across all phases, ending as the "why these changes" review |
 | [test-plan-artifact.md](./test-plan-artifact.md) | Per-ticket test plan: seeded from the report, executed at implementation |
 | [testing-implementation-artifact.md](./testing-implementation-artifact.md) | Per-ticket, scenario-first record of the real situations stress-tested (+ any change hung off each), explaining to other devs what was addressed — for the PR comment |
 | [ticket-changelog-workflow.md](./ticket-changelog-workflow.md) | How changelogs work end-to-end |
@@ -267,6 +268,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `qa-to-spec-traceability.md` | Q and A to Spec Traceability |
 | `README.md` | Cursor docs (playbooks) |
 | `session-start.md` | Session start (optional) |
+| `testing-implementation-artifact.md` | Testing-implementation artifact — the scenarios stress-tested |
 | `test-plan-artifact.md` | Test plan artifact — how to test the implementation |
 | `ticket-changelog-workflow.md` | Ticket changelog workflow |
 | `ticket-orchestration.md` | Ticket orchestration — superseded by the `orchestrate` skill |
