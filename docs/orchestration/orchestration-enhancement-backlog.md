@@ -93,7 +93,7 @@ These three are the biggest cluster and overlap the existing `test-plan-artifact
 ## Quick-win candidates (low effort, low controversy — could ship first)
 
 - **A3** — "PR comment not code comment" standing rule. **SHIPPED 2026-07-27** → `build-implementation-guardrails.md` §7 + orchestrate Phase 5 / Do-not.
-- **D1** — post-approval test-plan revision tick. **SHIPPED 2026-07-27** → `test-plan-artifact.md` lifecycle + status; orchestrate Phase 5 step 2.
+- **D1** — test-plan revision tick. **SHIPPED 2026-07-27** → `test-plan-artifact.md` lifecycle + status; orchestrate Phase 5 step 3. Placement corrected after review: the revision runs **post-implementation, before test execution** (a quick pass over the test plan so it matches what was actually built), not at the pre-implementation Phase 4→5 junction.
 - **B1 (shell only)** — stage the PR skeleton early, content later. **SHIPPED 2026-07-27** → orchestrate folder layout + Phase 2 step 6 + Phase 5 step 5; `pull-request-workflow.md` early-shell note.
 
 ## Needs-a-decision-first (don't build until the cross-cutting call is made)
