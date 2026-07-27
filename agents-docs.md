@@ -1622,6 +1622,63 @@ Working on PRDV-XXXXX (atlas). Scaffold changelog and capture requirements verba
 Working on Countdowns. Project log: @docs/countdowns/countdowns-app-changelog.mdc
 ```
 
+## testing-implementation-artifact.md
+
+# Testing-implementation artifact — the scenarios stress-tested
+
+Use this to explain, **for other devs, what was addressed** — the real-world **scenarios** that were stress-tested for this ticket, and what came of each. A test with no stated scenario is arbitrary code execution; the scenario is the stake that makes the test meaningful. This doc is the scenario-level record: it says *why* each test mattered, whether the code held, and — when testing surfaces a **scenario the plan did not cover** — it captures that gap, which is often what drives a change.
+
+Its content is meant to be posted as a **GitHub PR comment**, **NOT** left as a comment in the codebase.
+
+It is the companion to the test plan. The **test plan** lists the scenarios to run and logs pass/fail; **this doc** explains, for a reviewing dev, the scenarios that were actually stress-tested — including the ones found only by testing — and hangs any resulting code change off the scenario that forced it. It is a **living doc**: written as you test, updated as new scenarios surface.
+
+## Output location
+
+```text
+docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-testing-implementation.md
+```
+
+## When produced
+
+During and after **Phase 5** test execution. Start it as testing begins; add scenarios as they are exercised or discovered; finalize before filling the PR.
+
+## Core rules
+
+- **Scenario-first.** Every entry names the real situation being stress-tested, in terms another dev understands — not "ran `popup.js`" but "user exports a task whose title contains a `#`." No scenario = no meaningful test.
+- **Newly-uncovered scenarios are flagged as such.** If testing reveals a situation the plan did not cover, that discovery *is* the point — record it, and note whether it drove a code change or a follow-up.
+- **Code changes hang off a scenario.** Each change records the file(s) + observed → expected → implemented fix, under the scenario that forced it — never a change with no scenario behind it.
+- **PR-comment content.** Paste it into the GitHub PR; never copy it into the source as a code comment (see `build-implementation-guardrails` §7).
+- **Living, not frozen.** Update it as new scenarios surface; the last state before the PR is the one that ships.
+
+## Artifact template
+
+```markdown
+# Testing implementation — <Project>/<ticket-slug>
+
+> Companion to [<ticket-slug>-test-plan.md](./<ticket-slug>-test-plan.md). The scenarios stress-tested and what came of each — for other devs. PR-comment content; never a code comment. Living doc.
+
+## Scenarios stress-tested
+
+### Scenario 1 — <the real situation, in a dev's terms>
+- **Why it matters:** <the stake — what breaks in the real world if this isn't handled>
+- **Covered by the plan?** yes | no — newly uncovered during testing
+- **Result:** held | failed → fixed (see change) | follow-up filed
+- **Change (if any):** <file(s)> — observed → expected → implemented fix
+
+### Scenario 2 — ...
+
+## PR comment (ready to paste)
+
+<the scenarios above, assembled as the comment/description to post on the GitHub PR>
+```
+
+## Definition of done
+
+- Every test maps to a **named scenario** a reviewer can understand — no arbitrary or unexplained test execution.
+- **Newly-uncovered scenarios are flagged**, each noted as driving a change or a follow-up.
+- Every code change **hangs off its scenario** with file(s) + observed → expected → implemented fix.
+- The PR-comment block is assembled and ready to paste; nothing in this doc was copied into the codebase as a code comment.
+
 ## test-plan-artifact.md
 
 # Test plan artifact — how to test the implementation
@@ -1640,7 +1697,8 @@ docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-test-plan.md
 | --- | --- |
 | Investigation report (Phase 2) | **Seed** the test plan from report §9: happy path, negative paths, test map, gates |
 | Probe & spec (Phase 3) | **Refine** as locked decisions land — resolved open variables become concrete assertions |
-| Implementation done, before executing (Phase 5) | **Revise, then execute.** Once the code is written and *before running anything*, do a quick revision of **this test plan** so what you are about to run reflects what was actually built — the implementation can diverge from what the spec/plan proposed. Test plan only; a quick pass, not a rebuild. Then **execute**: check off scenarios, fill the results log with exact command + scope + result. |
+| After approval, before implementation (Phase 5 start) | **Revise.** The implementation plan is approved but no code is written yet; do a quick revision/refinement of **this test plan** so it matches what was actually approved — the approved plan can differ from what the spec proposed. Test plan only; a quick pass, not a rebuild. |
+| Implementation (Phase 5) | **Execute.** Check off scenarios, fill the results log with exact command + scope + result. The **scenarios** actually stress-tested — and any code change they force — are explained for other devs in the **testing-implementation artifact** (scenario-first; file(s) + observed → expected → fix, for the PR comment — never a code comment), not here. |
 | Manual review (Phase 6) | **Cite**: the review summary references this file's results, not a prose claim of "tests passed" |
 
 ## Core rules
@@ -1657,7 +1715,7 @@ docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-test-plan.md
 
 > Seeded from [<ticket-slug>-investigation.md](../investigations/<ticket-slug>-investigation.md) §9 on YYYY-MM-DD. Refined by spec: <link or "pending">.
 
-Status: seeded / refined / revised (pre-execution) / in-execution / complete
+Status: seeded / refined / revised (post-approval) / in-execution / complete
 
 ## Scope and surfaces under test
 
@@ -2164,6 +2222,7 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 | [investigation-diagrams.md](./investigation-diagrams.md) | Standalone diagrams artifact (delta, flows, sequences) for investigations |
 | [future-development-concerns.md](./future-development-concerns.md) | Per-ticket risk record: dated, code-verified concerns shipped out of scope |
 | [test-plan-artifact.md](./test-plan-artifact.md) | Per-ticket test plan: seeded from the report, executed at implementation |
+| [testing-implementation-artifact.md](./testing-implementation-artifact.md) | Per-ticket, scenario-first record of the real situations stress-tested (+ any change hung off each), explaining to other devs what was addressed — for the PR comment |
 | [ticket-changelog-workflow.md](./ticket-changelog-workflow.md) | How changelogs work end-to-end |
 | [wiki-spec-authoring.md](./wiki-spec-authoring.md) | PRDV wiki naming, Obsidian wiring, dev notes, author checklist |
 | [docs/atlas/local/callisto-local.mdc](./atlas/local/callisto-local.mdc) | Callisto backend local runbook (Docker, migrations, DBeaver) |
@@ -2304,6 +2363,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `qa-to-spec-traceability.md` | Q and A to Spec Traceability |
 | `README.md` | Cursor docs (playbooks) |
 | `session-start.md` | Session start (optional) |
+| `testing-implementation-artifact.md` | Testing-implementation artifact — the scenarios stress-tested |
 | `test-plan-artifact.md` | Test plan artifact — how to test the implementation |
 | `ticket-changelog-workflow.md` | Ticket changelog workflow |
 | `ticket-orchestration.md` | Ticket orchestration — superseded by the `orchestrate` skill |

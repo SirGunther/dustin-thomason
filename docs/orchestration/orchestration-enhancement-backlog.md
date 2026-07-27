@@ -18,11 +18,10 @@ These three are the biggest cluster and overlap the existing `test-plan-artifact
 - **Relationship:** distinct from the investigation report (that's *before* the fix, this is *after*), and distinct from the future-development-concerns doc (that's risk, this is rationale). Feeds the PR body/description.
 - **Open question:** is this one doc with A2, or two? (see Cross-cutting decision 1). Also: does its "rationale" content partly already exist in report §1/§5/§7, and should it *link back* to them rather than restate?
 
-### A2 — Testing-implementation record
-- **Idea:** A doc capturing what was tested, plus any code changes made *during* testing — which files, and the reason, framed as observed behavior → expected behavior → implemented fix. Intended for use as a **GitHub PR comment, explicitly NOT as a code comment in the codebase**.
-- **Lands as:** either an extension of `test-plan-artifact.md`'s results log, or a new sibling `testing/<slug>-testing-implementation.md`; produced during Phase 5 execution.
-- **Relationship:** the existing test plan already has a "results log (filled at execution)"; this adds the *mid-test change* dimension (file + reason + before/after behavior). Strong overlap — likely a new section of the test plan rather than a new file.
-- **Open question:** new file vs. new section of the existing test plan? (Cross-cutting decision 1.)
+### A2 — Testing-implementation artifact (scenario-first) — **BUILT (uncommitted, in review) 2026-07-27**
+- **Objective (as refined by the user):** explain to **other devs what was addressed** — the real-world **scenarios** that were stress-tested. A test with no stated scenario is arbitrary code execution; the scenario is the stake. The doc also captures **scenarios the plan did not cover** but that testing surfaced. Code changes hang off the scenario that forced them (file + observed → expected → fix). PR-comment content, never a code comment.
+- **Shipped as:** standalone, scenario-first artifact — template `agents/docs/testing-implementation-artifact.md`; per-ticket output `testing/<slug>-testing-implementation.md`; produced/maintained in orchestrate Phase 5 (step 5); wired into the folder layout, Phase 5 gate evidence, guardrails §7, README catalog, workflow-index, and the test-plan execute row (scenarios + changes recorded here, not in the test plan).
+- **Correction note:** this was the substance of the user's original suggestion #3 (the "github stuff"). First wrongly deferred while only the one-line A3 rule shipped; then rebuilt change-first; **finally reframed scenario-first** per the user's stated objective (the scenario is why the test matters, not the code change). Cross-cutting decision 1 resolved: standalone, not folded into the test plan.
 
 ### A3 — "PR comment, not code comment" as a standing rule
 - **Idea:** Recurring principle across A1/A2 — rationale for a change belongs in the PR conversation, never as a comment in the codebase.
@@ -92,13 +91,14 @@ These three are the biggest cluster and overlap the existing `test-plan-artifact
 
 ## Quick-win candidates (low effort, low controversy — could ship first)
 
-- **A3** — "PR comment not code comment" standing rule. **SHIPPED 2026-07-27** → `build-implementation-guardrails.md` §7 + orchestrate Phase 5 / Do-not.
-- **D1** — test-plan revision tick. **SHIPPED 2026-07-27** → `test-plan-artifact.md` lifecycle + status; orchestrate Phase 5 step 3. Placement corrected after review: the revision runs **post-implementation, before test execution** (a quick pass over the test plan so it matches what was actually built), not at the pre-implementation Phase 4→5 junction.
-- **B1 (shell only)** — stage the PR skeleton early, content later. **SHIPPED 2026-07-27** → orchestrate folder layout + Phase 2 step 6 + Phase 5 step 5; `pull-request-workflow.md` early-shell note.
+- **A2** — testing-implementation artifact (the "github stuff": what was tested + mid-test code changes for the PR comment). **BUILT (uncommitted, in review)** → `testing-implementation-artifact.md` template; orchestrate folder layout + Phase 5 step 5 + gate evidence; guardrails §7; test-plan execute row.
+- **A3** — "PR comment not code comment" standing rule (the principle behind A2). **SHIPPED 2026-07-27** → `build-implementation-guardrails.md` §7 + orchestrate Phase 5 / Do-not.
+- **D1** — post-approval test-plan revision tick. **EDITED (uncommitted, in review)** → `test-plan-artifact.md` lifecycle + status; orchestrate Phase 5 step 2. Placement per user evidence "after approval, MEANING before implementation": the revision runs at the **start of Phase 5, after the plan is approved but before any code is written** — a quick pass so the test plan matches what was approved. (Note: an earlier edit wrongly moved this to post-implementation; corrected back.)
+- **B1 (shell only)** — stage the PR skeleton early, content later. **SHIPPED 2026-07-27** → orchestrate folder layout + Phase 2 step 6 + Phase 5 step 6; `pull-request-workflow.md` early-shell note.
 
 ## Needs-a-decision-first (don't build until the cross-cutting call is made)
 
-- **A1 / A2** — gated on decision 1.
+- **A1** — "why these changes" rationale artifact (gated on decision 1; A2 now built standalone, so A1 stays a separate open question).
 - **B3** — gated on decision 2 (implementer routing).
 - **C1 / C2** — gated on decision 3 (new step vs. sharpen).
 - **B2** — gated on decision 4 (reference-doc class).

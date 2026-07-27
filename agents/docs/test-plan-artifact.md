@@ -14,7 +14,8 @@ docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-test-plan.md
 | --- | --- |
 | Investigation report (Phase 2) | **Seed** the test plan from report §9: happy path, negative paths, test map, gates |
 | Probe & spec (Phase 3) | **Refine** as locked decisions land — resolved open variables become concrete assertions |
-| Implementation done, before executing (Phase 5) | **Revise, then execute.** Once the code is written and *before running anything*, do a quick revision of **this test plan** so what you are about to run reflects what was actually built — the implementation can diverge from what the spec/plan proposed. Test plan only; a quick pass, not a rebuild. Then **execute**: check off scenarios, fill the results log with exact command + scope + result. |
+| After approval, before implementation (Phase 5 start) | **Revise.** The implementation plan is approved but no code is written yet; do a quick revision/refinement of **this test plan** so it matches what was actually approved — the approved plan can differ from what the spec proposed. Test plan only; a quick pass, not a rebuild. |
+| Implementation (Phase 5) | **Execute.** Check off scenarios, fill the results log with exact command + scope + result. The **scenarios** actually stress-tested — and any code change they force — are explained for other devs in the **testing-implementation artifact** (scenario-first; file(s) + observed → expected → fix, for the PR comment — never a code comment), not here. |
 | Manual review (Phase 6) | **Cite**: the review summary references this file's results, not a prose claim of "tests passed" |
 
 ## Core rules
@@ -31,7 +32,7 @@ docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-test-plan.md
 
 > Seeded from [<ticket-slug>-investigation.md](../investigations/<ticket-slug>-investigation.md) §9 on YYYY-MM-DD. Refined by spec: <link or "pending">.
 
-Status: seeded / refined / revised (pre-execution) / in-execution / complete
+Status: seeded / refined / revised (post-approval) / in-execution / complete
 
 ## Scope and surfaces under test
 

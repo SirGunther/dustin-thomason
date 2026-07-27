@@ -43,7 +43,8 @@ docs/<Project>/tickets/<slug>/            (always under the dustin-thomason repo
     <slug>-spec.md                                Phase 3
     <slug>-locked-decisions.md                    Phase 3 — standard once decisions exceed a handful (see Phase 3)
   testing/
-    <slug>-test-plan.md                           Phase 2 seed → Phase 3 refine → Phase 5 revise (post-impl) → execute
+    <slug>-test-plan.md                           Phase 2 seed → Phase 3 refine → Phase 5 revise (after approval, before impl) → execute
+    <slug>-testing-implementation.md              Phase 5 — scenarios stress-tested (+ any change hung off each), for the PR comment
   dnu/                                            superseded artifacts move here, names unchanged
 ```
 
@@ -218,11 +219,12 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 - **Reads:** the approved plan; the test plan; repo-specific rules of the touched repo.
 - **Do:**
   1. Update the ledger; add the changelog Plans row (`active`).
-  2. Implement per the plan, inside the `build-implementation-guardrails` obligations (tests as part of shipping, architecture fit, graceful degradation by layer). Change rationale — observed → expected → fix — is PR-comment content, never a source comment (guardrails §7).
-  3. **Now that implementation is complete and before running any tests, do a quick revision of the test plan** (`testing/<slug>-test-plan.md`) so what you are about to run reflects what was actually built — the code can diverge from what the spec/plan proposed. Test plan only; a quick pass, not a rebuild. Set status `revised (pre-execution)`.
+  2. **Revise the test plan — after approval, before implementation.** The implementation plan is approved (Phase 4) but no code is written yet; at this junction do a quick revision/refinement of the test plan (`testing/<slug>-test-plan.md`) so it matches what was actually approved — the approved plan can differ from what the spec proposed. Test plan only; a quick pass, not a rebuild. Set status `revised (post-approval)`.
+  3. Implement per the plan, inside the `build-implementation-guardrails` obligations (tests as part of shipping, architecture fit, graceful degradation by layer).
   4. Execute `testing/<slug>-test-plan.md`: check off scenarios, fill the results log with exact command + scope + result (serial runs).
-  5. If a PR draft shell was staged in Phase 2, fill it now (title, description, test evidence, commit hash) per `../../docs/pull-request-workflow.md`. Before every commit: changelog session log, then audit → lint → tests per the `git-commit-workflow` rule. PR per `../../docs/pull-request-workflow.md` when requested.
-- **Gate evidence:** test plan status `complete` (or blocked items carry reason + residual risk + follow-up); session log written; gate results reported as a table. **Do not mark this phase `done` on drafted-but-unproven code** — the evidence must be an actual observed result (a run, a manual check, a passing suite), not a claim of what should happen.
+  5. **Maintain the testing-implementation doc** `testing/<slug>-testing-implementation.md` per `../../docs/testing-implementation-artifact.md` — **scenario-first**: each real situation stress-tested (why it matters, whether it held), newly-uncovered scenarios flagged, and any code change hung off the scenario that forced it (file(s) + observed → expected → fix). This is the artifact that explains to other devs *what was addressed* — a test with no scenario is arbitrary execution. Write it as you go; living doc. PR-comment content, never a source comment (guardrails §7).
+  6. If a PR draft shell was staged in Phase 2, fill it now (title, description, test evidence, commit hash) per `../../docs/pull-request-workflow.md` — paste the testing-implementation doc's assembled block as the PR comment / test-evidence. Before every commit: changelog session log, then audit → lint → tests per the `git-commit-workflow` rule. PR per `../../docs/pull-request-workflow.md` when requested.
+- **Gate evidence:** test plan status `complete` (or blocked items carry reason + residual risk + follow-up); testing-implementation doc records the scenarios stress-tested (each in dev-legible terms, newly-uncovered ones flagged) with any change hung off its scenario, assembled for the PR comment and not copied into source; session log written; gate results reported as a table. **Do not mark this phase `done` on drafted-but-unproven code** — the evidence must be an actual observed result (a run, a manual check, a passing suite), not a claim of what should happen.
 - **Advance:** notify (Progress notifications), then handoff → Phase 6 (Idle).
 
 ## Phase 6 — Manual review (Idle)

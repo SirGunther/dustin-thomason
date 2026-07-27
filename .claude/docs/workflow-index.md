@@ -126,6 +126,7 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 | [investigation-diagrams.md](./investigation-diagrams.md) | Standalone diagrams artifact (delta, flows, sequences) for investigations |
 | [future-development-concerns.md](./future-development-concerns.md) | Per-ticket risk record: dated, code-verified concerns shipped out of scope |
 | [test-plan-artifact.md](./test-plan-artifact.md) | Per-ticket test plan: seeded from the report, executed at implementation |
+| [testing-implementation-artifact.md](./testing-implementation-artifact.md) | Per-ticket, scenario-first record of the real situations stress-tested (+ any change hung off each), explaining to other devs what was addressed — for the PR comment |
 | [ticket-changelog-workflow.md](./ticket-changelog-workflow.md) | How changelogs work end-to-end |
 | [wiki-spec-authoring.md](./wiki-spec-authoring.md) | PRDV wiki naming, Obsidian wiring, dev notes, author checklist |
 | [docs/atlas/local/callisto-local.mdc](./atlas/local/callisto-local.mdc) | Callisto backend local runbook (Docker, migrations, DBeaver) |
@@ -266,6 +267,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `qa-to-spec-traceability.md` | Q and A to Spec Traceability |
 | `README.md` | Cursor docs (playbooks) |
 | `session-start.md` | Session start (optional) |
+| `testing-implementation-artifact.md` | Testing-implementation artifact — the scenarios stress-tested |
 | `test-plan-artifact.md` | Test plan artifact — how to test the implementation |
 | `ticket-changelog-workflow.md` | Ticket changelog workflow |
 | `ticket-orchestration.md` | Ticket orchestration — superseded by the `orchestrate` skill |

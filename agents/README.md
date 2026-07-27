@@ -79,6 +79,7 @@ Mirrored verbatim to `.cursor/docs/` and `.claude/docs/`.
 | `pull-request-workflow.md` | The PR playbook: branch, commit evidence, body format, Slack post. Referenced by Phase 5. |
 | `qa-to-spec-traceability.md` | The locked-decision workflow: every answered question becomes a cited, non-reaskable decision that lands in the spec. Governs Phase 3's grill-me pass. |
 | `session-start.md` | Optional copy-paste snippets to point a fresh agent thread at a ticket/changelog. |
+| `testing-implementation-artifact.md` | Template for the per-ticket, **scenario-first** record that explains to other devs *what was addressed* — the real situations stress-tested (why each matters; newly-uncovered ones flagged), with any code change hung off its scenario (file + observed → expected → fix). Assembled for the GitHub PR comment, never a code comment. Produced in Phase 5. |
 | `test-plan-artifact.md` | Template + lifecycle for the per-ticket test plan: seeded from the report's validation plan, refined by the spec, executed at implementation, cited at review. |
 | `ticket-changelog-workflow.md` | The end-to-end changelog playbook behind the `ticket-changelog` rule. |
 | `ticket-orchestration.md` | Pointer stub → the `orchestrate` skill (the original prompt sheet was folded into it). Tracked for eventual deletion. |
