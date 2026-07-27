@@ -1,0 +1,44 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Start Countdowns",
+        "type": "shell",
+        "command": "npm run start",
+        "options": {
+          "cwd": "C:\\Users\\dustin.thomason\\OneDrive\\Countdowns"
+        },
+        "presentation": {
+          "panel": "dedicated",
+          "reveal": "always"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Start WorkLists",
+        "type": "shell",
+        "command": "npm run start",
+        "options": {
+          "cwd": "C:\\Users\\dustin.thomason\\OneDrive\\SCRIPTS ALL SYSTEMS\\To Do List\\WorkLists"
+        },
+        "presentation": {
+          "panel": "dedicated",
+          "reveal": "always"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Start Both Apps",
+        "dependsOn": [
+          "Start Countdowns",
+          "Start WorkLists"
+        ],
+        "dependsOrder": "parallel",
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        }
+      }
+    ]
+  }

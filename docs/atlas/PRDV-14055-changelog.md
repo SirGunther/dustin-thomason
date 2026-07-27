@@ -56,6 +56,13 @@
 
 ## Session log
 
+### 2026-07-23 - PR #548 Lana review fixes validated + responded
+
+- **Summary:** Codex implemented the Lana (p-lana) review fixes per `PRDV-14055-lana-review-fixes-plan.md` and pushed to origin `PRDV-14055` (`18a6bf05`). Validated the diff against the plan: i18n for all 4 user-facing strings in `useUploadItem.ts` (2 new `common.json` keys + reused `uploadFailedTxt`), `PROMISE_STATUS` in global `@globalUtils/constants.ts` used at the `rejected` check, error-name literals left alone, spec updated with `vue-i18n` identity mock + key-form assertions.
+- **Verified:** `npm run lint` clean; focused serial Vitest 6 files / 51 tests pass; type-check enforced by the pre-push hook that landed `18a6bf05`.
+- **Responded on PR #548:** in-thread replies to her 4 comments (3 i18n = short "done + key"; the constants one flags the nearby `CanceledError`/`AbortError` names as an FYI + offer, no taxonomy verdict) + 1 general comment noting the extra cancel-string localization.
+- **Nothing pushed** (already on origin); no code changed this session.
+
 ### 2026-07-22 - Implementation reviewed + narrowed; opening PR (atlas-front-end)
 
 - **Summary:** Reviewed Codex's implementation. It had expanded beyond the approved Callisto-only spec (10s upload watchdog + axios request `timeout` + a guarded global `apiClient`/`useApiRequest` change). Recommended and planned a narrowing: keep the abort-based watchdog (the real mechanism; aborted requests reject `ERR_CANCELED`, not in the retryable list), drop the redundant axios-timeout belt + global changes. Codex executed the narrowing plan.
