@@ -14,6 +14,7 @@ docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-test-plan.md
 | --- | --- |
 | Investigation report (Phase 2) | **Seed** the test plan from report §9: happy path, negative paths, test map, gates |
 | Probe & spec (Phase 3) | **Refine** as locked decisions land — resolved open variables become concrete assertions |
+| Prep → Implement junction (Phase 4→5) | **Revise (post-approval)**: a quick pass to reconcile the plan against the *approved* implementation plan — what the spec proposed and what was approved can differ. Do this before executing. |
 | Implementation (Phase 5) | **Execute**: check off scenarios, fill the results log with exact commands + scope + result |
 | Manual review (Phase 6) | **Cite**: the review summary references this file's results, not a prose claim of "tests passed" |
 
@@ -31,7 +32,7 @@ docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-test-plan.md
 
 > Seeded from [<ticket-slug>-investigation.md](../investigations/<ticket-slug>-investigation.md) §9 on YYYY-MM-DD. Refined by spec: <link or "pending">.
 
-Status: seeded / refined / in-execution / complete
+Status: seeded / refined / revised (post-approval) / in-execution / complete
 
 ## Scope and surfaces under test
 

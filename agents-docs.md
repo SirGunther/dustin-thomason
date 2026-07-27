@@ -1419,6 +1419,7 @@ https://atlas-dev.planetdepos.com/triton/swagger
 - **Automated tests:** Only spell out commands/output when specific tests are relevant to the change; otherwise you usually **do not** need long test logs.
 - **Section headers:** Keep **### Testing and Verification** (or whatever the template uses) **even when the body is minimal**—for example a short note plus screenshots, or a sentence like “Verified locally; see screenshots below.”
 - **Agents / drafts:** If a PR is drafted before you have run the app, leave the section present with a placeholder you replace after verification (do not skip the heading).
+- **Early shell (orchestrated tickets):** the `orchestrate` skill stages a PR *shell* during investigation (Phase 2) as a head start — headings and empty placeholders from the **PR template** above, no filled content. That shell is filled after testing (Phase 5). Draft the shell early if it helps; do **not** fill Description / Test Evidence / Commit hash until the change is implemented and verified, since scope can still move before then.
 
 ---
 
@@ -1639,6 +1640,7 @@ docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-test-plan.md
 | --- | --- |
 | Investigation report (Phase 2) | **Seed** the test plan from report §9: happy path, negative paths, test map, gates |
 | Probe & spec (Phase 3) | **Refine** as locked decisions land — resolved open variables become concrete assertions |
+| Prep → Implement junction (Phase 4→5) | **Revise (post-approval)**: a quick pass to reconcile the plan against the *approved* implementation plan — what the spec proposed and what was approved can differ. Do this before executing. |
 | Implementation (Phase 5) | **Execute**: check off scenarios, fill the results log with exact commands + scope + result |
 | Manual review (Phase 6) | **Cite**: the review summary references this file's results, not a prose claim of "tests passed" |
 
@@ -1656,7 +1658,7 @@ docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-test-plan.md
 
 > Seeded from [<ticket-slug>-investigation.md](../investigations/<ticket-slug>-investigation.md) §9 on YYYY-MM-DD. Refined by spec: <link or "pending">.
 
-Status: seeded / refined / in-execution / complete
+Status: seeded / refined / revised (post-approval) / in-execution / complete
 
 ## Scope and surfaces under test
 

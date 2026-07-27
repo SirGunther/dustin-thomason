@@ -34,6 +34,7 @@ docs/<Project>/tickets/<slug>/            (always under the dustin-thomason repo
   original-ticket.md                              Phase 0
   orchestration.md                                phase-state ledger (Phase 0 scaffolds)
   <slug>-future-development-concerns.md           Phases 1–4, created on first concern only
+  <slug>-pr-draft.md                              Phase 2 shell (empty template) → Phase 5 filled
   investigations/
     <slug>-investigation.md                       Phase 2 (§13+ addenda appended, never rewritten — see Phase 2)
     <slug>-coverage-ledger.md                     Phases 1–2
@@ -42,7 +43,7 @@ docs/<Project>/tickets/<slug>/            (always under the dustin-thomason repo
     <slug>-spec.md                                Phase 3
     <slug>-locked-decisions.md                    Phase 3 — standard once decisions exceed a handful (see Phase 3)
   testing/
-    <slug>-test-plan.md                           Phase 2 seed → Phase 3 refine → Phase 5 execute
+    <slug>-test-plan.md                           Phase 2 seed → Phase 3 refine → Phase 4→5 revise → Phase 5 execute
   dnu/                                            superseded artifacts move here, names unchanged
 ```
 
@@ -187,8 +188,9 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
   3. Materialize `investigations/<slug>-coverage-ledger.md` — Consulted line first, then every staged area entry, then the Not-yet-inspected frontier.
   4. Produce `investigations/<slug>-diagrams.md` — current-vs-target, flows, sequences (race conditions and timing edge cases) as applicable; N/A lines for kinds skipped.
   5. Seed `testing/<slug>-test-plan.md` from report §9.
-  6. Update `original-ticket.md` Downstream Artifacts; add a Plans row to the changelog.
-- **Gate evidence:** consult log line present in the coverage ledger; report §5 links (not embeds) the diagrams; report §2 Problem Check subsection is filled with quote-grounded findings (or explicit "nothing here" per flag) and the §1–§2 framing claims cite ticket-text quotes, not only code; §8/§10 route facts vs decisions per Step 7; test plan status `seeded`.
+  6. **Stage the PR draft shell** `<slug>-pr-draft.md` — headings and empty placeholders only, from the PR template in `../../docs/pull-request-workflow.md` (title, ClickUp link, Description, Test Evidence, Commit hash, Checklist). Get the head start, but **draft the shell, not the content**: the body is filled in Phase 5 after testing, because scope can still move in Phases 3–4. Leave a one-line note at the top that it is an unfilled shell.
+  7. Update `original-ticket.md` Downstream Artifacts; add a Plans row to the changelog.
+- **Gate evidence:** consult log line present in the coverage ledger; report §5 links (not embeds) the diagrams; report §2 Problem Check subsection is filled with quote-grounded findings (or explicit "nothing here" per flag) and the §1–§2 framing claims cite ticket-text quotes, not only code; §8/§10 route facts vs decisions per Step 7; test plan status `seeded`; PR draft shell staged (shell only, body unfilled).
 - **Advance:** notify (Progress notifications; deferred Phase 1 notice batches in here too), AUTO-ADVANCE to Phase 3 (same mode) — print the gate, keep going.
 - **Reopening a "done" report:** if later work (a fast-follow answer, a live-DOM proof, a corrected assumption) needs to change this report after it's marked done, **append a numbered addendum section** (e.g. "§13. Post-Investigation Addendum — <what>") dated and evidenced — never rewrite the verdict or earlier sections in place. This preserves the original reasoning trail the same way the coverage ledger and locked-decision ledger already do.
 
@@ -216,9 +218,10 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 - **Reads:** the approved plan; the test plan; repo-specific rules of the touched repo.
 - **Do:**
   1. Update the ledger; add the changelog Plans row (`active`).
-  2. Implement per the plan, inside the `build-implementation-guardrails` obligations (tests as part of shipping, architecture fit, graceful degradation by layer).
-  3. Execute `testing/<slug>-test-plan.md`: check off scenarios, fill the results log with exact command + scope + result (serial runs).
-  4. Before every commit: changelog session log, then audit → lint → tests per the `git-commit-workflow` rule. PR per `../../docs/pull-request-workflow.md` when requested.
+  2. **Quick-revise the test plan against the just-approved implementation plan before writing code** — the approved plan can differ from what the spec proposed; reconcile scenarios/assertions to what was actually approved, set status `revised (post-approval)`. This is the Phase 4→5 revision tick, not a full rebuild.
+  3. Implement per the plan, inside the `build-implementation-guardrails` obligations (tests as part of shipping, architecture fit, graceful degradation by layer). Change rationale — observed → expected → fix — is PR-comment content, never a source comment (guardrails §7).
+  4. Execute `testing/<slug>-test-plan.md`: check off scenarios, fill the results log with exact command + scope + result (serial runs).
+  5. If a PR draft shell was staged in Phase 2, fill it now (title, description, test evidence, commit hash) per `../../docs/pull-request-workflow.md`. Before every commit: changelog session log, then audit → lint → tests per the `git-commit-workflow` rule. PR per `../../docs/pull-request-workflow.md` when requested.
 - **Gate evidence:** test plan status `complete` (or blocked items carry reason + residual risk + follow-up); session log written; gate results reported as a table. **Do not mark this phase `done` on drafted-but-unproven code** — the evidence must be an actual observed result (a run, a manual check, a passing suite), not a claim of what should happen.
 - **Advance:** notify (Progress notifications), then handoff → Phase 6 (Idle).
 
@@ -258,3 +261,5 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 - Do not skip the Problem Check pass or leave its framing claims ungrounded — cite the ticket's words; "nothing here" per flag is fine, silence is not.
 - Do not park a code-discoverable fact as an open-variable "for discussion," and do not bring it to the user to decide — trace it and resolve it via evidence (§8); only genuine decisions go to the user.
 - Do not run without a visible, checked-off todo list where the harness does not surface one.
+- Do not fill the PR draft body before Phase 5 — Phase 2 stages the shell only; content waits until the change is implemented and verified.
+- Do not put change rationale (observed → expected → fix) in a source comment; it is PR-comment content (guardrails §7).

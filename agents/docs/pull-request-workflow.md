@@ -158,6 +158,7 @@ https://atlas-dev.planetdepos.com/triton/swagger
 - **Automated tests:** Only spell out commands/output when specific tests are relevant to the change; otherwise you usually **do not** need long test logs.
 - **Section headers:** Keep **### Testing and Verification** (or whatever the template uses) **even when the body is minimal**—for example a short note plus screenshots, or a sentence like “Verified locally; see screenshots below.”
 - **Agents / drafts:** If a PR is drafted before you have run the app, leave the section present with a placeholder you replace after verification (do not skip the heading).
+- **Early shell (orchestrated tickets):** the `orchestrate` skill stages a PR *shell* during investigation (Phase 2) as a head start — headings and empty placeholders from the **PR template** above, no filled content. That shell is filled after testing (Phase 5). Draft the shell early if it helps; do **not** fill Description / Test Evidence / Commit hash until the change is implemented and verified, since scope can still move before then.
 
 ---
 

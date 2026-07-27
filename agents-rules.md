@@ -223,6 +223,16 @@ Bad:  "Tooling gates N/A."
 
 Do **not** run a local test whose only purpose is to confirm the app server is already listening. Only start or probe a local server when it directly verifies requested behavior (**browser automation**, endpoint checks, or a manual repro path), and state the behavioral signal it provides.
 
+---
+
+## 7. Change rationale lives in the PR, not the code
+
+**Why:** the explanation for *why a change was made* — especially a change discovered while testing — is a message to the reviewer, not to the next reader of the code. It ages out the moment the PR merges; left inline it becomes noise. (Observed directly in real agent runs: the reason for a fix kept landing as a source comment when it belonged in the PR conversation.)
+
+- When you make or revise a change and want to explain it, frame it as **observed behavior → expected behavior → implemented fix**, name the file(s) touched, and put that in the **GitHub PR comment / description — not as a comment in the codebase.**
+- A code comment remains correct **only** for a constraint the code itself cannot show. "Why this change was needed" / "what this fixes" is never that — it is PR content.
+- Where a ticket keeps a testing-implementation record or a "why these changes" artifact, those docs (under the ticket folder) are the staging ground for this PR content — never a substitute for it, and never copied into the source as comments.
+
 ## context-fanout
 
 # Context fanout — parallel exploration subagents
