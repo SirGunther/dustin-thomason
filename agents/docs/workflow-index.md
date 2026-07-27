@@ -272,6 +272,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `test-plan-artifact.md` | Test plan artifact — how to test the implementation |
 | `ticket-changelog-workflow.md` | Ticket changelog workflow |
 | `ticket-orchestration.md` | Ticket orchestration — superseded by the `orchestrate` skill |
+| `why-these-changes.md` | Why these changes — the living "Why" of the whole ticket |
 | `wiki-spec-authoring.md` | Wiki spec authoring (Callisto / Atlas) |
 
 ### Scripts (`scripts/`, `agents/scripts/`)
