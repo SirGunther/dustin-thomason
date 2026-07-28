@@ -118,14 +118,38 @@ This is exactly the pattern the AC review prompt is designed to catch — the st
 
 ## Explicit Constraints In Original Request
 
-- _Review the Original Request section above; constraints are preserved there when present._
+- None stated as a constraint in the Description / QA Notes text. The request states three defects and, for item 3, a directional UX preference only ("from UX perspective it is better to say something like 'removed create-read'") — wording is illustrative, not mandated.
+- Item 2 offers two alternative directions in the request's own words: "adding some info about changed module" **or** "Changing multiple resource keys in one save produces one PERMISSIONS_UPDATED event with one entry per changed resource key". The request does not pick between them.
+- Recorded from Activity (not the Description): "The solution may need to be discussed with IT" — Kat Giangiulio, Jul 16.
 
 ## Context Paths In Original Request
 
-- _Review the Original Request section above; paths and links are preserved there when present._
+- No file paths or repository references appear in the Description / QA Notes.
+- Named identifiers appearing in the request text: `PERMISSIONS_UPDATED` event, `resourceName`, `oldState.path`, `newState.path`, Path column, resource key.
+- Related ticket link captured under Activity And Comments: [PRDV-15840 — [BE] Publish permission change to Europa and Permissions page update](https://app.clickup.com/t/43227262/PRDV-15840) (stated origin of this improvement ticket).
+
+## Capture Gaps
+
+_Factual gaps in this capture — to be closed in Phase 1, not filled by inference._
+
+| Gap | What was captured | Why it matters |
+| --- | --- | --- |
+| `## Dev Note:` | Heading present in the captured Description with no body text beneath it. | The QA Notes state the entire testable behaviour "comes entirely from the dev notes" and quote the event shape (`"oldState": { "path": "read" }`) from them. Whether those dev notes live on this ticket or on PRDV-15840 is unresolved. |
 
 ## Downstream Artifacts
 
-- Investigation: Not created yet
-- Spec: Not created yet
-- Q and A ledger: Not created yet
+- Orchestration ledger: [`orchestration.md`](./orchestration.md)
+- Changelog: [`docs/atlas/PRDV-16192-changelog.md`](../PRDV-16192-changelog.md)
+- Why these changes: [`PRDV-16192-why-these-changes.md`](./PRDV-16192-why-these-changes.md)
+- Investigation report: [`investigations/PRDV-16192-investigation.md`](./investigations/PRDV-16192-investigation.md)
+- Coverage ledger: [`investigations/PRDV-16192-coverage-ledger.md`](./investigations/PRDV-16192-coverage-ledger.md)
+- Diagrams: [`investigations/PRDV-16192-diagrams.md`](./investigations/PRDV-16192-diagrams.md)
+- Test plan: [`testing/PRDV-16192-test-plan.md`](./testing/PRDV-16192-test-plan.md) (seeded)
+- Future-development concerns: [`PRDV-16192-future-development-concerns.md`](./PRDV-16192-future-development-concerns.md)
+- PR draft: [`PRDV-16192-pr-draft.md`](./PRDV-16192-pr-draft.md) (unfilled shell)
+- Spec: Not created yet (Phase 3)
+- Q and A / locked-decision ledger: Not created yet (Phase 3)
+
+### Capture gap resolution
+
+The `Dev Note:` gap recorded above was **closed by code evidence** during Phase 1: the behaviour the QA Notes attribute to the dev notes (`oldState.path` = comma-separated prior actions, `newState.path` = comma-separated resulting actions) matches the shipped emitter exactly (`callisto-back-end .../permissions-to-audit-event.assembler.ts:22-23`). The missing body is informational only; no requirement was lost.
