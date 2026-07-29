@@ -112,6 +112,26 @@ _Newest first. Add one block before each commit (agents) or end of work session 
 
 ---
 
+## Why each non-obvious value is what it is
+
+_Moved out of source comments per `pr-review-patterns` Pattern 7 (reviewer derrickdso: "lets clear out these unnecessary comments"). Code carries no explanatory comments; this section is the record._
+
+| Decision | Why |
+| --- | --- |
+| Registry keyed on `videoTranscodeValue`, never `videoTranscodeId` | Migration `1754574059506` renumbered every row in `video_transcodes` (`5→6, 4→5, 3→4, 2→3, 1→2`) to free id 1 for the empty value. Nothing broke only because nothing consumed the id. A hardcoded id in Nova would silently repoint at the wrong preset on the next such migration. |
+| Registry keys asserted as exactly `['Standard', 'Video Mix']` | Those are the only two values Callisto's `IsVideoTranscodeSelectionEligibleForOutbox` gate emits. Callisto owns the vocabulary; Nova mirrors it. The assertion turns an upstream rename into a CI failure instead of a silent production downgrade. |
+| `resolveTranscodePreset` returns `isFallback` rather than throwing | Keeps the return type honest about whether a substitution happened, and leaves the logging to `TranscodeStep`, which owns the logger. Throwing would deny the customer a usable deliverable over a preset mismatch. |
+| Exact string matching — no trimming, no case folding | Keeps the registry a byte-exact mirror of the Callisto authority, which is what makes the contract-guard assertion mean anything. `video_transcodes.value` is a unique-constrained column, so casing variance is not an observed risk. |
+| `nal-hrd=cbr` on **both** presets | YesLaw, the transcript-to-video sync application these deliverables play through, only stays in sync on a genuinely constant bitrate. Without it x264 ran `nal_hrd=none filler=0`, treating the rate as a ceiling and settling wherever the content landed — a static source at Video Mix's 2000k target came out at 1572k. With it x264 pads with filler NAL units and holds the rate exactly. Confirmed locally: 2 000 kb/s flat, MediaInfo bit-rate mode `Constant`, no visible quality change, file 18.0 → 22.5 MiB. |
+| `-minrate` on Video Mix (not in the HandBrake preset) | MediaInfo on pipeline output showed Standard holding 950 exactly while Video Mix undershot to 1572 on the same source. Standard sets the floor as an ffmpeg flag; Video Mix carried its VBV only inside `-x264-params`. Mirroring Standard's shape removed the asymmetry. |
+| `force-cfr=1` on Video Mix (not in the HandBrake preset) | Consistency with the Standard preset, so both pin the timebase the same way rather than differing by accident. HandBrake enforces CFR in its own pipeline via `VideoFramerateMode` rather than through that field. |
+| `-af afade…areverse` on Video Mix (not in the HandBrake preset) | Consistency with Standard, which uses a 5 ms fade in/out to suppress start and end clicks. HandBrake offers no audio-fade option. |
+| `yadif=deint=interlaced` on Video Mix | Covers the HandBrake preset's `PictureDeinterlaceFilter: "decomb"`. `deint=interlaced` only touches frames flagged interlaced, so progressive sources — which is all Nova ingests — pass through untouched. Runs before `scale` so fields are separated before any vertical resampling. Not bit-identical to HandBrake's own decomb filter, and deliberately not chased. |
+| Standard's arg list otherwise verbatim from `template1` | AC 2. The parity spec asserts a hand-written literal rather than calling the production builder, because an expectation derived from the code under test cannot catch a transcription error in that code. |
+| `payload-local.json` / `payload-s3.json` left untouched | Dropped from the PR — stale fixtures that appear unused. Not worth carrying in a hot-fix diff. |
+
+---
+
 ## Root cause analysis
 
 _Provisional, from the Phase 0 read-only survey; the authoritative account lands in the Phase 2 investigation report._
