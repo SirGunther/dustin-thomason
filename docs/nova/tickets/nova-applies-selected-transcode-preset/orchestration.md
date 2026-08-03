@@ -19,6 +19,20 @@ Resume: Phase 3 — Working mode
 
 ---
 
+## ⚠ CORRECTION 2026-07-29 — THIS TICKET SHIPPED; THE PHASE 5 ROW ABOVE IS STALE
+
+The Phase 5 row still reads `in-progress` / *"Not committed — npm audit exits 1"*. **The work merged to `nova-back-end` `main`** as commit `4128419` *"PRDV-16398: Apply selected video transcode preset (#15)"* (followed by `4979ee8` adding audit overrides, which is how the audit blocker was resolved). Verified in source on 2026-07-29:
+
+- `src/video-conversion/domain/steps/transcode-step/transcode-preset.registry.ts` — `resolveTranscodePreset(value)` keyed on `'Standard'` / `'Video Mix'`, falling back to Standard with a `warn` carrying `requestedValue` + `appliedPreset`, exactly as the dev note specified
+- both presets exist: `presets/standard-depo.preset.ts`, `presets/vid-mix.preset.ts` — so the HandBrake Video Mix blocker was resolved
+- `TranscodeStep.apply(localInputPath, localOutputPath, transcodeValue)` takes the value; wired via `video-job.assembler.ts:66` → `video-conversion.service.ts:124`
+
+**Why this correction is here rather than just in the row:** leaving it stale caused a real downstream failure. PRDV-16402's investigation consulted this ledger, took "unshipped, blocked on the HandBrake preset" as current, and on that basis issued a `proceed with conditions` verdict plus a recommendation to split PRDV-16402's acceptance criterion with Product — all wrong, and it cost a round of review. Root-cause analysis and the proposed rule change ("closing a phase must update the ledgers it read"; a ledger is an index to evidence, not evidence) are in `docs/atlas/PRDV-16402/PRDV-16402-investigation-failure-analysis.md`.
+
+Phases 5 and 6 of this ticket still need closing out properly against what actually merged.
+
+---
+
 ## Ledger notes
 
 ### Phase 0 (2026-07-28)
