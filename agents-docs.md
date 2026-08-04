@@ -1060,6 +1060,16 @@ The purpose of `original-ticket.md` is to establish one fact:
 
 It is not an investigation, not a spec, not a decision log, and not a place to infer missing requirements.
 
+## How to reference it
+
+Use any of these phrases:
+
+- `@original-ticket-artifact`
+- "Generate the original ticket artifact."
+- "Create the original-ticket.md first."
+- "Capture the original ticket as source of truth."
+- "Establish the original ticket fact before investigation."
+
 When invoked, create or update the canonical `original-ticket.md` artifact before generating investigation, Q and A, spec, or implementation-plan artifacts.
 
 ## Output location
@@ -1104,7 +1114,7 @@ An `original-ticket.md` artifact should contain only:
 4. Explicit constraints present in the original request.
 5. Context paths or links present in the original request.
 
-Downstream artifact links are optional and should stay factual, for example `Not created yet` or a direct path once the file exists.
+**Nothing else.** This artifact is the request and only the request, and it is immutable once captured — no later phase appends to it. Paths to the files a ticket produces belong in the ledger's **Artifacts** column, never here. A Downstream Artifacts section used to live in the template below; it duplicated the ledger and blurred this boundary, so it was removed.
 
 ## Artifact template
 
@@ -1132,12 +1142,6 @@ Downstream artifact links are optional and should stay factual, for example `Not
 ## Context Paths In Original Request
 
 - 
-
-## Downstream Artifacts
-
-- Investigation: Not created yet
-- Spec: Not created yet
-- Q and A ledger: Not created yet
 ```
 
 ## What belongs here
@@ -2436,6 +2440,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | ----- | ------- |
 | `grill-me` | Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when user wants to stress-test a plan, get grilled on their design, or mentions "grill me". |
 | `investigation` | The method for investigating a problem and its proposed fix before committing to it — in any domain (software, workflow, policy, process, etc.). Ground in real instances, classify the problem, lock acceptance criteria, trace why it exists, re-confirm the class, then stress-test the solution against scale, generalization, and fit. Emits an Investigation Report (see the investigation-report template): verdict, problem class, assumptions-to-test, a happy/negative validation plan, recommendation with gates, and open variables to collect. Use when scoping a change, validating assumptions, writing a spec, or when the user says "investigate". |
+| `job-story` | Turn a feature request or ticket into a job story — a structured user story plus acceptance criteria, built through a matrix sequence that strips solution-speak and unobservable outcomes before emitting. Produces a referenceable artifact the finished work gets held against. Use when the user says "job story", "write the story", "turn this into a story", "acceptance criteria for this ticket", or asks to define what done means for a request. |
 | `orchestrate` | Conduct a ticket end-to-end through the seven-phase lifecycle — capture original ticket, investigate, report, probe and spec, prep for implementation, implement, manual review — with full-rigor artifacts, phase exit gates, and a standardized handoff at every mode boundary. Resumable from the per-ticket ledger. Use when the user says "orchestrate", "orchestrate PRDV-XXXXX", "run the ticket workflow", "take this ticket through the phases", or "resume/continue orchestration". |
 | `workflow-housekeeping` | Audit dustin-thomason workflow docs, rules, and index for drift, duplicates, and missing entries. Use when user asks to housekeeping workflows, sync workflow-index, validate personal Cursor setup, or after adding a new playbook or rule. |
 | `write-spec` | Create or update epic/story specs and dev notes for Callisto/Atlas. Use when the user asks to write a spec, author PRDV ticket documentation, create a dev note for estimation, or extend specs under a systems/ wiki tree. |

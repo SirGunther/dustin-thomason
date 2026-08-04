@@ -8,6 +8,16 @@ The purpose of `original-ticket.md` is to establish one fact:
 
 It is not an investigation, not a spec, not a decision log, and not a place to infer missing requirements.
 
+## How to reference it
+
+Use any of these phrases:
+
+- `@original-ticket-artifact`
+- "Generate the original ticket artifact."
+- "Create the original-ticket.md first."
+- "Capture the original ticket as source of truth."
+- "Establish the original ticket fact before investigation."
+
 When invoked, create or update the canonical `original-ticket.md` artifact before generating investigation, Q and A, spec, or implementation-plan artifacts.
 
 ## Output location
@@ -52,7 +62,7 @@ An `original-ticket.md` artifact should contain only:
 4. Explicit constraints present in the original request.
 5. Context paths or links present in the original request.
 
-Downstream artifact links are optional and should stay factual, for example `Not created yet` or a direct path once the file exists.
+**Nothing else.** This artifact is the request and only the request, and it is immutable once captured — no later phase appends to it. Paths to the files a ticket produces belong in the ledger's **Artifacts** column, never here. A Downstream Artifacts section used to live in the template below; it duplicated the ledger and blurred this boundary, so it was removed.
 
 ## Artifact template
 
@@ -80,12 +90,6 @@ Downstream artifact links are optional and should stay factual, for example `Not
 ## Context Paths In Original Request
 
 - 
-
-## Downstream Artifacts
-
-- Investigation: Not created yet
-- Spec: Not created yet
-- Q and A ledger: Not created yet
 ```
 
 ## What belongs here
