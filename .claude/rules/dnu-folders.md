@@ -1,0 +1,19 @@
+<!-- generated from rules/dnu-folders.md by scripts/sync-rules.ps1; edit the source, not this file -->
+
+## dnu folders — kept, not used
+
+`dnu` means **do not use**. A `dnu/` folder holds work that has been superseded but deliberately not deleted, because the reasoning in it may still be worth something and throwing work away loses the trail.
+
+**Never pull a `dnu/` folder into context.** When you load a folder — a ticket folder, a skill folder, a docs folder — skip `dnu/`. When you search or grep for how something works, exclude it. When you cite a source, never cite from it.
+
+**The only exception is an explicit instruction.** If the user names the file or asks what a retired approach used to say, read it then and say plainly that it is retired.
+
+**Why this is a hard rule and not a preference:** a superseded file reads exactly like a current one. It has the same headings, the same confident tone, and often more detail than what replaced it — that is usually *why* it was replaced. An agent that loads it cannot tell it is stale, will treat it as authority, and will reintroduce the thing that was already decided against. That has already happened: a retired sequence doc kept asserting that later phases may append to an immutable file, six phases after that rule was reversed.
+
+**Where they appear:**
+
+- `agents/dnu/` — retired workflow docs, rules, and skills
+- `docs/<Project>/tickets/<slug>/dnu/` — superseded ticket artifacts, names unchanged
+- any `dnu/` a project creates for the same purpose
+
+**A `dnu/` folder carries a `README.md`** listing each file, the date it was retired, and what superseded it. That README is the only file in there worth reading, and only to find out where the current version lives.

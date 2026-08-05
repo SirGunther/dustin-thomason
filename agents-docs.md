@@ -138,9 +138,9 @@ A running record of outdated references, superseded files, and structural warts 
 
 | Item | Why it's cruft | Proposed fate | Blocked by |
 | --- | --- | --- | --- |
-| `agents/docs/ticket-orchestration.md` (stub) | Superseded by the `orchestrate` skill; stub kept only to redirect previously circulated prompts | Delete after the skill proves out over a few real tickets | Skill adoption |
-| `agents/docs/investigation-question-coverage.md` | Meta-audit proving the investigation SKILL covers a collected question list — documentation *about* the method, not operational input; not loaded by any flow | Archive (move under a `dnu/` or `archive/` convention for `agents/docs/`) | Decide the archive convention for agents/docs |
-| `agents/skills/write-spec/SKILL.md` path references | Contains `.cursor/skills/grill-me/SKILL.md` and `../../rules/spec-writing.mdc` style links that only resolve in the `.cursor` tree — broken in `agents/` and `.claude/` mirrors | Switch to portable relative forms (`../grill-me/SKILL.md`; rules named in prose) | — |
+| `../dnu/ticket-orchestration.md` (stub) | Superseded by the `orchestrate` skill; stub kept only to redirect previously circulated prompts | Delete after the skill proves out over a few real tickets | Skill adoption |
+| `../skills/investigation/docs/investigation-question-coverage.md` | Meta-audit proving the investigation SKILL covers a collected question list — documentation *about* the method, not operational input; not loaded by any flow | Archive (move under a `dnu/` or `archive/` convention for `agents/docs/`) | Decide the archive convention for agents/docs |
+| `agents/skills/write-spec/SKILL.md` path references | Contains `.cursor/skills/grill-me/SKILL.md` and `../../rules/spec-writing.mdc` style links that only resolve in the `.cursor` tree — broken in `agents/` and `.claude/` mirrors | Switch to portable relative forms (`../skills/grill-me/SKILL.md`; rules named in prose) | — |
 | `agents/skills/investigation/` folder vs `name: investigate` frontmatter | Folder name (the actual invocation name) and frontmatter `name` disagree | Align frontmatter `name` to `investigation` | Confirm nothing keys off `investigate` |
 | `agents/scripts/sync-agents-md.ps1` | Backwards-compatible shim to `sync-rules.ps1` | Delete once nothing invokes it | Validator's expected-scripts list includes it |
 | `agents/docs/workflow-index.md` hand-written Skills table | Now complete (all 5 skills) but duplicates the generated inventory below it | Decide: slim the hand-written table to a pointer at the generated inventory, or keep maintaining both | — |
@@ -153,7 +153,7 @@ A running record of outdated references, superseded files, and structural warts 
 >
 > **What this is not:** a full architecture diagram, a sequence diagram, or a per-state set of separate diagrams. The whole point is *one* picture where current and target share the same lanes so the eye reads the change, not two pictures the reader has to diff in their head.
 >
-> **How it fits the investigation method:** the Investigation Report ([investigation-report.md](./investigation-report.md)) §5 ("Why it exists + data paths") is the natural home for this diagram — it turns the traced current path and the proposed target path into a single visual. It is equally usable in a spec, a PR description, or a design doc. A workflow rule or skill can reference this file the way `SKILL.md` references [problem-check.md](./problem-check.md).
+> **How it fits the investigation method:** the Investigation Report ([investigation-report.md](../skills/investigation/docs/investigation-report.md)) §5 ("Why it exists + data paths") is the natural home for this diagram — it turns the traced current path and the proposed target path into a single visual. It is equally usable in a spec, a PR description, or a design doc. A workflow rule or skill can reference this file the way `SKILL.md` references [problem-check.md](../skills/investigation/docs/problem-check.md).
 
 ---
 
@@ -366,611 +366,8 @@ To make this a referenced standard (the way the investigation method references 
 
 1. Keep this file as the single source in `agents/docs/`.
 2. From the rule/skill that should use it, link it: *"When the change has a before/after across parts, include one current-vs-target diagram per [current-vs-target-diagram.md](../docs/current-vs-target-diagram.md)."*
-3. If you add it to the investigation flow, the attach point is **Report §5** (data paths) — state "single diagram, current vs target, deltas legible" as the done-when. In orchestrated tickets the diagram lives in the **standalone diagrams artifact** ([investigation-diagrams.md](./investigation-diagrams.md)) and §5 links out to it rather than embedding it.
+3. If you add it to the investigation flow, the attach point is **Report §5** (data paths) — state "single diagram, current vs target, deltas legible" as the done-when. In orchestrated tickets the diagram lives in the **standalone diagrams artifact** ([investigation-diagrams.md](../skills/investigation/docs/investigation-diagrams.md)) and §5 links out to it rather than embedding it.
 4. Regenerate the tool mirrors (`.claude/`, `.cursor/`, `AGENTS.md`) with `agents/scripts/sync-rules.ps1` after editing — never hand-edit the generated copies.
-
-## future-development-concerns.md
-
-# Future-development concerns — the risk record artifact
-
-Use this instruction when work on a ticket surfaces a concern that will NOT be resolved in scope: a decision that cuts against best practice, a risk consciously accepted, or a gap deliberately deferred. The concerns file is a **dated, evidence-backed record that the risk was identified and raised** — kept out of the report and spec so they stay lean, but findable when the risk lands.
-
-Reference shape: `docs/atlas/16216/PRDV-16216-future-development-concerns.md`.
-
-## Output location
-
-```text
-docs/<Project>/tickets/<ticket-slug>/<ticket-slug>-future-development-concerns.md
-```
-
-Create the file on the **first** concern; append after that. Many tickets never need one — do not create it empty.
-
-## When to record a concern
-
-During investigation, grill-me / Q and A, spec writing, or spec review, whenever:
-
-- a chosen direction goes against best practice and is being shipped anyway;
-- a risk is consciously scoped out ("future companion ticket", "accepted for now");
-- a locked decision accepts a failure mode someone may later ask "was this known?" about;
-- a proposed change contradicts a documented prior rejection.
-
-## Relationship to the locked-decision ledger
-
-A risk-accepting answer produces **both** records: a locked-decision row per [qa-to-spec-traceability.md](./qa-to-spec-traceability.md) (the **what**: decision, source, spec destination) and a concern entry here (the **why**: risk rationale, evidence, escalation context). The locked-decision row cites the concern entry. Neither substitutes for the other.
-
-## Core rules
-
-- **Dated and code-verified.** Every factual claim about system behavior carries file:line evidence and the date it was verified. An unverified worry is labeled as such.
-- **Framed around where the system is headed**, not just what ships in this story — the record exists for the future reader deciding whether the risk has now matured.
-- **Escalation-ready.** The executive summary must stand alone for a reader with authority but no context: the vulnerability, why it matters (fallout, not probability), and the decision being requested with explicit options.
-- **Concerns are not blockers.** Recording one does not stop the work; it prevents "why wasn't this considered?" later. If the concern SHOULD block, say so in the summary and route it to the person with authority to own it.
-- **Never let it bloat the report or spec** — they link here.
-
-## Artifact template
-
-```markdown
----
-ticket: <PRDV-XXXXX or slug>
-tags: [<system>, <area>, concerns]
-author: <name>
-created: YYYY-MM-DD
-modified: YYYY-MM-DD
----
-
-# <Ticket> — Future-development concerns (<short subject>)
-
-> **Context:** <what decision/direction these concerns attach to, one or two sentences>
-> **Purpose of this document:** a dated, code-verified record that these risks were identified and raised — for team discussion and, where needed, escalation.
-> **Constructive path forward:** <if one exists, name it and link the artifact; else "none identified yet">
-
-## Executive summary (for escalation)
-
-<The vulnerability in plain language. Why it matters even if rare — fallout, not probability.
-The decision being requested, from someone with authority to own it, with explicit options (a) / (b) / (c).>
-
-## Concern 1 — <one-line title>
-
-<What the concern is. Why the current direction makes it worse or leaves it open.>
-
-- **Evidence (verified YYYY-MM-DD):** <file:line refs, config, contract fields>
-- **What would resolve it:** <the smallest change or companion ticket that closes it>
-
-## Concern 2 — ...
-
-## Decision history
-
-<Dated chronology of how the direction got here — proposals, rejections, reversals — each step pointing at a dated artifact, not memory.>
-
-## Open questions to settle
-
-1. <question> — owner: <who>
-```
-
-## Definition of done
-
-An entry is done when a future reader can answer: what was the risk, who raised it and when, what evidence supported it, what decision was made (or requested) in response, and what would resolve it.
-
-## investigation-coverage-ledger.md
-
-# Investigation coverage ledger — the visited-state map
-
-Use this instruction when an investigation begins, resumes, or hands off. The ledger is a durable record of **where the agent has already looked, how deeply, and what it learned there** — coverage AND outcome, not just conclusions.
-
-The problem it solves: an agent that forgets its visited set repeatedly traverses the same branches, consumes enormous context, and still believes it is making progress. Compaction turns deep investigation into repeated exploration. Without the coverage half, a later agent sees only "the database may be involved" and reopens every file; with it, the agent sees the adapter was already inspected, which methods were checked, and why it was ruled out.
-
-**Relationship to [qa-to-spec-traceability.md](./qa-to-spec-traceability.md):** complementary halves of the same don't-redo principle. That workflow preserves **decisions** (what was answered, locked, and where it lands in the spec). This ledger preserves **traversal** (where the agent looked in code and what it found or ruled out). This is the traversal counterpart to its reconcile-before-asking rule. Do not merge the two artifacts.
-
-## Output location
-
-```text
-docs/<Project>/tickets/<ticket-slug>/investigations/<ticket-slug>-coverage-ledger.md
-```
-
-One ledger per ticket. Do **not** maintain a single ever-growing project-wide coverage document — at scale that document becomes its own million-token problem. Discovery across tickets is grep-based (see the consult protocol).
-
-## Core rules
-
-- Record coverage **as you investigate**, not retroactively. An entry costs one table row at the moment of inspection; reconstructing it later costs a re-read.
-- Every entry is keyed to a **commit** (short SHA) and date. "This function was investigated" is only reusable while the code is materially unchanged; an inspection against commit A does not silently govern commit B.
-- Every entry carries a **status** from the fixed vocabulary below. No free-form status values.
-- The **Not yet inspected** section is mandatory. It is the frontier — the most valuable part of the ledger for whoever resumes.
-- Entries are structured tables and bullets, never prose narratives. The investigation report tells the story; the ledger is the index.
-
-## Status vocabulary
-
-| Status | Meaning |
-| --- | --- |
-| `fully-inspected` | Examined completely for the stated question; findings recorded |
-| `partial` | Examined, but stated aspects remain unchecked (name them in Notes) |
-| `ruled-out` | Examined and eliminated as a cause/factor for the stated question |
-| `contributing` | Examined and confirmed as a contributing condition |
-| `not-inspected` | Identified as relevant but not yet examined (lives in the frontier section) |
-
-## Consult protocol (before opening a new investigative branch)
-
-Before investigating area X:
-
-1. **Search prior ledgers** for X and its surrounding subsystem:
-
-   ```powershell
-   # from the repo holding docs/<Project>/
-   Get-ChildItem docs/<Project>/tickets/*/investigations/*-coverage-ledger.md
-   # then grep those files for the file path, symbol, or subsystem name
-   ```
-
-2. **If already covered, reuse the prior result** — cite the ledger entry instead of re-reading the code.
-3. **Reopen only if** at least one holds:
-   - new evidence contradicts the prior finding;
-   - the code changed since the recorded commit (`git log <sha>..HEAD -- <path>` is non-empty);
-   - the prior inspection was `partial` for the aspect now in question;
-   - the current question concerns a **different behavior** than the one inspected.
-4. **Record why it was reopened** in the new ledger's entry (`Reopened: <reason>`). Re-checking without a stated reason is the exact waste this ledger exists to stop.
-
-**Mandatory consult log line:** the ledger's `Consulted` section must record what was searched and what came of it — even when nothing was found. This line is the auditable evidence that the consult happened. Example: `Consulted: docs/WorkLists/tickets/*/investigations/*-coverage-ledger.md for "cardActions"; found duplicate-card-option ledger; reused its ruled-out entry for dal.js.` or `Consulted: <glob>; none found.`
-
-## Ledger template
-
-```markdown
-# Coverage ledger — <Project>/<ticket-slug>
-
-Investigation question: <one sentence — the behavioral question this coverage is FOR>
-Repo(s): <repo names>  ·  Baseline commit: <short SHA>  ·  Started: YYYY-MM-DD
-
-## Consulted
-
-- <glob searched> for "<terms>" — <found + reused | found + reopened (reason) | none found>
-
-## Areas examined
-
-### 1. <area — file, module, table, endpoint>
-
-| Field | Value |
-| --- | --- |
-| Inspected | <functions / callers / columns / queries — the concrete items> |
-| Findings | <what was found, one clause per finding> |
-| Status | fully-inspected / partial / ruled-out / contributing |
-| Commit | <short SHA> · YYYY-MM-DD |
-| Evidence | <file:line refs, grep results, test names> |
-| Notes | <partial: what remains unchecked · reopened: reason> |
-
-### 2. <next area>
-
-...
-
-## Not yet inspected (frontier)
-
-- <area> — <why it's relevant / what question it would answer>
-```
-
-## What belongs here
-
-- Files, functions, callers, adapters, schemas, tables, constraints, queries, logs, tests, and call paths examined — with the specific items named.
-- What was found, ruled out, or left unresolved in each area.
-- Completeness claims and how they were established ("`useUnapproveFlow` imported only by X and Y — grep clean").
-- The frontier: relevant areas not yet examined.
-
-## What does not belong here
-
-- The investigation narrative, verdict, or recommendation (that is the investigation report).
-- Locked decisions from Q and A (that is the qa-to-spec-traceability ledger).
-- Speculation without an inspection behind it.
-
-## Definition of done
-
-The ledger is serving its purpose when a future agent can answer, without re-reading code: Has this subsystem been inspected at all? Was this file inspected? Was this symbol inspected **for this particular question**? Was it inspected at a commit that still matches the current code?
-
-## investigation-diagrams.md
-
-# Investigation diagrams — the standalone visuals artifact
-
-Use this instruction when an investigation's findings need diagrams. Diagrams are a **standalone artifact**, not sections embedded in the investigation report — combining everything into one file creates reference and context-length problems (a single report carrying 70 lines of inline Mermaid is the failure mode this replaces). The report links out; the diagrams file renders.
-
-## Output location
-
-```text
-docs/<Project>/tickets/<ticket-slug>/investigations/<ticket-slug>-diagrams.md
-```
-
-The investigation report's data-paths section (§5) carries a one-line link to this file instead of an inline diagram.
-
-## When it is produced
-
-The diagrams artifact is a **todo appended to the investigation**: the investigation plan (Phase 1) includes it; the report phase (Phase 2) produces it alongside the report. It can also be created or extended later — during spec review or PR writing — whenever a picture would settle what prose is failing to.
-
-## The three diagram kinds
-
-Include only the kinds the ticket needs; state a one-line N/A for kinds deliberately skipped.
-
-### 1. Current vs target delta (`flowchart`)
-
-The "what changes, where, and what stays frozen" picture. Follow the single-diagram convention in [current-vs-target-diagram.md](./current-vs-target-diagram.md) — one figure, lanes = owners, color = change status, two chains through shared lanes, constraints named. Use when there is a before/after that crosses parts.
-
-### 2. Flow diagrams (`flowchart`)
-
-Data or control paths that the delta diagram doesn't cover: how a request travels, where a value originates and lands, which branch points exist. Use when the investigation traced a path whose shape matters and prose keeps re-explaining it.
-
-### 3. Sequence diagrams (`sequenceDiagram`)
-
-Workflow and timing representations — **hugely beneficial for edge cases like race conditions**: concurrent viewers, retry overlap, double-write windows, event ordering. Use when *when* matters as much as *what*: two actors touching shared state, an idempotency guard, anything where the failure only exists in an interleaving.
-
-```mermaid
-sequenceDiagram
-    participant A as Browser tab 1
-    participant B as Browser tab 2
-    participant S as Server
-    A->>S: write-back (length=8040)
-    B->>S: write-back (length=8040)
-    S->>S: update WHERE length IS NULL (first wins)
-    S-->>A: 200 (row updated)
-    S-->>B: 200 (no-op - already set)
-```
-
-## Artifact template
-
-````markdown
-# Diagrams — <Project>/<ticket-slug>
-
-> Companion to [<ticket-slug>-investigation.md](./<ticket-slug>-investigation.md). Each diagram states what question it answers.
-
-## Current vs target
-
-<one line: what this shows>  (or: N/A — <reason>)
-
-```mermaid
-...
-```
-
-## Flows
-
-<one line per diagram: what this shows>  (or: N/A — <reason>)
-
-## Sequences
-
-<one line per diagram: which interleaving / edge case this exposes>  (or: N/A — <reason>)
-````
-
-## Rules
-
-- **Every diagram answers a named question.** A diagram nobody can caption is decoration; cut it.
-- **Validate the render before committing** — silent Mermaid parse failures are common. The syntax gotchas in [current-vs-target-diagram.md](./current-vs-target-diagram.md) (no colons in edge labels, no raw angle brackets, quote node labels, `<br/>` for line breaks) apply to every diagram kind here.
-- **Keep the report lean.** If a diagram earns a place in the report or a spec, link it; do not paste it back inline.
-- One diagrams file per ticket; superseded diagrams move to the ticket's `dnu/` folder with the rest of the superseded material.
-
-## investigation-question-coverage.md
-
-# Investigation method — question coverage checklist
-
-> **What this is:** the loose questions/principles collected for the investigation method, deduped and checked against what the method **currently** captures. Every "present" item carries a **verbatim quote** from the source so this reads as an audit, not a claim — no lookup required.
-> **Sources quoted:** `SK` = `agents/skills/investigation/SKILL.md` (line refs); `RT` = `agents/docs/investigation-report.md`.
-> **Scope:** built from *Questions to answer*, *Guiding principles*, the *Problem→Requirement→Solution* note, and *Transcript Analysis Tasks*. **Excludes** Jim's Question Battery and the Pre-meeting self-grill.
-> **Legend:** `[x]` = present, with quote · `[ ]` = gap / handled elsewhere (explained inline). Net-new software questions live in [investigation-software-gaps.md](./investigation-software-gaps.md).
-
-## Questions to answer
-
-- [x] **Solve the class, not just the instance**
-  > SK Step 5: *"**The confirmed class** — does it solve the class of problem (not the assumed class, not just this occurrence)?"*
-- [x] **Will it scale?**
-  > SK Step 5: *"**Scale** — will it hold up as scope, volume, or the number of people and cases involved grows?"*
-- [x] **Can/should it be abstracted?**
-  > SK Step 5: *"**Generalization** — should this be abstracted, or is that overreach?"*
-- [x] **Follows best practices / fits architecture & philosophy**
-  > SK Step 5: *"**Fit** — does it follow established practice and integrate cleanly with the existing system, its conventions, and its philosophy?"*
-- [x] **Leaks: fix now vs. follow-up + effort tradeoff**
-  > SK Step 5: *"**Adjacent issues** — if you surface related problems, is it lower effort to resolve them now or to spin off a follow-up? State the tradeoff."*
-- [x] **Front-end: change behavior, appearance, or both?**
-  > SK software branch (line 94): *"Add a frontend lens where relevant: should we change how it behaves, how it looks, or both?"*
-
-## Guiding principles
-
-- [x] **No simpler / no more complex than it needs to be**
-  > SK Step 5, inside Generalization: *"The fix must be no simpler than it needs to be and no more complex than it needs to be."*
-  > *(Note: currently embedded in the Generalization bullet, not a standalone principle.)*
-- [x] **Every claim written to be refuted**
-  > SK standing disciplines: *"**Every claim falsifiable.** Write each claim — including problem statements and classifications — so it could be refuted, then go look for the refutation."*
-- [x] **Confirm/revise each claim against evidence**
-  > SK Step 4: *"Confirm or revise each assumption against that evidence, not against what the request claims."*
-  > RT §8 assumptions ledger status: *"open | confirmed | confirmed directionally | revised | refuted"*.
-- [x] **Test happy path AND negative/inferred paths (defect not leaking in from / out to unmodeled areas)**
-  > SK Step 6: *"**Negative / inferred paths:** prove the problem isn't leaking in from, or out to, somewhere we haven't modeled."*
-
-## Root cause in code
-
-- [x] **Understand the code and *why* the problem exists**
-  > SK Step 4: *"Trace the problem to its origin. Gather evidence from the primary source before asking me."*
-  > SK software branch (line 94): *"search the codebase for evidence and trace the defect to its origin in code."*
-
-## Validation & recommendation (always-on outputs, present)
-
-The four *Transcript Analysis Tasks* split **2 + 2**: two are always-on outputs the method already emits on every investigation (here); the other two are transcript-triggered lenses (next section). The always-on two are **not** transcript-gated.
-
-- [x] **Testing strategies / how to validate** — this is the validation plan; the behavioral "how we test" *is* the happy + negative paths.
-  > SK Step 6: *"**Happy path:** the sequence that should work, step by step."* and *"**Negative / inferred paths:** prove the problem isn't leaking in from, or out to, somewhere we haven't modeled."*
-  > *(One software-specific sharpening — the automated red→green test that encodes the defect — is logged in [investigation-software-gaps.md](./investigation-software-gaps.md); the general behavioral coverage is here.)*
-- [x] **Recommendations (how to proceed)** — a core emit at the **end of every investigation**, not transcript-gated.
-  > SK Step 7: *"**Decisions and recommendation with gates** — what we settled; what to do in order; what proceeds first and what stays gated behind which proof or artifact."*
-  > RT §10: *"- **Recommendation** (what to do, in order):"*
-
-## Identify uncertainties → Problem Check (always-run, present)
-
-- [x] **Run Problem Check on every investigation** — wired into `SK Step 1`, **not** contextual. The always-on disciplines only catch a **known blank** (a missing value):
-  > SK standing disciplines: *"**Log unknowns as they surface.** Any value, mapping, threshold, owner, or boundary you can't pin down goes into the open-variables list the moment you notice it."*
-  Problem Check catches the **ambiguity** they don't: asked-vs-answered drift, and above all **conflation** — usually *several* distinct problems treated as one, which split into branches — plus *thin* terms and *off* (internal contradictions). Now wired at:
-  > SK Step 1: *"Run the **Problem Check** lens … **every investigation, not just transcripts**."*
-  Tool: [problem-check.md](./problem-check.md).
-
-## Identify decisions → context-triggered pointer (present)
-
-- [x] **Extract decisions when a transcript / live discussion is present** — the one genuinely conditional item (you can't mine decisions from a discussion that isn't there). Home in the report when they exist:
-  > RT §10: *"- **Decisions** (settled):"*
-  Wired as a rider on the same Step 1 Problem Check line: *"When the evidence includes a transcript or live discussion, also extract the explicit decisions made."*
-
-## Not this method's job (parked)
-
-- [ ] **Problem → Requirement → Solution as an explicit ordered narrative** — this belongs to **ticket generation**, not investigation. It's the fast framing used when *writing a ticket* ("here's the problem, the requirement, the solution we'll implement"), which falls out of the investigation's own outputs (problem in SK Step 1, acceptance criteria ≈ requirement in SK Step 3, solution in SK Step 5). Revisit it as a note on how tickets are built, not as an investigation step.
-
----
-
-## Summary
-
-Against the collected questions, the redundancy you felt is confirmed — everything under *Questions to answer*, *Guiding principles*, and *root cause* is **present with a verbatim quote above**. The four *Transcript Analysis Tasks* resolve as **2 always-on + 2 triggered**:
-
-- **Testing strategies** → present; the behavioral "how we test" is the happy/negative validation plan (SK Step 6). Automated-test sharpening logged in software-gaps.
-- **Recommendations** → present; a core end-of-investigation emit (SK Step 7 / RT §10), not transcript-gated.
-- **Identify uncertainties** → now an **always-run** lens (Problem Check, wired into SK Step 1) — conflation-detection is its core.
-- **Identify decisions** → a **context-triggered pointer**: when a transcript is present, extract decisions (already have a report home; rides the same Step 1 line).
-
-And separately: **P→R→S** → not this method's job; a ticket-framing note for later.
-
-Software-specific questions the method doesn't ask at all are tracked separately in [investigation-software-gaps.md](./investigation-software-gaps.md).
-
-## investigation-report.md
-
-# Investigation Report: <short title>
-
-> **What this is:** the delivered results of running the `investigate` method — findings and recommendation, plus the plan for what happens next. Use it as the shared reference for future discussions and decisions.
-> **What this is not:** a plan *to* investigate. By the time this report exists, the investigating is done.
->
-> **Reading order ≠ fill order.** The report reads verdict-first (bottom line up front), but it is filled in dependency order: instances → class → contract → root cause (class re-check) → solution → validation → verdict last.
->
-> Copy this per investigation to `docs/investigations/<id>-<slug>.md`. Sections 0–10 are the findings; Section 11 is the emitted plan. Keep it updated as the source of truth while the work proceeds.
-
-## Metadata
-- **Status:** draft | investigating | planned | in-progress | done
-- **Disposition:** proceed | proceed with conditions | blocked | rejected | needs more investigation
-- **Date:**
-- **Owner:**
-- **Location:** `docs/investigations/<id>-<slug>.md`
-- **Ticket:** <ClickUp link>
-- **Domain:** software | workflow | policy | process | ...
-- **References / evidence:** <primary sources — code paths, commits, docs, transcripts, clauses>
-
----
-
-## 0. Verdict (bottom line up front — written last, read first)
-<One paragraph: current viability, the strongest path forward, and — explicitly — what this is NOT yet (e.g. "viable, but not a production approval").>
-
-- **Strongest path:**
-- **Not yet proven / not approved:**
-
-## 1. Problem class
-> The single highest-leverage call in this report — everything below is checked against it. The class is derived from real instances (Section 2), held as provisional, and re-confirmed against root-cause evidence (Section 5). Get it wrong and the whole report solves the wrong problem.
-
-- **Class the request assumed** (implied by how it was framed):
-- **Confirmed class** (derived from instances, re-checked against root cause):
-- **Reframed?** no — because: <argue why the assumed class held> | yes → from **<assumed>** to **<confirmed>**, triggered by: <what evidence flipped it, and at which step>
-- **What the confirmed class implies** (how the solution space changes vs. the assumed class):
-
-*Why this matters: a request framed as "data access — who can reach which systems" can turn out to be a knowledge-management problem — where the data lives and how people discover it. Same symptoms, different class, completely different solution. The framing was aimed at the wrong target, and everything downstream inherited the error.*
-
-## 2. Problem statement (the raw facts — collected before classification)
-- **Named instances** (specific people/cases, blocked right now, on real tasks):
-- **One sentence** (a stranger could confirm or deny):
-- **Distinct problems** (don't merge them):
-- **Urgency** (date or trigger event when it bites next):
-- **Wedge** (smallest reusable issue *within the confirmed class* that opens the space):
-
-### Problem Check (required — run the lens per `problem-check.md`; feeds §1, §2 Distinct problems, §8, §10)
-> The framing claims above and here **cite the words that justify them** — trimmed quotes from the ticket/request text or discussion, not only code evidence. "Nothing here" is a valid finding for any flag; never manufacture one to look thorough. This subsection is not optional: it is where evidence-grounded framing and conflation live, and a report without it has skipped the method's Step 1 discipline.
-
-- **Asked:** <what the request says it's working on> — *evidence:* "<trimmed quote>"
-- **Answered:** <what it's actually working on; name the drift if any> — *evidence:* "<trimmed quote>"
-- **Should-ask:** <sharper/upstream question, or "the asked question is the right one"> — *why:* <what it decides>
-- **Conflation:** <distinct problems named apart + whether solving one touches the other> | nothing here — *evidence:* "<trimmed quote>"
-- **Thin:** <undefined term / unstated "what does solved look like" / unsupported claim> | nothing here — *evidence:* "<trimmed quote>"
-- **Off:** <internal contradiction> | nothing here — *evidence:* "<fragment A>" → "<contradicting fragment B>"
-
-## 3. The contract (locked before any solutioning)
-### Acceptance criteria
-| Criterion | Status | What's needed to close it |
-|-----------|--------|---------------------------|
-|           | covered / needs-proof / documented / gap |  |
-
-### Non-goals / out of scope
-- <what this explicitly does NOT cover, and why — this is what prevents scope churn later>
-
-## 4. What changed since the request was created
-- **Shifted from:** <original framing> → **to:** <current framing>
-  *(If the class itself changed, lead with that and point to Section 1 — it's the most important kind of shift.)*
-- **What that buys us:**
-- **What it still needs to prove:**
-
-## 5. Why it exists
-- **Origin traced to:**
-- **Evidence** (primary-source pointers):
-- **Class re-check:** held | flipped → <what the root-cause evidence showed; if flipped, confirm the wedge and acceptance criteria were redone>
-
-## 6. Alternatives considered
-> Pre-answers the future "why didn't we just X?"
-
-| Alternative | Rejected because |
-|-------------|------------------|
-|             |                  |
-
-## 7. Solution & stress-test
-- **Proposed solution:**
-- **Solves the confirmed class** (not the assumed one, not just this occurrence)?
-- **Scale:**
-- **Generalization** (abstract, or overreach?):
-- **Fit** (conventions / philosophy):
-- **Adjacent issues** (fix now vs. follow-up + effort tradeoff):
-- **Sufficiency** (covers the pain that convened this, or a corner of it?):
-- **Feedback speed** (how fast reality tells us we're wrong):
-- **Happy-path story** (30 seconds — who does what, without whom):
-
-## 8. Assumptions ledger
-> Populated throughout the investigation as claims are made — not backfilled at the end. Each is a falsifiable claim with a test. "Confirmed directionally" still owes proof of performance, accuracy, and parity.
->
-> **This is the home for facts to be discovered** — uncertainties with an answer already in the evidence (code, source text, observed behavior). They resolve by *discovery*, so resolve them here, now, by going to look — never park a discoverable fact in §10 as an "open variable for discussion." (The distinction from §10: a fact resolves by finding it; a decision resolves by someone choosing. See §10.)
-
-- **Claim:** <…>
-  - **Status:** open | confirmed | confirmed directionally | revised | refuted
-  - **Confirm/revise by:** <method / test>
-- **Claim:** <…>
-  - **Status:**
-  - **Confirm/revise by:**
-
-## 9. Validation plan
-**Happy path**
-- <the sequence that should work, step by step>
-
-**Negative paths**
-- <what must fail *visibly* rather than corrupt silently>
-- <volume / limit / threshold breaches>
-- <removed or trimmed dependencies proven non-required>
-- <timing / refresh / latency bounds that must hold>
-
-## 10. Decisions, recommendation & open variables
-- **Decisions** (settled):
-- **Recommendation** (what to do, in order):
-- **Sequencing & gates:** <what proceeds first; what stays gated behind which proof or artifact — e.g. "Do not start Y until X proves parity, performance, ownership, and security controls">
-
-### Open variables to collect
-> Logged as they surfaced during the investigation. Assign an owner where possible.
->
-> **This is the home for decisions to be made** — resolved by an owner *choosing* (scope, product, ownership, a change to the current structure), not by discovery. If an item has **both halves** — a discoverable fact and a decision riding on it — **split it**: resolve the fact in §8 by evidence now, and leave only the decision here. What lands here after Step 7's reconcile is only true decisions. When a question is open because the *current structure cannot answer it*, record the evidence that proves that (the missing seam / absent field / state the system can't distinguish) so the reader sees it's a decision or a change, not an un-run lookup.
->
-> On a software ticket this fact-vs-decision axis is *code vs workflow*; on policy it's *source-text/precedent vs judgment call* — the axis is domain-agnostic.
-
-- [ ] <decision / mapping / threshold / owner / boundary> — owner:
-- [ ] <…> — owner:
-
----
-
-## 11. Plan — Next steps
-*This is the emitted plan. The agent works it from here; check items off as they land.*
-
-### Handoff table
-| Action | Owner | Done-when (falsifiable) |
-|--------|-------|-------------------------|
-|        |       |                         |
-
-### Checklist
-#### Investigation
-- [x] This report (Sections 0–10)
-
-#### Project Spec
-- [ ] Draft open questions / unknowns
-- [ ] Create project spec
-
-#### Development
-- [ ] Create new branch
-- [ ] Begin implementation
-
-#### Testing & Validation
-- [ ] Test and validate implementation locally
-
-#### Deploy & PR
-- [ ] Push to GitHub
-- [ ] Deploy to sandbox + verify there
-- [ ] Open PR
-- [ ] Address feedback / wait for approval
-- [ ] Merge to main
-- [ ] Deploy to test
-
-#### Ticket Closeout
-- [ ] Update ClickUp: merged to test
-- [ ] Set ticket to Ready for QA
-- [ ] (If bug) Document root cause / why it slipped through
-
----
-
-## 12. Definition of done (investigation gate)
-Don't move past investigation until each is answered:
-- [ ] **Class derived from instances, re-confirmed against root cause — and "reframed?" answered with a justification either way (Section 1)**
-- [ ] Problem Check pass recorded (§2) — flags grounded in trimmed quotes, or an explicit "nothing here"; framing claims cite the request's words, not only code
-- [ ] Problem in one plain sentence
-- [ ] Named blocked instance
-- [ ] Date it bites next
-- [ ] Wedge + why it's reusable within the confirmed class
-- [ ] Acceptance criteria + non-goals locked before the solution was proposed
-- [ ] Alternatives recorded with rejection reasons
-- [ ] 30-second happy-path story
-- [ ] Metric that proves it works + how fast it arrives
-- [ ] Verdict + disposition stated
-- [ ] Every open question reconciled (Step 7): discoverable facts resolved by evidence in §8; only genuine decisions remain in §10, each with an owner — and any "the structure can't answer this" carries the evidence that proves it
-- [ ] Tracked action with a falsifiable done-when
-
-## investigation-software-gaps.md
-
-# Investigation method — software lens
-
-> **Status:** adopted (2026-07-18) — the mandatory software-lens questions in Phase 1 of the `orchestrate` skill (`../skills/orchestrate/SKILL.md`); also usable standalone alongside `agents/skills/investigation/SKILL.md`. These are questions the base method does **not** force, that a real software investigation needs.
-> **Companion:** [investigation-question-coverage.md](./investigation-question-coverage.md) audits the questions we already had; this doc holds the net-new ones.
-
-## The organizing idea: ground *sideways*, not just down and up
-
-The method already grounds in two directions:
-
-- **Downward** — "show me the instance." (Step 1: named, blocked, real.)
-- **Upward** — "does it solve the class?" (Steps 2/5.)
-
-Software bugs need a **third direction — sideways/outward, across the code surface.** Instance-and-class framing can't see that code has a *surface* (every call site that can reach the behavior), a *contract* (an authoritative layer someone else owns), *neighbors* (other behavior sharing the same code path), and a *detection net* (the tests/types/review that were supposed to catch this). The class of PRDV-16047 was obvious in one sentence; the entire investigation was sideways work. The four candidates below are that missing axis. They're worth asking on any change that touches shared code or crosses a layer boundary — not just bugs.
-
----
-
-## Candidate 1 — Contract / source-of-truth alignment
-
-- **What we mean to ask:** What is the authoritative definition of this behavior, and who owns it (a backend guard, an API contract, a DB constraint, a shared type, a spec)? Does the layer we're changing **mirror it exactly**? Where could the two **drift apart again** later?
-- **Why it's useful:** A large share of software defects are not logic errors — they're one layer disagreeing with the layer that actually decides. If you don't name the authority and check the mirror, you "fix" the symptom on the wrong side and it silently re-drifts.
-- **Where it attaches:** SKILL Step 4 (trace why it exists) → after finding origin, identify the authority and verify the mirror. Report: fold into §5 (Why it exists) or a new "Contract alignment" line in §7.
-- **16047 evidence:** the whole root cause — the frontend gated withdraw on `SUBMISSION_PROCEEDING_FILES_<TRACK>` while the backend guard (`MultiDeliverableFileAuthorizeRole`) authorizes on `CLIENT_DELIVERABLE_PROCEEDING_FILES_<TRACK>`. The fix was "make the FE mirror the BE authority exactly"; the durable risk is re-drift.
-- **Done-when / artifact:** the authoritative source is named with a pointer; the changed layer is shown to match it (ideally byte-identical, as with the resource-key strings); the re-drift risk is noted.
-
-## Candidate 2 — Exhaustive surface enumeration (blast radius)
-
-- **What we mean to ask:** What are **all** the call sites / entry points / consumers this change touches — and **how do we know the list is complete** (grep for callers, type/usage references, i18n keys, route/registry entries)?
-- **Why it's useful:** The method's Step 6 already says "prove the defect isn't leaking out to somewhere we haven't modeled" — but as a *principle*, not a forced artifact. An un-enumerated surface is exactly where a fix half-lands: you patch the obvious path and miss the twin. Requiring the list + a completeness claim is what turns the principle into a catch.
-- **Where it attaches:** SKILL Step 6 (make the enumeration an explicit output of the negative-path work). Report: a "Affected surfaces" list in §7 or §9.
-- **16047 evidence:** the withdraw action had **three** entry points (row-single, row-batch, and the FAB). The FAB had *no* permission check at all and was the easiest to miss — it only surfaced because the entry points were enumerated and the plumbing (`useUnapproveFlow`, imported by exactly two tables) was traced to prove the list was complete. A feared 4th surface (a `deliverables.bulkActions` i18n key) was checked and confirmed non-existent.
-- **Done-when / artifact:** an enumerated list of every surface that can reach the behavior, plus a one-line statement of how completeness was established ("`useUnapproveFlow` imported only by X and Y; grep of `withdraw*` i18n keys yields exactly these three").
-
-## Candidate 3 — Protect-the-neighbors (regression proof)
-
-- **What we mean to ask:** What existing behaviors share this code path and **must not change**? How did we verify they stayed identical?
-- **Why it's useful:** Distinct from "adjacent issues" (which is about *new* problems worth fixing) and from negative paths (which prove the *new* behavior fails visibly). This is the opposite duty: name the neighbors on the shared path and prove they didn't move. It's the "absence of change verified against a concrete surface" discipline — the thing that stops a fix from quietly regressing a sibling.
-- **Where it attaches:** SKILL Step 5 (Fit) or Step 6. Report: a "Unchanged surfaces (verified)" line in §9.
-- **16047 evidence:** the withdraw items shared the `canModifyDeliverableApproval` flag with **Approve**, and had a deliberate **audio "cannot withdraw" tooltip**. The fix had to leave Approve gating (submission resource) and the audio disabled+tooltip untouched — both were named and asserted (Approve verified unchanged; audio preserved via the `v-if` audio special-case + a menu spec).
-- **Done-when / artifact:** each shared-path neighbor named, with the concrete check that confirmed it's unchanged (a test, a preserved branch, an asserted prop).
-
-## Candidate 4 — Detection gap (why the net missed it)
-
-- **What we mean to ask:** Why wasn't this already caught — no test, a permissive/`any`-typed seam, a review blind spot, an untested component? (Bugs only.)
-- **Why it's useful:** The answer *designs the regression test you add.* "Why it exists" (Step 4) explains the defect's origin; this explains the **detection** failure, which is a different and equally actionable finding. Currently it lives only as a bug-closeout checkbox in the report DoD, too late to shape the fix.
-- **Where it attaches:** SKILL Step 4 checkpoint (for the software branch). Report: a line under §5.
-- **16047 evidence:** the shared `canModifyDeliverableApproval` flag conflated two backend-distinct permissions, and `ProceedingFileRowActionsMenu` had **no** spec at all — so nothing could have caught the drift. That gap is exactly what the new `useProceedingFilePermission.spec.ts` (submission-only → `false`) and the first menu spec now close.
-- **Done-when / artifact:** a one-line detection-failure cause, tied to the specific test/type/guard added to close it.
-
----
-
-## Two refinements (sharpen existing steps rather than add sections)
-
-- **Red→green regression test.** Step 6 should ask for the test that **fails before / passes after**, encoding the exact defect — not just "a testing strategy." This is what makes the fix's proof durable and prevents silent re-drift. (16047: the `useProceedingFilePermission` drift case.)
-- **Reproduction recipe + preconditions.** The software branch should ask for the role / data-state / feature-flag / environment needed to observe the defect. "Actor / action / moment" (Step 5) is adjacent but not the SE "how do I see this locally, and what's gated" recipe — the absence of which is exactly what ballooned 16047 into a separate local-testability question.
-
-## Also flagged (from the coverage checklist, if we ever promote them)
-
-- **P→R→S as an explicit ordered narrative** — components exist across Steps 1/3/5 but aren't ordered/named; personal-vs-general-skill decision.
-- **A transcript/discussion evidence sub-branch** — the four extraction outputs exist; the "mine a meeting transcript" lens doesn't. Low priority.
 
 ## new-branch-get-started.md
 
@@ -1047,219 +444,6 @@ Use your repo’s PR template. Title: **`PRDV-15263: Same short description`**. 
 ---
 
 That’s the starting point. For PR body text, screenshots, and commit hash in the description, use [pull-request-workflow.md](./pull-request-workflow.md) when you’re ready to open the PR—not before.
-
-## original-ticket-artifact.md
-
-# Original Ticket Artifact
-
-Use this instruction when a request needs a stable source-of-truth artifact before investigation, Q and A, spec writing, or implementation planning begins.
-
-The purpose of `original-ticket.md` is to establish one fact:
-
-> This is the original ticket/request as it was provided.
-
-It is not an investigation, not a spec, not a decision log, and not a place to infer missing requirements.
-
-## How to reference it
-
-Use any of these phrases:
-
-- `@original-ticket-artifact`
-- "Generate the original ticket artifact."
-- "Create the original-ticket.md first."
-- "Capture the original ticket as source of truth."
-- "Establish the original ticket fact before investigation."
-
-When invoked, create or update the canonical `original-ticket.md` artifact before generating investigation, Q and A, spec, or implementation-plan artifacts.
-
-## Output location
-
-Default path:
-
-```text
-docs/<Project>/tickets/<ticket-slug>/original-ticket.md
-```
-
-Sibling artifacts should live under the same ticket folder when created later:
-
-```text
-docs/<Project>/tickets/<ticket-slug>/investigations/<ticket-slug>-investigation.md
-docs/<Project>/tickets/<ticket-slug>/specs/<ticket-slug>-spec.md
-```
-
-Example:
-
-```text
-docs/WorkLists/tickets/prompt-injection-note-refinement/original-ticket.md
-```
-
-## Core rules
-
-- Preserve the original request as the baseline fact.
-- Keep the user's wording intact wherever practical.
-- Record only minimal provenance metadata.
-- Do not add investigation findings.
-- Do not add agent recommendations.
-- Do not add later Q and A decisions.
-- Do not rewrite the ticket to match later clarifications.
-- If later clarifications conflict with the original request, preserve the original here and record the clarification in the Q and A ledger or spec.
-
-## Required contents
-
-An `original-ticket.md` artifact should contain only:
-
-1. Title.
-2. Capture metadata.
-3. Original request.
-4. Explicit constraints present in the original request.
-5. Context paths or links present in the original request.
-
-**Nothing else.** This artifact is the request and only the request, and it is immutable once captured — no later phase appends to it. Paths to the files a ticket produces belong in the ledger's **Artifacts** column, never here. A Downstream Artifacts section used to live in the template below; it duplicated the ledger and blurred this boundary, so it was removed.
-
-## Artifact template
-
-```markdown
-# <Ticket Title> - Original Ticket
-
-## Capture Metadata
-
-| Field | Value |
-| --- | --- |
-| Project |  |
-| Ticket slug / ID |  |
-| Captured on | YYYY-MM-DD |
-| Source | User-provided request / backlog item / chat prompt / external ticket |
-| Formatting | Verbatim / lightly formatted for Markdown |
-
-## Original Request
-
-<Preserve the original request text here. Keep headings, bullets, estimates, and phase instructions intact.>
-
-## Explicit Constraints In Original Request
-
-- 
-
-## Context Paths In Original Request
-
-- 
-```
-
-## What belongs here
-
-- The initial problem statement.
-- The initial requirement statement.
-- The initial proposed solution, if one was provided.
-- Initial estimate or phase structure, if provided.
-- Original constraints such as "do not change code yet" or "do not pull broad modules."
-- Original links and file paths provided as context.
-
-## What does not belong here
-
-- Investigation findings.
-- Open questions.
-- Answered grill-me questions.
-- Later locked decisions.
-- Implementation recommendations.
-- Test plans.
-- Acceptance criteria unless they were part of the original request text.
-
-## Definition of done
-
-This artifact is done when a future agent can open it and know exactly what was originally asked, where it came from, and when it was captured.
-
-## problem-check.md
-
-# Problem Check — is the question even the right question?
-
-> **What this is:** a drop-in lens for reading a live, partial problem discussion. It does **not** summarize or solve — it audits the *problem's framing and standing*: what's being asked vs. actually worked on, what's being **conflated**, what's **thin**, what's **off**.
->
-> **How it fits the investigation method:** the method grounds *downward* (Step 1 — show me the instance) and *upward* (Steps 2/5 — does it solve the class). This grounds a third way — *inward*: is this one, well-defined, well-supported question, or several tangled together? Its highest-value output is **conflation detection** — and usually it's not a single merge but a *list* of distinct problems treated as one, which then split into separate branches. It is the concrete mechanism behind the "identify uncertainties" need flagged in [investigation-question-coverage.md](./investigation-question-coverage.md).
->
-> **When to run it:** **every investigation** — it's wired into the method's Step 1 (collect the raw facts), not gated behind a trigger. On a crisp, single-problem request the flags will mostly come back "nothing here," and that's fine (fast when there's nothing to find). Its value spikes when a request bundles several things, when "asked" and "answered" have drifted, or when a term / "what does solved look like" is undefined — and it's strongest on a transcript or live discussion, where you *also* extract the explicit decisions.
-
----
-
-## The prompt (verbatim)
-
-```
-**Problem Check** — Injected mid-discussion. You're reading a live, partial transcript of people working a problem. Don't summarize it, don't solve it. Answer the questions below about the *problem itself* — its framing and standing.
-
-Rules for every answer:
-- A question may be answered "nothing here." Never manufacture a finding to look useful.
-- Every claim cites the words that justify it. A claim you can't ground, you drop.
-- Plain register: no scare quotes around the team's words, no intensifiers (massive, critical, impossible), no invented terms. Use their plain language, not a sharpened version.
-- Treat the transcript as live and noisy — partial, possibly mislabeled speakers. Anchor on the active thread, not the whole meeting. The last thing said isn't necessarily the point.
-
-THE QUESTION
-1. **Asked** — What problem does the group *say* it's working on?
-2. **Answered** — What is the discussion *actually* working on? If it differs from Asked, name the drift.
-3. **Should-ask** — Is there a sharper or more upstream question that would serve them better? If the asked question is the right one, say so.
-
-THE FLAGS — raise only what's present; "nothing here" is valid for all three.
-4. **Conflation** — Are two+ distinct problems being treated as one? Name them apart; say whether solving one would even touch the other.
-5. **Thin** — Any key term undefined, any "what does solved look like" unstated, any claim with no support? Name the specific gap, not "needs detail."
-6. **Off** — Does anything fail to track with the rest — a claim that contradicts another, or an assumption that doesn't hold given what else was said? (Internal inconsistency only — you can't catch factual errors against the world.)
-
-FORMATTING — keep all six findings and their evidence. The goal is a fast top-down scan: each finding is a "### " section heading followed by its own two-column table.
-- Above each table, print the section name as a heading: "### Asked", "### Answered", etc.
-- The table has a blank header row "|  |  |", then the separator "|---|---|", then one row per labeled line. (No column titles — keep it quiet.)
-    **finding** — the claim, one plain clause. (Always present.)
-    **drift** — Answered only: "[what they think they're asking]" → "[what they're actually doing]"
-    **consequence** — Conflation / Off only: the second thought, the valuable half.
-    **why** — Should-ask only: one line on what the better question decides.
-    **evidence** — the supporting quote, TRIMMED to the 5–10 words that prove it. Never paste a full rambling quote.
-- Row order: finding → (drift / consequence / why) → evidence. Omit any row you have nothing for.
-- Group under two headers: "## The question" (Asked, Answered, Should-ask) and "## Flags" (Conflation, Thin, Off).
-- If all three flags are clear, under Flags print only: "No flags — the question being answered is the one being asked."
-
-Layout:
-
-## In brief
-A 2–3 sentence plain-language sketch of what the discussion is about and where it currently stands — just enough to orient a reader before the findings. This is the one place you describe rather than diagnose: no flags, no drift, no quotes. Neutral and factual.
-
-# The question
----
-### Asked
-|  |  |
-|---|---|
-| **finding** | [claim] |
-| **evidence** | "[trimmed quote]" |
-
-### Answered
-|  |  |
-|---|---|
-| **finding** | [claim] |
-| **drift** | "[think they're asking]" → "[actually doing]" |
-| **evidence** | "[trimmed quote]" |
-
-### Should-ask
-|  |  |
-|---|---|
-| **finding** | [the sharper question] |
-| **why** | [what it decides] |
-
-# Flags
----
-### Conflation
-|  |  |
-|---|---|
-| **finding** | [two problems, named apart] |
-| **consequence** | [whether solving one touches the other] |
-| **evidence** | "[trimmed quote]" |
-
-### Thin
-|  |  |
-|---|---|
-| **finding** | [the specific gap] |
-| **evidence** | "[trimmed quote]" |
-
-### Off
-|  |  |
-|---|---|
-| **finding** | [what doesn't track] |
-| **consequence** | [why it matters] |
-| **evidence** | "[fragment A]" → "[contradicting fragment B]" |
-```
 
 ## pull-request-workflow.md
 
@@ -1448,7 +632,7 @@ Swap ticket title, ClickUp URL, GitHub PR URL, and commit hash per task. The inn
 
 Use this workflow when a requirements conversation, grill-me pass, investigation review, or user correction needs to become durable spec content. Its job is to prevent settled answers from being re-asked, diluted, or lost between conversation and implementation.
 
-This document is a process guardrail. It does not replace `agents/skills/grill-me/SKILL.md`, `agents/docs/investigation-report.md`, or `agents/rules/spec-writing.md`. Load it alongside those documents when the task moves from questions into a spec or implementation plan.
+This document is a process guardrail. It does not replace `agents/skills/grill-me/SKILL.md`, `../skills/investigation/docs/investigation-report.md`, or `agents/rules/spec-writing.md`. Load it alongside those documents when the task moves from questions into a spec or implementation plan.
 
 ## How to reference it
 
@@ -1626,141 +810,6 @@ Working on PRDV-XXXXX (atlas). Scaffold changelog and capture requirements verba
 Working on Countdowns. Project log: @docs/countdowns/countdowns-app-changelog.mdc
 ```
 
-## testing-implementation-artifact.md
-
-# Testing-implementation artifact — the scenarios stress-tested
-
-Use this to explain, **for other devs, what was addressed** — the real-world **scenarios** that were stress-tested for this ticket, and what came of each. A test with no stated scenario is arbitrary code execution; the scenario is the stake that makes the test meaningful. This doc is the scenario-level record: it says *why* each test mattered, whether the code held, and — when testing surfaces a **scenario the plan did not cover** — it captures that gap, which is often what drives a change.
-
-Its content is meant to be posted as a **GitHub PR comment**, **NOT** left as a comment in the codebase.
-
-It is the companion to the test plan. The **test plan** lists the scenarios to run and logs pass/fail; **this doc** explains, for a reviewing dev, the scenarios that were actually stress-tested — including the ones found only by testing — and hangs any resulting code change off the scenario that forced it. It is a **living doc**: written as you test, updated as new scenarios surface.
-
-## Output location
-
-```text
-docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-testing-implementation.md
-```
-
-## When produced
-
-During and after **Phase 5** test execution. Start it as testing begins; add scenarios as they are exercised or discovered; finalize before filling the PR.
-
-## Core rules
-
-- **Scenario-first.** Every entry names the real situation being stress-tested, in terms another dev understands — not "ran `popup.js`" but "user exports a task whose title contains a `#`." No scenario = no meaningful test.
-- **Newly-uncovered scenarios are flagged as such.** If testing reveals a situation the plan did not cover, that discovery *is* the point — record it, and note whether it drove a code change or a follow-up.
-- **Code changes hang off a scenario.** Each change records the file(s) + observed → expected → implemented fix, under the scenario that forced it — never a change with no scenario behind it.
-- **PR-comment content.** Paste it into the GitHub PR; never copy it into the source as a code comment (see `build-implementation-guardrails` §7).
-- **Living, not frozen.** Update it as new scenarios surface; the last state before the PR is the one that ships.
-
-## Artifact template
-
-```markdown
-# Testing implementation — <Project>/<ticket-slug>
-
-> Companion to [<ticket-slug>-test-plan.md](./<ticket-slug>-test-plan.md). The scenarios stress-tested and what came of each — for other devs. PR-comment content; never a code comment. Living doc.
-
-## Scenarios stress-tested
-
-### Scenario 1 — <the real situation, in a dev's terms>
-- **Why it matters:** <the stake — what breaks in the real world if this isn't handled>
-- **Covered by the plan?** yes | no — newly uncovered during testing
-- **Result:** held | failed → fixed (see change) | follow-up filed
-- **Change (if any):** <file(s)> — observed → expected → implemented fix
-
-### Scenario 2 — ...
-
-## PR comment (ready to paste)
-
-<the scenarios above, assembled as the comment/description to post on the GitHub PR>
-```
-
-## Definition of done
-
-- Every test maps to a **named scenario** a reviewer can understand — no arbitrary or unexplained test execution.
-- **Newly-uncovered scenarios are flagged**, each noted as driving a change or a follow-up.
-- Every code change **hangs off its scenario** with file(s) + observed → expected → implemented fix.
-- The PR-comment block is assembled and ready to paste; nothing in this doc was copied into the codebase as a code comment.
-
-## test-plan-artifact.md
-
-# Test plan artifact — how to test the implementation
-
-Use this instruction to make "how we will prove it works" a durable artifact of its own, **built in from the investigation step** — not reconstructed at implementation time. The investigation report's validation plan (§9) already produces the content; this artifact makes it executable and trackable through implementation and review.
-
-## Output location
-
-```text
-docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-test-plan.md
-```
-
-## Lifecycle
-
-| Phase | Action |
-| --- | --- |
-| Investigation report (Phase 2) | **Seed** the test plan from report §9: happy path, negative paths, test map, gates |
-| Probe & spec (Phase 3) | **Refine** as locked decisions land — resolved open variables become concrete assertions |
-| After approval, before implementation (Phase 5 start) | **Revise.** The implementation plan is approved but no code is written yet; do a quick revision/refinement of **this test plan** so it matches what was actually approved — the approved plan can differ from what the spec proposed. Test plan only; a quick pass, not a rebuild. |
-| Implementation (Phase 5) | **Execute.** Check off scenarios, fill the results log with exact command + scope + result. The **scenarios** actually stress-tested — and any code change they force — are explained for other devs in the **testing-implementation artifact** (scenario-first; file(s) + observed → expected → fix, for the PR comment — never a code comment), not here. |
-| Manual review (Phase 6) | **Cite**: the review summary references this file's results, not a prose claim of "tests passed" |
-
-## Core rules
-
-- Scenarios are **falsifiable**: each states the setup, the action, and the observable outcome that passes or fails it.
-- Negative paths are first-class — what must fail **visibly** instead of corrupting silently (invalid input, unauthorized caller, concurrent actors, boundary values).
-- The results log follows the verification-gate reporting standard (see the `ticket-changelog` rule): exact gate command, scope, result. "Tests passed" by itself is not sufficient. Gates run serially (`--runInBand` / `--maxWorkers 1`) and are reported for the **final post-change state only**.
-- If a scenario cannot be executed, record it as **blocked** with the reason, residual risk, and follow-up — never silently drop it.
-
-## Artifact template
-
-```markdown
-# Test plan — <Project>/<ticket-slug>
-
-> Seeded from [<ticket-slug>-investigation.md](../investigations/<ticket-slug>-investigation.md) §9 on YYYY-MM-DD. Refined by spec: <link or "pending">.
-
-Status: seeded / refined / revised (post-approval) / in-execution / complete
-
-## Scope and surfaces under test
-
-- <the behavior being proven, and the surfaces (components, endpoints, tables) it renders/executes on>
-
-## Happy path
-
-- [ ] HP-1: <setup> → <action> → <observable outcome>
-
-## Negative paths
-
-- [ ] NP-1: <invalid input / unauthorized / concurrent case> → <the visible failure required>
-
-## Edge cases
-
-- [ ] EC-1: <boundary / empty / extreme> → <expected behavior>
-
-## Test map
-
-| Repo | Suite | Asserts |
-| --- | --- | --- |
-| <repo> | <spec file or suite path> | <what it proves> |
-
-## Gates
-
-| Gate | Command |
-| --- | --- |
-| audit | `npm audit --audit-level=high` |
-| lint | `npm run lint` |
-| tests | `<repo's serial test command>` |
-
-## Results log (filled at execution)
-
-| Date | Gate/Scenario | Command | Scope | Result | Exception / risk |
-| --- | --- | --- | --- | --- | --- |
-```
-
-## Definition of done
-
-The test plan is done when every scenario is checked off or explicitly blocked-with-reason, the results log holds the final post-change gate runs, and the manual review can cite this file instead of restating evidence.
-
 ## ticket-changelog-workflow.md
 
 # Ticket changelog workflow
@@ -1785,10 +834,10 @@ Nothing in this workflow is “uploaded” to Larry Adams. You only **reference*
 
 | Moment | Doc to follow | Changelog action |
 | ------ | ------------- | ---------------- |
-| Pick up a ticket, create branch | [new-branch-get-started.md](../.cursor/docs/new-branch-get-started.md) | **Create** changelog (first pass — see below) |
+| Pick up a ticket, create branch | [new-branch-get-started.md](new-branch-get-started.md) | **Create** changelog (first pass — see below) |
 | Work in Cursor / another agent | — | **Append** session notes as you go (optional but cheap insurance) |
 | Commit or push (any PlanetDepos repo) | [git-commit-workflow.mdc](../.cursor/rules/git-commit-workflow.mdc) | **Update** changelog before `git commit` (required for agents) |
-| Open PR | [pull-request-workflow.md](../.cursor/docs/pull-request-workflow.md) | **Mine** changelog for Description / learnings |
+| Open PR | [pull-request-workflow.md](pull-request-workflow.md) | **Mine** changelog for Description / learnings |
 
 ---
 
@@ -1806,13 +855,13 @@ docs/
 - **`<system>`** — short name for where the code lives (`atlas`, `callisto`, `europa`, `triton`, or `other` for cross-cutting / personal-only work).
 - **Filename** — `PRDV-12345-changelog.md` (ticket number + `-changelog`).
 
-Example: [atlas/PRDV-12264-changelog.md](./atlas/PRDV-12264-changelog.md).
+Example: [atlas/PRDV-12264-changelog.md](../../docs/atlas/PRDV-12264-changelog.md).
 
 ---
 
 ## First pass (branch / new ticket)
 
-Do this **once** when you start the ticket (step 4 in [new-branch-get-started.md](../.cursor/docs/new-branch-get-started.md)), or the **first time** an agent touches commit workflow for that ticket.
+Do this **once** when you start the ticket (step 4 in [new-branch-get-started.md](new-branch-get-started.md)), or the **first time** an agent touches commit workflow for that ticket.
 
 ### Scaffold script (preferred)
 
@@ -1902,7 +951,7 @@ Keep entries short; link to attempt history for long debugging threads.
 
 ## Pull requests
 
-When drafting a PR ([pull-request-workflow.md](../.cursor/docs/pull-request-workflow.md)):
+When drafting a PR ([pull-request-workflow.md](pull-request-workflow.md)):
 
 - **Description** — pull bullets from **Requirements**, **Current state**, and the latest **Session log** entry.
 - **What not to do** — do not paste the entire changelog into GitHub; summarize and link to this repo path if reviewers need depth.
@@ -1916,121 +965,13 @@ When drafting a PR ([pull-request-workflow.md](../.cursor/docs/pull-request-work
 - For long tickets, keep **Attempt history** so you do not retry dead ends across sessions.
 - Link **Plans** when a Cursor plan or external spec exists — future agents check there before re-proposing the same approach.
 
-## ticket-orchestration.md
-
-# Ticket orchestration — superseded by the `orchestrate` skill
-
-> **This doc is a pointer.** The phase-by-phase prompt sheet that lived here has been folded into the invocable skill [`../skills/orchestrate/SKILL.md`](../skills/orchestrate/SKILL.md) — say "orchestrate" (optionally with a ticket id or project + slug) instead of copy-pasting phase prompts.
->
-> The high-level phase index (what the phases are, at a glance) lives in the un-synced index/TOC at `agents/README.md` under "Orchestration flow at a glance".
->
-> The standing constraint from the original sheet — **DO NOT PULL IN MODULES UNLESS ABSOLUTELY NECESSARY. WE WANT CONTEXT TO BE SIGNAL, NOT NOISE.** — now lives in the skill and governs every phase.
->
-> This stub exists only to redirect muscle memory from previously circulated prompts; its eventual deletion is tracked in [cleanup-candidates.md](./cleanup-candidates.md).
-
-## why-these-changes.md
-
-# Why these changes — the living "Why" of the whole ticket
-
-Use this to hold the **overarching "Why" of the entire ticket** — surfaced **early** and kept **living** across every phase. Its heart is the **class of problem**: what are we actually trying to solve? Establishing that at the start, and tracking how the understanding moves, is the point. It ends as the review that explains, to anyone, *why the changes we made were needed* — what was missing from the code, whether it was a bug, a workflow change, or something else.
-
-This is deliberately **high-level** and distinct from the scenario detail in the testing-implementation artifact: that doc holds the specific situations stress-tested; this doc holds the ticket's reasoning arc. It is also distinct from the investigation report (a point-in-time classification in Phase 2) — this is the **running why-thread** that spans Phase 1 through close, link the report rather than restate it.
-
-**It is a communication artifact.** Its finalized form is the reviewer-facing narrative of the ticket — it reads the way the reference (`PRDV-14055-why-these-changes.md`) reads, and its content feeds the PR. The spine of that finalized form is a **categorized breakdown of every change**: each change classified (requested change / bug fix / workflow change / capability gap / other), counted in a headline, and given a **Before / After / Why**.
-
-## Output location
-
-```text
-docs/<Project>/tickets/<ticket-slug>/<ticket-slug>-why-these-changes.md
-```
-
-## When produced / updated
-
-- **Created early — as early as Phase 1**, off the first investigation, to establish the problem class and the problems we're solving before the work runs ahead of the understanding.
-- **A living doc:** revisited at **every phase**. It must **always be updatable through each phase, if required** — and when the "why" moves (the problem, the class, the bug, the code, an assumption), that change is **logged, explicitly labeled** with the phase.
-- **Finalized at Phase 6** as the "why these changes" review.
-
-## Core rules
-
-- **The class of problem is the core.** Lead with it; keep it high-level (not the specific scenarios — those live in the testing-implementation doc).
-- **Name the code that is the problem.** Beyond the class, pin the specific file / function / symbol that is the root cause — the actual piece of code at the heart of it — and update it if investigation re-traces the cause. Link the report's §5 root-cause trace rather than restate the full evidence.
-- **Log the reasoning trail as you go** — per phase: what was **obvious**, what **wasn't**, what **changed after learning more**, what **got us to the solution**, and what turned out to be **noise**.
-- **Label every entry.** Each logged item names its phase and whether it is a new understanding, a **course change**, or a discarded path. Silence is not a log — if nothing moved this phase, that can be stated, but a change that went unlogged is a failure of the doc.
-- **Reference, don't restate.** Link the report's problem class / root cause and other artifacts; this doc's job is the evolving *why*, not the investigation detail.
-- **If the why changes, log it — always.** The bug, the code, the class, an assumption: a shift in any of these is exactly what this doc exists to capture.
-- **Categorize every change (the finalized spine).** As implementation locks, classify each change — requested change / bug fix / workflow change / capability gap / other — give a **headline count**, and a **Before / After / Why** per change. This is what the artifact primarily represents to a reviewer.
-- **Say why it shipped together.** Explain why the bundle of changes is coherent — not scope creep — tying it to the acceptance criteria.
-- **State scope.** What the change is confined to, anything narrowed during implementation, and any follow-ups spun off.
-- **Code changes and their why are logged here too.** As changes land (especially Phase 5), record *why* each was needed in the ticket's reasoning — a bug, a workflow change, missing code, or something else — not just that it happened. This is the **reasoning behind** the change. The **mechanics** of a change (file + observed → expected → fix, tied to the scenario that forced it) live in the testing-implementation doc; this doc says *why the ticket needed that change at all*. When the code moves the why, the why-log says so.
-
-## Artifact template
-
-```markdown
-# Why these changes — <Project>/<ticket-slug>
-
-> The living "Why" of this ticket. Created Phase 1, updated every phase, finalized at close. High-level — scenarios live in the testing-implementation doc; point-in-time classification lives in the investigation report.
-
-## Problem class (the core — what are we actually solving?)
-<high-level class of problem; link investigation report §1 once it exists>
-
-## The code at the root (what/where is the problem)
-<the specific file / function / symbol that is the problem — the root-cause location; link report §5 for the full trace. Update if the cause is re-traced.>
-
-## The problems we're solving
-<the distinct problems, high-level — not scenarios>
-
-## Why-log (append per phase; label each entry)
-### Phase 1 — <date>
-- Obvious: <…>
-- Not obvious / still open: <…>
-- Assumptions logged: <…>
-
-### Phase <N> — <date> — [COURSE CHANGE] (label only when the why moved)
-- What changed after learning more: <…>
-- What was noise / discarded: <…>
-- Code change + why: <what changed, and why the ticket needed it — bug / workflow / missing code / other>
-- Why this changes the solution: <…>
-
-## Changes made — categorized (filled as implementation locks; subject to update)
-> Headline count, then one entry per change. Classify each: requested change / bug fix / workflow change / capability gap / other.
-
-Count: <e.g. 1 requested change · 2 bug fixes · 1 capability gap>
-
-### <change title> — <type>
-- **Before:** <what it did>
-- **After:** <what it does now>
-- **Why:** <the reasoning — deliberate requested/UX change? latent bug? missing capability? workflow?>
-- **Files:** <where> (the change mechanics + the scenario that forced it live in the testing-implementation doc)
-
-## Why it shipped together
-<why the bundle is coherent, not scope creep — tie to the acceptance criteria>
-
-## Scope
-<what it's confined to; anything narrowed during implementation; follow-ups spun off>
-
-## Net
-<one-line summary of what the ticket turned out to be>
-
-## Verified
-<gates (lint / type / tests) + manual evidence + PR link — sourced from the test plan / testing-implementation doc>
-```
-
-## Definition of done
-
-- The **problem class** is stated and current (not contradicted by later phases without a logged reason).
-- The **why-log has an entry for each phase where the why moved**, explicitly labeled, including course changes.
-- The reasoning trail (obvious / not / changed / solution / noise) is captured, not just conclusions.
-- The finalized review **categorizes every change** (requested change / bug fix / workflow change / capability gap / other) with a headline count and a Before / After / Why each.
-- **"Why it shipped together"** justifies the bundle against the acceptance criteria (not scope creep); **Scope**, **Net**, and **Verified** (gates + PR link) are present.
-- The whole reads as reviewer-facing communication — the shape of the reference `PRDV-14055-why-these-changes.md`.
-
 ## wiki-spec-authoring.md
 
 # Wiki spec authoring (Callisto / Atlas)
 
 Canonical conventions for PRDV epic/story specs and dev notes in the team **Obsidian wiki** (`systems/` tree). Technical spec sections 1–8 live in [spec-writing](../.cursor/rules/spec-writing.mdc); this doc covers naming, frontmatter, vault wiring, and dev notes.
 
-Guided workflow: [write-spec](../.cursor/skills/write-spec/SKILL.md) skill. Ticket memory stays in `docs/<system>/PRDV-XXXXX-changelog.md`.
+Guided workflow: [write-spec](../skills/write-spec/SKILL.md) skill. Ticket memory stays in `docs/<system>/PRDV-XXXXX-changelog.md`.
 
 ---
 
@@ -2272,7 +1213,7 @@ All three are committed, so `git pull` distributes rule changes to every machine
 | **Open a PR** | â€œOpen PR for PRDV-â€¦â€ | **No** â€” router reads `pull-request-workflow` |
 | **Implement code** | (normal implementation chat) | **No** â€” agent resolves changelog at **task start**; then `problem-requirement-solution` + `build-implementation-guardrails` + app repo rules |
 | **Fix bug / regression** | (normal fix chat) | **No** â€” same **task-start** changelog alignment when a ticket or project log exists |
-| **Debug front-end** layout/CSS/interaction at runtime | (drive/observe the live browser) | **No** â€” `browser-loop-guardrails` + [browser-loop-setup](../.cursor/docs/browser-loop-setup.md) |
+| **Debug front-end** layout/CSS/interaction at runtime | (drive/observe the live browser) | **No** â€” `browser-loop-guardrails` + [browser-loop-setup](browser-loop-setup.md) |
 | **Ticket context (new thread)** | `@docs/atlas/PRDV-XXXXX-changelog` | **Optional** â€” explicit pointer; agent should still resolve changelog from branch/ticket id |
 | **Run a ticket end-to-end** | `orchestrate PRDV-...` / `orchestrate <project> <slug>` | No (skill by name) - seven phases, exit gates, mode handoffs, resumable ledger |
 | **Stress-test a plan** | `@grill-me` | Yes (skill) |
@@ -2304,10 +1245,10 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 
 | File | When |
 | ---- | ---- |
-| [new-branch-get-started.md](../.cursor/docs/new-branch-get-started.md) | New `PRDV-*` branch |
-| [pull-request-workflow.md](../.cursor/docs/pull-request-workflow.md) | `gh pr create`, PR body, Slack post |
-| [README.md](../.cursor/docs/README.md) | Pointer to this index |
-| [browser-loop-setup.md](../.cursor/docs/browser-loop-setup.md) | Wire and observe a live browser for front-end debugging |
+| [new-branch-get-started.md](new-branch-get-started.md) | New `PRDV-*` branch |
+| [pull-request-workflow.md](pull-request-workflow.md) | `gh pr create`, PR body, Slack post |
+| [README.md](README.md) | Pointer to this index |
+| [browser-loop-setup.md](browser-loop-setup.md) | Wire and observe a live browser for front-end debugging |
 
 ---
 
@@ -2315,22 +1256,22 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 
 | Path | When |
 | ---- | ---- |
-| [original-ticket-artifact.md](./original-ticket-artifact.md) | Capture the baseline request as `original-ticket.md` before investigation/spec work |
+| [original-ticket-artifact.md](../skills/orchestrate/docs/original-ticket-artifact.md) | Capture the baseline request as `original-ticket.md` before investigation/spec work |
 | `agents/README.md` (un-synced) | Why each `agents/` file exists + the orchestration flow at a glance — root TOC, never mirrored |
 | [cleanup-candidates.md](./cleanup-candidates.md) | Archive/consolidation ledger - fed by orchestrated runs' cruft checks |
-| [investigation-coverage-ledger.md](./investigation-coverage-ledger.md) | Per-ticket visited-state map: template + consult/reopen protocol |
-| [investigation-diagrams.md](./investigation-diagrams.md) | Standalone diagrams artifact (delta, flows, sequences) for investigations |
-| [future-development-concerns.md](./future-development-concerns.md) | Per-ticket risk record: dated, code-verified concerns shipped out of scope |
-| [why-these-changes.md](./why-these-changes.md) | Per-ticket living "Why" doc — class of problem + reasoning arc across all phases, ending as the "why these changes" review |
-| [test-plan-artifact.md](./test-plan-artifact.md) | Per-ticket test plan: seeded from the report, executed at implementation |
-| [testing-implementation-artifact.md](./testing-implementation-artifact.md) | Per-ticket, scenario-first record of the real situations stress-tested (+ any change hung off each), explaining to other devs what was addressed — for the PR comment |
+| [investigation-coverage-ledger.md](../skills/investigation/docs/investigation-coverage-ledger.md) | Per-ticket visited-state map: template + consult/reopen protocol |
+| [investigation-diagrams.md](../skills/investigation/docs/investigation-diagrams.md) | Standalone diagrams artifact (delta, flows, sequences) for investigations |
+| [future-development-concerns.md](../skills/orchestrate/docs/future-development-concerns.md) | Per-ticket risk record: dated, code-verified concerns shipped out of scope |
+| [why-these-changes.md](../skills/orchestrate/docs/why-these-changes.md) | Per-ticket living "Why" doc — class of problem + reasoning arc across all phases, ending as the "why these changes" review |
+| [test-plan-artifact.md](../skills/orchestrate/docs/test-plan-artifact.md) | Per-ticket test plan: seeded from the report, executed at implementation |
+| [testing-implementation-artifact.md](../skills/orchestrate/docs/testing-implementation-artifact.md) | Per-ticket, scenario-first record of the real situations stress-tested (+ any change hung off each), explaining to other devs what was addressed — for the PR comment |
 | [ticket-changelog-workflow.md](./ticket-changelog-workflow.md) | How changelogs work end-to-end |
 | [wiki-spec-authoring.md](./wiki-spec-authoring.md) | PRDV wiki naming, Obsidian wiring, dev notes, author checklist |
 | [docs/atlas/local/callisto-local.mdc](./atlas/local/callisto-local.mdc) | Callisto backend local runbook (Docker, migrations, DBeaver) |
 | [docs/atlas/local/triton-local.mdc](./atlas/local/triton-local.mdc) | Triton backend local runbook |
 | [docs/atlas/local/europa-local.mdc](./atlas/local/europa-local.mdc) | Europa backend local runbook |
 | `docs/<system>/PRDV-XXXXX-changelog.md` | **This ticketâ€™s** memory in **dustin-thomason** only â€” `@` every new agent thread. `larry-adams` = read-only spec links in **Plans**, not a push target |
-| [\_templates/TICKET-changelog.template.md](./_templates/TICKET-changelog.template.md) | Rarely â€” use `scripts/new-ticket-changelog.ps1` instead |
+| [\_templates/TICKET-changelog.template.md](../../docs/_templates/TICKET-changelog.template.md) | Rarely â€” use `scripts/new-ticket-changelog.ps1` instead |
 | `docs/WorkLists/` | One-off personal work lists |
 
 **Do not** keep ticket changelogs under `.cursor/docs/` â€” only `docs/<system>/` to avoid duplicate `@` suggestions.
@@ -2398,7 +1339,7 @@ Checks: required `alwaysApply` rules, expected scripts, playbooks, router links,
 | Step in real work | Covered by |
 | ----------------- | ---------- |
 | Workspace includes `dustin-thomason` | All `alwaysApply` rules load automatically |
-| New agent on a ticket | `@docs/<system>/PRDV-XXXXX-changelog` ([session-start](../.cursor/docs/session-start.md) snippet) |
+| New agent on a ticket | `@docs/<system>/PRDV-XXXXX-changelog` ([session-start](session-start.md) snippet) |
 | Branch + changelog | `new-branch-get-started` + script + `ticket-changelog` rule |
 | Work + agents | Changelog updated; link **Plans** when a plan exists |
 | Commit | `git-commit-workflow` + `ticket-changelog` rules |
@@ -2426,6 +1367,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `browser-loop-guardrails` | always | Boundary rules for a runtime browser-observation loop (Playwright/CDP/MCP) and for any CSS/layout/interaction debugging — fix the responsible cascade rule not the symptom, explain magic constants, keep independent constants independent, treat a green check as necessary-not-sufficient, and escalate after bounded iteration instead of spiraling. |
 | `build-implementation-guardrails` | always | Mandatory tests, changelog, Swagger (when applicable), architecture guardrails for Codex/agent builds — shipping checklist, coverage, non-regression, graceful failure, SOLID shaping, avoid raw Postgres/SQL unless unavoidable. |
 | `context-fanout` | always | Prefer read-only exploration subagents for multi-area investigation so the parent context stays compact and focused. |
+| `dnu-folders` | always | A dnu folder is retired work kept for posterity. Never load it as context, never cite it, never treat it as current — unless the user names it explicitly. |
 | `git-commit-workflow` | always | Standard commit/push habit for dustin-thomason—runs to completion via npm audit/lint/serial-test gates (when applicable), git status → add → commit → push when an agent pushes work here or in sibling Node repos. |
 | `personal-methodology` | always | Routes dustin-thomason personal standards into any workspace repo (Atlas, Callisto, etc.) without copying rules there or requiring @-mentions. |
 | `problem-requirement-solution` | always | Coherent implementation philosophy — reason in order Problem → Requirement → Solution so the line of thinking stays clear for the end user, in implementations, plans, specs, and changelog/PR narratives. |
@@ -2441,7 +1383,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `grill-me` | Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when user wants to stress-test a plan, get grilled on their design, or mentions "grill me". |
 | `investigation` | The method for investigating a problem and its proposed fix before committing to it — in any domain (software, workflow, policy, process, etc.). Ground in real instances, classify the problem, lock acceptance criteria, trace why it exists, re-confirm the class, then stress-test the solution against scale, generalization, and fit. Emits an Investigation Report (see the investigation-report template): verdict, problem class, assumptions-to-test, a happy/negative validation plan, recommendation with gates, and open variables to collect. Use when scoping a change, validating assumptions, writing a spec, or when the user says "investigate". |
 | `job-story` | Turn a feature request or ticket into a job story — a structured user story plus acceptance criteria, built through a matrix sequence that strips solution-speak and unobservable outcomes before emitting. Produces a referenceable artifact the finished work gets held against. Use when the user says "job story", "write the story", "turn this into a story", "acceptance criteria for this ticket", or asks to define what done means for a request. |
-| `orchestrate` | Conduct a ticket end-to-end through the seven-phase lifecycle — capture original ticket, investigate, report, probe and spec, prep for implementation, implement, manual review — with full-rigor artifacts, phase exit gates, and a standardized handoff at every mode boundary. Resumable from the per-ticket ledger. Use when the user says "orchestrate", "orchestrate PRDV-XXXXX", "run the ticket workflow", "take this ticket through the phases", or "resume/continue orchestration". |
+| `orchestrate` | Conduct a ticket end-to-end through the seven-phase lifecycle — capture original ticket, investigate, report, probe and spec, prep for implementation, implement, manual review — with full-rigor artifacts, a generated per-phase checklist, and a standardized handoff at every mode boundary. Resumable from the per-ticket ledger. Use when the user says "orchestrate", "orchestrate PRDV-XXXXX", "run the ticket workflow", "take this ticket through the phases", or "resume/continue orchestration". |
 | `workflow-housekeeping` | Audit dustin-thomason workflow docs, rules, and index for drift, duplicates, and missing entries. Use when user asks to housekeeping workflows, sync workflow-index, validate personal Cursor setup, or after adding a new playbook or rule. |
 | `write-spec` | Create or update epic/story specs and dev notes for Callisto/Atlas. Use when the user asks to write a spec, author PRDV ticket documentation, create a dev note for estimation, or extend specs under a systems/ wiki tree. |
 
@@ -2452,24 +1394,12 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `browser-loop-setup.md` | Browser-loop setup (dustin-thomason) |
 | `cleanup-candidates.md` | Cleanup candidates — archive and consolidation ledger |
 | `current-vs-target-diagram.md` | Current vs Target diagram — a single-diagram delta convention |
-| `future-development-concerns.md` | Future-development concerns — the risk record artifact |
-| `investigation-coverage-ledger.md` | Investigation coverage ledger — the visited-state map |
-| `investigation-diagrams.md` | Investigation diagrams — the standalone visuals artifact |
-| `investigation-question-coverage.md` | Investigation method — question coverage checklist |
-| `investigation-report.md` | Investigation Report: <short title> |
-| `investigation-software-gaps.md` | Investigation method — software lens |
 | `new-branch-get-started.md` | Start a new branch |
-| `original-ticket-artifact.md` | Original Ticket Artifact |
-| `problem-check.md` | Problem Check — is the question even the right question? |
 | `pull-request-workflow.md` | Pull request workflow (reference) |
 | `qa-to-spec-traceability.md` | Q and A to Spec Traceability |
 | `README.md` | Cursor docs (playbooks) |
 | `session-start.md` | Session start (optional) |
-| `testing-implementation-artifact.md` | Testing-implementation artifact — the scenarios stress-tested |
-| `test-plan-artifact.md` | Test plan artifact — how to test the implementation |
 | `ticket-changelog-workflow.md` | Ticket changelog workflow |
-| `ticket-orchestration.md` | Ticket orchestration — superseded by the `orchestrate` skill |
-| `why-these-changes.md` | Why these changes — the living "Why" of the whole ticket |
 | `wiki-spec-authoring.md` | Wiki spec authoring (Callisto / Atlas) |
 
 ### Scripts (`scripts/`, `agents/scripts/`)

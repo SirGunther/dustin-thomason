@@ -44,7 +44,7 @@ docs/<Project>/tickets/<slug>/
   dnu/                                            superseded stories move here, names unchanged
 ```
 
-- **`original-ticket.md`** — if it already exists, cite it and never rewrite its Original Request. If it does not, create it per `../../docs/original-ticket-artifact.md` before writing any story. There is exactly one verbatim capture per ticket.
+- **`original-ticket.md`** — if it already exists, cite it and never rewrite its Original Request. If it does not, create it per `../orchestrate/docs/original-ticket-artifact.md` before writing any story. There is exactly one verbatim capture per ticket.
 - **One file per story**, numbered in creation order, `<short>` being two or three words naming the story's subject.
 - **Superseded stories move to `dnu/`** — never deleted, never renamed, never edited in place after acceptance.
 
@@ -74,7 +74,7 @@ When the request bundles two or more distinct problems, write **a story for each
 
 ### Relationship to Problem Check
 
-`../../docs/problem-check.md` audits a request's framing and surfaces *questions that might get asked*. This skill **synthesizes** — it commits to what the story is and why it is believed. They are peers, not stages:
+`../investigation/docs/problem-check.md` audits a request's framing and surfaces *questions that might get asked*. This skill **synthesizes** — it commits to what the story is and why it is believed. They are peers, not stages:
 
 - **Neither is a prerequisite.** A story can be written before any investigation exists; Problem Check can run on a request that has no story.
 - **When both exist, each must be updated when the other moves.** A Problem Check flag landing after a story is written is a revisit trigger; a story that splits or changes user type means the framing read is stale.

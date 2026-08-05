@@ -76,7 +76,7 @@ All three are committed, so `git pull` distributes rule changes to every machine
 | **Open a PR** | â€œOpen PR for PRDV-â€¦â€ | **No** â€” router reads `pull-request-workflow` |
 | **Implement code** | (normal implementation chat) | **No** â€” agent resolves changelog at **task start**; then `problem-requirement-solution` + `build-implementation-guardrails` + app repo rules |
 | **Fix bug / regression** | (normal fix chat) | **No** â€” same **task-start** changelog alignment when a ticket or project log exists |
-| **Debug front-end** layout/CSS/interaction at runtime | (drive/observe the live browser) | **No** â€” `browser-loop-guardrails` + [browser-loop-setup](../.cursor/docs/browser-loop-setup.md) |
+| **Debug front-end** layout/CSS/interaction at runtime | (drive/observe the live browser) | **No** â€” `browser-loop-guardrails` + [browser-loop-setup](browser-loop-setup.md) |
 | **Ticket context (new thread)** | `@docs/atlas/PRDV-XXXXX-changelog` | **Optional** â€” explicit pointer; agent should still resolve changelog from branch/ticket id |
 | **Run a ticket end-to-end** | `orchestrate PRDV-...` / `orchestrate <project> <slug>` | No (skill by name) - seven phases, exit gates, mode handoffs, resumable ledger |
 | **Stress-test a plan** | `@grill-me` | Yes (skill) |
@@ -108,10 +108,10 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 
 | File | When |
 | ---- | ---- |
-| [new-branch-get-started.md](../.cursor/docs/new-branch-get-started.md) | New `PRDV-*` branch |
-| [pull-request-workflow.md](../.cursor/docs/pull-request-workflow.md) | `gh pr create`, PR body, Slack post |
-| [README.md](../.cursor/docs/README.md) | Pointer to this index |
-| [browser-loop-setup.md](../.cursor/docs/browser-loop-setup.md) | Wire and observe a live browser for front-end debugging |
+| [new-branch-get-started.md](new-branch-get-started.md) | New `PRDV-*` branch |
+| [pull-request-workflow.md](pull-request-workflow.md) | `gh pr create`, PR body, Slack post |
+| [README.md](README.md) | Pointer to this index |
+| [browser-loop-setup.md](browser-loop-setup.md) | Wire and observe a live browser for front-end debugging |
 
 ---
 
@@ -119,22 +119,22 @@ Not always-on: `workflow-housekeeping` (only when editing workflow files here); 
 
 | Path | When |
 | ---- | ---- |
-| [original-ticket-artifact.md](./original-ticket-artifact.md) | Capture the baseline request as `original-ticket.md` before investigation/spec work |
+| [original-ticket-artifact.md](../skills/orchestrate/docs/original-ticket-artifact.md) | Capture the baseline request as `original-ticket.md` before investigation/spec work |
 | `agents/README.md` (un-synced) | Why each `agents/` file exists + the orchestration flow at a glance — root TOC, never mirrored |
 | [cleanup-candidates.md](./cleanup-candidates.md) | Archive/consolidation ledger - fed by orchestrated runs' cruft checks |
-| [investigation-coverage-ledger.md](./investigation-coverage-ledger.md) | Per-ticket visited-state map: template + consult/reopen protocol |
-| [investigation-diagrams.md](./investigation-diagrams.md) | Standalone diagrams artifact (delta, flows, sequences) for investigations |
-| [future-development-concerns.md](./future-development-concerns.md) | Per-ticket risk record: dated, code-verified concerns shipped out of scope |
-| [why-these-changes.md](./why-these-changes.md) | Per-ticket living "Why" doc — class of problem + reasoning arc across all phases, ending as the "why these changes" review |
-| [test-plan-artifact.md](./test-plan-artifact.md) | Per-ticket test plan: seeded from the report, executed at implementation |
-| [testing-implementation-artifact.md](./testing-implementation-artifact.md) | Per-ticket, scenario-first record of the real situations stress-tested (+ any change hung off each), explaining to other devs what was addressed — for the PR comment |
+| [investigation-coverage-ledger.md](../skills/investigation/docs/investigation-coverage-ledger.md) | Per-ticket visited-state map: template + consult/reopen protocol |
+| [investigation-diagrams.md](../skills/investigation/docs/investigation-diagrams.md) | Standalone diagrams artifact (delta, flows, sequences) for investigations |
+| [future-development-concerns.md](../skills/orchestrate/docs/future-development-concerns.md) | Per-ticket risk record: dated, code-verified concerns shipped out of scope |
+| [why-these-changes.md](../skills/orchestrate/docs/why-these-changes.md) | Per-ticket living "Why" doc — class of problem + reasoning arc across all phases, ending as the "why these changes" review |
+| [test-plan-artifact.md](../skills/orchestrate/docs/test-plan-artifact.md) | Per-ticket test plan: seeded from the report, executed at implementation |
+| [testing-implementation-artifact.md](../skills/orchestrate/docs/testing-implementation-artifact.md) | Per-ticket, scenario-first record of the real situations stress-tested (+ any change hung off each), explaining to other devs what was addressed — for the PR comment |
 | [ticket-changelog-workflow.md](./ticket-changelog-workflow.md) | How changelogs work end-to-end |
 | [wiki-spec-authoring.md](./wiki-spec-authoring.md) | PRDV wiki naming, Obsidian wiring, dev notes, author checklist |
 | [docs/atlas/local/callisto-local.mdc](./atlas/local/callisto-local.mdc) | Callisto backend local runbook (Docker, migrations, DBeaver) |
 | [docs/atlas/local/triton-local.mdc](./atlas/local/triton-local.mdc) | Triton backend local runbook |
 | [docs/atlas/local/europa-local.mdc](./atlas/local/europa-local.mdc) | Europa backend local runbook |
 | `docs/<system>/PRDV-XXXXX-changelog.md` | **This ticketâ€™s** memory in **dustin-thomason** only â€” `@` every new agent thread. `larry-adams` = read-only spec links in **Plans**, not a push target |
-| [\_templates/TICKET-changelog.template.md](./_templates/TICKET-changelog.template.md) | Rarely â€” use `scripts/new-ticket-changelog.ps1` instead |
+| [\_templates/TICKET-changelog.template.md](../../docs/_templates/TICKET-changelog.template.md) | Rarely â€” use `scripts/new-ticket-changelog.ps1` instead |
 | `docs/WorkLists/` | One-off personal work lists |
 
 **Do not** keep ticket changelogs under `.cursor/docs/` â€” only `docs/<system>/` to avoid duplicate `@` suggestions.
@@ -202,7 +202,7 @@ Checks: required `alwaysApply` rules, expected scripts, playbooks, router links,
 | Step in real work | Covered by |
 | ----------------- | ---------- |
 | Workspace includes `dustin-thomason` | All `alwaysApply` rules load automatically |
-| New agent on a ticket | `@docs/<system>/PRDV-XXXXX-changelog` ([session-start](../.cursor/docs/session-start.md) snippet) |
+| New agent on a ticket | `@docs/<system>/PRDV-XXXXX-changelog` ([session-start](session-start.md) snippet) |
 | Branch + changelog | `new-branch-get-started` + script + `ticket-changelog` rule |
 | Work + agents | Changelog updated; link **Plans** when a plan exists |
 | Commit | `git-commit-workflow` + `ticket-changelog` rules |
@@ -230,6 +230,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `browser-loop-guardrails` | always | Boundary rules for a runtime browser-observation loop (Playwright/CDP/MCP) and for any CSS/layout/interaction debugging — fix the responsible cascade rule not the symptom, explain magic constants, keep independent constants independent, treat a green check as necessary-not-sufficient, and escalate after bounded iteration instead of spiraling. |
 | `build-implementation-guardrails` | always | Mandatory tests, changelog, Swagger (when applicable), architecture guardrails for Codex/agent builds — shipping checklist, coverage, non-regression, graceful failure, SOLID shaping, avoid raw Postgres/SQL unless unavoidable. |
 | `context-fanout` | always | Prefer read-only exploration subagents for multi-area investigation so the parent context stays compact and focused. |
+| `dnu-folders` | always | A dnu folder is retired work kept for posterity. Never load it as context, never cite it, never treat it as current — unless the user names it explicitly. |
 | `git-commit-workflow` | always | Standard commit/push habit for dustin-thomason—runs to completion via npm audit/lint/serial-test gates (when applicable), git status → add → commit → push when an agent pushes work here or in sibling Node repos. |
 | `personal-methodology` | always | Routes dustin-thomason personal standards into any workspace repo (Atlas, Callisto, etc.) without copying rules there or requiring @-mentions. |
 | `problem-requirement-solution` | always | Coherent implementation philosophy — reason in order Problem → Requirement → Solution so the line of thinking stays clear for the end user, in implementations, plans, specs, and changelog/PR narratives. |
@@ -245,7 +246,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `grill-me` | Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when user wants to stress-test a plan, get grilled on their design, or mentions "grill me". |
 | `investigation` | The method for investigating a problem and its proposed fix before committing to it — in any domain (software, workflow, policy, process, etc.). Ground in real instances, classify the problem, lock acceptance criteria, trace why it exists, re-confirm the class, then stress-test the solution against scale, generalization, and fit. Emits an Investigation Report (see the investigation-report template): verdict, problem class, assumptions-to-test, a happy/negative validation plan, recommendation with gates, and open variables to collect. Use when scoping a change, validating assumptions, writing a spec, or when the user says "investigate". |
 | `job-story` | Turn a feature request or ticket into a job story — a structured user story plus acceptance criteria, built through a matrix sequence that strips solution-speak and unobservable outcomes before emitting. Produces a referenceable artifact the finished work gets held against. Use when the user says "job story", "write the story", "turn this into a story", "acceptance criteria for this ticket", or asks to define what done means for a request. |
-| `orchestrate` | Conduct a ticket end-to-end through the seven-phase lifecycle — capture original ticket, investigate, report, probe and spec, prep for implementation, implement, manual review — with full-rigor artifacts, phase exit gates, and a standardized handoff at every mode boundary. Resumable from the per-ticket ledger. Use when the user says "orchestrate", "orchestrate PRDV-XXXXX", "run the ticket workflow", "take this ticket through the phases", or "resume/continue orchestration". |
+| `orchestrate` | Conduct a ticket end-to-end through the seven-phase lifecycle — capture original ticket, investigate, report, probe and spec, prep for implementation, implement, manual review — with full-rigor artifacts, a generated per-phase checklist, and a standardized handoff at every mode boundary. Resumable from the per-ticket ledger. Use when the user says "orchestrate", "orchestrate PRDV-XXXXX", "run the ticket workflow", "take this ticket through the phases", or "resume/continue orchestration". |
 | `workflow-housekeeping` | Audit dustin-thomason workflow docs, rules, and index for drift, duplicates, and missing entries. Use when user asks to housekeeping workflows, sync workflow-index, validate personal Cursor setup, or after adding a new playbook or rule. |
 | `write-spec` | Create or update epic/story specs and dev notes for Callisto/Atlas. Use when the user asks to write a spec, author PRDV ticket documentation, create a dev note for estimation, or extend specs under a systems/ wiki tree. |
 
@@ -256,24 +257,12 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `browser-loop-setup.md` | Browser-loop setup (dustin-thomason) |
 | `cleanup-candidates.md` | Cleanup candidates — archive and consolidation ledger |
 | `current-vs-target-diagram.md` | Current vs Target diagram — a single-diagram delta convention |
-| `future-development-concerns.md` | Future-development concerns — the risk record artifact |
-| `investigation-coverage-ledger.md` | Investigation coverage ledger — the visited-state map |
-| `investigation-diagrams.md` | Investigation diagrams — the standalone visuals artifact |
-| `investigation-question-coverage.md` | Investigation method — question coverage checklist |
-| `investigation-report.md` | Investigation Report: <short title> |
-| `investigation-software-gaps.md` | Investigation method — software lens |
 | `new-branch-get-started.md` | Start a new branch |
-| `original-ticket-artifact.md` | Original Ticket Artifact |
-| `problem-check.md` | Problem Check — is the question even the right question? |
 | `pull-request-workflow.md` | Pull request workflow (reference) |
 | `qa-to-spec-traceability.md` | Q and A to Spec Traceability |
 | `README.md` | Cursor docs (playbooks) |
 | `session-start.md` | Session start (optional) |
-| `testing-implementation-artifact.md` | Testing-implementation artifact — the scenarios stress-tested |
-| `test-plan-artifact.md` | Test plan artifact — how to test the implementation |
 | `ticket-changelog-workflow.md` | Ticket changelog workflow |
-| `ticket-orchestration.md` | Ticket orchestration — superseded by the `orchestrate` skill |
-| `why-these-changes.md` | Why these changes — the living "Why" of the whole ticket |
 | `wiki-spec-authoring.md` | Wiki spec authoring (Callisto / Atlas) |
 
 ### Scripts (`scripts/`, `agents/scripts/`)

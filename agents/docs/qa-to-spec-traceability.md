@@ -2,7 +2,7 @@
 
 Use this workflow when a requirements conversation, grill-me pass, investigation review, or user correction needs to become durable spec content. Its job is to prevent settled answers from being re-asked, diluted, or lost between conversation and implementation.
 
-This document is a process guardrail. It does not replace `agents/skills/grill-me/SKILL.md`, `agents/docs/investigation-report.md`, or `agents/rules/spec-writing.md`. Load it alongside those documents when the task moves from questions into a spec or implementation plan.
+This document is a process guardrail. It does not replace `agents/skills/grill-me/SKILL.md`, `../skills/investigation/docs/investigation-report.md`, or `agents/rules/spec-writing.md`. Load it alongside those documents when the task moves from questions into a spec or implementation plan.
 
 ## How to reference it
 

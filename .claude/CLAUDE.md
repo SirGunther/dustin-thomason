@@ -9,6 +9,7 @@ scope:scoped rules stay on-demand via `.claude/rules/` path matching.
 @rules/browser-loop-guardrails.md
 @rules/build-implementation-guardrails.md
 @rules/context-fanout.md
+@rules/dnu-folders.md
 @rules/git-commit-workflow.md
 @rules/personal-methodology.md
 @rules/problem-requirement-solution.md

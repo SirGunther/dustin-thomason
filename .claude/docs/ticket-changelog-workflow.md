@@ -20,10 +20,10 @@ Nothing in this workflow is “uploaded” to Larry Adams. You only **reference*
 
 | Moment | Doc to follow | Changelog action |
 | ------ | ------------- | ---------------- |
-| Pick up a ticket, create branch | [new-branch-get-started.md](../.cursor/docs/new-branch-get-started.md) | **Create** changelog (first pass — see below) |
+| Pick up a ticket, create branch | [new-branch-get-started.md](new-branch-get-started.md) | **Create** changelog (first pass — see below) |
 | Work in Cursor / another agent | — | **Append** session notes as you go (optional but cheap insurance) |
 | Commit or push (any PlanetDepos repo) | [git-commit-workflow.mdc](../.cursor/rules/git-commit-workflow.mdc) | **Update** changelog before `git commit` (required for agents) |
-| Open PR | [pull-request-workflow.md](../.cursor/docs/pull-request-workflow.md) | **Mine** changelog for Description / learnings |
+| Open PR | [pull-request-workflow.md](pull-request-workflow.md) | **Mine** changelog for Description / learnings |
 
 ---
 
@@ -41,13 +41,13 @@ docs/
 - **`<system>`** — short name for where the code lives (`atlas`, `callisto`, `europa`, `triton`, or `other` for cross-cutting / personal-only work).
 - **Filename** — `PRDV-12345-changelog.md` (ticket number + `-changelog`).
 
-Example: [atlas/PRDV-12264-changelog.md](./atlas/PRDV-12264-changelog.md).
+Example: [atlas/PRDV-12264-changelog.md](../../docs/atlas/PRDV-12264-changelog.md).
 
 ---
 
 ## First pass (branch / new ticket)
 
-Do this **once** when you start the ticket (step 4 in [new-branch-get-started.md](../.cursor/docs/new-branch-get-started.md)), or the **first time** an agent touches commit workflow for that ticket.
+Do this **once** when you start the ticket (step 4 in [new-branch-get-started.md](new-branch-get-started.md)), or the **first time** an agent touches commit workflow for that ticket.
 
 ### Scaffold script (preferred)
 
@@ -137,7 +137,7 @@ Keep entries short; link to attempt history for long debugging threads.
 
 ## Pull requests
 
-When drafting a PR ([pull-request-workflow.md](../.cursor/docs/pull-request-workflow.md)):
+When drafting a PR ([pull-request-workflow.md](pull-request-workflow.md)):
 
 - **Description** — pull bullets from **Requirements**, **Current state**, and the latest **Session log** entry.
 - **What not to do** — do not paste the entire changelog into GitHub; summarize and link to this repo path if reviewers need depth.

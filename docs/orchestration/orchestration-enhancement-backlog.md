@@ -102,3 +102,15 @@ These three are the biggest cluster and overlap the existing `test-plan-artifact
 - **B3** — gated on decision 2 (implementer routing).
 - **C1 / C2** — gated on decision 3 (new step vs. sharpen).
 - **B2** — gated on decision 4 (reference-doc class).
+
+---
+
+## Cluster F — Live board visibility (captured 2026-08-04)
+
+### F1 — Agent updates a Kanban board as the run progresses — **NOT STARTED**
+- **Objective (user's words):** "I do have a Kanban that keeps track of activity, like, in notes, which I would ultimately want to reference as to where that's located, and then the agent could update that, which would be great for visibility so that I would know where things are in a process. It's like an active live sort of board."
+- **Why it matters:** the ledger (`orchestration.md`) already records phase state, but it is a file you have to open. A live board answers "where is this right now" at a glance, without reading a ticket folder — the same problem the visible-todo-list requirement solves inside a single run, extended across runs and tickets.
+- **Blocked on:** the board's location and format are not yet recorded. Needs the path or app, and whether it is a Markdown file, a Notes app database, or an API.
+- **Lands as:** likely a step per phase transition, or one standing rule. Fits naturally beside the existing notify step — both are "tell the outside world where we are."
+- **Open question:** does the board get updated at every phase transition, or only at handoffs where the run actually stops? Every transition is more current; handoffs-only is less churn. Decision 43 (no status bookkeeping) is the relevant precedent to weigh against — this is status tracking, so it has to clear the bar that Plans rows failed: is it read, and does it change what anyone does.
+- **Effort:** S once the location is known.
