@@ -60,7 +60,11 @@ function Resolve-Target($alias) {
         'external-artifact'  { return @{ ok = $false; reason = 'lives outside the ticket folder' } }
     }
     if (-not $p.path) { return @{ ok = $false; reason = 'no path defined' } }
-    # every <placeholder> becomes a wildcard, so <slug>, <NN> and <short> all resolve
+    # Every <placeholder> becomes a wildcard, so <slug>, <NN> and <short> all resolve.
+    # <prefix> is the same mechanism used for a filename whose variation is a leading
+    # segment rather than an embedded one: SKILL.md's layout lets a PRDV ticket name the
+    # capture PRDV-16312-original-ticket.md while a personal project names it
+    # original-ticket.md, and * matches zero characters, so one glob covers both.
     $pattern = [regex]::Replace($p.path, '<[^>]+>', '*')
     return @{ ok = $true; pattern = $pattern }
 }

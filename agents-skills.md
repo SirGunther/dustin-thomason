@@ -1098,6 +1098,9 @@ Settled decisions only. Newest at the bottom. Do not re-litigate these. A decisi
 | 46 | **The distinction that separates 43 from 45: a status is a field that gets edited; a record is an entry that gets appended.** Statuses are cut. Records stay. | A status implies a state machine and invites `blocked` / `in progress` / `pending`. An append-only record answers "what happened" without maintaining anything. |
 | 47 | **The visible todo list is generated from `steps.csv`, not invented** — `scripts/render-sequence.ps1 -Checklist -Phase <N>` emits one checkbox per step with its stable id, and the agent cites the id when saying what is next. | The requirement to keep a visible list already existed but predated `steps.csv`, so it said "sub-steps of the phase currently in progress" with no source — leaving the agent to invent them. An invented list hides omissions: a list of six that should have been seven is indistinguishable from a list that was always six. Sourcing it means a missing step shows up as a missing id, for almost no token cost. Also removed a stale reference to gates, cut in 7. |
 | 48 | **Gate obligations live only in `steps.csv`'s `done` column.** `SKILL.md`'s per-phase `**Gate evidence:**` lines and its printed `Phase <N> gate:` block are deleted; the generated checklist is the gate, and what satisfies an item is that step's `done`. | The same requirement existed in two places, so it drifted in both. Twelve obligations the prose carried that no `done` covered were **folded into `done` first**, then the prose removed — nothing was dropped. The Entry check paragraph stays: it is a distinct rule about not touching the implementation repo before Phase 0 and 1 exist, not a restatement of any step's `done`. |
+| 49 | **`TICKET`'s path is `<prefix>original-ticket.md`, not `original-ticket.md`.** | `SKILL.md`'s layout permits a PRDV ticket to name the capture `PRDV-16312-original-ticket.md`, but `check-steps.ps1` only wildcards `<placeholders>`, so the literal path could never match a prefixed file — `P0.ticket` reported `MISSING` on every PRDV ticket that had a perfectly good artifact. Uses the existing placeholder mechanism rather than new script logic; `*` matches zero characters, so one glob covers the prefixed and unprefixed names both. **Diagram impact: none.** |
+| 50 | **A spec review is one participant and two steps: `REV` (seq 22), `P3.spec-submit` (phase 3, seq 65), `P5.spec-approved` (phase 5, seq 20).** | The lifecycle had **no human approval gate anywhere.** Across all 49 steps the only approvals were the two plan-mode ones — and those approve *plans*, not the spec. Nothing between `P3.spec` and `P5.code` required anyone to approve a design someone else owns, which contradicts the documented PRDV process. `P5.spec-approved` takes seq 20 specifically so it falls **between** `P5.impl-plan` (10) and `P5.code` (30): the last moment before code. Both steps are `check_by: human` — a script cannot tell whether a person answered. `verb` is a validated closed set, so the existing `notify` and `read` are reused instead of inventing `submit`/`confirm`. **Diagram impact: +1 lifeline, +2 arrows — `notify AG→REV` in phase 3, `read AG→REV` in phase 5. Counts 49→51 steps, 21→22 participants.** |
+| 51 | **A manual test scenario states its before/after and where the change is observable — including when the answer is "nowhere in the UI".** A core rule plus a required *Manual verification* section in `docs/test-plan-artifact.md`. | A falsifiable assertion is not the same as a runnable procedure. A test plan named the right assertion and was still unexecutable by the person holding the keyboard, because it never said what the old behavior was or which surface held the evidence. Worst on backend-only work, where the UI is byte-for-byte identical: an operator told to "upload a file and verify the event" reasonably screenshots the screen that did not change. Now requires before/after, preconditions, numbered steps, a paste-ready evidence command, and per-step pass/fail. **Diagram impact: none — artifact content, not a step.** |
 
 ## Diagram rules
 
@@ -1399,6 +1402,7 @@ docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-test-plan.md
 ## Core rules
 
 - Scenarios are **falsifiable**: each states the setup, the action, and the observable outcome that passes or fails it.
+- **Every manual scenario states the before/after contrast and where the change is observable — including when the answer is "nowhere in the UI".** A falsifiable assertion is not the same as a runnable procedure. A plan can name the right assertion and still be unexecutable by the person holding the keyboard, because it never said what the old behavior was, what the new behavior looks like, or which surface to look at. That gap is worst on backend-only work: the UI is byte-for-byte identical, so an operator told to "upload a file and verify the event" reasonably screenshots the screen that did not change. State it plainly — *"nothing changes in the UI; the evidence is the row in table X"* — and give the **exact command or query** that produces it, ready to paste. If a reviewer expects a screenshot, the plan says what is in frame.
 - Negative paths are first-class — what must fail **visibly** instead of corrupting silently (invalid input, unauthorized caller, concurrent actors, boundary values).
 - The results log follows the verification-gate reporting standard (see the `ticket-changelog` rule): exact gate command, scope, result. "Tests passed" by itself is not sufficient. Gates run serially (`--runInBand` / `--maxWorkers 1`) and are reported for the **final post-change state only**.
 - If a scenario cannot be executed, record it as **blocked** with the reason, residual risk, and follow-up — never silently drop it.
@@ -1427,6 +1431,37 @@ Status: seeded / refined / in-execution / complete
 ## Edge cases
 
 - [ ] EC-1: <boundary / empty / extreme> → <expected behavior>
+
+## Manual verification (required whenever a human runs a step)
+
+Written so someone who did not build the change can execute it without asking a follow-up question.
+
+**Before / after** — say what changes and, just as importantly, what does not:
+
+| | Before | After |
+| --- | --- | --- |
+| <the user-facing surface> | <old behavior> | <new behavior, or **identical**> |
+| <where the change is actually observable> | <old state> | <new state> |
+
+> If the change is invisible in the UI, say so in one blunt sentence and name the surface that does hold the evidence (a table, a log, a queue, a file). Otherwise the operator screenshots the unchanged screen.
+
+**Preconditions** — services, credentials, seed data, one-time environment setup, and the baseline reading to take *before* acting.
+
+**Steps** — numbered, with the exact URL/route, and any choice that matters called out (which track, which record, which option).
+
+**Evidence** — the exact command or query, paste-ready, plus what should be in frame if a screenshot is expected:
+
+```sql
+-- or shell/HTTP; whatever produces the evidence
+```
+
+**Pass / fail** — per step, both columns:
+
+| Step | Passes | Fails |
+| --- | --- | --- |
+| M-1 | <observed result> | <the specific wrong result, and what it would mean> |
+
+Name which step is load-bearing and why — the one whose failure means the defect is back.
 
 ## Test map
 
@@ -1612,7 +1647,11 @@ function Resolve-Target($alias) {
         'external-artifact'  { return @{ ok = $false; reason = 'lives outside the ticket folder' } }
     }
     if (-not $p.path) { return @{ ok = $false; reason = 'no path defined' } }
-    # every <placeholder> becomes a wildcard, so <slug>, <NN> and <short> all resolve
+    # Every <placeholder> becomes a wildcard, so <slug>, <NN> and <short> all resolve.
+    # <prefix> is the same mechanism used for a filename whose variation is a leading
+    # segment rather than an embedded one: SKILL.md's layout lets a PRDV ticket name the
+    # capture PRDV-16312-original-ticket.md while a personal project names it
+    # original-ticket.md, and * matches zero characters, so one glob covers both.
     $pattern = [regex]::Replace($p.path, '<[^>]+>', '*')
     return @{ ok = $true; pattern = $pattern }
 }
@@ -2028,9 +2067,9 @@ If this boundary is ever unclear at invocation (a free brief naming a folder tha
 | 0 | Capture | Working | `original-ticket.md`, `orchestration.md`, job stories (draft) + index | gate → HANDOFF (Plan) |
 | 1 | Recon and plan | Plan | approved recon-and-plan doc (findings + emission todos + staged coverage rows) | gate → plan approval |
 | 2 | Report | Working | investigation report, coverage ledger, diagrams, test-plan seed | gate → AUTO-ADVANCE to 3 |
-| 3 | Probe & spec | Working | locked-decision ledger, accepted job stories, spec, refined test plan | gate → HANDOFF (Plan) |
+| 3 | Probe & spec | Working | locked-decision ledger, accepted job stories, spec, spec submitted to its reviewer, refined test plan | gate → HANDOFF (Plan) |
 | 4 | Prep | Plan | approved implementation plan | gate → plan approval |
-| 5 | Implement | Working | code, executed test plan, session log, PR | gate → HANDOFF (Idle) |
+| 5 | Implement | Working | **reviewer's spec response recorded**, code, executed test plan, session log, PR | gate → HANDOFF (Idle) |
 | 6 | Wrap up | Working | finalized why doc, closed stories, closed ledger, review summary | END — you review manually after |
 
 ## Mode handling (harness-agnostic)
@@ -2174,7 +2213,8 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
   3. Risk-accepting answers produce BOTH records: the locked-decision row and a concern entry in `<slug>-future-development-concerns.md` (create on first concern); the row cites the entry.
   4. **Accept the job stories.** Fold every resolved decision into the criteria it affects, close each story's Open Questions (or carry one forward with a named owner and the reason), set the index rows to `accepted`, and append the Phase 3 Story log entry. A decision wins on *how*; the criterion still owns *what done means* — rewrite it to stay observable rather than importing the design word the decision introduced.
   5. Materialize the locked-decision ledger as its own file, `specs/<slug>-locked-decisions.md` (question gates resolved + the full `LD-###` table with source / supersedes-or-rejects / spec destination) — the standard from the first real run, once decisions run past a handful the way they will on any non-trivial ticket. Write `specs/<slug>-spec.md`: grill-me output **informs** the spec, it is not the spec. Its required `Locked Decisions From Q and A` section (per `spec-writing` / `qa-to-spec-traceability`) becomes a short summary table that **links to** `<slug>-locked-decisions.md` for the full ledger, rather than repeating it — satisfy the spec-writing rule's sections (N/A lines where a section does not apply); frame Problem → Requirement → Solution.
-  6. Refine the test plan — resolved variables become concrete assertions, each mapped to the acceptance criterion it proves; status `refined`.
+  6. **Submit the spec to its reviewer.** A spec is a review gate, not a private artifact: on a team where a principal dev owns the design, implementing from an unreviewed spec is the same mistake as implementing from an unread one. Deliver it the way that team actually reviews — where a shared wiki is the review surface, that means **pushing a branch and opening a PR, not writing the file locally and calling it submitted**. Two shapes recur: the reviewer has **not** written a spec, so yours is the thing under review; or the reviewer **already authored** the authoritative spec, in which case submit an **addendum** carrying only what your investigation added or changed — decisions that extend their spec, deviations from precedent, and defects found in their own documents. Never request a reviewer through GitHub's reviewer mechanism unless the user asks in that moment (`git-commit-workflow`). If no review is owed, record that as `not-applicable` naming who owns the spec and why.
+  7. Refine the test plan — resolved variables become concrete assertions, each mapped to the acceptance criterion it proves; status `refined`.
 - **Advance:** notify (Progress notifications), then handoff → Phase 4 (Plan).
 
 ## Phase 4 — Prep for implementation (Plan)
@@ -2189,6 +2229,7 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 - **Reads:** the approved plan; the test plan; repo-specific rules of the touched repo; `../../../docs/reviewers/pr-review-patterns.md` for the self-review checklist.
 - **Do:**
   1. Save the approved plan verbatim as `<slug>-implementation-plan.md` (frozen once written — see Phase 4); update the ledger.
+  1b. **Confirm the reviewer responded to the spec, before any product code.** Record the response in the ledger with its form and date — a merged PR, a comment, an explicit go-ahead. Review latency is asynchronous and can outlast a session, so this is the one gate that legitimately parks a run: **if the answer has not arrived, stop and say so** rather than implementing on the assumption it will be fine. Proceeding anyway requires a waiver naming who authorised it and what risk it carries. A plan approval is **not** a spec approval — Phase 4 approves your sequencing, not the design someone else owns.
   2. **Do not revise the test plan here.** It was refined at Phase 3 against the locked decisions, and Phase 4's gate already traced every plan step to it — approving a plan confirms the touch points against the spec, it does not introduce anything the test plan has not already seen. What survives is the ordering rule: the refined test plan must be in place **before any code is written**, so the tests are never shaped by what was built. Status stays `refined`; there is no post-approval revision.
   3. Implement per the plan, inside the `build-implementation-guardrails` obligations (tests as part of shipping, architecture fit, graceful degradation by layer).
   3b. **Run the self-review checklist against your own diff — after the code, before the tests.** `../../../docs/reviewers/pr-review-patterns.md` carries the fixes reviewers ask for again and again, promoted to a checklist once a pattern recurs. Its whole purpose is catching them *before* a PR goes up rather than reactively after, and any refactor it prompts belongs here, while the tests have not yet been shaped around the current code.
@@ -2237,6 +2278,8 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 - Do not put any orchestration artifact outside `C:\dustin-thomason\docs\<Project>\tickets\<slug>\`, even when the implementation lives in a different repo or folder — see Repo boundary.
 - Do not touch implementation-repo files before Phase 0 and Phase 1 both show `done` in the ledger.
 - Do not mark a phase `done` — Phase 5 especially — on a claim or drafted code; the step's `done` condition must be met by an observed result.
+- Do not write product code before the spec's reviewer has responded, and do not treat Phase 4's plan approval as that response — it approves your sequencing, not a design someone else owns.
+- Do not call a spec "submitted" because the file exists; submitting means delivering it to the reviewer through the surface that team reviews on.
 - Do not rewrite a "done" investigation report to incorporate later findings; append a dated addendum section instead.
 - Do not assume a notification or script can run while genuinely in Plan mode; use the deferred-to-next-Working-action pattern in Progress notifications instead.
 - Do not skip the Problem Check pass or leave its framing claims ungrounded — cite the ticket's words; "nothing here" per flag is fine, silence is not.
@@ -2251,7 +2294,7 @@ kind,id,phase,seq,verb,actor,target,label,done,check_by,governs,role,path,mode,r
 participant,U,,1,,,,You,,,,actor,,,
 participant,AG,,2,,,,agent,,,,actor,,,
 participant,LEDGER,,3,,,,orchestration.md,,,,ticket-artifact,orchestration.md,,
-participant,TICKET,,4,,,,original-ticket.md,,,,ticket-artifact,original-ticket.md,,
+participant,TICKET,,4,,,,original-ticket.md,,,,ticket-artifact,<prefix>original-ticket.md,,
 participant,CLOG,,5,,,,changelog,,,,external-artifact,docs/<system>/PRDV-XXXXX-changelog.md,,
 participant,STORY,,6,,,,job stories,,,,ticket-artifact,stories/<slug>-job-story-<NN>-<short>.md,,
 participant,COV,,7,,,,coverage-ledger.md,,,,ticket-artifact,investigations/<slug>-coverage-ledger.md,,
@@ -2269,6 +2312,7 @@ participant,LD,,18,,,,locked-decisions.md,,,,ticket-artifact,specs/<slug>-locked
 participant,SPEC,,19,,,,spec.md,,,,ticket-artifact,specs/<slug>-spec.md,,
 participant,IMPL,,20,,,,implementation-plan.md,,,,ticket-artifact,<slug>-implementation-plan.md,,
 participant,TI,,21,,,,testing-implementation.md,,,,ticket-artifact,testing/<slug>-testing-implementation.md,,
+participant,REV,,22,,,,spec reviewer,,,,actor,,,
 phase,P0,0,0,,,,Capture,,,SKILL.md Phase 0,,,Working,"original-ticket-artifact.md, job-story/SKILL.md, ticket-changelog rule, browser-loop-setup.md when the ticket lives in ClickUp"
 step,P0.ledger,0,10,write,AG,LEDGER,write the ledger,orchestration.md exists with a row per phase and a Resume footer,script,SKILL.md State ledger and resume,,,,
 step,P0.ticket,0,20,write,AG,TICKET,write the original ticket,"original-ticket.md Original Request is the request text unaltered, and the capture source is named - ClickUp page or user-provided text",human,original-ticket-artifact.md,,,,
@@ -2302,6 +2346,7 @@ step,P3.decisions,3,30,write,AG,LD,write the locked decisions,"locked-decisions.
 step,P3.concerns,3,40,write,AG,CONC,record any risk-accepted decision,a risk-accepted decision has a concern entry that its locked-decision row cites,script,future-development-concerns.md,,,,
 step,P3.accept-stories,3,50,write,AG,STORY,accept the job stories,"every story index row reads accepted, or names the owner of a still-open question",script,job-story/SKILL.md,,,,
 step,P3.spec,3,60,write,AG,SPEC,write the spec,"spec.md exists, links locked-decisions.md rather than repeating it, and cites the stories' acceptance criteria rather than restating or amending them",script,spec-writing rule,,,,
+step,P3.spec-submit,3,65,notify,AG,REV,submit the spec to its reviewer,"the spec - or an addendum when the reviewer already authored the spec - was actually delivered to them, pushed and PR'd where a shared wiki is the review surface rather than only written locally; or recorded not-applicable naming who owns the spec and why no review is owed",human,spec-writing rule,,,,
 step,P3.test-plan,3,70,write,AG,TP,refine the test plan,test-plan.md status reads refined and each assertion maps to a criterion,script,test-plan-artifact.md,,,,
 step,P3.session-log,3,75,write,AG,CLOG,write the changelog session log,"the changelog has a session log entry naming the decisions locked and the spec written, dated in UTC",script,ticket-changelog rule,,,,
 step,P3.advance,3,80,notify,AG,U,notify and hand off to Phase 4,the handoff block was emitted verbatim,human,agent-completion-notification rule,,,,
@@ -2309,6 +2354,7 @@ phase,P4,4,0,,,,Prep for implementation,,,SKILL.md Phase 4,,,Plan,"the spec, the
 step,P4.impl-plan,4,10,stage,AG,IMPL,stage the implementation plan,"the plan carries ordered steps, each traced to the spec, the report or the test plan AND to an acceptance criterion",human,SKILL.md Phase 4,,,,
 phase,P5,5,0,,,,Implement,,,SKILL.md Phase 5,,,Working,"the approved plan, the test plan, the touched repo's own rules, testing-implementation-artifact.md, pull-request-workflow.md, git-commit-workflow rule, pr-review-patterns.md"
 step,P5.impl-plan,5,10,write,AG,IMPL,write the implementation plan,implementation-plan.md is present in the ticket folder,script,SKILL.md Phase 5,,,,
+step,P5.spec-approved,5,20,read,AG,REV,confirm the reviewer approved the spec,"the reviewer's response is recorded in the ledger with its form and date - a merged PR, a comment, or an explicit go-ahead - or a waiver naming who authorised proceeding without it and what risk that carries; no product code is written while this is unanswered",human,SKILL.md Phase 5,,,,
 step,P5.code,5,30,write,AG,CODE,write the code,"the change is implemented per the approved plan, and the refined test plan was already in place before any code was written",human,build-implementation-guardrails rule,,,,
 step,P5.self-review,5,40,run,AG,CODE,run the self-review checklist,every checklist item was checked against the diff before the tests ran,human,pr-review-patterns.md,,,,
 step,P5.run-tests,5,50,run,AG,CODE,run the test plan scenarios,"every scenario ran and produced an actually observed result - a run, a manual check or a passing suite - never a claim of what should happen",human,test-plan-artifact.md,,,,

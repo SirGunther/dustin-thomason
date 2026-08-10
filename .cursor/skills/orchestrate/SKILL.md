@@ -122,9 +122,9 @@ If this boundary is ever unclear at invocation (a free brief naming a folder tha
 | 0 | Capture | Working | `original-ticket.md`, `orchestration.md`, job stories (draft) + index | gate → HANDOFF (Plan) |
 | 1 | Recon and plan | Plan | approved recon-and-plan doc (findings + emission todos + staged coverage rows) | gate → plan approval |
 | 2 | Report | Working | investigation report, coverage ledger, diagrams, test-plan seed | gate → AUTO-ADVANCE to 3 |
-| 3 | Probe & spec | Working | locked-decision ledger, accepted job stories, spec, refined test plan | gate → HANDOFF (Plan) |
+| 3 | Probe & spec | Working | locked-decision ledger, accepted job stories, spec, spec submitted to its reviewer, refined test plan | gate → HANDOFF (Plan) |
 | 4 | Prep | Plan | approved implementation plan | gate → plan approval |
-| 5 | Implement | Working | code, executed test plan, session log, PR | gate → HANDOFF (Idle) |
+| 5 | Implement | Working | **reviewer's spec response recorded**, code, executed test plan, session log, PR | gate → HANDOFF (Idle) |
 | 6 | Wrap up | Working | finalized why doc, closed stories, closed ledger, review summary | END — you review manually after |
 
 ## Mode handling (harness-agnostic)
@@ -268,7 +268,8 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
   3. Risk-accepting answers produce BOTH records: the locked-decision row and a concern entry in `<slug>-future-development-concerns.md` (create on first concern); the row cites the entry.
   4. **Accept the job stories.** Fold every resolved decision into the criteria it affects, close each story's Open Questions (or carry one forward with a named owner and the reason), set the index rows to `accepted`, and append the Phase 3 Story log entry. A decision wins on *how*; the criterion still owns *what done means* — rewrite it to stay observable rather than importing the design word the decision introduced.
   5. Materialize the locked-decision ledger as its own file, `specs/<slug>-locked-decisions.md` (question gates resolved + the full `LD-###` table with source / supersedes-or-rejects / spec destination) — the standard from the first real run, once decisions run past a handful the way they will on any non-trivial ticket. Write `specs/<slug>-spec.md`: grill-me output **informs** the spec, it is not the spec. Its required `Locked Decisions From Q and A` section (per `spec-writing` / `qa-to-spec-traceability`) becomes a short summary table that **links to** `<slug>-locked-decisions.md` for the full ledger, rather than repeating it — satisfy the spec-writing rule's sections (N/A lines where a section does not apply); frame Problem → Requirement → Solution.
-  6. Refine the test plan — resolved variables become concrete assertions, each mapped to the acceptance criterion it proves; status `refined`.
+  6. **Submit the spec to its reviewer.** A spec is a review gate, not a private artifact: on a team where a principal dev owns the design, implementing from an unreviewed spec is the same mistake as implementing from an unread one. Deliver it the way that team actually reviews — where a shared wiki is the review surface, that means **pushing a branch and opening a PR, not writing the file locally and calling it submitted**. Two shapes recur: the reviewer has **not** written a spec, so yours is the thing under review; or the reviewer **already authored** the authoritative spec, in which case submit an **addendum** carrying only what your investigation added or changed — decisions that extend their spec, deviations from precedent, and defects found in their own documents. Never request a reviewer through GitHub's reviewer mechanism unless the user asks in that moment (`git-commit-workflow`). If no review is owed, record that as `not-applicable` naming who owns the spec and why.
+  7. Refine the test plan — resolved variables become concrete assertions, each mapped to the acceptance criterion it proves; status `refined`.
 - **Advance:** notify (Progress notifications), then handoff → Phase 4 (Plan).
 
 ## Phase 4 — Prep for implementation (Plan)
@@ -283,6 +284,7 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 - **Reads:** the approved plan; the test plan; repo-specific rules of the touched repo; `../../../docs/reviewers/pr-review-patterns.md` for the self-review checklist.
 - **Do:**
   1. Save the approved plan verbatim as `<slug>-implementation-plan.md` (frozen once written — see Phase 4); update the ledger.
+  1b. **Confirm the reviewer responded to the spec, before any product code.** Record the response in the ledger with its form and date — a merged PR, a comment, an explicit go-ahead. Review latency is asynchronous and can outlast a session, so this is the one gate that legitimately parks a run: **if the answer has not arrived, stop and say so** rather than implementing on the assumption it will be fine. Proceeding anyway requires a waiver naming who authorised it and what risk it carries. A plan approval is **not** a spec approval — Phase 4 approves your sequencing, not the design someone else owns.
   2. **Do not revise the test plan here.** It was refined at Phase 3 against the locked decisions, and Phase 4's gate already traced every plan step to it — approving a plan confirms the touch points against the spec, it does not introduce anything the test plan has not already seen. What survives is the ordering rule: the refined test plan must be in place **before any code is written**, so the tests are never shaped by what was built. Status stays `refined`; there is no post-approval revision.
   3. Implement per the plan, inside the `build-implementation-guardrails` obligations (tests as part of shipping, architecture fit, graceful degradation by layer).
   3b. **Run the self-review checklist against your own diff — after the code, before the tests.** `../../../docs/reviewers/pr-review-patterns.md` carries the fixes reviewers ask for again and again, promoted to a checklist once a pattern recurs. Its whole purpose is catching them *before* a PR goes up rather than reactively after, and any refactor it prompts belongs here, while the tests have not yet been shaped around the current code.
@@ -331,6 +333,8 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 - Do not put any orchestration artifact outside `C:\dustin-thomason\docs\<Project>\tickets\<slug>\`, even when the implementation lives in a different repo or folder — see Repo boundary.
 - Do not touch implementation-repo files before Phase 0 and Phase 1 both show `done` in the ledger.
 - Do not mark a phase `done` — Phase 5 especially — on a claim or drafted code; the step's `done` condition must be met by an observed result.
+- Do not write product code before the spec's reviewer has responded, and do not treat Phase 4's plan approval as that response — it approves your sequencing, not a design someone else owns.
+- Do not call a spec "submitted" because the file exists; submitting means delivering it to the reviewer through the surface that team reviews on.
 - Do not rewrite a "done" investigation report to incorporate later findings; append a dated addendum section instead.
 - Do not assume a notification or script can run while genuinely in Plan mode; use the deferred-to-next-Working-action pattern in Progress notifications instead.
 - Do not skip the Problem Check pass or leave its framing claims ungrounded — cite the ticket's words; "nothing here" per flag is fine, silence is not.

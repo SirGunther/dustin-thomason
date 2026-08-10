@@ -2,7 +2,7 @@ kind,id,phase,seq,verb,actor,target,label,done,check_by,governs,role,path,mode,r
 participant,U,,1,,,,You,,,,actor,,,
 participant,AG,,2,,,,agent,,,,actor,,,
 participant,LEDGER,,3,,,,orchestration.md,,,,ticket-artifact,orchestration.md,,
-participant,TICKET,,4,,,,original-ticket.md,,,,ticket-artifact,original-ticket.md,,
+participant,TICKET,,4,,,,original-ticket.md,,,,ticket-artifact,<prefix>original-ticket.md,,
 participant,CLOG,,5,,,,changelog,,,,external-artifact,docs/<system>/PRDV-XXXXX-changelog.md,,
 participant,STORY,,6,,,,job stories,,,,ticket-artifact,stories/<slug>-job-story-<NN>-<short>.md,,
 participant,COV,,7,,,,coverage-ledger.md,,,,ticket-artifact,investigations/<slug>-coverage-ledger.md,,
@@ -20,6 +20,7 @@ participant,LD,,18,,,,locked-decisions.md,,,,ticket-artifact,specs/<slug>-locked
 participant,SPEC,,19,,,,spec.md,,,,ticket-artifact,specs/<slug>-spec.md,,
 participant,IMPL,,20,,,,implementation-plan.md,,,,ticket-artifact,<slug>-implementation-plan.md,,
 participant,TI,,21,,,,testing-implementation.md,,,,ticket-artifact,testing/<slug>-testing-implementation.md,,
+participant,REV,,22,,,,spec reviewer,,,,actor,,,
 phase,P0,0,0,,,,Capture,,,SKILL.md Phase 0,,,Working,"original-ticket-artifact.md, job-story/SKILL.md, ticket-changelog rule, browser-loop-setup.md when the ticket lives in ClickUp"
 step,P0.ledger,0,10,write,AG,LEDGER,write the ledger,orchestration.md exists with a row per phase and a Resume footer,script,SKILL.md State ledger and resume,,,,
 step,P0.ticket,0,20,write,AG,TICKET,write the original ticket,"original-ticket.md Original Request is the request text unaltered, and the capture source is named - ClickUp page or user-provided text",human,original-ticket-artifact.md,,,,
@@ -53,6 +54,7 @@ step,P3.decisions,3,30,write,AG,LD,write the locked decisions,"locked-decisions.
 step,P3.concerns,3,40,write,AG,CONC,record any risk-accepted decision,a risk-accepted decision has a concern entry that its locked-decision row cites,script,future-development-concerns.md,,,,
 step,P3.accept-stories,3,50,write,AG,STORY,accept the job stories,"every story index row reads accepted, or names the owner of a still-open question",script,job-story/SKILL.md,,,,
 step,P3.spec,3,60,write,AG,SPEC,write the spec,"spec.md exists, links locked-decisions.md rather than repeating it, and cites the stories' acceptance criteria rather than restating or amending them",script,spec-writing rule,,,,
+step,P3.spec-submit,3,65,notify,AG,REV,submit the spec to its reviewer,"the spec - or an addendum when the reviewer already authored the spec - was actually delivered to them, pushed and PR'd where a shared wiki is the review surface rather than only written locally; or recorded not-applicable naming who owns the spec and why no review is owed",human,spec-writing rule,,,,
 step,P3.test-plan,3,70,write,AG,TP,refine the test plan,test-plan.md status reads refined and each assertion maps to a criterion,script,test-plan-artifact.md,,,,
 step,P3.session-log,3,75,write,AG,CLOG,write the changelog session log,"the changelog has a session log entry naming the decisions locked and the spec written, dated in UTC",script,ticket-changelog rule,,,,
 step,P3.advance,3,80,notify,AG,U,notify and hand off to Phase 4,the handoff block was emitted verbatim,human,agent-completion-notification rule,,,,
@@ -60,6 +62,7 @@ phase,P4,4,0,,,,Prep for implementation,,,SKILL.md Phase 4,,,Plan,"the spec, the
 step,P4.impl-plan,4,10,stage,AG,IMPL,stage the implementation plan,"the plan carries ordered steps, each traced to the spec, the report or the test plan AND to an acceptance criterion",human,SKILL.md Phase 4,,,,
 phase,P5,5,0,,,,Implement,,,SKILL.md Phase 5,,,Working,"the approved plan, the test plan, the touched repo's own rules, testing-implementation-artifact.md, pull-request-workflow.md, git-commit-workflow rule, pr-review-patterns.md"
 step,P5.impl-plan,5,10,write,AG,IMPL,write the implementation plan,implementation-plan.md is present in the ticket folder,script,SKILL.md Phase 5,,,,
+step,P5.spec-approved,5,20,read,AG,REV,confirm the reviewer approved the spec,"the reviewer's response is recorded in the ledger with its form and date - a merged PR, a comment, or an explicit go-ahead - or a waiver naming who authorised proceeding without it and what risk that carries; no product code is written while this is unanswered",human,SKILL.md Phase 5,,,,
 step,P5.code,5,30,write,AG,CODE,write the code,"the change is implemented per the approved plan, and the refined test plan was already in place before any code was written",human,build-implementation-guardrails rule,,,,
 step,P5.self-review,5,40,run,AG,CODE,run the self-review checklist,every checklist item was checked against the diff before the tests ran,human,pr-review-patterns.md,,,,
 step,P5.run-tests,5,50,run,AG,CODE,run the test plan scenarios,"every scenario ran and produced an actually observed result - a run, a manual check or a passing suite - never a claim of what should happen",human,test-plan-artifact.md,,,,

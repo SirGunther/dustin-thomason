@@ -21,6 +21,7 @@ docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-test-plan.md
 ## Core rules
 
 - Scenarios are **falsifiable**: each states the setup, the action, and the observable outcome that passes or fails it.
+- **Every manual scenario states the before/after contrast and where the change is observable — including when the answer is "nowhere in the UI".** A falsifiable assertion is not the same as a runnable procedure. A plan can name the right assertion and still be unexecutable by the person holding the keyboard, because it never said what the old behavior was, what the new behavior looks like, or which surface to look at. That gap is worst on backend-only work: the UI is byte-for-byte identical, so an operator told to "upload a file and verify the event" reasonably screenshots the screen that did not change. State it plainly — *"nothing changes in the UI; the evidence is the row in table X"* — and give the **exact command or query** that produces it, ready to paste. If a reviewer expects a screenshot, the plan says what is in frame.
 - Negative paths are first-class — what must fail **visibly** instead of corrupting silently (invalid input, unauthorized caller, concurrent actors, boundary values).
 - The results log follows the verification-gate reporting standard (see the `ticket-changelog` rule): exact gate command, scope, result. "Tests passed" by itself is not sufficient. Gates run serially (`--runInBand` / `--maxWorkers 1`) and are reported for the **final post-change state only**.
 - If a scenario cannot be executed, record it as **blocked** with the reason, residual risk, and follow-up — never silently drop it.
@@ -49,6 +50,37 @@ Status: seeded / refined / in-execution / complete
 ## Edge cases
 
 - [ ] EC-1: <boundary / empty / extreme> → <expected behavior>
+
+## Manual verification (required whenever a human runs a step)
+
+Written so someone who did not build the change can execute it without asking a follow-up question.
+
+**Before / after** — say what changes and, just as importantly, what does not:
+
+| | Before | After |
+| --- | --- | --- |
+| <the user-facing surface> | <old behavior> | <new behavior, or **identical**> |
+| <where the change is actually observable> | <old state> | <new state> |
+
+> If the change is invisible in the UI, say so in one blunt sentence and name the surface that does hold the evidence (a table, a log, a queue, a file). Otherwise the operator screenshots the unchanged screen.
+
+**Preconditions** — services, credentials, seed data, one-time environment setup, and the baseline reading to take *before* acting.
+
+**Steps** — numbered, with the exact URL/route, and any choice that matters called out (which track, which record, which option).
+
+**Evidence** — the exact command or query, paste-ready, plus what should be in frame if a screenshot is expected:
+
+```sql
+-- or shell/HTTP; whatever produces the evidence
+```
+
+**Pass / fail** — per step, both columns:
+
+| Step | Passes | Fails |
+| --- | --- | --- |
+| M-1 | <observed result> | <the specific wrong result, and what it would mean> |
+
+Name which step is load-bearing and why — the one whose failure means the defect is back.
 
 ## Test map
 
