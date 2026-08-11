@@ -1,5 +1,17 @@
 # Why these changes — PRDV-16312
 
+## The scenario
+
+An ops user opens a proceeding in Atlas and uploads a transcript into Client Deliverables. It saves. It shows up in Atlas.
+
+The client logs into Planet Portal and the file is not there. Not delayed — never. Portal has no idea the file exists, and nothing will ever tell it.
+
+The reason is that Portal does not read from Callisto. It keeps its own separate database and answers the client from that copy. So when Callisto saves a deliverable and says nothing, Portal's copy is simply missing a file that exists.
+
+This ticket makes Callisto send the message: *this file now exists, here is its name, here is the track and grouping it belongs to.* Portal writes that into its own copy, and the client sees the file.
+
+**What you would see before and after:** nothing about the upload changes. Same screens, same clicks, same result in Atlas. The only difference is that Callisto now records an announcement in a table called the outbox — one row per upload. That row is the entire change.
+
 ## The class of problem
 
 **Callisto is the writer of record for client deliverables, but nothing downstream is told when one appears.** A file uploaded straight into client deliverables exists in Callisto and is invisible to Planet Portal (Dione), so a client who was given a deliverable cannot reach it.

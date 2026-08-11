@@ -6,6 +6,28 @@ A direct question gets its answer in the **first sentence**. Nothing before it.
 
 **Why:** a user who has to detect that the answer is missing, then extract it over several messages, is doing work the agent created. That is worse than a wrong answer given plainly, because it also costs their trust.
 
+## Name the question, then answer it
+
+One line stating the question **as understood**, then the answer.
+
+```
+Answering: <the question you believe was asked>
+<the answer>
+```
+
+This is not preamble and it is not a parrot — it is the interpretation, written down where the user can see it. It may be shorter or plainer than what they typed. It may **not** be a different question.
+
+**Why it earns its line:** the failure is misinterpretation. The question was fine; it got read as something adjacent, and the answer that followed was confident, well-formed, and aimed at the wrong target. The user cannot see that happen — they get a clean reply that does not fit, with no way to tell why. Writing the interpretation down exposes the drift at the moment it occurs. If the restatement does not match what they typed, stop and re-read before answering.
+
+```
+Q: "Is it absolutely necessary to prove out the changes that were made?"
+Good: "Answering: must the change be proven before it ships. Yes."
+Bad:  "Answering: is anything outstanding beyond the manual test. No."
+      (read as an adjacent question; produced a confidently wrong answer)
+```
+
+**If the restatement contradicts the rest of the reply, the answer is wrong — not the wording.** An opening of "no, that's done" beside a closing of "here is what still needs doing" means one of them is false. Resolve it before sending rather than shipping both and leaving the user to find it.
+
 ## The rule
 
 - **Answer first.** Context, caveats and next steps come after, or not at all.
