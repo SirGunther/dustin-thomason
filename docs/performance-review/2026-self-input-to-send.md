@@ -1,4 +1,19 @@
-# Self-Input — Ready to Send
+# ⛔ REJECTED DRAFT — DO NOT USE, DO NOT SEND
+
+> **Rejected by Dustin on 2026-08-06.** Retained only as a record of what failed. Read [00-HANDOFF-BRIEF.md](./00-HANDOFF-BRIEF.md) before touching anything in this directory.
+>
+> **Why it failed:**
+>
+> 1. **Ghostwritten in Dustin's first-person voice.** He did not write it and would not say it this way. Composing sentences he has to own as his own is out of bounds.
+> 2. **Fabricated admission.** The "one honest note" line about record-keeping came from an aside Dustin made to the agent explaining why the data was thin. It was turned into a confession addressed to his VP. He never said it and it does not belong in the deliverable.
+> 3. **Plans presented as completed work.** The ADB/OJB claims ("I designed…", "On ADB I replaced…", "I ran…") derive from notes written as *objectives in future tense* describing *team* strategy. See handoff brief §6a.
+> 4. **Invented self-characterization** — lines such as "it's the most reliable thing about me" and "Thanks for asking for this" are the agent's words, not his.
+>
+> Content below is unverified. Do not copy from it.
+
+---
+
+## Original draft content (rejected)
 
 *This is the short version: Jim's three questions, answered, and nothing else. Detail lives in [2026-accomplishments.md](./2026-accomplishments.md), which is what you bring to the discussion — not what you send.*
 

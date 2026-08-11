@@ -1,5 +1,14 @@
 # 2026 Accomplishments — Self-Input
 
+> ## ⚠️ AUDIT REQUIRED BEFORE REUSE
+>
+> Read [00-HANDOFF-BRIEF.md](./00-HANDOFF-BRIEF.md) first. The factual inventory here is useful; the attribution is not yet verified.
+>
+> - **§2 (ADB/OJB)** — built from notes written as *objectives in future tense* describing *team* strategy, but rendered as Dustin's completed personal work. Highest-risk section. See handoff brief §6a.
+> - **§8 (Hubble → Nova)** — the Fargate lineage is an agent inference and may contradict what Dustin said about when Fargate was learned. See handoff brief §6c.
+> - **§1 (Nova)** — origin, prototype, cost investigation and beta status are confirmed by Dustin. Some verbs ("designed", "benchmarked") are stronger than the source supports.
+> - **Whole document is written in first person**, which Dustin has rejected as an output form.
+
 **Dustin Thomason** · Prepared for annual review · Draft 2026-07-31
 
 *First person so it can be sent largely as-is. Evidence layer: [2026-sprint-harvest.md](./2026-sprint-harvest.md) (Jan–Jul sprint inventory) and [2026-annual-self-input.md](./2026-annual-self-input.md) (weekly log). Those are reference; this is the communication.*

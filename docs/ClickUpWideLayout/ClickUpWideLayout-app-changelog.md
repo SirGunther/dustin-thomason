@@ -58,20 +58,27 @@ Cross-session implementation memory for the ClickUpWideLayout browser extension.
 
 ## Current State
 
-- `popup.html` exposes `Toggle Extended Layout`, `Copy ID - Title`, and `Copy as Markdown`.
+- The popup uses a minimal SaySlate-inspired visual system: a 312px shell, light/dark palette, inline SVG icons, a top-right theme toggle, and separate Layout, Header, and Task action groups.
+- Each action row keeps only a concise title on the left; all explanatory copy lives in hover/focus tooltips on the 32px controls. Header copy actions remain separate rows, while Task uses one `Full Markdown` row with copy and download controls side by side.
+- Theme preference persists locally under `clickup-wide-layout-theme`; light mode is the safe fallback if local storage is unavailable.
 - `popup.js` owns the active popup copy flow.
 - Existing task copy behavior remains `id - title` plus URL when available.
 - Markdown copy requires `id`, `title`, and resolved task URL; output shape is exactly `# [title - id](url)`.
+- Full task Markdown copy and file export share `prepareCurrentTaskMarkdown()`, so both receive the exact output of `formatTaskExportMarkdown()`. Clipboard output is written as plain text and uses the existing in-page success/failure toast path.
 - Export-to-original-ticket Markdown has draft popup code with live PRDV-14055 DOM selector proof and fast follow-ups for PRDV-style filenames, Created date, omitted fields, and Save As. First Save As manual attempt failed with no saved file; export now uses a data URL and avoids auto-closing the popup. Implementation is not complete until actual popup download retry and existing copy/toggle regressions are validated in Chrome.
 - Toggle layout flow now waits for a background response before the popup closes.
 - `background.js` centralizes toggle state changes and returns `{ ok, enabled }` or `{ ok, error }` for popup requests.
 - `content.js` restores storage-backed enabled state only after `window.__CU_LAYOUT_API__` exists.
-- No package file or automated test harness exists in the extension repo.
+- No package file exists in the extension repo. Focused popup behavior coverage now runs with Node's built-in test runner from `tests/popup-markdown.test.mjs`.
 
 ## Plans
 
 | Date | Plan | Status | Summary |
 | ---- | ---- | ------ | ------- |
+| 2026-08-07 | Move action details into tooltips | implemented | Remove persistent secondary descriptions and combine full-task copy/download into one `Full Markdown` row with two icon actions. |
+| 2026-08-07 | Separate descriptions from icon actions | implemented | Replace text-inside-action buttons with description rows and independent Slate-style icon controls with hover/focus tooltips. |
+| 2026-08-07 | SaySlate-inspired popup refresh | implemented | Restyle the popup with grouped icon actions and a persistent light/dark theme while preserving all existing button ids and behavior. |
+| 2026-08-07 | Copy full ticket Markdown to clipboard | implemented | Add a popup action that copies the exact full-ticket Markdown used by file export and reports success/failure through the existing toast path. |
 | 2026-07-20 | Export ClickUp ticket to original-ticket Markdown | active | Add a popup export action that captures the active ClickUp task via browser DOM, formats the original-ticket Markdown artifact, and downloads `{ticket-id}-original-ticket.md`. |
 | 2026-07-14 | Fix toggle UI sync | implemented | Make popup toggle wait for background completion; centralize toggle state/apply logic; move content storage restore after API creation. |
 | 2026-07-01 | Add Markdown copy button | implemented | Share popup task lookup and clipboard helpers; add Markdown heading-link copy action requiring URL. |
@@ -82,6 +89,120 @@ Cross-session implementation memory for the ClickUpWideLayout browser extension.
 - 2026-07-01: Rejected fallback `# ${title} - ${id}` when URL is missing; requirement only supports heading link Markdown.
 
 ## Session Log
+
+### 2026-08-07T20:43:23Z - ClickUpWideLayout
+
+- Summary: Simplified the popup again by removing every persistent secondary description. Layout and Header retain concise row titles with their explanatory text moved into tooltips. Task is now one `Full Markdown` row with adjacent copy and download controls, each carrying its own accessible tooltip.
+- Plan used: Plans table -> `Move action details into tooltips`.
+- Files/areas:
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\popup.html`: removed `action-detail` text, refined tooltip language, and combined the two Task rows into one title with copy/download actions.
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\popup.css`: tightened rows from 56px to 50px and added a small side-by-side action-control group.
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\tests\popup-markdown.test.mjs`: updated contracts for tooltip-only details and the single two-action Task row.
+  - `docs/ClickUpWideLayout/tickets/export-clickup-ticket-to-markdown/testing/export-clickup-ticket-to-markdown-test-plan.md`: aligned tooltip and combined-row scenarios.
+- User-visible impact: The menu now shows only `Extended layout`, `ID + title`, `Markdown link`, and `Full Markdown`. Explanations appear on hover/focus, and full-ticket copy/save live together in one row.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | tests | `node --test tests/popup-markdown.test.mjs` | Tooltip-only details, single Task row/two controls, themes, Markdown parity, clipboard failure | pass - 6 tests | Loaded-extension interaction remains recommended after reload. |
+  | syntax | `node --check popup.js; node --check theme.js; node --check content.js; node --check background.js` | Popup/theme and neighboring extension scripts | pass | - |
+  | manifest | `Get-Content -Raw manifest.json \| ConvertFrom-Json` | Existing extension manifest | pass | - |
+- Tests added/updated: The popup structure test now proves no `action-detail` or embedded button label remains, tooltip wording contains each former explanation, and the Task section has exactly one row with two controls.
+- Visual verification: Headless Edge light/dark and hovered-copy renders at 312px confirmed an unclipped 391px-high popup, one Task row, two Task controls, readable spacing, and an inward-aligned `Copy complete task contents` tooltip.
+- Regression impact: Button ids/listeners and all copy/download payloads are unchanged. Theme persistence, layout toggle, Save As, status messages, and in-page toasts remain intact.
+- API docs: Not relevant - browser-extension popup markup/styling only; manifest permissions and ClickUp host scope are unchanged.
+- Tooling gates: `npm` lint/audit remain unavailable because the extension has no `package.json`; Node tests, syntax checks, manifest parsing, and headless visual inspection are the applicable gates.
+
+### 2026-08-07T19:59:35Z - ClickUpWideLayout
+
+- Summary: Refined the popup interaction model so descriptive content and actions are visually separate. Every Layout/Header/Task item is now a full-width description row with title/detail text on the left and an independent toolbar-style icon button on the right. The three copy operations share the familiar Slate copy glyph; save and layout remain visually distinct. All action and theme controls expose custom hover/focus tooltips.
+- Plan used: Plans table -> `Separate descriptions from icon actions`.
+- Files/areas:
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\popup.html`: converted compact text buttons into semantic description rows with separate icon-only actions, accessible labels, and tooltip text.
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\popup.css`: replaced button-grid styling with spaced rows, separators, 32px toolbar controls, and viewport-safe custom tooltips.
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\popup.js`: keeps the theme tooltip synchronized with the active mode.
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\tests\popup-markdown.test.mjs`: updated structural/accessibility assertions for description-before-action ordering, shared copy glyphs, tooltips, and unchanged behavior.
+  - `docs/ClickUpWideLayout/tickets/export-clickup-ticket-to-markdown/testing/export-clickup-ticket-to-markdown-test-plan.md`: added row/action separation and tooltip validation.
+- User-visible impact: Users now read what each item represents on the left, then click a small, clearly separate action on the right. The interface has more breathing room without hiding meaning inside buttons.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | tests | `node --test tests/popup-markdown.test.mjs` | Description/action separation, icon/tooltips, themes, exact Markdown parity, clipboard failure | pass - 6 tests | Loaded-extension interaction remains recommended after reload. |
+  | syntax | `node --check popup.js; node --check theme.js; node --check content.js; node --check background.js` | Popup/theme logic and neighboring extension scripts | pass | - |
+  | manifest | `Get-Content -Raw manifest.json \| ConvertFrom-Json` | Existing extension manifest | pass | - |
+- Tests added/updated: Reworked the popup structure test to prove each description precedes its icon action, all three copy controls use the shared glyph, no visible label is embedded inside an action button, and tooltips appear for hover and keyboard focus.
+- Visual verification: Headless Edge renders at the final 312px width confirmed 56px rows, 32px controls, complete unclipped light/dark layouts, correct row separators, and an inward-aligned `Copy ID + title` hover tooltip. Total content height is 471px, within Chrome's popup limit.
+- Regression impact: Button ids/listeners, clipboard payloads, shared full-ticket formatter, Save As flow, layout toggle, theme persistence, status messages, and in-page toasts are unchanged.
+- API docs: Not relevant - browser-extension popup markup and styling only; manifest permissions and host scope are unchanged.
+- Tooling gates: `npm` lint/audit remain unavailable because the extension has no `package.json`; Node tests, syntax checks, manifest parsing, and headless visual inspection are the applicable gates.
+
+### 2026-08-07T17:55:34Z - ClickUpWideLayout
+
+- Summary: Refreshed the ClickUpWideLayout popup using SaySlate's minimal visual language. Added a compact brand header, persistent sun/moon theme toggle, light and Cursor-inspired dark palettes, inline SVG action icons, and distinct Layout, Header, and Task groups. Repeated subject prefixes moved into section headings so the individual actions remain concise.
+- Plan used: Plans table -> `SaySlate-inspired popup refresh`.
+- Files/areas:
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\popup.html`: replaced the flat button list with the grouped, accessible icon-led popup structure.
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\popup.css`: added the SaySlate-derived light/dark tokens, compact card/button styling, focus states, and reduced-motion handling.
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\theme.js`: added pre-render theme restoration with a safe light fallback.
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\popup.js`: added theme toggle/persistence logic, preserved SVG button contents during async operations, and routed popup status through themed classes.
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\tests\popup-markdown.test.mjs`: added grouped-markup, palette, theme persistence/bootstrap, and storage-failure coverage while retaining copy/export contracts.
+  - `docs/ClickUpWideLayout/tickets/export-clickup-ticket-to-markdown/testing/export-clickup-ticket-to-markdown-test-plan.md`: added the theme and grouped-action scenarios/results.
+- User-visible impact: The popup now presents three small sections with icon-led actions, a clearer visual hierarchy, and a top-right sun/moon control. Light mode uses the SaySlate off-white/green palette; dark mode uses its `#181818`/blue-gray palette and reopens in the last selected mode.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | tests | `node --test tests/popup-markdown.test.mjs` | Grouped icon UI, theme tokens/toggle/bootstrap/fallback, exact Markdown parity, clipboard failure | pass - 6 tests | Loaded-extension visual review remains recommended after reload. |
+  | syntax | `node --check popup.js; node --check theme.js; node --check content.js; node --check background.js` | New theme bootstrap, changed popup logic, neighboring scripts | pass | - |
+  | manifest | `Get-Content -Raw manifest.json \| ConvertFrom-Json` | Existing popup permissions and extension manifest | pass | - |
+- Tests added/updated: Extended the Node VM harness to cover theme persistence, saved-theme restoration before render, local-storage failure fallback, exact palette tokens, native-button appearance reset, grouping, icons, and all existing full-task Markdown behavior.
+- Visual verification: Headless Edge rendered the popup at its 296px content width in both modes. Light and settled dark screenshots were inspected; grouping, wrapping, spacing, icon contrast, and the final dark button colors were correct. An initial screenshot taken during the 140ms theme transition briefly showed intermediate button colors; a settled render confirmed the responsible CSS rule resolves to dark surface `rgb(29, 31, 29)` and muted light text.
+- Regression impact: Existing button ids and listeners are unchanged. Header/task clipboard payloads, shared full-ticket formatter, Save As flow, layout toggle messaging, and in-page toasts remain behaviorally identical. The manifest needs no new permissions.
+- API docs: Not relevant - MV3 popup presentation and local theme preference only; manifest permissions and ClickUp host scope are unchanged.
+- Tooling gates: `npm` lint/audit remain unavailable because the extension has no `package.json`; Node tests, syntax checks, manifest parsing, and headless visual inspection are the applicable gates.
+
+### 2026-08-07T17:43:06Z - ClickUpWideLayout
+
+- Summary: Cleaned up the popup action labels so each operation leads with the content it affects. Header-only copies now start with `Header:` and full-ticket operations start with `Task:`, making the distinction visible before the repeated Copy/Markdown wording.
+- Plan used: Follow-up UI clarity cleanup for the implemented full-ticket Markdown copy action.
+- Files/areas:
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\popup.html`: renamed the four copy/save actions with subject-first labels.
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\tests\popup-markdown.test.mjs`: extended popup markup coverage to lock the four labels and their task copy/save ordering.
+- User-visible impact: The popup now reads `Header: Copy ID + Title`, `Header: Copy Markdown Link`, `Task: Copy Markdown`, and `Task: Save Markdown`, so users can distinguish header snippets from the complete task before reading the operation.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | tests | `node --test tests/popup-markdown.test.mjs` | Subject-first labels, action ordering, exact download/copy parity, and clipboard toasts | pass - 3 tests | Live visual review still requires reloading the unpacked extension. |
+  | syntax | `node --check popup.js; node --check content.js; node --check background.js` | Popup and neighboring extension scripts | pass | - |
+  | manifest | `Get-Content -Raw manifest.json \| ConvertFrom-Json` | Existing extension manifest | pass | - |
+- Tests added/updated: Extended the existing popup action test with exact label assertions; no new test case was needed because behavior is unchanged.
+- Regression impact: Button ids, event bindings, clipboard payloads, formatter sharing, download behavior, and toast messages are unchanged; only user-visible labels changed.
+- API docs: Not relevant - label-only browser-extension UI change; manifest permissions and host scope are unchanged.
+- Tooling gates: `npm` lint/audit remain unavailable because the extension has no `package.json`; Node tests and syntax checks are the available executable gates.
+
+### 2026-08-07T17:36:00Z - ClickUpWideLayout
+
+- Summary: Added `Copy Task Markdown` to the popup. The copy and download actions now share one task collection/formatting helper, and the new action writes the full original-ticket Markdown as plain text so clipboard content is byte-for-byte identical to the saved document.
+- Plan used: Plans table -> `Copy full ticket Markdown to clipboard`, implemented as a narrow follow-up to the active export plan.
+- Files/areas:
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\popup.html`: added the new popup action beside the existing Markdown operations.
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\popup.js`: added the copy coordinator, shared `prepareCurrentTaskMarkdown()` path, plain-text clipboard handling, and success/failure toast messages.
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\tests\popup-markdown.test.mjs`: added focused success and clipboard-denial regression coverage.
+  - `docs/ClickUpWideLayout/tickets/export-clickup-ticket-to-markdown/testing/export-clickup-ticket-to-markdown-test-plan.md`: added the full-ticket clipboard scenarios and automated results.
+- User-visible impact: A task's complete exported Markdown can now be copied directly from the popup without downloading and reopening the file. Success shows `Copied task Markdown.`; clipboard denial shows the existing `Clipboard blocked. Try again.` toast.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | tests | `node --test tests/popup-markdown.test.mjs` | Popup action wiring, exact download/copy parity, plain-text clipboard behavior, success toast, clipboard-denial toast | pass - 3 tests | Live popup clipboard permission behavior still requires a loaded-extension check. |
+  | syntax | `node --check popup.js; node --check content.js; node --check background.js` | Changed popup plus neighboring content/background scripts | pass | - |
+  | manifest | `Get-Content -Raw manifest.json \| ConvertFrom-Json` | Existing extension manifest and clipboard/download permissions | pass | - |
+- Tests added/updated: Added a Node VM popup harness that clicks both real popup handlers and asserts decoded download text equals clipboard text exactly; it also asserts the shared clipboard failure toast.
+- Regression impact: Existing `Copy ID - Title` and heading-link `Copy as Markdown` still use rich-plus-plain clipboard payloads. Only the new full-ticket action takes the plain-text-only branch; download formatting, DOM collection, layout toggling, and manifest permissions are unchanged.
+- API docs: Not relevant - this is an MV3 popup-only change; `manifest.json` permissions and ClickUp host permission were checked and are unchanged.
+- Tooling gates: `npm` lint/audit are not applicable because the extension has no `package.json`; Node syntax and built-in tests are the available executable gates.
 
 ### 2026-07-20T18:19:25-04:00 - ClickUpWideLayout
 

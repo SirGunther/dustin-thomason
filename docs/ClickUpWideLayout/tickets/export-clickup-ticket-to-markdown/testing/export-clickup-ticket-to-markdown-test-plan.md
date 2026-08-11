@@ -8,7 +8,7 @@ Live ClickUp DOM inspection passed for PRDV-14055 after Chrome was launched with
 
 ## Scope and surfaces under test
 
-- Popup export action, active ClickUp task DOM collection, original-ticket Markdown formatting, PRDV-style filename generation, Save As download prompt, omitted-field reporting, visible activity/comment/threaded-reply capture, attachment/media omission, and regression coverage for existing popup copy/toggle actions.
+- Popup export and full-ticket copy actions, active ClickUp task DOM collection, original-ticket Markdown formatting, PRDV-style filename generation, Save As download prompt, exact clipboard parity, shared copy toasts, omitted-field reporting, visible activity/comment/threaded-reply capture, attachment/media omission, and regression coverage for existing popup copy/toggle actions.
 
 ## Happy path
 
@@ -17,6 +17,9 @@ Live ClickUp DOM inspection passed for PRDV-14055 after Chrome was launched with
 - [ ] HP-3: Task id renders with leading `#` -> exported filename strips the `#` and still ends with `-original-ticket.md`.
 - [ ] HP-4: Task has visible activity and comments -> generated Markdown includes `## Activity And Comments` with visible activity rows, top-level comments, author/timestamp labels, and readable comment body Markdown.
 - [ ] HP-5: Task has visible threaded replies -> export opens the visible thread, captures replies as nested bullets under the parent comment, then returns the ClickUp page to the normal activity stream.
+- [x] HP-6: Click `Copy Task Markdown` -> clipboard plain text is byte-for-byte identical to the Markdown passed to the download action and a `Copied task Markdown.` toast appears.
+- [x] HP-7: Toggle light/dark mode -> the palette and sun/moon icon switch immediately, the selection persists, and a new popup restores the saved mode before rendering.
+- [x] HP-8: Hover or keyboard-focus an action icon -> a concise tooltip identifies the action without moving the description into the button.
 
 ## Negative paths
 
@@ -26,6 +29,8 @@ Live ClickUp DOM inspection passed for PRDV-14055 after Chrome was launched with
 - [ ] NP-4: Metadata/custom fields are not visible -> export succeeds and omits the empty metadata table.
 - [ ] NP-5: Download helper throws, Chrome blocks Save As, or user cancels -> popup shows a visible error and no misleading success message.
 - [ ] NP-6: Activity stream is hidden or absent -> export succeeds with the no-visible-activity placeholder.
+- [x] NP-7: Clipboard write is denied -> no content is reported as copied and the existing `Clipboard blocked. Try again.` toast appears.
+- [x] NP-8: Theme storage is unavailable -> popup still renders in the safe light theme and the current-popup toggle remains usable.
 
 ## Edge cases
 
@@ -38,6 +43,10 @@ Live ClickUp DOM inspection passed for PRDV-14055 after Chrome was launched with
 - [ ] EC-6: Live ClickUp task with custom fields visible -> visible custom field labels/values appear in Ticket Metadata, or missing fields are recorded as validation risk.
 - [ ] EC-7: Comment contains attachments/images/video -> exported comment keeps text but replaces attachment/media DOM with `[Attachment omitted]`; no attachment URL/file bytes are fetched or downloaded.
 - [ ] EC-8: Comment mentions render as ClickUp JavaScript links -> exported Markdown keeps visible mention text and does not emit `javascript:` links.
+- [x] EC-9: Full task copy uses a plain-text clipboard write -> rich clipboard formatting cannot change the Markdown when pasted into a rich editor.
+- [x] EC-10: Popup actions are grouped under Layout, Header, and Task with concise row descriptions -> users can distinguish content scope without repeated prefixes on every button.
+- [x] EC-11: Each item renders a concise title before a separate right-aligned icon-only control -> the target and action remain visually distinct while details stay in tooltips.
+- [x] EC-12: Task renders one `Full Markdown` row with copy and download controls side by side -> duplicate task descriptions are removed without merging the two operations.
 
 ## Test map
 
@@ -47,6 +56,7 @@ Live ClickUp DOM inspection passed for PRDV-14055 after Chrome was launched with
 | ClickUpWideLayout | `node --check popup.js` | popup script syntax |
 | ClickUpWideLayout | `node --check content.js` | injected content script syntax |
 | ClickUpWideLayout | `node --check background.js` | background service worker syntax |
+| ClickUpWideLayout | `node --test tests/popup-markdown.test.mjs` | grouped icon UI, theme persistence/bootstrap/fallback, shared formatter path, exact download/copy parity, success/failure toasts |
 | ClickUpWideLayout | generated Markdown file inspection | original-ticket template shape and visible field preservation |
 
 ## Gates
@@ -56,6 +66,7 @@ Live ClickUp DOM inspection passed for PRDV-14055 after Chrome was launched with
 | syntax | `node --check popup.js` |
 | syntax | `node --check content.js` |
 | syntax | `node --check background.js` |
+| tests | `node --test tests/popup-markdown.test.mjs` |
 | manual | Reload unpacked extension in Chrome and validate on a live ClickUp task |
 
 ## Results log (filled at execution)
@@ -80,3 +91,7 @@ Live ClickUp DOM inspection passed for PRDV-14055 after Chrome was launched with
 | 2026-07-20 | syntax | `node --check content.js` | Existing injected content API and layout behavior after activity/comment changes | pass | - |
 | 2026-07-20 | syntax | `node --check background.js` | Existing background service worker after activity/comment changes | pass | - |
 | 2026-07-20 | HP-1..HP-5, NP-1..NP-6, EC-3..EC-8 | Reload unpacked extension in Chrome and use popup | Actual popup download, activity/comment output, attachment omission, and existing button regression | pending | Live DOM and formatter gates passed, but actual popup click/download behavior and existing copy/toggle regression still require manual validation in Chrome with the unpacked extension loaded. |
+| 2026-08-07 | HP-6, NP-7, EC-9 | `node --test tests/popup-markdown.test.mjs` | Popup action wiring, full-ticket clipboard parity, plain-text write, success toast, clipboard-denial toast | pass | 3 tests passed; loaded-extension clipboard permission behavior remains a manual check. |
+| 2026-08-07 | HP-7, NP-8, EC-10 plus clipboard regression | `node --test tests/popup-markdown.test.mjs` | Grouped icon UI, light/dark tokens, toggle persistence, saved-theme bootstrap, storage fallback, full-ticket copy/export behavior | pass | 6 tests passed; headless Edge light/dark renders were also inspected at 296px content width. |
+| 2026-08-07 | HP-8, EC-11 plus behavior regression | `node --test tests/popup-markdown.test.mjs` | Description-before-action rows, shared copy glyphs, icon-only controls, hover/focus tooltips, themes, Markdown copy/export | pass | 6 tests passed; full light/dark renders and a hovered tooltip were inspected at the final 312px width. |
+| 2026-08-07 | EC-11, EC-12 plus behavior regression | `node --test tests/popup-markdown.test.mjs` | Tooltip-only details, four persistent titles, one Task row/two controls, themes, Markdown copy/export | pass | 6 tests passed; light/dark and hovered-copy renders confirmed a 391px popup with correct spacing. |
