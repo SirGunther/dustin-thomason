@@ -143,7 +143,7 @@ The capability was never built — PRDV-16293 delivered the carrier and stopped 
 | Criterion | Status | What closes it |
 | --- | --- | --- |
 | AC1 routekey written on success | **covered** | Contract already registered; writer resolves it |
-| AC2 payload matches the type | **needs proof** | Port is `Record<string, unknown>` — no compile-time guard. Spec must choose the enforcement seam (OV-2) |
+| AC2 payload matches the type | **demonstrated 2026-08-10** — all 16 fields observed in a live `outbox_events` row from a real upload. The port remains `Record<string, unknown>` with no compile-time guard, so the converter's ODP return type (LD-013) is what holds the shape going forward | — |
 | AC3 `deliverableCollectionValue` populated created-or-existing | **covered** | Assembler returns `value` on all three paths (found / created / race-loser) |
 | AC4 null for Exhibits/MVC | **needs proof** | Those tracks pass no collection; assert the null branch explicitly |
 | AC5 unit tests on the TS | **covered** | Existing spec file; add emission assertions |

@@ -2,6 +2,27 @@
 
 Source: `agents/docs/**`. Regenerate with `.\agents\scripts\sync-rules.ps1`.
 
+## README.md
+
+# Cursor docs (playbooks)
+
+**Unsure what to `@`?** → [workflow-index.md](./workflow-index.md) (or type `@workflow-index`).
+
+| Task | `@` this file |
+| ---- | ------------- |
+| New agent on a ticket (optional) | [session-start.md](./session-start.md) |
+| New branch / ticket | [new-branch-get-started.md](./new-branch-get-started.md) |
+| Open PR | [pull-request-workflow.md](./pull-request-workflow.md) |
+| Wiring audit | run `scripts/validate-workflows.ps1` |
+
+Ticket changelogs live in **`docs/<system>/PRDV-XXXXX-changelog.md`**; personal projects use **`docs/<project>/*-changelog*`**. Not under `.cursor/docs/`.
+
+**Personal rules load automatically** when `dustin-thomason` is in the workspace — including while you edit Callisto/Atlas. Agents **resolve and read** the canonical changelog at **task start** for substantive work ([ticket-changelog.mdc](../rules/ticket-changelog.mdc)). Say *“write a spec”* or *“commit”*; do **not** copy rules into app repos. Router: `personal-methodology.mdc`.
+
+**`@` the changelog** on a new agent thread is **optional** but helpful when several tickets or repos are open.
+
+**Multi-root:** [workflow-index.md](./workflow-index.md#multi-root-workspace-callisto--dustin-thomason)
+
 ## browser-loop-setup.md
 
 # Browser-loop setup (dustin-thomason)
@@ -760,27 +781,6 @@ This workflow is done when:
 - Open questions contain only genuinely unresolved variables.
 - The agent can proceed without re-asking answered questions.
 
-## README.md
-
-# Cursor docs (playbooks)
-
-**Unsure what to `@`?** → [workflow-index.md](./workflow-index.md) (or type `@workflow-index`).
-
-| Task | `@` this file |
-| ---- | ------------- |
-| New agent on a ticket (optional) | [session-start.md](./session-start.md) |
-| New branch / ticket | [new-branch-get-started.md](./new-branch-get-started.md) |
-| Open PR | [pull-request-workflow.md](./pull-request-workflow.md) |
-| Wiring audit | run `scripts/validate-workflows.ps1` |
-
-Ticket changelogs live in **`docs/<system>/PRDV-XXXXX-changelog.md`**; personal projects use **`docs/<project>/*-changelog*`**. Not under `.cursor/docs/`.
-
-**Personal rules load automatically** when `dustin-thomason` is in the workspace — including while you edit Callisto/Atlas. Agents **resolve and read** the canonical changelog at **task start** for substantive work ([ticket-changelog.mdc](../rules/ticket-changelog.mdc)). Say *“write a spec”* or *“commit”*; do **not** copy rules into app repos. Router: `personal-methodology.mdc`.
-
-**`@` the changelog** on a new agent thread is **optional** but helpful when several tickets or repos are open.
-
-**Multi-root:** [workflow-index.md](./workflow-index.md#multi-root-workspace-callisto--dustin-thomason)
-
 ## session-start.md
 
 # Session start (optional)
@@ -1392,13 +1392,13 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 
 | Doc | About |
 | --- | ----- |
+| `README.md` | Cursor docs (playbooks) |
 | `browser-loop-setup.md` | Browser-loop setup (dustin-thomason) |
 | `cleanup-candidates.md` | Cleanup candidates — archive and consolidation ledger |
 | `current-vs-target-diagram.md` | Current vs Target diagram — a single-diagram delta convention |
 | `new-branch-get-started.md` | Start a new branch |
 | `pull-request-workflow.md` | Pull request workflow (reference) |
 | `qa-to-spec-traceability.md` | Q and A to Spec Traceability |
-| `README.md` | Cursor docs (playbooks) |
 | `session-start.md` | Session start (optional) |
 | `ticket-changelog-workflow.md` | Ticket changelog workflow |
 | `wiki-spec-authoring.md` | Wiki spec authoring (Callisto / Atlas) |

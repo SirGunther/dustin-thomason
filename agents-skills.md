@@ -22,6 +22,120 @@ At a minimum, 3 sections:
 2. **Current behavior:** include if this question contains functionality already present in some way
 3. **My recommended answer:**
 
+## investigation/SKILL.md
+
+---
+name: investigate
+description: The method for investigating a problem and its proposed fix before committing to it — in any domain (software, workflow, policy, process, etc.). Ground in real instances, classify the problem, lock acceptance criteria, trace why it exists, re-confirm the class, then stress-test the solution against scale, generalization, and fit. Emits an Investigation Report (see the investigation-report template): verdict, problem class, assumptions-to-test, a happy/negative validation plan, recommendation with gates, and open variables to collect. Use when scoping a change, validating assumptions, writing a spec, or when the user says "investigate".
+---
+
+Investigate this problem and any proposed solution until we understand it well enough to act on it. Work down the tree one question at a time, and for each question give your recommended answer.
+
+Before proceeding, tell the user they need to place the agent in Plan mode first. The investigation plan must address every point in every section below. Nothing can be left out: if a point is not resolved immediately, record where and when it will be resolved, and carry it into the Investigation Report / handoff so every section remains covered when referenced later.
+
+The steps below are ordered by dependency: each locks in something the next step needs. Getting an early step wrong creates churn in every step after it — so don't skip ahead, and when a checkpoint flips an earlier answer, go back and redo the dependents before proceeding.
+
+## Standing disciplines (apply from the first sentence, not a later phase)
+
+- **Evidence first.** If a question can be answered by gathering evidence yourself, do that instead of asking. Only ask me what the evidence can't tell you.
+- **Maintain the coverage ledger.** Consult prior coverage ledgers before opening an investigative branch, and record coverage (area, items inspected, findings, status, commit) as you traverse — per `docs/investigation-coverage-ledger.md`.
+- **Every claim falsifiable.** Write each claim — including problem statements and classifications — so it could be refuted, then go look for the refutation. Log each into the assumptions ledger as you make it, not retroactively.
+- **Log unknowns as they surface — and route them by how they resolve.** A **fact to be discovered** (an answer already exists in the code / source text / observed behavior) goes to the assumptions ledger and you resolve it by evidence, *now* — never park a discoverable fact as an "open variable for discussion," which quietly excuses not going to find the answer. A **decision to be made** (resolved only by an owner choosing — scope, product, ownership, a change to the current structure) goes to the open-variables list with an owner. If one item has both halves, split it: discover the fact, isolate the decision. This axis is domain-agnostic — *fact-to-discover vs decision-to-make*; on a software ticket it lands as *code vs workflow*, on policy as *source-text/precedent vs judgment call*.
+- **Offer candidates cheaply, drop misses without ceremony.** Never defend a bad instance or framing.
+- **Push back on my framing for real.** If I say I'm sure, probe it. Agreement-by-default wastes the exercise.
+
+## Step 1 — Collect the raw facts (ground downward first)
+
+Instances come before classification: they are the evidence a classification is built from. Classifying first invites finding only the instances that fit.
+
+- Name real instances: specific people or cases, blocked right now, on real tasks. No named instance = no confirmed problem; say so.
+- State the problem in one plain sentence a stranger could confirm or deny. Enumerate the distinct problems separately — don't merge them.
+- Establish urgency: the date or trigger event when this bites next. "Eventually" doesn't count.
+- Run the **Problem Check** lens (`docs/problem-check.md`) on the problem as stated — **every investigation, not just transcripts**. It surfaces what's being **conflated** (usually several distinct problems treated as one → separate them, per the bullet above), asked-vs-answered drift, **thin** terms, and internal contradictions ("off"). Feed its findings into Step 2 (class) and the assumptions ledger / open variables. When the evidence includes a transcript or live discussion, also extract the explicit **decisions** made.
+
+## Step 2 — Classify the problem (provisional, from the instances)
+
+The highest-leverage call in the investigation — everything downstream is checked against it — but it stays *provisional* until Step 4 confirms it against root-cause evidence.
+
+- Note the class the request *assumes* — the category implied by how it was framed.
+- Derive the class from the instances in Step 1, not from the request's framing. Are we looking at the class, or a symptom of a different class?
+- If they differ, **stop and flag it loudly** — a reclassification is a major finding, not a footnote. (Example: a request framed as "data access — who can reach which systems" may really be a knowledge-management problem — where the data lives and how people discover it. Same symptoms, different class, completely different solution.)
+- State what the class implies for the solution space.
+- Only now find the wedge: the smallest issue *within the class* that forces the space open and stays reusable. A theme is not a project. The wedge depends on the class — if the class later flips, the wedge is redone.
+
+## Step 3 — Lock the contract before any solutioning
+
+Acceptance criteria are part of the problem definition, not the solution. Define what "done" is judged against before proposing anything, or the stress-test has no target.
+
+- List the acceptance criteria — each one checkable.
+- List the non-goals: what this explicitly does *not* cover. This is what prevents scope churn later.
+- Note any framing drift beyond the class — other ways the question has shifted from the original ask.
+
+## Step 4 — Trace why it exists, then re-check the class
+
+- Trace the problem to its origin. Gather evidence from the primary source before asking me. Confirm or revise each assumption against that evidence, not against what the request claims.
+- **Checkpoint:** re-confirm the classification against the root-cause evidence. Reclassifications most often emerge *here*, not at first glance. If the class flips, go back and redo the wedge and acceptance criteria before proceeding — that redo is cheap now and churn everywhere after.
+
+## Step 5 — Propose, compare, and stress-test the solution
+
+Propose a solution if there isn't one. Record the alternatives you considered and why each was rejected — future discussions will ask "why didn't we just X?" and this report should already answer it. Then test the chosen solution against:
+
+- **The confirmed class** — does it solve the class of problem (not the assumed class, not just this occurrence)?
+- **The acceptance criteria** — cover each: covered / needs proof / documented / gap, and what closes it.
+- **Scale** — will it hold up as scope, volume, or the number of people and cases involved grows?
+- **Generalization** — should this be abstracted, or is that overreach? The fix must be no simpler than it needs to be and no more complex than it needs to be.
+- **Fit** — does it follow established practice and integrate cleanly with the existing system, its conventions, and its philosophy?
+- **Adjacent issues** — if you surface related problems, is it lower effort to resolve them now or to spin off a follow-up? State the tradeoff.
+- **Sufficiency** — does it cover the pain that convened this, or only a corner of it?
+- **Feedback speed** — how fast will reality tell us we're wrong? Flag slow-feedback work.
+- **Actor / action / moment** — for any capability, who is asking what, and when. Kill vague capabilities.
+- **The flip side** — narrate the 30-second happy-path story of the solved world: who does what, and without whom.
+
+## Step 6 — Build the validation plan
+
+- **Happy path:** the sequence that should work, step by step.
+- **Negative / inferred paths:** prove the problem isn't leaking in from, or out to, somewhere we haven't modeled. What must fail *visibly* instead of corrupting silently; limit and threshold breaches; removed dependencies proven non-required; timing/latency bounds that must hold.
+
+## Step 7 — Reconcile open questions against the evidence (facts resolved, decisions isolated)
+
+Before emitting, take every open question the investigation surfaced and run it back through the evidence one more time. This is the ambiguity re-check: a question is only allowed to stay open if it is a genuine decision, not an un-investigated fact. It comes *after* the prime investigation because you now know which questions actually survived.
+
+- **Classify each open question** on the fact-vs-decision axis (Standing disciplines): is the answer discoverable in the evidence (code / source / observed behavior), or is it a decision for an owner? An item with both halves is split.
+- **Resolve the discoverable ones now** — trace the code, read the source, observe the behavior — and move each to the assumptions ledger with its finding. Do not carry a fact you could have found into the handoff as a question, and do not bring it to me to "decide" when the codebase already answers it.
+- **For a question the current structure genuinely cannot answer, prove it** — cite the specific code or structure that shows *why* it is unanswerable as-is: the missing seam, the absent field, the state the system cannot distinguish. "We don't know" is not acceptable; "here is the evidence that the current implementation cannot tell us, so this is a decision or a change, not a lookup" is.
+- **What remains in open variables after this pass is only true decisions**, each with an owner.
+
+## Step 8 — Emit the Investigation Report
+
+Record everything into an Investigation Report (copy the template to `docs/investigations/<id>-<slug>.md`). The report is the deliverable — the results of investigating, not a plan to investigate. Its reading order leads with the verdict; you write the verdict last.
+
+- **Verdict (bottom line up front)** — disposition (proceed / proceed with conditions / blocked / rejected / needs more investigation), one-paragraph summary, the strongest path forward, and — explicitly — what this is *not* yet (e.g. "viable, but not a production approval").
+- **Problem class** — assumed class, confirmed class, whether it was reframed and at which step. The load-bearing finding.
+- **Problem statement, acceptance criteria, non-goals** — from Steps 1 and 3.
+- **What changed** — how the question shifted since the request was created; a reclassification is the most important kind of shift, so lead with it if it happened.
+- **Why it exists** — origin and evidence, plus the class re-check outcome.
+- **Alternatives considered** — each rejected option and the reason.
+- **Solution & stress-test** — including the acceptance-criteria coverage table.
+- **Assumptions ledger** — every falsifiable claim with status (open / confirmed / confirmed directionally / revised / refuted) and how to confirm or revise it. "Confirmed directionally" still owes proof of performance, accuracy, and parity.
+- **Validation plan** — happy path and negative paths, from Step 6.
+- **Decisions and recommendation with gates** — what we settled; what to do in order; what proceeds first and what stays gated behind which proof or artifact.
+- **Open variables to collect** — the unknowns logged along the way, each with an owner where possible.
+- **Handoff table** — action / owner / done-when, each done-when falsifiable.
+
+Don't finish until you can answer all of these: the confirmed problem class (and any reframing from the original ask, with the step where it flipped), the problem in one plain sentence, a named blocked instance, the date it bites next, the wedge and why it's reusable, the acceptance criteria and non-goals, the 30-second happy-path story, the metric that proves it works and how fast it arrives, the verdict and disposition, owners for the open variables, and the tracked action with a falsifiable done-when.
+
+---
+
+## Contextual branches
+
+This procedure is domain-agnostic. "Gather evidence from the primary source" resolves differently by context — follow the branch that fits:
+
+- **Software** — search the codebase for evidence and trace the defect to its origin in code. Add a frontend lens where relevant: should we change how it behaves, how it looks, or both?
+- **Workflow / process** — read the process as documented, talk to the people who actually run it, and watch where it breaks in practice.
+- **Policy** — read the source text and precedent; check how it's applied versus how it's written.
+
+Other domains plug in their own evidence source the same way.
+
 ## investigation/docs/investigation-coverage-ledger.md
 
 # Investigation coverage ledger — the visited-state map
@@ -734,120 +848,6 @@ sequenceDiagram
 | Step 5 → Step 3 | a criterion has no coverage | the criterion, or the solution that was supposed to meet it |
 | Step 7 → Step 1 | an open question turns out discoverable | trace it now; it becomes an assumption with a finding, not a question |
 
-## investigation/SKILL.md
-
----
-name: investigate
-description: The method for investigating a problem and its proposed fix before committing to it — in any domain (software, workflow, policy, process, etc.). Ground in real instances, classify the problem, lock acceptance criteria, trace why it exists, re-confirm the class, then stress-test the solution against scale, generalization, and fit. Emits an Investigation Report (see the investigation-report template): verdict, problem class, assumptions-to-test, a happy/negative validation plan, recommendation with gates, and open variables to collect. Use when scoping a change, validating assumptions, writing a spec, or when the user says "investigate".
----
-
-Investigate this problem and any proposed solution until we understand it well enough to act on it. Work down the tree one question at a time, and for each question give your recommended answer.
-
-Before proceeding, tell the user they need to place the agent in Plan mode first. The investigation plan must address every point in every section below. Nothing can be left out: if a point is not resolved immediately, record where and when it will be resolved, and carry it into the Investigation Report / handoff so every section remains covered when referenced later.
-
-The steps below are ordered by dependency: each locks in something the next step needs. Getting an early step wrong creates churn in every step after it — so don't skip ahead, and when a checkpoint flips an earlier answer, go back and redo the dependents before proceeding.
-
-## Standing disciplines (apply from the first sentence, not a later phase)
-
-- **Evidence first.** If a question can be answered by gathering evidence yourself, do that instead of asking. Only ask me what the evidence can't tell you.
-- **Maintain the coverage ledger.** Consult prior coverage ledgers before opening an investigative branch, and record coverage (area, items inspected, findings, status, commit) as you traverse — per `docs/investigation-coverage-ledger.md`.
-- **Every claim falsifiable.** Write each claim — including problem statements and classifications — so it could be refuted, then go look for the refutation. Log each into the assumptions ledger as you make it, not retroactively.
-- **Log unknowns as they surface — and route them by how they resolve.** A **fact to be discovered** (an answer already exists in the code / source text / observed behavior) goes to the assumptions ledger and you resolve it by evidence, *now* — never park a discoverable fact as an "open variable for discussion," which quietly excuses not going to find the answer. A **decision to be made** (resolved only by an owner choosing — scope, product, ownership, a change to the current structure) goes to the open-variables list with an owner. If one item has both halves, split it: discover the fact, isolate the decision. This axis is domain-agnostic — *fact-to-discover vs decision-to-make*; on a software ticket it lands as *code vs workflow*, on policy as *source-text/precedent vs judgment call*.
-- **Offer candidates cheaply, drop misses without ceremony.** Never defend a bad instance or framing.
-- **Push back on my framing for real.** If I say I'm sure, probe it. Agreement-by-default wastes the exercise.
-
-## Step 1 — Collect the raw facts (ground downward first)
-
-Instances come before classification: they are the evidence a classification is built from. Classifying first invites finding only the instances that fit.
-
-- Name real instances: specific people or cases, blocked right now, on real tasks. No named instance = no confirmed problem; say so.
-- State the problem in one plain sentence a stranger could confirm or deny. Enumerate the distinct problems separately — don't merge them.
-- Establish urgency: the date or trigger event when this bites next. "Eventually" doesn't count.
-- Run the **Problem Check** lens (`docs/problem-check.md`) on the problem as stated — **every investigation, not just transcripts**. It surfaces what's being **conflated** (usually several distinct problems treated as one → separate them, per the bullet above), asked-vs-answered drift, **thin** terms, and internal contradictions ("off"). Feed its findings into Step 2 (class) and the assumptions ledger / open variables. When the evidence includes a transcript or live discussion, also extract the explicit **decisions** made.
-
-## Step 2 — Classify the problem (provisional, from the instances)
-
-The highest-leverage call in the investigation — everything downstream is checked against it — but it stays *provisional* until Step 4 confirms it against root-cause evidence.
-
-- Note the class the request *assumes* — the category implied by how it was framed.
-- Derive the class from the instances in Step 1, not from the request's framing. Are we looking at the class, or a symptom of a different class?
-- If they differ, **stop and flag it loudly** — a reclassification is a major finding, not a footnote. (Example: a request framed as "data access — who can reach which systems" may really be a knowledge-management problem — where the data lives and how people discover it. Same symptoms, different class, completely different solution.)
-- State what the class implies for the solution space.
-- Only now find the wedge: the smallest issue *within the class* that forces the space open and stays reusable. A theme is not a project. The wedge depends on the class — if the class later flips, the wedge is redone.
-
-## Step 3 — Lock the contract before any solutioning
-
-Acceptance criteria are part of the problem definition, not the solution. Define what "done" is judged against before proposing anything, or the stress-test has no target.
-
-- List the acceptance criteria — each one checkable.
-- List the non-goals: what this explicitly does *not* cover. This is what prevents scope churn later.
-- Note any framing drift beyond the class — other ways the question has shifted from the original ask.
-
-## Step 4 — Trace why it exists, then re-check the class
-
-- Trace the problem to its origin. Gather evidence from the primary source before asking me. Confirm or revise each assumption against that evidence, not against what the request claims.
-- **Checkpoint:** re-confirm the classification against the root-cause evidence. Reclassifications most often emerge *here*, not at first glance. If the class flips, go back and redo the wedge and acceptance criteria before proceeding — that redo is cheap now and churn everywhere after.
-
-## Step 5 — Propose, compare, and stress-test the solution
-
-Propose a solution if there isn't one. Record the alternatives you considered and why each was rejected — future discussions will ask "why didn't we just X?" and this report should already answer it. Then test the chosen solution against:
-
-- **The confirmed class** — does it solve the class of problem (not the assumed class, not just this occurrence)?
-- **The acceptance criteria** — cover each: covered / needs proof / documented / gap, and what closes it.
-- **Scale** — will it hold up as scope, volume, or the number of people and cases involved grows?
-- **Generalization** — should this be abstracted, or is that overreach? The fix must be no simpler than it needs to be and no more complex than it needs to be.
-- **Fit** — does it follow established practice and integrate cleanly with the existing system, its conventions, and its philosophy?
-- **Adjacent issues** — if you surface related problems, is it lower effort to resolve them now or to spin off a follow-up? State the tradeoff.
-- **Sufficiency** — does it cover the pain that convened this, or only a corner of it?
-- **Feedback speed** — how fast will reality tell us we're wrong? Flag slow-feedback work.
-- **Actor / action / moment** — for any capability, who is asking what, and when. Kill vague capabilities.
-- **The flip side** — narrate the 30-second happy-path story of the solved world: who does what, and without whom.
-
-## Step 6 — Build the validation plan
-
-- **Happy path:** the sequence that should work, step by step.
-- **Negative / inferred paths:** prove the problem isn't leaking in from, or out to, somewhere we haven't modeled. What must fail *visibly* instead of corrupting silently; limit and threshold breaches; removed dependencies proven non-required; timing/latency bounds that must hold.
-
-## Step 7 — Reconcile open questions against the evidence (facts resolved, decisions isolated)
-
-Before emitting, take every open question the investigation surfaced and run it back through the evidence one more time. This is the ambiguity re-check: a question is only allowed to stay open if it is a genuine decision, not an un-investigated fact. It comes *after* the prime investigation because you now know which questions actually survived.
-
-- **Classify each open question** on the fact-vs-decision axis (Standing disciplines): is the answer discoverable in the evidence (code / source / observed behavior), or is it a decision for an owner? An item with both halves is split.
-- **Resolve the discoverable ones now** — trace the code, read the source, observe the behavior — and move each to the assumptions ledger with its finding. Do not carry a fact you could have found into the handoff as a question, and do not bring it to me to "decide" when the codebase already answers it.
-- **For a question the current structure genuinely cannot answer, prove it** — cite the specific code or structure that shows *why* it is unanswerable as-is: the missing seam, the absent field, the state the system cannot distinguish. "We don't know" is not acceptable; "here is the evidence that the current implementation cannot tell us, so this is a decision or a change, not a lookup" is.
-- **What remains in open variables after this pass is only true decisions**, each with an owner.
-
-## Step 8 — Emit the Investigation Report
-
-Record everything into an Investigation Report (copy the template to `docs/investigations/<id>-<slug>.md`). The report is the deliverable — the results of investigating, not a plan to investigate. Its reading order leads with the verdict; you write the verdict last.
-
-- **Verdict (bottom line up front)** — disposition (proceed / proceed with conditions / blocked / rejected / needs more investigation), one-paragraph summary, the strongest path forward, and — explicitly — what this is *not* yet (e.g. "viable, but not a production approval").
-- **Problem class** — assumed class, confirmed class, whether it was reframed and at which step. The load-bearing finding.
-- **Problem statement, acceptance criteria, non-goals** — from Steps 1 and 3.
-- **What changed** — how the question shifted since the request was created; a reclassification is the most important kind of shift, so lead with it if it happened.
-- **Why it exists** — origin and evidence, plus the class re-check outcome.
-- **Alternatives considered** — each rejected option and the reason.
-- **Solution & stress-test** — including the acceptance-criteria coverage table.
-- **Assumptions ledger** — every falsifiable claim with status (open / confirmed / confirmed directionally / revised / refuted) and how to confirm or revise it. "Confirmed directionally" still owes proof of performance, accuracy, and parity.
-- **Validation plan** — happy path and negative paths, from Step 6.
-- **Decisions and recommendation with gates** — what we settled; what to do in order; what proceeds first and what stays gated behind which proof or artifact.
-- **Open variables to collect** — the unknowns logged along the way, each with an owner where possible.
-- **Handoff table** — action / owner / done-when, each done-when falsifiable.
-
-Don't finish until you can answer all of these: the confirmed problem class (and any reframing from the original ask, with the step where it flipped), the problem in one plain sentence, a named blocked instance, the date it bites next, the wedge and why it's reusable, the acceptance criteria and non-goals, the 30-second happy-path story, the metric that proves it works and how fast it arrives, the verdict and disposition, owners for the open variables, and the tracked action with a falsifiable done-when.
-
----
-
-## Contextual branches
-
-This procedure is domain-agnostic. "Gather evidence from the primary source" resolves differently by context — follow the branch that fits:
-
-- **Software** — search the codebase for evidence and trace the defect to its origin in code. Add a frontend lens where relevant: should we change how it behaves, how it looks, or both?
-- **Workflow / process** — read the process as documented, talk to the people who actually run it, and watch where it breaks in practice.
-- **Policy** — read the source text and precedent; check how it's applied versus how it's written.
-
-Other domains plug in their own evidence source the same way.
-
 ## job-story/SKILL.md
 
 ---
@@ -1039,6 +1039,353 @@ A story is a living artifact: `draft` while anything can still move it, `accepte
 - Do not create a story file without updating the index in the same pass.
 - Do not put a story anywhere except `docs/<Project>/tickets/<slug>/stories/`, even when the code lives in another repo.
 - Do not deviate from the **User Story** and **Acceptance Criteria** headings, or from the four-component sequence inside the story paragraph.
+
+## orchestrate/SKILL.md
+
+---
+name: orchestrate
+description: Conduct a ticket end-to-end through the seven-phase lifecycle — capture original ticket, investigate, report, probe and spec, prep for implementation, implement, manual review — with full-rigor artifacts, a generated per-phase checklist, and a standardized handoff at every mode boundary. Resumable from the per-ticket ledger. Use when the user says "orchestrate", "orchestrate PRDV-XXXXX", "run the ticket workflow", "take this ticket through the phases", or "resume/continue orchestration".
+---
+
+# Orchestrate — end-to-end ticket lifecycle
+
+Drive one ticket through all seven phases with maximum traceability, correctness, and completeness. This is the **full-rigor, opt-in** version of ticket work: invoking it means the user wants every artifact and every gate — do **not** scale the ceremony down because the ticket looks small. The user decides whether to invoke this; you do not decide to abbreviate it.
+
+**DO NOT PULL IN MODULES UNLESS ABSOLUTELY NECESSARY. WE WANT CONTEXT TO BE SIGNAL, NOT NOISE.**
+Load only the current phase's listed inputs plus the orchestration ledger. Never preload later phases' references.
+
+## Visible progress — maintain a running todo list
+
+Harness step-visibility differs: Cursor's plan mode shows a checklist natively, but the Codex and Claude Code harnesses surface no step list during a working run. So **maintain an explicit todo list visible in the chat regardless of harness**, and check items off as you complete them — this is the user's window into where the run is. Use the harness's native todo tool where one exists; otherwise print the checklist inline.
+
+**The items are not yours to invent. They come from `steps.csv`:**
+
+```powershell
+scripts/render-sequence.ps1 -Checklist -Phase <N>
+```
+
+That emits one checkbox per step, each carrying its stable id:
+
+```text
+### PHASE 3 — Probe and spec · Working
+- [ ] `P3.reconcile`      trace any question the code can answer
+- [ ] `P3.grill`          run grill-me
+- [ ] `P3.decisions`      write the locked decisions
+```
+
+Post that at the start of each phase and check items off as you go. **Cite the id when you say what you are doing next** — "next is `P3.spec`" — so the user can see the exact step rather than a paraphrase.
+
+**Why the ids matter more than the checkboxes.** An invented sub-step list lets a step disappear silently: nobody can tell the difference between a list of six that should have been seven and a list of six that was always six. Sourcing the list from `steps.csv` means a missing item is visible as a missing id. It costs almost nothing per phase and it is the cheapest guarantee in this whole skill that an action was actually addressed rather than skipped.
+
+Keep one item in progress at a time, and refresh the list at every phase transition. This is a requirement, not optional narration.
+
+## The ticket's Why (living doc — every phase)
+
+The ticket carries a living **"Why" doc** (`<slug>-why-these-changes.md`, per `docs/why-these-changes.md`) — the overarching *why* of the whole ticket, whose heart is the **class of problem** being solved. It is **created early (Phase 1)** so the understanding is established before the work runs ahead of it, and it is **always open for update through every phase**. At each phase, check whether the why moved — the problem, the class, the bug, the code, an assumption — and if it did, **log it in the why-log, explicitly labeled with the phase and whether it's a new understanding, a course change, or a discarded path**. Capture the reasoning trail (what was obvious, what wasn't, what changed after learning more, what got us to the solution, what was noise), not just conclusions. This is high-level and distinct from the testing-implementation doc's scenarios. If nothing moved in a phase, that is fine; an *unlogged* change is not.
+
+## The ticket's acceptance criteria (living doc — every phase)
+
+The ticket's **job stories** (`stories/`, per `../job-story/SKILL.md`) are the yardstick the finished work gets held against — a User Story and Acceptance Criteria for each distinct problem in the request. They are **drafted at Phase 0** from the verbatim request alone (they do not wait on the investigation), **accepted at Phase 3** once their open questions close against the locked decisions, and **open for revision at every phase in between**.
+
+Same discipline as the why-log: at each phase, check whether a story moved — a criterion added or reworded, an open question closed, a story split, a user type corrected — and if it did, append a **Story log** entry labeled with the phase. Nothing moving in a phase is fine; an *unlogged* change is not. While a story is `draft`, revise it in place; once `accepted`, move it to `dnu/` unchanged and write the next version.
+
+The story owns *what done means*; the spec owns *how it gets built*. Investigation artifacts (Problem Check, report §8/§10) are peer inputs that inform the stories — never the authority on their criteria. Where a story and a spec disagree on what done means, the story wins or the story changes on the record — never both quietly.
+
+## No status bookkeeping
+
+**An artifact either exists or it does not. Do not maintain status fields across phases.**
+
+Earlier versions had this skill add a changelog **Plans** row and then walk it from `active` to `implemented` across three phases. That is gone. It cost tokens on every phase, nobody ever read it, and it invented a state machine where a boolean was wanted: *did this happen, yes or no.*
+
+So:
+
+- **Do not** add or restatus a changelog Plans row anywhere in this lifecycle.
+- **Do not** infer intermediate states — no `blocked`, no `in progress`, no `pending`.
+The ledger (`orchestration.md`) still tracks phase state, because that is what a resumable run needs. That is the one place status lives.
+
+**Records of what happened are a different thing, and they stay.** A session log entry is not a status field — it says what the phase produced, which is exactly what the changelog exists to carry across sessions.
+
+**Every Working phase ends with a changelog session log entry.** Phase 0 creates the changelog; Phases 2, 3, 5 and 6 each append an entry naming what that phase emitted, dated in UTC. Plan phases 1 and 4 write nothing, so anything they would record folds into the next Working phase, the same as every other staged write.
+
+That consistency is the point. Before this, only Phase 5 had an entry, and only because a commit forced it — so Phase 2 could write nine artifacts and Phase 6 could close the ticket with nothing in the cross-session record.
+
+## Invocation and inputs
+
+Resolve the ticket in this order:
+
+1. **`PRDV-XXXXX` id** → `<Project>` is the system (atlas / callisto / europa / triton / …) resolved per the `ticket-changelog` rule; the ticket changelog lives at `docs/<system>/PRDV-XXXXX-changelog.md`.
+2. **Project + slug** (e.g. "orchestrate WorkLists duplicate-card-option") → `docs/<Project>/tickets/<slug>/`.
+3. **Free brief, no id** → derive `<slug>` from the brief (kebab-case, at most six words); ask once for `<Project>` if it is not inferable from the working directory or branch.
+4. **Nothing** → ask exactly one question: "Paste the ticket/request text (or id) and name the project." Never fabricate or paraphrase a ticket into existence.
+
+If the ticket folder already exists, follow **State ledger and resume** below instead of starting fresh.
+
+## Ticket folder layout
+
+Every artifact this skill produces lives in one canonical layout, rooted at **`C:\dustin-thomason\docs\<Project>\tickets\<slug>\`** — organized, obvious by filename:
+
+```text
+docs/<Project>/tickets/<slug>/            (always under the dustin-thomason repo — see Repo boundary below)
+  original-ticket.md                              Phase 0
+  orchestration.md                                phase-state ledger (Phase 0 scaffolds)
+  <slug>-why-these-changes.md                     Phase 1 created → updated every phase (why-log) → Phase 6 finalized
+  <slug>-future-development-concerns.md           Phases 1–4, created on first concern only
+  <slug>-implementation-plan.md                   Phase 4 approved → saved verbatim at Phase 5's first action, then frozen
+  <slug>-pr-draft.md                              Phase 2 shell (empty template) → Phase 5 filled
+  stories/
+    <slug>-job-stories-index.md                   Phase 0 created → updated whenever a story moves
+    <slug>-job-story-<NN>-<short>.md              Phase 0 draft → revised Phases 1–2 → accepted Phase 3
+  investigations/
+    <slug>-recon-and-plan.md                      Phase 1 approved → saved verbatim at Phase 2's first action, then frozen
+    <slug>-investigation.md                       Phase 2 (§13+ addenda appended, never rewritten — see Phase 2)
+    <slug>-coverage-ledger.md                     Phases 1–2
+    <slug>-diagrams.md                            Phase 2
+  specs/
+    <slug>-spec.md                                Phase 3
+    <slug>-locked-decisions.md                    Phase 3 — standard once decisions exceed a handful (see Phase 3)
+  testing/
+    <slug>-test-plan.md                           Phase 2 seed → Phase 3 refine → Phase 5 revise (after approval, before impl) → execute
+    <slug>-testing-implementation.md              Phase 5 — scenarios stress-tested (+ any change hung off each), for the PR comment
+  dnu/                                            superseded artifacts move here, names unchanged
+```
+
+PRDV tickets may prefix artifact filenames with `PRDV-XXXXX-` instead of the slug; personal projects use the slug. Superseded or redone artifacts **move to `dnu/`** — never deleted, never renamed.
+
+## Repo boundary (docs vs implementation)
+
+**Every orchestration artifact lives in `dustin-thomason`, always — never inside the implementation repo or folder, regardless of where `<Project>`'s actual code lives.** This mirrors the `ticket-changelog` rule's boundary ("all changelog and Plans data stays in this repo"). A ticket whose code lives at `C:\Users\<user>\...\Browser Extensions\<Project>\` or in an app repo like `atlas-front-end` still gets its `original-ticket.md`, ledger, report, spec, and every other artifact under `C:\dustin-thomason\docs\<Project>\tickets\<slug>\`.
+
+The implementation location is **recorded**, not used as a docs root: capture it in `original-ticket.md`'s Context Paths and in the orchestration ledger's Artifacts column (Phase 5 onward) when code changes land there. If the target repo has no `.git` (e.g. a loose extension folder), say so in the ledger notes and skip the branch step — do not relocate docs there instead.
+
+If this boundary is ever unclear at invocation (a free brief naming a folder that could be mistaken for the docs root), ask once before creating anything — this was reached only by a live user correction in a prior run, not caught by the skill itself.
+
+## The phase map
+
+| Phase | Name | Mode | Output artifacts | Advance |
+| --- | --- | --- | --- | --- |
+| 0 | Capture | Working | `original-ticket.md`, `orchestration.md`, job stories (draft) + index | gate → HANDOFF (Plan) |
+| 1 | Recon and plan | Plan | approved recon-and-plan doc (findings + emission todos + staged coverage rows) | gate → plan approval |
+| 2 | Report | Working | investigation report, coverage ledger, diagrams, test-plan seed | gate → AUTO-ADVANCE to 3 |
+| 3 | Probe & spec | Working | locked-decision ledger, accepted job stories, spec, spec submitted to its reviewer, refined test plan | gate → HANDOFF (Plan) |
+| 4 | Prep | Plan | approved implementation plan | gate → plan approval |
+| 5 | Implement | Working | **reviewer's spec response recorded**, code, executed test plan, session log, PR | gate → HANDOFF (Idle) |
+| 6 | Wrap up | Working | finalized why doc, closed stories, closed ledger, review summary | END — you review manually after |
+
+## Mode handling (harness-agnostic)
+
+- **Never assume you can switch Plan/Working modes.** Cursor and Codex have no agent-callable switch; mode is the user's.
+- **Claude Code exception:** if a plan-mode tool (EnterPlanMode) is available in the session, you MAY use it to cross a Working→Plan boundary without stopping — but still print the handoff block first, so the ledger and the user stay synchronized.
+- Handoff boundaries: 0→1, 3→4, 5→6. The 1→2 and 4→5 boundaries are crossed by **plan approval** itself (approving the plan is the handoff) — post the following phase's checklist at its start instead.
+- Same-mode boundary 2→3: **auto-advance, no stop** — but Phase 2's checklist must be fully checked before Phase 3 begins.
+- **Open, untested assumption — whether scripts/messages can run *while in* Plan mode at all** (some harnesses restrict non-readonly tool calls, including shell/Bash, during Plan mode). Status: open. Confirm/revise by: attempt a script call while genuinely in Plan mode in each harness in use and record the observed result (allowed / blocked / silently no-op) as a coverage-ledger or ledger-notes entry. Until confirmed either way, the design below never depends on running anything during a Plan phase — see Progress notifications.
+
+## Progress notifications
+
+**Because handoffs stop and wait, and the user may not be watching, every phase completion sends a push notification** — not only Phase 6 — per the `agent-completion-notification` rule. This directly works around the open Plan-mode question above rather than resolving it: notifications are sent only from **Working**-mode moments, never attempted from inside a Plan phase.
+
+- **Working-phase completions (0, 2, 3, 5, 6) notify immediately**, before printing that phase's handoff block (or, for the auto-advancing Phase 2, alongside its completed checklist).
+- **Plan-phase completions (1, 4) defer their notification** to the first action of the next Working phase, batched with that phase's own "starting" notice — the same deferred pattern already used for their ledger writes (`deferred (plan mode)`).
+- Resolve the dustin-thomason repo root the same way `agent-completion-notification` does, then run (adjust for cwd):
+
+  ```powershell
+  # from the dustin-thomason repo root
+  .\scripts\notify-agent-complete.ps1 -Status "Completed" -Message "<Project>/<slug>: Phase <N> done, next is Phase <M> (<mode>)"
+
+  # from elsewhere in the workspace (e.g. the implementation repo)
+  & "<dustin-thomason>\scripts\notify-agent-complete.ps1" -Status "Completed" -Message "<Project>/<slug>: Phase <N> done, next is Phase <M> (<mode>)"
+  ```
+
+## The handoff block
+
+At each handoff boundary, emit this block verbatim with values filled, **then stop — output nothing after it**:
+
+```text
+==================== ORCHESTRATION HANDOFF ====================
+Ticket:        <Project>/<slug>
+Phase done:    Phase <N> — <name>
+Artifacts:     <repo-relative paths | n/a>
+Ledger:        docs/<Project>/tickets/<slug>/orchestration.md (updated)
+Next phase:    Phase <M> — <name>
+Required mode: <Plan | Working | Idle>
+Your move:     Switch to <mode> mode and say "go".
+               Already in <mode>? Just say "go".
+               Also accepted: "skip to phase <X>" | "redo phase <N>"
+===============================================================
+```
+
+## The checklist is the gate
+
+Agents deprioritize instructions they judge redundant. **The visible checklist is what stops that**, and it replaces the hand-written gate blocks this section used to carry.
+
+**Before advancing out of any phase, every item in that phase's checklist is checked off.** An unchecked item blocks the advance — say what is missing and complete it first. Confidence is not a substitute for the check.
+
+**What satisfies each item is the `done` column in `steps.csv`.** That is the single source of truth for every obligation in this lifecycle. Phase-by-phase "gate evidence" lists used to live here in prose, which meant the same requirement existed in two places and drifted in both — so they were folded into `done` and removed. If you are looking for what proves a step happened, read its row. Nothing else carries it.
+
+To see whether the artifacts actually landed:
+
+```powershell
+scripts/check-steps.ps1 -TicketFolder docs/<Project>/tickets/<slug> -ThroughPhase <N>
+```
+
+Plan-mode phases (1, 4) cannot write files. Their outputs are staged and land as the **first action** of the next Working phase, so their checklist items are satisfied by the staging, not by a file on disk.
+
+**Entry check — before touching anything, not just before leaving.** A checklist only catches a phase on the way *out*. A prior orchestrated run edited implementation-repo files during Phase 0/1, before capture and investigation existed, and was only caught because the user noticed and reverted it. So: before doing **any** work in Phase 2 or later, confirm every earlier phase's ledger row reads `done` or `skipped (reason)` — if it does not, stop and close the gap first. Concretely, **do not create, edit, or run anything in the target implementation repo/folder until Phase 0 and Phase 1 both read `done`.** And `done` means the phase's steps actually met their `done` conditions — not that code was drafted or an outcome was expected. That was missed once too: implementation was nearly called complete before any live proof existed.
+
+## State ledger and resume
+
+`orchestration.md` is scaffolded at Phase 0 from this template:
+
+```markdown
+# Orchestration — <Project>/<slug>
+
+| Phase | Status | Artifacts | Date | Notes |
+| --- | --- | --- | --- | --- |
+| 0 Capture | pending | | | |
+| 1 Recon and plan | pending | | | |
+| 2 Report | pending | | | |
+| 3 Probe & spec | pending | | | |
+| 4 Prep | pending | | | |
+| 5 Implement | pending | | | |
+| 6 Manual review | pending | | | |
+
+Resume: Phase 0 — Working mode
+```
+
+Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `redone (see dnu/)`. Update the row and the `Resume:` footer at every phase transition (deferred to the next Working action for plan-mode phases).
+
+**Resume protocol** — when invoked and the ticket folder already exists:
+
+1. Read `orchestration.md`; **verify against disk** (do the listed artifacts exist?). Disk facts win — flag any discrepancy, correct the ledger, continue from the corrected state.
+2. Announce a one-line status ("Phases 0–2 done; next: Phase 3, Working mode") and emit the handoff block for the next phase.
+3. Ledger missing but ticket artifacts exist (pre-skill ticket): reconstruct the ledger from disk, show it, get the user's confirmation before proceeding.
+4. Neither exists: fresh Phase 0.
+
+---
+
+## Phase 0 — Capture the original ticket (Working)
+
+- **Reads:** `docs/original-ticket-artifact.md`; `../job-story/SKILL.md` (execute it for the job stories below); the canonical changelog per the `ticket-changelog` rule (task-start alignment — resolve or scaffold it; personal projects use `docs/<project>/`'s project changelog). For ClickUp-backed tickets, also read `../../docs/browser-loop-setup.md` and load the browser-loop guardrails before using Playwright/browser observation.
+- **Do:**
+  1. Create the ticket folder in the canonical layout.
+  2. For ClickUp-backed tickets, use Playwright/browser observation as the preferred capture path: open the active ClickUp ticket page, identify the visible ticket fields and metadata from the rendered UI, and export the captured ticket to Markdown as `{ticket-id}-original-ticket.md`. Use API access only as a fallback or cross-check, not as the default source of truth. **ClickUp requires an authenticated session** — a freshly Playwright-launched browser context has no login and cannot see the page. Attach to a real, already-logged-in Chrome instead, per browser-loop-setup.md's "Attaching to an authenticated browser session" recipe; do not attempt a fresh headless/incognito launch against ClickUp and fall back to guessing selectors when it fails to load — that already happened once and cost a manual recovery.
+  3. Create `original-ticket.md` (or `{ticket-id}-original-ticket.md` for PRDV tickets) per the artifact doc — the request **verbatim**, capture metadata, explicit constraints, context paths. No findings, no recommendations.
+  4. **Draft the job stories** per `../job-story/SKILL.md` — synthesize the verbatim request, split it into one story per distinct problem, run the full sequence, and write `stories/` plus its index with each story `draft`. Anything the request left undecided becomes that story's Open Questions; do not decide it here. This is the acceptance-criteria baseline every later phase is measured against, and it is established **before** the investigation so the investigation cannot quietly define what done means.
+  5. Scaffold `orchestration.md` from the template above; mark Phase 0 `done`.
+  6. Align with the changelog's Current state / Plans / Attempt history before anything downstream.
+- **Advance:** notify (Progress notifications), then handoff → Phase 1 (Plan).
+
+## Phase 1 — Recon and plan (Plan)
+
+**What this phase is.** Not planning where to look — **recon**. Plan mode is used as the operative method for collecting methodically: the agent reads the ticket text and traces the code, reaches its findings, and emits them as a written plan you approve. The name matters because it sets the right expectation — by the time you see the plan, the looking is done, and what you are approving is a set of findings plus the plan to record them. That is deliberate: the approval sits at the last moment before any durable artifact is written, and the first moment there is something substantive to judge. A misdirected recon costs one pass and leaves nothing wrong on disk; a misdirected write-up costs every artifact downstream that cites it.
+
+**The plan is the durable carrier.** Plan mode's output is a written document, not working memory — that is what makes this phase's findings survivable. It must carry the **findings**, not just the emission todos, so Phase 2 is re-derivable from it if context is lost. It is saved verbatim as `investigations/<slug>-recon-and-plan.md` at Phase 2's first action and **frozen** thereafter, the same way `original-ticket.md`'s Original Request is: later deviation is recorded where deviation belongs — a coverage-ledger reopen reason, or a why-log course change — never by editing the approved plan.
+
+- **Reads:** `../investigation/SKILL.md` (execute it — this phase IS that method, run inside this orchestration); `../investigation/docs/investigation-software-gaps.md` (**mandatory software lens** for software-domain tickets: contract alignment, surface enumeration, protect-the-neighbors, detection gap, red→green test, repro recipe); `../investigation/docs/investigation-coverage-ledger.md` (the consult protocol). Problem Check is already embedded in the method's Step 1 — do not load it separately. Do **not** load `investigation-question-coverage.md` (meta-audit, not an operational input).
+- **Do:**
+  1. **Consult prior coverage ledgers FIRST** — before opening any investigative branch, run the consult protocol (grep `docs/<Project>/tickets/*/investigations/*-coverage-ledger.md` for the subsystems in play). Reuse covered ground; reopen only per the four reopen conditions, with the reason recorded. Stage the mandatory consult log line for the ledger.
+  2. Execute the investigation method steps 1–7 on the ticket (everything but the emit). Two disciplines this phase must not skip: (a) the **Problem Check lens** (method Step 1) — its Asked / Answered / Should-ask + Conflation / Thin / Off findings, each grounded in a trimmed quote from the ticket text ("nothing here" is a valid flag, silence is not), carry into report §2; (b) the **Step 7 reconcile** — classify every open question on the fact-vs-decision axis, resolve the code-discoverable ones by tracing the evidence *now*, and for any question the current structure genuinely can't answer, capture the code evidence that proves why. Stage coverage rows (area, items inspected, findings, status, commit) as you traverse — they become the coverage ledger in Phase 2.
+  3. Build the recon-and-plan doc. It records **the findings this recon reached** — problem class, what was inspected and ruled out, the facts resolved by evidence, the decisions left open with owners — and then the todos to: reconcile against every point of the software lens; emit the report per the template; materialize the coverage ledger (with the consult line); produce the diagrams artifact per `../investigation/docs/investigation-diagrams.md`; seed the test plan per `docs/test-plan-artifact.md`; record any surfaced concerns per `docs/future-development-concerns.md`. Findings-plus-todos, not todos alone — a plan a later agent could execute after losing all context.
+  4. **Surface the ticket's Why early.** Establish the **class of problem** and the high-level problems we're solving, and stage the Phase 1 why-log entry (obvious / not obvious / assumptions) for `<slug>-why-these-changes.md` (per `docs/why-these-changes.md`). This is the heart of the Why doc — get it on the record before the work runs ahead of the understanding. Plan mode can't write, so the file is materialized at Phase 2's first action.
+  5. **Reconcile the job stories against what the investigation surfaced.** Problem Check's Thin and Conflation flags and the Step 7 fact-vs-decision split are peer inputs to the stories, not their source of truth. Stage: open questions the investigation answered, criteria a finding invalidates, and any story that has to split. Plan mode can't write, so these land at Phase 2's first action.
+- **Advance:** plan approval (this is the handoff). Ledger row updates and the deferred Phase 1 notification both fire at Phase 2's first action.
+
+## Phase 2 — Investigation report (Working)
+
+- **Reads:** the approved plan; `../investigation/docs/investigation-report.md` (template); `../investigation/docs/investigation-diagrams.md`; `docs/test-plan-artifact.md`.
+- **Do:**
+  1. Update the ledger (Phase 1 `done`, Phase 2 `in-progress`), and materialize the deferred Phase 1 writes: save the approved plan verbatim as `investigations/<slug>-recon-and-plan.md` (frozen once written — see Phase 1); create `<slug>-why-these-changes.md` (problem class + Phase 1 why-log entry) per `docs/why-these-changes.md`, and apply the staged job-story reconcile — revised criteria, closed questions, any split — with a Phase 1 Story log entry on each story touched.
+  2. Write `investigations/<slug>-investigation.md` from the template — this path **overrides** the template's default `docs/investigations/` location for orchestrated tickets. The report **links out** to the diagrams artifact from §5; do not embed large diagrams inline.
+  3. Materialize `investigations/<slug>-coverage-ledger.md` — Consulted line first, then every staged area entry, then the Not-yet-inspected frontier.
+  4. Produce `investigations/<slug>-diagrams.md` — current-vs-target, flows, sequences (race conditions and timing edge cases) as applicable; N/A lines for kinds skipped.
+  5. Seed `testing/<slug>-test-plan.md` from report §9 — each seeded scenario names the acceptance criterion it exercises, or is flagged as coverage with no criterion behind it yet.
+  6. **Stage the PR draft shell** `<slug>-pr-draft.md` — headings and empty placeholders only, from the PR template in `../../docs/pull-request-workflow.md` (title, ClickUp link, Description, Test Evidence, Commit hash, Checklist). Get the head start, but **draft the shell, not the content**: the body is filled in Phase 5 after testing, because scope can still move in Phases 3–4. Leave a one-line note at the top that it is an unfilled shell.
+  7. Do **not** touch `original-ticket.md` — it is immutable once captured, and the files this phase produced are recorded in the ledger's **Artifacts** column instead. Do **not** add or restatus a changelog Plans row; see **No status bookkeeping** above.
+- **Advance:** notify (Progress notifications; deferred Phase 1 notice batches in here too), AUTO-ADVANCE to Phase 3 (same mode) — close out Phase 2's checklist, post Phase 3's, keep going.
+- **Reopening a "done" report:** if later work (a fast-follow answer, a live-DOM proof, a corrected assumption) needs to change this report after it's marked done, **append a numbered addendum section** (e.g. "§13. Post-Investigation Addendum — <what>") dated and evidenced — never rewrite the verdict or earlier sections in place. This preserves the original reasoning trail the same way the coverage ledger and locked-decision ledger already do.
+
+## Phase 3 — Probe and spec (Working)
+
+- **Reads:** report §8 (assumptions) + §10 (open variables); the job stories' Open Questions (`../job-story/SKILL.md`); `../grill-me/SKILL.md`; `../../docs/qa-to-spec-traceability.md`; the `spec-writing` rule (loads automatically; PRDV app tickets may route through `../write-spec/SKILL.md` and the wiki conventions — ask once: sibling spec or wiki).
+- **Do:**
+  1. **Before grilling, re-run the Step 7 reconcile on the current open variables.** Any question whose answer is discoverable in the code/source — trace it and resolve it yourself via evidence; do not bring a fact to the user to "decide" when the codebase already answers it. Where a question bundles a discoverable fact with a decision, split it: you answer the fact, the user decides the rest. Only genuine decisions reach grill-me.
+  2. Run grill-me against the report's remaining open variables and assumptions **and every job story's Open Questions** — **under the qa-to-spec-traceability workflow**: question gate before each question, one question at a time, each answer committed to the locked-decision ledger before the next, rejected paths recorded.
+  3. Risk-accepting answers produce BOTH records: the locked-decision row and a concern entry in `<slug>-future-development-concerns.md` (create on first concern); the row cites the entry.
+  4. **Accept the job stories.** Fold every resolved decision into the criteria it affects, close each story's Open Questions (or carry one forward with a named owner and the reason), set the index rows to `accepted`, and append the Phase 3 Story log entry. A decision wins on *how*; the criterion still owns *what done means* — rewrite it to stay observable rather than importing the design word the decision introduced.
+  5. Materialize the locked-decision ledger as its own file, `specs/<slug>-locked-decisions.md` (question gates resolved + the full `LD-###` table with source / supersedes-or-rejects / spec destination) — the standard from the first real run, once decisions run past a handful the way they will on any non-trivial ticket. Write `specs/<slug>-spec.md`: grill-me output **informs** the spec, it is not the spec. Its required `Locked Decisions From Q and A` section (per `spec-writing` / `qa-to-spec-traceability`) becomes a short summary table that **links to** `<slug>-locked-decisions.md` for the full ledger, rather than repeating it — satisfy the spec-writing rule's sections (N/A lines where a section does not apply); frame Problem → Requirement → Solution.
+  6. **Submit the spec to its reviewer.** A spec is a review gate, not a private artifact: on a team where a principal dev owns the design, implementing from an unreviewed spec is the same mistake as implementing from an unread one. Deliver it the way that team actually reviews — where a shared wiki is the review surface, that means **pushing a branch and opening a PR, not writing the file locally and calling it submitted**. Two shapes recur: the reviewer has **not** written a spec, so yours is the thing under review; or the reviewer **already authored** the authoritative spec, in which case submit an **addendum** carrying only what your investigation added or changed — decisions that extend their spec, deviations from precedent, and defects found in their own documents. Never request a reviewer through GitHub's reviewer mechanism unless the user asks in that moment (`git-commit-workflow`). If no review is owed, record that as `not-applicable` naming who owns the spec and why.
+  7. Refine the test plan — resolved variables become concrete assertions, each mapped to the acceptance criterion it proves; status `refined`.
+- **Advance:** notify (Progress notifications), then handoff → Phase 4 (Plan).
+
+## Phase 4 — Prep for implementation (Plan)
+
+- **Reads:** the spec; report §11 (handoff table); the test plan. **No re-investigation** — plan from the artifacts.
+- **Do:** build a brief implementation plan: Problem → Requirement → Solution framing; ordered steps; branch step per `../../docs/new-branch-get-started.md` when repo work begins; test execution mapped to the test plan; the shipping checklist obligations (tests, regression, API docs, gates) named up front per the `build-implementation-guardrails` rule.
+- **The plan is saved, the same way Phase 1's is.** It governs every step of Phase 5, so it cannot live only in the conversation. The approved plan is written verbatim to `<slug>-implementation-plan.md` at Phase 5's first action and **frozen** thereafter — later deviation is recorded in the why-log or the session log, never by editing the approved plan.
+- **Advance:** plan approval (this is the handoff). The ledger row, the implementation-plan write, and the deferred Phase 4 notification all fire at Phase 5's first action.
+
+## Phase 5 — Implement (Working)
+
+- **Reads:** the approved plan; the test plan; repo-specific rules of the touched repo; `../../../docs/reviewers/pr-review-patterns.md` for the self-review checklist.
+- **Do:**
+  1. Save the approved plan verbatim as `<slug>-implementation-plan.md` (frozen once written — see Phase 4); update the ledger.
+  1b. **Confirm the reviewer responded to the spec, before any product code.** Record the response in the ledger with its form and date — a merged PR, a comment, an explicit go-ahead. Review latency is asynchronous and can outlast a session, so this is the one gate that legitimately parks a run: **if the answer has not arrived, stop and say so** rather than implementing on the assumption it will be fine. Proceeding anyway requires a waiver naming who authorised it and what risk it carries. A plan approval is **not** a spec approval — Phase 4 approves your sequencing, not the design someone else owns.
+  2. **Do not revise the test plan here.** It was refined at Phase 3 against the locked decisions, and Phase 4's gate already traced every plan step to it — approving a plan confirms the touch points against the spec, it does not introduce anything the test plan has not already seen. What survives is the ordering rule: the refined test plan must be in place **before any code is written**, so the tests are never shaped by what was built. Status stays `refined`; there is no post-approval revision.
+  3. Implement per the plan, inside the `build-implementation-guardrails` obligations (tests as part of shipping, architecture fit, graceful degradation by layer).
+  3b. **Run the self-review checklist against your own diff — after the code, before the tests.** `../../../docs/reviewers/pr-review-patterns.md` carries the fixes reviewers ask for again and again, promoted to a checklist once a pattern recurs. Its whole purpose is catching them *before* a PR goes up rather than reactively after, and any refactor it prompts belongs here, while the tests have not yet been shaped around the current code.
+  4. Execute `testing/<slug>-test-plan.md`: check off scenarios, fill the results log with exact command + scope + result (serial runs). A criterion that turns out to be unobservable in practice failed its own review — move that story to `dnu/`, write the next version, and log it; never reinterpret a criterion to match what was built.
+  5. **Maintain the testing-implementation doc** `testing/<slug>-testing-implementation.md` per `docs/testing-implementation-artifact.md` — **scenario-first**: each real situation stress-tested (why it matters, whether it held), newly-uncovered scenarios flagged, and any code change hung off the scenario that forced it (file(s) + observed → expected → fix). This is the artifact that explains to other devs *what was addressed* — a test with no scenario is arbitrary execution. Write it as you go; living doc. PR-comment content, never a source comment (guardrails §7).
+  6. If a PR draft shell was staged in Phase 2, fill it now (title, description, test evidence, commit hash) per `../../docs/pull-request-workflow.md` — paste the testing-implementation doc's assembled block as the PR comment / test-evidence. Before every commit: changelog session log, then audit → lint → tests per the `git-commit-workflow` rule. PR per `../../docs/pull-request-workflow.md` when requested.
+- **Advance:** notify (Progress notifications), then handoff → Phase 6 (Idle).
+
+## Phase 6 — Wrap up (Working)
+
+**The agent works in this phase.** It was previously labelled Idle, which contradicted its own Do list — four artifacts get written here. Idle describes what happens *after* END, when you review manually and the agent is done.
+
+- **Do:**
+  1. **Finalize the Why doc:** complete the reviewer-facing review in `<slug>-why-these-changes.md` — the **categorized change breakdown** (requested change / bug fix / workflow change / capability gap / other, with a headline count and Before / After / Why per change), **"why it shipped together"** tied to the acceptance criteria, **Scope**, **Net**, and **Verified** (gates + PR link). Confirm the why-log captured every phase where the why moved.
+  2. Produce the review summary: what to review, where, **walking each acceptance criterion against what shipped**, citing the test plan's results log and the Why doc — no unfalsifiable "tests passed" claims.
+  3. **Cruft check:** did this run surface outdated references, superseded docs, or dead weight? Append findings to `../../docs/cleanup-candidates.md`; write "cruft check: nothing surfaced" in the ledger notes if clean.
+  4. Close the ledger: Phase 6 `done`, `Resume: complete`; append each story's final Story log entry and confirm every index row reads `accepted` or `superseded (see dnu/)`.
+  5. Notify per Progress notifications — this is the final one, matching the standard `agent-completion-notification` rule usage.
+- **Advance:** END. The user reviews manually; you are done.
+
+---
+
+## Edge cases
+
+- **Personal projects (WorkLists, Countdowns, OtterCopy, …):** `<Project>` = the `docs/<project>/` folder name; changelog = that project's changelog per the `ticket-changelog` rule; the spec stays the sibling `specs/<slug>-spec.md` (wiki routing is PRDV-only). If `docs/<Project>/` does not exist, ask once, then create it at Phase 0.
+- **No ticket text at invocation:** Phase 0 blocks on the verbatim request — ask the one question; never synthesize the request.
+- **Deliberate skip:** only on the user's explicit instruction. Record `skipped (<user's reason>)` in the ledger AND name the downstream inputs now missing (skipping Phase 1 leaves the spec uninvestigated; skipping Phase 3 leaves implementation without locked decisions). Never skip on your own initiative, never silently.
+- **Artifact already exists:** compare the ledger status and dates, then offer exactly three options — **reuse** as-is, **refresh** in place, or **move to `dnu/`** and redo. `original-ticket.md`'s Original Request section is never rewritten regardless of choice.
+- **Conflicting instructions mid-flow:** the user can always override a phase's course — record the override in the ledger notes; the orchestration continues from the adjusted state.
+
+## Do not
+
+- Do not assume you can switch modes; do not proceed past a handoff block.
+- Do not skip a phase, a gate, or an artifact silently — the ledger records everything, including waivers.
+- Do not scale artifacts down because the ticket seems small — invocation of this skill IS the request for full rigor.
+- Do not load later phases' docs early, and do not reload docs already embedded in a method you are executing.
+- Do not modify `original-ticket.md` after Phase 0 captures it — not the Original Request, not any other section. Files the run produces are recorded in the ledger's Artifacts column.
+- Do not edit `<slug>-implementation-plan.md` once it is saved — it records what was approved; deviation goes in the why-log or the session log.
+- Do not edit `investigations/<slug>-recon-and-plan.md` once it is saved — it records what was approved; deviation goes in the coverage ledger's reopen reason or the why-log, not into the plan.
+- Do not leave Phase 0 without at least one drafted job story — the acceptance-criteria baseline is set before the investigation, not derived from it.
+- Do not treat an investigation artifact as the authority on acceptance criteria; the job story owns what done means, and the spec cites it rather than amending it.
+- Do not reinterpret a criterion to match what was built — move the story to `dnu/` and write the next version.
+- Do not let a story move without a Story log entry naming what changed.
+- Do not put the orchestration ledger anywhere except the ticket folder.
+- Do not emit anything after a handoff block.
+- Do not put any orchestration artifact outside `C:\dustin-thomason\docs\<Project>\tickets\<slug>\`, even when the implementation lives in a different repo or folder — see Repo boundary.
+- Do not touch implementation-repo files before Phase 0 and Phase 1 both show `done` in the ledger.
+- Do not mark a phase `done` — Phase 5 especially — on a claim or drafted code; the step's `done` condition must be met by an observed result.
+- Do not write product code before the spec's reviewer has responded, and do not treat Phase 4's plan approval as that response — it approves your sequencing, not a design someone else owns.
+- Do not call a spec "submitted" because the file exists; submitting means delivering it to the reviewer through the surface that team reviews on.
+- Do not rewrite a "done" investigation report to incorporate later findings; append a dated addendum section instead.
+- Do not assume a notification or script can run while genuinely in Plan mode; use the deferred-to-next-Working-action pattern in Progress notifications instead.
+- Do not skip the Problem Check pass or leave its framing claims ungrounded — cite the ticket's words; "nothing here" per flag is fine, silence is not.
+- Do not park a code-discoverable fact as an open-variable "for discussion," and do not bring it to the user to decide — trace it and resolve it via evidence (§8); only genuine decisions go to the user.
+- Do not run without a visible, checked-off todo list where the harness does not surface one.
+- Do not fill the PR draft body before Phase 5 — Phase 2 stages the shell only; content waits until the change is implemented and verified.
+- Do not put change rationale (observed → expected → fix) in a source comment; it is PR-comment content (guardrails §7).
 
 ## orchestrate/decisions.md
 
@@ -1320,63 +1667,6 @@ An `original-ticket.md` artifact should contain only:
 
 This artifact is done when a future agent can open it and know exactly what was originally asked, where it came from, and when it was captured.
 
-## orchestrate/docs/testing-implementation-artifact.md
-
-# Testing-implementation artifact — the scenarios stress-tested
-
-Use this to explain, **for other devs, what was addressed** — the real-world **scenarios** that were stress-tested for this ticket, and what came of each. A test with no stated scenario is arbitrary code execution; the scenario is the stake that makes the test meaningful. This doc is the scenario-level record: it says *why* each test mattered, whether the code held, and — when testing surfaces a **scenario the plan did not cover** — it captures that gap, which is often what drives a change.
-
-Its content is meant to be posted as a **GitHub PR comment**, **NOT** left as a comment in the codebase.
-
-It is the companion to the test plan. The **test plan** lists the scenarios to run and logs pass/fail; **this doc** explains, for a reviewing dev, the scenarios that were actually stress-tested — including the ones found only by testing — and hangs any resulting code change off the scenario that forced it. It is a **living doc**: written as you test, updated as new scenarios surface.
-
-## Output location
-
-```text
-docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-testing-implementation.md
-```
-
-## When produced
-
-During and after **Phase 5** test execution. Start it as testing begins; add scenarios as they are exercised or discovered; finalize before filling the PR.
-
-## Core rules
-
-- **Scenario-first.** Every entry names the real situation being stress-tested, in terms another dev understands — not "ran `popup.js`" but "user exports a task whose title contains a `#`." No scenario = no meaningful test.
-- **Newly-uncovered scenarios are flagged as such.** If testing reveals a situation the plan did not cover, that discovery *is* the point — record it, and note whether it drove a code change or a follow-up.
-- **Code changes hang off a scenario.** Each change records the file(s) + observed → expected → implemented fix, under the scenario that forced it — never a change with no scenario behind it.
-- **PR-comment content.** Paste it into the GitHub PR; never copy it into the source as a code comment (see `build-implementation-guardrails` §7).
-- **Living, not frozen.** Update it as new scenarios surface; the last state before the PR is the one that ships.
-
-## Artifact template
-
-```markdown
-# Testing implementation — <Project>/<ticket-slug>
-
-> Companion to [<ticket-slug>-test-plan.md](./<ticket-slug>-test-plan.md). The scenarios stress-tested and what came of each — for other devs. PR-comment content; never a code comment. Living doc.
-
-## Scenarios stress-tested
-
-### Scenario 1 — <the real situation, in a dev's terms>
-- **Why it matters:** <the stake — what breaks in the real world if this isn't handled>
-- **Covered by the plan?** yes | no — newly uncovered during testing
-- **Result:** held | failed → fixed (see change) | follow-up filed
-- **Change (if any):** <file(s)> — observed → expected → implemented fix
-
-### Scenario 2 — ...
-
-## PR comment (ready to paste)
-
-<the scenarios above, assembled as the comment/description to post on the GitHub PR>
-```
-
-## Definition of done
-
-- Every test maps to a **named scenario** a reviewer can understand — no arbitrary or unexplained test execution.
-- **Newly-uncovered scenarios are flagged**, each noted as driving a change or a follow-up.
-- Every code change **hangs off its scenario** with file(s) + observed → expected → implemented fix.
-- The PR-comment block is assembled and ready to paste; nothing in this doc was copied into the codebase as a code comment.
-
 ## orchestrate/docs/test-plan-artifact.md
 
 # Test plan artifact — how to test the implementation
@@ -1486,6 +1776,63 @@ Name which step is load-bearing and why — the one whose failure means the defe
 ## Definition of done
 
 The test plan is done when every scenario is checked off or explicitly blocked-with-reason, the results log holds the final post-change gate runs, and the manual review can cite this file instead of restating evidence.
+
+## orchestrate/docs/testing-implementation-artifact.md
+
+# Testing-implementation artifact — the scenarios stress-tested
+
+Use this to explain, **for other devs, what was addressed** — the real-world **scenarios** that were stress-tested for this ticket, and what came of each. A test with no stated scenario is arbitrary code execution; the scenario is the stake that makes the test meaningful. This doc is the scenario-level record: it says *why* each test mattered, whether the code held, and — when testing surfaces a **scenario the plan did not cover** — it captures that gap, which is often what drives a change.
+
+Its content is meant to be posted as a **GitHub PR comment**, **NOT** left as a comment in the codebase.
+
+It is the companion to the test plan. The **test plan** lists the scenarios to run and logs pass/fail; **this doc** explains, for a reviewing dev, the scenarios that were actually stress-tested — including the ones found only by testing — and hangs any resulting code change off the scenario that forced it. It is a **living doc**: written as you test, updated as new scenarios surface.
+
+## Output location
+
+```text
+docs/<Project>/tickets/<ticket-slug>/testing/<ticket-slug>-testing-implementation.md
+```
+
+## When produced
+
+During and after **Phase 5** test execution. Start it as testing begins; add scenarios as they are exercised or discovered; finalize before filling the PR.
+
+## Core rules
+
+- **Scenario-first.** Every entry names the real situation being stress-tested, in terms another dev understands — not "ran `popup.js`" but "user exports a task whose title contains a `#`." No scenario = no meaningful test.
+- **Newly-uncovered scenarios are flagged as such.** If testing reveals a situation the plan did not cover, that discovery *is* the point — record it, and note whether it drove a code change or a follow-up.
+- **Code changes hang off a scenario.** Each change records the file(s) + observed → expected → implemented fix, under the scenario that forced it — never a change with no scenario behind it.
+- **PR-comment content.** Paste it into the GitHub PR; never copy it into the source as a code comment (see `build-implementation-guardrails` §7).
+- **Living, not frozen.** Update it as new scenarios surface; the last state before the PR is the one that ships.
+
+## Artifact template
+
+```markdown
+# Testing implementation — <Project>/<ticket-slug>
+
+> Companion to [<ticket-slug>-test-plan.md](./<ticket-slug>-test-plan.md). The scenarios stress-tested and what came of each — for other devs. PR-comment content; never a code comment. Living doc.
+
+## Scenarios stress-tested
+
+### Scenario 1 — <the real situation, in a dev's terms>
+- **Why it matters:** <the stake — what breaks in the real world if this isn't handled>
+- **Covered by the plan?** yes | no — newly uncovered during testing
+- **Result:** held | failed → fixed (see change) | follow-up filed
+- **Change (if any):** <file(s)> — observed → expected → implemented fix
+
+### Scenario 2 — ...
+
+## PR comment (ready to paste)
+
+<the scenarios above, assembled as the comment/description to post on the GitHub PR>
+```
+
+## Definition of done
+
+- Every test maps to a **named scenario** a reviewer can understand — no arbitrary or unexplained test execution.
+- **Newly-uncovered scenarios are flagged**, each noted as driving a change or a follow-up.
+- Every code change **hangs off its scenario** with file(s) + observed → expected → implemented fix.
+- The PR-comment block is assembled and ready to paste; nothing in this doc was copied into the codebase as a code comment.
 
 ## orchestrate/docs/why-these-changes.md
 
@@ -1940,353 +2287,6 @@ if ($OutFile) {
     Write-Host "wrote $OutFile"
 }
 else { Write-Output $text }
-
-## orchestrate/SKILL.md
-
----
-name: orchestrate
-description: Conduct a ticket end-to-end through the seven-phase lifecycle — capture original ticket, investigate, report, probe and spec, prep for implementation, implement, manual review — with full-rigor artifacts, a generated per-phase checklist, and a standardized handoff at every mode boundary. Resumable from the per-ticket ledger. Use when the user says "orchestrate", "orchestrate PRDV-XXXXX", "run the ticket workflow", "take this ticket through the phases", or "resume/continue orchestration".
----
-
-# Orchestrate — end-to-end ticket lifecycle
-
-Drive one ticket through all seven phases with maximum traceability, correctness, and completeness. This is the **full-rigor, opt-in** version of ticket work: invoking it means the user wants every artifact and every gate — do **not** scale the ceremony down because the ticket looks small. The user decides whether to invoke this; you do not decide to abbreviate it.
-
-**DO NOT PULL IN MODULES UNLESS ABSOLUTELY NECESSARY. WE WANT CONTEXT TO BE SIGNAL, NOT NOISE.**
-Load only the current phase's listed inputs plus the orchestration ledger. Never preload later phases' references.
-
-## Visible progress — maintain a running todo list
-
-Harness step-visibility differs: Cursor's plan mode shows a checklist natively, but the Codex and Claude Code harnesses surface no step list during a working run. So **maintain an explicit todo list visible in the chat regardless of harness**, and check items off as you complete them — this is the user's window into where the run is. Use the harness's native todo tool where one exists; otherwise print the checklist inline.
-
-**The items are not yours to invent. They come from `steps.csv`:**
-
-```powershell
-scripts/render-sequence.ps1 -Checklist -Phase <N>
-```
-
-That emits one checkbox per step, each carrying its stable id:
-
-```text
-### PHASE 3 — Probe and spec · Working
-- [ ] `P3.reconcile`      trace any question the code can answer
-- [ ] `P3.grill`          run grill-me
-- [ ] `P3.decisions`      write the locked decisions
-```
-
-Post that at the start of each phase and check items off as you go. **Cite the id when you say what you are doing next** — "next is `P3.spec`" — so the user can see the exact step rather than a paraphrase.
-
-**Why the ids matter more than the checkboxes.** An invented sub-step list lets a step disappear silently: nobody can tell the difference between a list of six that should have been seven and a list of six that was always six. Sourcing the list from `steps.csv` means a missing item is visible as a missing id. It costs almost nothing per phase and it is the cheapest guarantee in this whole skill that an action was actually addressed rather than skipped.
-
-Keep one item in progress at a time, and refresh the list at every phase transition. This is a requirement, not optional narration.
-
-## The ticket's Why (living doc — every phase)
-
-The ticket carries a living **"Why" doc** (`<slug>-why-these-changes.md`, per `docs/why-these-changes.md`) — the overarching *why* of the whole ticket, whose heart is the **class of problem** being solved. It is **created early (Phase 1)** so the understanding is established before the work runs ahead of it, and it is **always open for update through every phase**. At each phase, check whether the why moved — the problem, the class, the bug, the code, an assumption — and if it did, **log it in the why-log, explicitly labeled with the phase and whether it's a new understanding, a course change, or a discarded path**. Capture the reasoning trail (what was obvious, what wasn't, what changed after learning more, what got us to the solution, what was noise), not just conclusions. This is high-level and distinct from the testing-implementation doc's scenarios. If nothing moved in a phase, that is fine; an *unlogged* change is not.
-
-## The ticket's acceptance criteria (living doc — every phase)
-
-The ticket's **job stories** (`stories/`, per `../job-story/SKILL.md`) are the yardstick the finished work gets held against — a User Story and Acceptance Criteria for each distinct problem in the request. They are **drafted at Phase 0** from the verbatim request alone (they do not wait on the investigation), **accepted at Phase 3** once their open questions close against the locked decisions, and **open for revision at every phase in between**.
-
-Same discipline as the why-log: at each phase, check whether a story moved — a criterion added or reworded, an open question closed, a story split, a user type corrected — and if it did, append a **Story log** entry labeled with the phase. Nothing moving in a phase is fine; an *unlogged* change is not. While a story is `draft`, revise it in place; once `accepted`, move it to `dnu/` unchanged and write the next version.
-
-The story owns *what done means*; the spec owns *how it gets built*. Investigation artifacts (Problem Check, report §8/§10) are peer inputs that inform the stories — never the authority on their criteria. Where a story and a spec disagree on what done means, the story wins or the story changes on the record — never both quietly.
-
-## No status bookkeeping
-
-**An artifact either exists or it does not. Do not maintain status fields across phases.**
-
-Earlier versions had this skill add a changelog **Plans** row and then walk it from `active` to `implemented` across three phases. That is gone. It cost tokens on every phase, nobody ever read it, and it invented a state machine where a boolean was wanted: *did this happen, yes or no.*
-
-So:
-
-- **Do not** add or restatus a changelog Plans row anywhere in this lifecycle.
-- **Do not** infer intermediate states — no `blocked`, no `in progress`, no `pending`.
-The ledger (`orchestration.md`) still tracks phase state, because that is what a resumable run needs. That is the one place status lives.
-
-**Records of what happened are a different thing, and they stay.** A session log entry is not a status field — it says what the phase produced, which is exactly what the changelog exists to carry across sessions.
-
-**Every Working phase ends with a changelog session log entry.** Phase 0 creates the changelog; Phases 2, 3, 5 and 6 each append an entry naming what that phase emitted, dated in UTC. Plan phases 1 and 4 write nothing, so anything they would record folds into the next Working phase, the same as every other staged write.
-
-That consistency is the point. Before this, only Phase 5 had an entry, and only because a commit forced it — so Phase 2 could write nine artifacts and Phase 6 could close the ticket with nothing in the cross-session record.
-
-## Invocation and inputs
-
-Resolve the ticket in this order:
-
-1. **`PRDV-XXXXX` id** → `<Project>` is the system (atlas / callisto / europa / triton / …) resolved per the `ticket-changelog` rule; the ticket changelog lives at `docs/<system>/PRDV-XXXXX-changelog.md`.
-2. **Project + slug** (e.g. "orchestrate WorkLists duplicate-card-option") → `docs/<Project>/tickets/<slug>/`.
-3. **Free brief, no id** → derive `<slug>` from the brief (kebab-case, at most six words); ask once for `<Project>` if it is not inferable from the working directory or branch.
-4. **Nothing** → ask exactly one question: "Paste the ticket/request text (or id) and name the project." Never fabricate or paraphrase a ticket into existence.
-
-If the ticket folder already exists, follow **State ledger and resume** below instead of starting fresh.
-
-## Ticket folder layout
-
-Every artifact this skill produces lives in one canonical layout, rooted at **`C:\dustin-thomason\docs\<Project>\tickets\<slug>\`** — organized, obvious by filename:
-
-```text
-docs/<Project>/tickets/<slug>/            (always under the dustin-thomason repo — see Repo boundary below)
-  original-ticket.md                              Phase 0
-  orchestration.md                                phase-state ledger (Phase 0 scaffolds)
-  <slug>-why-these-changes.md                     Phase 1 created → updated every phase (why-log) → Phase 6 finalized
-  <slug>-future-development-concerns.md           Phases 1–4, created on first concern only
-  <slug>-implementation-plan.md                   Phase 4 approved → saved verbatim at Phase 5's first action, then frozen
-  <slug>-pr-draft.md                              Phase 2 shell (empty template) → Phase 5 filled
-  stories/
-    <slug>-job-stories-index.md                   Phase 0 created → updated whenever a story moves
-    <slug>-job-story-<NN>-<short>.md              Phase 0 draft → revised Phases 1–2 → accepted Phase 3
-  investigations/
-    <slug>-recon-and-plan.md                      Phase 1 approved → saved verbatim at Phase 2's first action, then frozen
-    <slug>-investigation.md                       Phase 2 (§13+ addenda appended, never rewritten — see Phase 2)
-    <slug>-coverage-ledger.md                     Phases 1–2
-    <slug>-diagrams.md                            Phase 2
-  specs/
-    <slug>-spec.md                                Phase 3
-    <slug>-locked-decisions.md                    Phase 3 — standard once decisions exceed a handful (see Phase 3)
-  testing/
-    <slug>-test-plan.md                           Phase 2 seed → Phase 3 refine → Phase 5 revise (after approval, before impl) → execute
-    <slug>-testing-implementation.md              Phase 5 — scenarios stress-tested (+ any change hung off each), for the PR comment
-  dnu/                                            superseded artifacts move here, names unchanged
-```
-
-PRDV tickets may prefix artifact filenames with `PRDV-XXXXX-` instead of the slug; personal projects use the slug. Superseded or redone artifacts **move to `dnu/`** — never deleted, never renamed.
-
-## Repo boundary (docs vs implementation)
-
-**Every orchestration artifact lives in `dustin-thomason`, always — never inside the implementation repo or folder, regardless of where `<Project>`'s actual code lives.** This mirrors the `ticket-changelog` rule's boundary ("all changelog and Plans data stays in this repo"). A ticket whose code lives at `C:\Users\<user>\...\Browser Extensions\<Project>\` or in an app repo like `atlas-front-end` still gets its `original-ticket.md`, ledger, report, spec, and every other artifact under `C:\dustin-thomason\docs\<Project>\tickets\<slug>\`.
-
-The implementation location is **recorded**, not used as a docs root: capture it in `original-ticket.md`'s Context Paths and in the orchestration ledger's Artifacts column (Phase 5 onward) when code changes land there. If the target repo has no `.git` (e.g. a loose extension folder), say so in the ledger notes and skip the branch step — do not relocate docs there instead.
-
-If this boundary is ever unclear at invocation (a free brief naming a folder that could be mistaken for the docs root), ask once before creating anything — this was reached only by a live user correction in a prior run, not caught by the skill itself.
-
-## The phase map
-
-| Phase | Name | Mode | Output artifacts | Advance |
-| --- | --- | --- | --- | --- |
-| 0 | Capture | Working | `original-ticket.md`, `orchestration.md`, job stories (draft) + index | gate → HANDOFF (Plan) |
-| 1 | Recon and plan | Plan | approved recon-and-plan doc (findings + emission todos + staged coverage rows) | gate → plan approval |
-| 2 | Report | Working | investigation report, coverage ledger, diagrams, test-plan seed | gate → AUTO-ADVANCE to 3 |
-| 3 | Probe & spec | Working | locked-decision ledger, accepted job stories, spec, spec submitted to its reviewer, refined test plan | gate → HANDOFF (Plan) |
-| 4 | Prep | Plan | approved implementation plan | gate → plan approval |
-| 5 | Implement | Working | **reviewer's spec response recorded**, code, executed test plan, session log, PR | gate → HANDOFF (Idle) |
-| 6 | Wrap up | Working | finalized why doc, closed stories, closed ledger, review summary | END — you review manually after |
-
-## Mode handling (harness-agnostic)
-
-- **Never assume you can switch Plan/Working modes.** Cursor and Codex have no agent-callable switch; mode is the user's.
-- **Claude Code exception:** if a plan-mode tool (EnterPlanMode) is available in the session, you MAY use it to cross a Working→Plan boundary without stopping — but still print the handoff block first, so the ledger and the user stay synchronized.
-- Handoff boundaries: 0→1, 3→4, 5→6. The 1→2 and 4→5 boundaries are crossed by **plan approval** itself (approving the plan is the handoff) — post the following phase's checklist at its start instead.
-- Same-mode boundary 2→3: **auto-advance, no stop** — but Phase 2's checklist must be fully checked before Phase 3 begins.
-- **Open, untested assumption — whether scripts/messages can run *while in* Plan mode at all** (some harnesses restrict non-readonly tool calls, including shell/Bash, during Plan mode). Status: open. Confirm/revise by: attempt a script call while genuinely in Plan mode in each harness in use and record the observed result (allowed / blocked / silently no-op) as a coverage-ledger or ledger-notes entry. Until confirmed either way, the design below never depends on running anything during a Plan phase — see Progress notifications.
-
-## Progress notifications
-
-**Because handoffs stop and wait, and the user may not be watching, every phase completion sends a push notification** — not only Phase 6 — per the `agent-completion-notification` rule. This directly works around the open Plan-mode question above rather than resolving it: notifications are sent only from **Working**-mode moments, never attempted from inside a Plan phase.
-
-- **Working-phase completions (0, 2, 3, 5, 6) notify immediately**, before printing that phase's handoff block (or, for the auto-advancing Phase 2, alongside its completed checklist).
-- **Plan-phase completions (1, 4) defer their notification** to the first action of the next Working phase, batched with that phase's own "starting" notice — the same deferred pattern already used for their ledger writes (`deferred (plan mode)`).
-- Resolve the dustin-thomason repo root the same way `agent-completion-notification` does, then run (adjust for cwd):
-
-  ```powershell
-  # from the dustin-thomason repo root
-  .\scripts\notify-agent-complete.ps1 -Status "Completed" -Message "<Project>/<slug>: Phase <N> done, next is Phase <M> (<mode>)"
-
-  # from elsewhere in the workspace (e.g. the implementation repo)
-  & "<dustin-thomason>\scripts\notify-agent-complete.ps1" -Status "Completed" -Message "<Project>/<slug>: Phase <N> done, next is Phase <M> (<mode>)"
-  ```
-
-## The handoff block
-
-At each handoff boundary, emit this block verbatim with values filled, **then stop — output nothing after it**:
-
-```text
-==================== ORCHESTRATION HANDOFF ====================
-Ticket:        <Project>/<slug>
-Phase done:    Phase <N> — <name>
-Artifacts:     <repo-relative paths | n/a>
-Ledger:        docs/<Project>/tickets/<slug>/orchestration.md (updated)
-Next phase:    Phase <M> — <name>
-Required mode: <Plan | Working | Idle>
-Your move:     Switch to <mode> mode and say "go".
-               Already in <mode>? Just say "go".
-               Also accepted: "skip to phase <X>" | "redo phase <N>"
-===============================================================
-```
-
-## The checklist is the gate
-
-Agents deprioritize instructions they judge redundant. **The visible checklist is what stops that**, and it replaces the hand-written gate blocks this section used to carry.
-
-**Before advancing out of any phase, every item in that phase's checklist is checked off.** An unchecked item blocks the advance — say what is missing and complete it first. Confidence is not a substitute for the check.
-
-**What satisfies each item is the `done` column in `steps.csv`.** That is the single source of truth for every obligation in this lifecycle. Phase-by-phase "gate evidence" lists used to live here in prose, which meant the same requirement existed in two places and drifted in both — so they were folded into `done` and removed. If you are looking for what proves a step happened, read its row. Nothing else carries it.
-
-To see whether the artifacts actually landed:
-
-```powershell
-scripts/check-steps.ps1 -TicketFolder docs/<Project>/tickets/<slug> -ThroughPhase <N>
-```
-
-Plan-mode phases (1, 4) cannot write files. Their outputs are staged and land as the **first action** of the next Working phase, so their checklist items are satisfied by the staging, not by a file on disk.
-
-**Entry check — before touching anything, not just before leaving.** A checklist only catches a phase on the way *out*. A prior orchestrated run edited implementation-repo files during Phase 0/1, before capture and investigation existed, and was only caught because the user noticed and reverted it. So: before doing **any** work in Phase 2 or later, confirm every earlier phase's ledger row reads `done` or `skipped (reason)` — if it does not, stop and close the gap first. Concretely, **do not create, edit, or run anything in the target implementation repo/folder until Phase 0 and Phase 1 both read `done`.** And `done` means the phase's steps actually met their `done` conditions — not that code was drafted or an outcome was expected. That was missed once too: implementation was nearly called complete before any live proof existed.
-
-## State ledger and resume
-
-`orchestration.md` is scaffolded at Phase 0 from this template:
-
-```markdown
-# Orchestration — <Project>/<slug>
-
-| Phase | Status | Artifacts | Date | Notes |
-| --- | --- | --- | --- | --- |
-| 0 Capture | pending | | | |
-| 1 Recon and plan | pending | | | |
-| 2 Report | pending | | | |
-| 3 Probe & spec | pending | | | |
-| 4 Prep | pending | | | |
-| 5 Implement | pending | | | |
-| 6 Manual review | pending | | | |
-
-Resume: Phase 0 — Working mode
-```
-
-Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `redone (see dnu/)`. Update the row and the `Resume:` footer at every phase transition (deferred to the next Working action for plan-mode phases).
-
-**Resume protocol** — when invoked and the ticket folder already exists:
-
-1. Read `orchestration.md`; **verify against disk** (do the listed artifacts exist?). Disk facts win — flag any discrepancy, correct the ledger, continue from the corrected state.
-2. Announce a one-line status ("Phases 0–2 done; next: Phase 3, Working mode") and emit the handoff block for the next phase.
-3. Ledger missing but ticket artifacts exist (pre-skill ticket): reconstruct the ledger from disk, show it, get the user's confirmation before proceeding.
-4. Neither exists: fresh Phase 0.
-
----
-
-## Phase 0 — Capture the original ticket (Working)
-
-- **Reads:** `docs/original-ticket-artifact.md`; `../job-story/SKILL.md` (execute it for the job stories below); the canonical changelog per the `ticket-changelog` rule (task-start alignment — resolve or scaffold it; personal projects use `docs/<project>/`'s project changelog). For ClickUp-backed tickets, also read `../../docs/browser-loop-setup.md` and load the browser-loop guardrails before using Playwright/browser observation.
-- **Do:**
-  1. Create the ticket folder in the canonical layout.
-  2. For ClickUp-backed tickets, use Playwright/browser observation as the preferred capture path: open the active ClickUp ticket page, identify the visible ticket fields and metadata from the rendered UI, and export the captured ticket to Markdown as `{ticket-id}-original-ticket.md`. Use API access only as a fallback or cross-check, not as the default source of truth. **ClickUp requires an authenticated session** — a freshly Playwright-launched browser context has no login and cannot see the page. Attach to a real, already-logged-in Chrome instead, per browser-loop-setup.md's "Attaching to an authenticated browser session" recipe; do not attempt a fresh headless/incognito launch against ClickUp and fall back to guessing selectors when it fails to load — that already happened once and cost a manual recovery.
-  3. Create `original-ticket.md` (or `{ticket-id}-original-ticket.md` for PRDV tickets) per the artifact doc — the request **verbatim**, capture metadata, explicit constraints, context paths. No findings, no recommendations.
-  4. **Draft the job stories** per `../job-story/SKILL.md` — synthesize the verbatim request, split it into one story per distinct problem, run the full sequence, and write `stories/` plus its index with each story `draft`. Anything the request left undecided becomes that story's Open Questions; do not decide it here. This is the acceptance-criteria baseline every later phase is measured against, and it is established **before** the investigation so the investigation cannot quietly define what done means.
-  5. Scaffold `orchestration.md` from the template above; mark Phase 0 `done`.
-  6. Align with the changelog's Current state / Plans / Attempt history before anything downstream.
-- **Advance:** notify (Progress notifications), then handoff → Phase 1 (Plan).
-
-## Phase 1 — Recon and plan (Plan)
-
-**What this phase is.** Not planning where to look — **recon**. Plan mode is used as the operative method for collecting methodically: the agent reads the ticket text and traces the code, reaches its findings, and emits them as a written plan you approve. The name matters because it sets the right expectation — by the time you see the plan, the looking is done, and what you are approving is a set of findings plus the plan to record them. That is deliberate: the approval sits at the last moment before any durable artifact is written, and the first moment there is something substantive to judge. A misdirected recon costs one pass and leaves nothing wrong on disk; a misdirected write-up costs every artifact downstream that cites it.
-
-**The plan is the durable carrier.** Plan mode's output is a written document, not working memory — that is what makes this phase's findings survivable. It must carry the **findings**, not just the emission todos, so Phase 2 is re-derivable from it if context is lost. It is saved verbatim as `investigations/<slug>-recon-and-plan.md` at Phase 2's first action and **frozen** thereafter, the same way `original-ticket.md`'s Original Request is: later deviation is recorded where deviation belongs — a coverage-ledger reopen reason, or a why-log course change — never by editing the approved plan.
-
-- **Reads:** `../investigation/SKILL.md` (execute it — this phase IS that method, run inside this orchestration); `../investigation/docs/investigation-software-gaps.md` (**mandatory software lens** for software-domain tickets: contract alignment, surface enumeration, protect-the-neighbors, detection gap, red→green test, repro recipe); `../investigation/docs/investigation-coverage-ledger.md` (the consult protocol). Problem Check is already embedded in the method's Step 1 — do not load it separately. Do **not** load `investigation-question-coverage.md` (meta-audit, not an operational input).
-- **Do:**
-  1. **Consult prior coverage ledgers FIRST** — before opening any investigative branch, run the consult protocol (grep `docs/<Project>/tickets/*/investigations/*-coverage-ledger.md` for the subsystems in play). Reuse covered ground; reopen only per the four reopen conditions, with the reason recorded. Stage the mandatory consult log line for the ledger.
-  2. Execute the investigation method steps 1–7 on the ticket (everything but the emit). Two disciplines this phase must not skip: (a) the **Problem Check lens** (method Step 1) — its Asked / Answered / Should-ask + Conflation / Thin / Off findings, each grounded in a trimmed quote from the ticket text ("nothing here" is a valid flag, silence is not), carry into report §2; (b) the **Step 7 reconcile** — classify every open question on the fact-vs-decision axis, resolve the code-discoverable ones by tracing the evidence *now*, and for any question the current structure genuinely can't answer, capture the code evidence that proves why. Stage coverage rows (area, items inspected, findings, status, commit) as you traverse — they become the coverage ledger in Phase 2.
-  3. Build the recon-and-plan doc. It records **the findings this recon reached** — problem class, what was inspected and ruled out, the facts resolved by evidence, the decisions left open with owners — and then the todos to: reconcile against every point of the software lens; emit the report per the template; materialize the coverage ledger (with the consult line); produce the diagrams artifact per `../investigation/docs/investigation-diagrams.md`; seed the test plan per `docs/test-plan-artifact.md`; record any surfaced concerns per `docs/future-development-concerns.md`. Findings-plus-todos, not todos alone — a plan a later agent could execute after losing all context.
-  4. **Surface the ticket's Why early.** Establish the **class of problem** and the high-level problems we're solving, and stage the Phase 1 why-log entry (obvious / not obvious / assumptions) for `<slug>-why-these-changes.md` (per `docs/why-these-changes.md`). This is the heart of the Why doc — get it on the record before the work runs ahead of the understanding. Plan mode can't write, so the file is materialized at Phase 2's first action.
-  5. **Reconcile the job stories against what the investigation surfaced.** Problem Check's Thin and Conflation flags and the Step 7 fact-vs-decision split are peer inputs to the stories, not their source of truth. Stage: open questions the investigation answered, criteria a finding invalidates, and any story that has to split. Plan mode can't write, so these land at Phase 2's first action.
-- **Advance:** plan approval (this is the handoff). Ledger row updates and the deferred Phase 1 notification both fire at Phase 2's first action.
-
-## Phase 2 — Investigation report (Working)
-
-- **Reads:** the approved plan; `../investigation/docs/investigation-report.md` (template); `../investigation/docs/investigation-diagrams.md`; `docs/test-plan-artifact.md`.
-- **Do:**
-  1. Update the ledger (Phase 1 `done`, Phase 2 `in-progress`), and materialize the deferred Phase 1 writes: save the approved plan verbatim as `investigations/<slug>-recon-and-plan.md` (frozen once written — see Phase 1); create `<slug>-why-these-changes.md` (problem class + Phase 1 why-log entry) per `docs/why-these-changes.md`, and apply the staged job-story reconcile — revised criteria, closed questions, any split — with a Phase 1 Story log entry on each story touched.
-  2. Write `investigations/<slug>-investigation.md` from the template — this path **overrides** the template's default `docs/investigations/` location for orchestrated tickets. The report **links out** to the diagrams artifact from §5; do not embed large diagrams inline.
-  3. Materialize `investigations/<slug>-coverage-ledger.md` — Consulted line first, then every staged area entry, then the Not-yet-inspected frontier.
-  4. Produce `investigations/<slug>-diagrams.md` — current-vs-target, flows, sequences (race conditions and timing edge cases) as applicable; N/A lines for kinds skipped.
-  5. Seed `testing/<slug>-test-plan.md` from report §9 — each seeded scenario names the acceptance criterion it exercises, or is flagged as coverage with no criterion behind it yet.
-  6. **Stage the PR draft shell** `<slug>-pr-draft.md` — headings and empty placeholders only, from the PR template in `../../docs/pull-request-workflow.md` (title, ClickUp link, Description, Test Evidence, Commit hash, Checklist). Get the head start, but **draft the shell, not the content**: the body is filled in Phase 5 after testing, because scope can still move in Phases 3–4. Leave a one-line note at the top that it is an unfilled shell.
-  7. Do **not** touch `original-ticket.md` — it is immutable once captured, and the files this phase produced are recorded in the ledger's **Artifacts** column instead. Do **not** add or restatus a changelog Plans row; see **No status bookkeeping** above.
-- **Advance:** notify (Progress notifications; deferred Phase 1 notice batches in here too), AUTO-ADVANCE to Phase 3 (same mode) — close out Phase 2's checklist, post Phase 3's, keep going.
-- **Reopening a "done" report:** if later work (a fast-follow answer, a live-DOM proof, a corrected assumption) needs to change this report after it's marked done, **append a numbered addendum section** (e.g. "§13. Post-Investigation Addendum — <what>") dated and evidenced — never rewrite the verdict or earlier sections in place. This preserves the original reasoning trail the same way the coverage ledger and locked-decision ledger already do.
-
-## Phase 3 — Probe and spec (Working)
-
-- **Reads:** report §8 (assumptions) + §10 (open variables); the job stories' Open Questions (`../job-story/SKILL.md`); `../grill-me/SKILL.md`; `../../docs/qa-to-spec-traceability.md`; the `spec-writing` rule (loads automatically; PRDV app tickets may route through `../write-spec/SKILL.md` and the wiki conventions — ask once: sibling spec or wiki).
-- **Do:**
-  1. **Before grilling, re-run the Step 7 reconcile on the current open variables.** Any question whose answer is discoverable in the code/source — trace it and resolve it yourself via evidence; do not bring a fact to the user to "decide" when the codebase already answers it. Where a question bundles a discoverable fact with a decision, split it: you answer the fact, the user decides the rest. Only genuine decisions reach grill-me.
-  2. Run grill-me against the report's remaining open variables and assumptions **and every job story's Open Questions** — **under the qa-to-spec-traceability workflow**: question gate before each question, one question at a time, each answer committed to the locked-decision ledger before the next, rejected paths recorded.
-  3. Risk-accepting answers produce BOTH records: the locked-decision row and a concern entry in `<slug>-future-development-concerns.md` (create on first concern); the row cites the entry.
-  4. **Accept the job stories.** Fold every resolved decision into the criteria it affects, close each story's Open Questions (or carry one forward with a named owner and the reason), set the index rows to `accepted`, and append the Phase 3 Story log entry. A decision wins on *how*; the criterion still owns *what done means* — rewrite it to stay observable rather than importing the design word the decision introduced.
-  5. Materialize the locked-decision ledger as its own file, `specs/<slug>-locked-decisions.md` (question gates resolved + the full `LD-###` table with source / supersedes-or-rejects / spec destination) — the standard from the first real run, once decisions run past a handful the way they will on any non-trivial ticket. Write `specs/<slug>-spec.md`: grill-me output **informs** the spec, it is not the spec. Its required `Locked Decisions From Q and A` section (per `spec-writing` / `qa-to-spec-traceability`) becomes a short summary table that **links to** `<slug>-locked-decisions.md` for the full ledger, rather than repeating it — satisfy the spec-writing rule's sections (N/A lines where a section does not apply); frame Problem → Requirement → Solution.
-  6. **Submit the spec to its reviewer.** A spec is a review gate, not a private artifact: on a team where a principal dev owns the design, implementing from an unreviewed spec is the same mistake as implementing from an unread one. Deliver it the way that team actually reviews — where a shared wiki is the review surface, that means **pushing a branch and opening a PR, not writing the file locally and calling it submitted**. Two shapes recur: the reviewer has **not** written a spec, so yours is the thing under review; or the reviewer **already authored** the authoritative spec, in which case submit an **addendum** carrying only what your investigation added or changed — decisions that extend their spec, deviations from precedent, and defects found in their own documents. Never request a reviewer through GitHub's reviewer mechanism unless the user asks in that moment (`git-commit-workflow`). If no review is owed, record that as `not-applicable` naming who owns the spec and why.
-  7. Refine the test plan — resolved variables become concrete assertions, each mapped to the acceptance criterion it proves; status `refined`.
-- **Advance:** notify (Progress notifications), then handoff → Phase 4 (Plan).
-
-## Phase 4 — Prep for implementation (Plan)
-
-- **Reads:** the spec; report §11 (handoff table); the test plan. **No re-investigation** — plan from the artifacts.
-- **Do:** build a brief implementation plan: Problem → Requirement → Solution framing; ordered steps; branch step per `../../docs/new-branch-get-started.md` when repo work begins; test execution mapped to the test plan; the shipping checklist obligations (tests, regression, API docs, gates) named up front per the `build-implementation-guardrails` rule.
-- **The plan is saved, the same way Phase 1's is.** It governs every step of Phase 5, so it cannot live only in the conversation. The approved plan is written verbatim to `<slug>-implementation-plan.md` at Phase 5's first action and **frozen** thereafter — later deviation is recorded in the why-log or the session log, never by editing the approved plan.
-- **Advance:** plan approval (this is the handoff). The ledger row, the implementation-plan write, and the deferred Phase 4 notification all fire at Phase 5's first action.
-
-## Phase 5 — Implement (Working)
-
-- **Reads:** the approved plan; the test plan; repo-specific rules of the touched repo; `../../../docs/reviewers/pr-review-patterns.md` for the self-review checklist.
-- **Do:**
-  1. Save the approved plan verbatim as `<slug>-implementation-plan.md` (frozen once written — see Phase 4); update the ledger.
-  1b. **Confirm the reviewer responded to the spec, before any product code.** Record the response in the ledger with its form and date — a merged PR, a comment, an explicit go-ahead. Review latency is asynchronous and can outlast a session, so this is the one gate that legitimately parks a run: **if the answer has not arrived, stop and say so** rather than implementing on the assumption it will be fine. Proceeding anyway requires a waiver naming who authorised it and what risk it carries. A plan approval is **not** a spec approval — Phase 4 approves your sequencing, not the design someone else owns.
-  2. **Do not revise the test plan here.** It was refined at Phase 3 against the locked decisions, and Phase 4's gate already traced every plan step to it — approving a plan confirms the touch points against the spec, it does not introduce anything the test plan has not already seen. What survives is the ordering rule: the refined test plan must be in place **before any code is written**, so the tests are never shaped by what was built. Status stays `refined`; there is no post-approval revision.
-  3. Implement per the plan, inside the `build-implementation-guardrails` obligations (tests as part of shipping, architecture fit, graceful degradation by layer).
-  3b. **Run the self-review checklist against your own diff — after the code, before the tests.** `../../../docs/reviewers/pr-review-patterns.md` carries the fixes reviewers ask for again and again, promoted to a checklist once a pattern recurs. Its whole purpose is catching them *before* a PR goes up rather than reactively after, and any refactor it prompts belongs here, while the tests have not yet been shaped around the current code.
-  4. Execute `testing/<slug>-test-plan.md`: check off scenarios, fill the results log with exact command + scope + result (serial runs). A criterion that turns out to be unobservable in practice failed its own review — move that story to `dnu/`, write the next version, and log it; never reinterpret a criterion to match what was built.
-  5. **Maintain the testing-implementation doc** `testing/<slug>-testing-implementation.md` per `docs/testing-implementation-artifact.md` — **scenario-first**: each real situation stress-tested (why it matters, whether it held), newly-uncovered scenarios flagged, and any code change hung off the scenario that forced it (file(s) + observed → expected → fix). This is the artifact that explains to other devs *what was addressed* — a test with no scenario is arbitrary execution. Write it as you go; living doc. PR-comment content, never a source comment (guardrails §7).
-  6. If a PR draft shell was staged in Phase 2, fill it now (title, description, test evidence, commit hash) per `../../docs/pull-request-workflow.md` — paste the testing-implementation doc's assembled block as the PR comment / test-evidence. Before every commit: changelog session log, then audit → lint → tests per the `git-commit-workflow` rule. PR per `../../docs/pull-request-workflow.md` when requested.
-- **Advance:** notify (Progress notifications), then handoff → Phase 6 (Idle).
-
-## Phase 6 — Wrap up (Working)
-
-**The agent works in this phase.** It was previously labelled Idle, which contradicted its own Do list — four artifacts get written here. Idle describes what happens *after* END, when you review manually and the agent is done.
-
-- **Do:**
-  1. **Finalize the Why doc:** complete the reviewer-facing review in `<slug>-why-these-changes.md` — the **categorized change breakdown** (requested change / bug fix / workflow change / capability gap / other, with a headline count and Before / After / Why per change), **"why it shipped together"** tied to the acceptance criteria, **Scope**, **Net**, and **Verified** (gates + PR link). Confirm the why-log captured every phase where the why moved.
-  2. Produce the review summary: what to review, where, **walking each acceptance criterion against what shipped**, citing the test plan's results log and the Why doc — no unfalsifiable "tests passed" claims.
-  3. **Cruft check:** did this run surface outdated references, superseded docs, or dead weight? Append findings to `../../docs/cleanup-candidates.md`; write "cruft check: nothing surfaced" in the ledger notes if clean.
-  4. Close the ledger: Phase 6 `done`, `Resume: complete`; append each story's final Story log entry and confirm every index row reads `accepted` or `superseded (see dnu/)`.
-  5. Notify per Progress notifications — this is the final one, matching the standard `agent-completion-notification` rule usage.
-- **Advance:** END. The user reviews manually; you are done.
-
----
-
-## Edge cases
-
-- **Personal projects (WorkLists, Countdowns, OtterCopy, …):** `<Project>` = the `docs/<project>/` folder name; changelog = that project's changelog per the `ticket-changelog` rule; the spec stays the sibling `specs/<slug>-spec.md` (wiki routing is PRDV-only). If `docs/<Project>/` does not exist, ask once, then create it at Phase 0.
-- **No ticket text at invocation:** Phase 0 blocks on the verbatim request — ask the one question; never synthesize the request.
-- **Deliberate skip:** only on the user's explicit instruction. Record `skipped (<user's reason>)` in the ledger AND name the downstream inputs now missing (skipping Phase 1 leaves the spec uninvestigated; skipping Phase 3 leaves implementation without locked decisions). Never skip on your own initiative, never silently.
-- **Artifact already exists:** compare the ledger status and dates, then offer exactly three options — **reuse** as-is, **refresh** in place, or **move to `dnu/`** and redo. `original-ticket.md`'s Original Request section is never rewritten regardless of choice.
-- **Conflicting instructions mid-flow:** the user can always override a phase's course — record the override in the ledger notes; the orchestration continues from the adjusted state.
-
-## Do not
-
-- Do not assume you can switch modes; do not proceed past a handoff block.
-- Do not skip a phase, a gate, or an artifact silently — the ledger records everything, including waivers.
-- Do not scale artifacts down because the ticket seems small — invocation of this skill IS the request for full rigor.
-- Do not load later phases' docs early, and do not reload docs already embedded in a method you are executing.
-- Do not modify `original-ticket.md` after Phase 0 captures it — not the Original Request, not any other section. Files the run produces are recorded in the ledger's Artifacts column.
-- Do not edit `<slug>-implementation-plan.md` once it is saved — it records what was approved; deviation goes in the why-log or the session log.
-- Do not edit `investigations/<slug>-recon-and-plan.md` once it is saved — it records what was approved; deviation goes in the coverage ledger's reopen reason or the why-log, not into the plan.
-- Do not leave Phase 0 without at least one drafted job story — the acceptance-criteria baseline is set before the investigation, not derived from it.
-- Do not treat an investigation artifact as the authority on acceptance criteria; the job story owns what done means, and the spec cites it rather than amending it.
-- Do not reinterpret a criterion to match what was built — move the story to `dnu/` and write the next version.
-- Do not let a story move without a Story log entry naming what changed.
-- Do not put the orchestration ledger anywhere except the ticket folder.
-- Do not emit anything after a handoff block.
-- Do not put any orchestration artifact outside `C:\dustin-thomason\docs\<Project>\tickets\<slug>\`, even when the implementation lives in a different repo or folder — see Repo boundary.
-- Do not touch implementation-repo files before Phase 0 and Phase 1 both show `done` in the ledger.
-- Do not mark a phase `done` — Phase 5 especially — on a claim or drafted code; the step's `done` condition must be met by an observed result.
-- Do not write product code before the spec's reviewer has responded, and do not treat Phase 4's plan approval as that response — it approves your sequencing, not a design someone else owns.
-- Do not call a spec "submitted" because the file exists; submitting means delivering it to the reviewer through the surface that team reviews on.
-- Do not rewrite a "done" investigation report to incorporate later findings; append a dated addendum section instead.
-- Do not assume a notification or script can run while genuinely in Plan mode; use the deferred-to-next-Working-action pattern in Progress notifications instead.
-- Do not skip the Problem Check pass or leave its framing claims ungrounded — cite the ticket's words; "nothing here" per flag is fine, silence is not.
-- Do not park a code-discoverable fact as an open-variable "for discussion," and do not bring it to the user to decide — trace it and resolve it via evidence (§8); only genuine decisions go to the user.
-- Do not run without a visible, checked-off todo list where the harness does not surface one.
-- Do not fill the PR draft body before Phase 5 — Phase 2 stages the shell only; content waits until the change is implemented and verified.
-- Do not put change rationale (observed → expected → fix) in a source comment; it is PR-comment content (guardrails §7).
 
 ## orchestrate/steps.csv
 

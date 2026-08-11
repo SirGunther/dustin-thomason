@@ -196,9 +196,15 @@ if (Test-Path $indexPath) {
 # child process so its internal 'exit' cannot short-circuit this validator.
 $syncScript = Join-Path $repoRoot 'agents\scripts\sync-rules.ps1'
 if (Test-Path -LiteralPath $syncScript) {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $syncScript -Check | Out-Null
+    # Keep sync-rules stdout visible on failure (which files / why); silence only on success.
+    $syncCheckOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $syncScript -Check 2>&1
     if ($LASTEXITCODE -ne 0) {
         Add-Issue 'Generated outputs are stale - run .\agents\scripts\sync-rules.ps1 and stage the outputs' 'ERROR'
+        foreach ($line in @($syncCheckOutput)) {
+            if (-not [string]::IsNullOrWhiteSpace([string]$line)) {
+                Write-Host "  $line" -ForegroundColor DarkYellow
+            }
+        }
     }
 }
 

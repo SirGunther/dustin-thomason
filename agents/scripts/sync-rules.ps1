@@ -31,6 +31,9 @@
 .NOTES
   PS 5.1 safe: source is pure ASCII (em-dash via [char]0x2014); files are read with
   [IO.File]::ReadAllText (BOM-aware UTF-8) and written UTF-8 no-BOM with LF.
+  Path/name ordering uses Ordinal string compare (not Sort-Object's culture word-sort) so
+  pwsh and Windows PowerShell 5.1 produce byte-identical artifacts; the pre-commit hook
+  always invokes powershell.exe, while interactive shells are often pwsh.
 #>
 param(
     [switch]$Check
@@ -82,6 +85,26 @@ function Write-Utf8NoBom([string]$Path, [string]$Content) {
 function Get-Marker([string]$Name) {
     return "<!-- generated from rules/$Name.md by scripts/sync-rules.ps1; edit the source, not this file -->"
 }
+function Get-OrdinalSortedStrings([string[]]$Values) {
+    # Ordinal (not culture) sort so pwsh and Windows PowerShell 5.1 emit identical concat order.
+    # PS 5.1 Sort-Object uses word-sort that ignores hyphens, so test-plan vs testing-* diverge.
+    $arr = [string[]]@($Values)
+    if ($arr.Count -gt 1) {
+        [array]::Sort($arr, [System.StringComparer]::Ordinal)
+    }
+    return $arr
+}
+function Get-OrdinalSortedByName {
+    param([object[]]$Items)
+    $arr = @($Items)
+    if ($arr.Count -le 1) { return $arr }
+    $comparison = [System.Comparison[object]] {
+        param($a, $b)
+        [string]::Compare([string]$a.Name, [string]$b.Name, [System.StringComparison]::Ordinal)
+    }
+    [array]::Sort($arr, $comparison)
+    return $arr
+}
 function Build-Concat([string]$Title, [string]$SourceDesc, [hashtable]$FileMap) {
     # Compile a file map (relpath -> content) into one flat artifact: header + '## <relpath>' sections.
     $parts = [System.Collections.Generic.List[string]]::new()
@@ -89,7 +112,7 @@ function Build-Concat([string]$Title, [string]$SourceDesc, [hashtable]$FileMap) 
     $parts.Add('')
     $parts.Add("Source: $SourceDesc. Regenerate with ``.\agents\scripts\sync-rules.ps1``.")
     $parts.Add('')
-    foreach ($rel in ($FileMap.Keys | Sort-Object)) {
+    foreach ($rel in (Get-OrdinalSortedStrings @($FileMap.Keys))) {
         $parts.Add("## $rel")
         $parts.Add('')
         $parts.Add($FileMap[$rel].TrimEnd())
@@ -147,7 +170,7 @@ function Build-Inventory($Rules) {
     $l.Add('')
     $l.Add('| Rule | Load | Purpose |')
     $l.Add('| ---- | ---- | ------- |')
-    foreach ($r in ($Rules | Sort-Object Name)) {
+    foreach ($r in (Get-OrdinalSortedByName @($Rules))) {
         $l.Add("| ``$($r.Name)`` | $($r.Scope) | $(Format-Cell $r.Description) |")
     }
     $l.Add('')
@@ -155,7 +178,7 @@ function Build-Inventory($Rules) {
     $l.Add('')
     $l.Add('| Skill | Purpose |')
     $l.Add('| ----- | ------- |')
-    foreach ($d in (Get-ChildItem -LiteralPath $skillsSource -Directory -ErrorAction SilentlyContinue | Sort-Object Name)) {
+    foreach ($d in (Get-OrdinalSortedByName @(Get-ChildItem -LiteralPath $skillsSource -Directory -ErrorAction SilentlyContinue))) {
         $l.Add("| ``$($d.Name)`` | $(Format-Cell (Get-FmField (Join-Path $d.FullName 'SKILL.md') 'description')) |")
     }
     $l.Add('')
@@ -163,7 +186,7 @@ function Build-Inventory($Rules) {
     $l.Add('')
     $l.Add('| Doc | About |')
     $l.Add('| --- | ----- |')
-    foreach ($f in (Get-ChildItem -LiteralPath $docsSource -Filter '*.md' -File -ErrorAction SilentlyContinue | Sort-Object Name)) {
+    foreach ($f in (Get-OrdinalSortedByName @(Get-ChildItem -LiteralPath $docsSource -Filter '*.md' -File -ErrorAction SilentlyContinue))) {
         if ($f.Name -eq 'workflow-index.md') { continue }
         $l.Add("| ``$($f.Name)`` | $(Format-Cell (Get-FirstHeading $f.FullName)) |")
     }
@@ -175,7 +198,7 @@ function Build-Inventory($Rules) {
     $scriptFiles = @()
     $scriptFiles += Get-ChildItem -LiteralPath (Join-Path $repoRoot 'scripts') -Filter '*.ps1' -File -ErrorAction SilentlyContinue
     $scriptFiles += Get-ChildItem -LiteralPath (Join-Path $agentsDir 'scripts') -Filter '*.ps1' -File -ErrorAction SilentlyContinue
-    foreach ($s in ($scriptFiles | Sort-Object Name)) {
+    foreach ($s in (Get-OrdinalSortedByName @($scriptFiles))) {
         $l.Add("| ``$($s.Name)`` | $(Format-Cell (Get-Synopsis $s.FullName)) |")
     }
     $l.Add($inventoryEnd)
@@ -184,7 +207,7 @@ function Build-Inventory($Rules) {
 
 function Get-Rules {
     $result = [System.Collections.Generic.List[object]]::new()
-    foreach ($f in (Get-ChildItem -LiteralPath $sourceDir -Filter '*.md' -File | Sort-Object Name)) {
+    foreach ($f in (Get-OrdinalSortedByName @(Get-ChildItem -LiteralPath $sourceDir -Filter '*.md' -File))) {
         $name = $f.BaseName
         $raw = ConvertTo-Lf (Read-Utf8 $f.FullName)
         $fm = @{}
@@ -239,7 +262,7 @@ function Build-Agents($Rules) {
     $parts.Add('')
     $parts.Add('Source: `rules/*.md`. Regenerate with `.\scripts\sync-rules.ps1`.')
     $parts.Add('')
-    foreach ($r in ($Rules | Where-Object { $_.Codex -eq 'include' } | Sort-Object Name)) {
+    foreach ($r in (Get-OrdinalSortedByName @($Rules | Where-Object { $_.Codex -eq 'include' }))) {
         $parts.Add("## $($r.Name)")
         $parts.Add('')
         $parts.Add($r.Body)
@@ -259,7 +282,7 @@ function Build-ClaudeManifest($Rules) {
     $lines.Add('Claude Code session, in every repo. Pulls in the scope:always rules plus the workflow index;')
     $lines.Add('scope:scoped rules stay on-demand via `.claude/rules/` path matching.')
     $lines.Add('')
-    foreach ($r in ($Rules | Where-Object { $_.Scope -eq 'always' } | Sort-Object Name)) {
+    foreach ($r in (Get-OrdinalSortedByName @($Rules | Where-Object { $_.Scope -eq 'always' }))) {
         $lines.Add("@rules/$($r.Name).md")
     }
     if (Test-Path -LiteralPath (Join-Path $docsSource 'workflow-index.md')) {

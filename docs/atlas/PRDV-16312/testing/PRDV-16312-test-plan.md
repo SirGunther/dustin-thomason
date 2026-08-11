@@ -189,7 +189,7 @@ Status: **executed** (2026-08-05). Every row below is an observed result. Comman
 | 2026-08-05 | Type check | `npx tsc --noEmit -p tsconfig.json` | whole repo | **pass** — exit 0 |
 | 2026-08-06 | **I3 (new)** — real Postgres round-trip of a `File` through the production repository, then the real converter | `npm run test:integration -- file-created-to-outbox-data` | new integration spec, Docker `callisto-postgres` | **pass** — 4 tests. **Found a real defect risk:** `typeof reread.fileSize === 'string'` — see below |
 | 2026-08-06 | Integration regression | `npm run test:integration` | whole repo | **pass** — 8 suites, 91 tests (the glob `schemaEntities` shares `callisto_test`, so this confirms no disturbance to the 7 pre-existing suites) |
-| — | **M2** (persisted `outbox_events` row via a real upload) | — | — | **still not run.** See below |
+| 2026-08-10 | **M2a-equivalent** — real upload into Client Deliverables (Transcript), then inspect the persisted row | DBeaver against `callisto` on localhost:5432 | live local stack | **PASS.** One row, `type` = `callisto.client-access.file.created.v1`, `aggregate_type` = `File`, `aggregate_id` = 2. Payload carried all 16 fields: `fileName` = `larry-file-2 copy 2.pdf`, `fileSize` = `3460219` **unquoted**, `fileType` = `application/pdf`, `trackTypeId` = 2, `proceedingId` = 3001, `attachedToType` = `Proceeding`, `key`, `bucketName`, `length` = 17, `createdUserIdentity`, `createdAt` ISO. Envelope carried `schema.uri` and `schema.version`. `deliverableCollectionId` / `deliverableCollectionValue` **null** — no collection was selected. **Screenshot captured.** |
 
 ### M2 is now the spec's own mandated manual test
 
@@ -203,7 +203,31 @@ The test asserts **both** the coerced output *and* the raw driver type. That dis
 
 `createdAt` round-tripped to a well-formed ISO 8601 string. The timezone question (the column is `timestamp` *without* time zone) is **not** settled by this — the format is right; whether the instant is right depends on what the DB stores, which needs a real seeded upload.
 
-### M2 still not run
+### Evidence query — use this one
+
+The payload is nested one level deeper than the earlier queries in this file assumed. `data->>'fileName'` returns null; the correct path is `data->'data'`:
+
+```sql
+SELECT data->>'type'          AS event_type,
+       jsonb_pretty(data->'data') AS payload
+FROM callisto.outbox_events
+ORDER BY created_at;
+```
+
+Click the `payload` cell so DBeaver's Value panel renders it, then screenshot grid and panel together. That single image evidences AC1 and AC2.
+
+### Status of the manual criteria
+
+| Criterion | State |
+| --- | --- |
+| AC1 — row written with the correct routekey | **demonstrated** 2026-08-10 |
+| AC2 — payload matches `CallistoClientAccessFileCreatedV1Data` | **demonstrated** 2026-08-10 |
+| AC3 — `deliverableCollectionValue` populated, new **and** existing collection | **not demonstrated** — blocked on the GCA feature flag |
+| AC4 — null for tracks without collections (Exhibits, MVC) | **not demonstrated** — but **not blocked**: Exhibits has no collections, so the picker never appears and the flag is irrelevant. One upload to the Exhibits section demonstrates it. |
+
+**AC3's blocker:** `IS_GRANTING_CLIENT_ACCESS_ENABLED` is absent from the local Cognito user's `custom:feature-flags`. Without it Atlas takes the legacy upload branch and never shows the collection picker, so no collection can be attached. The attribute exists on the pool schema and is mutable; it is **not** in the SAML attribute mapping, so it is settable per user. Setting it did not survive a re-login in the attempt made — unresolved.
+
+### Prior note, now superseded
 
 The remaining half of M2 is unverified: **no `outbox_events` row has been inspected.** I3 proves the payload's data shape survives a real database; it does **not** prove the row persists with the contract's `schema_uri` / `schema_version`, nor that the write participates correctly in the ambient transaction at runtime. That needs a booted local Callisto with a seeded dataset and an authenticated `POST /upload-complete`.
 

@@ -255,13 +255,13 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 
 | Doc | About |
 | --- | ----- |
+| `README.md` | Cursor docs (playbooks) |
 | `browser-loop-setup.md` | Browser-loop setup (dustin-thomason) |
 | `cleanup-candidates.md` | Cleanup candidates — archive and consolidation ledger |
 | `current-vs-target-diagram.md` | Current vs Target diagram — a single-diagram delta convention |
 | `new-branch-get-started.md` | Start a new branch |
 | `pull-request-workflow.md` | Pull request workflow (reference) |
 | `qa-to-spec-traceability.md` | Q and A to Spec Traceability |
-| `README.md` | Cursor docs (playbooks) |
 | `session-start.md` | Session start (optional) |
 | `ticket-changelog-workflow.md` | Ticket changelog workflow |
 | `wiki-spec-authoring.md` | Wiki spec authoring (Callisto / Atlas) |
