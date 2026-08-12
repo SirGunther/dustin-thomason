@@ -56,8 +56,54 @@ Cross-session implementation memory for the ClickUpWideLayout browser extension.
 > I do'nt see where the requirement states
 > without URL: # ${title} - ${id}
 
+## Requirements (verbatim) — Enable copying links from ClickUp page view
+
+> [ClickUpWideLayout](c:/Users/dktho/OneDrive/PDProjects/Browser Extensions/ClickUpWideLayout/)
+> [agents](c:/dustin-thomason/agents/)
+> [orchestrate](c:/dustin-thomason/agents/skills/orchestrate/)
+>
+> Enable copying links from ClickUp page view
+>
+> ---
+>
+> ---
+> # Incident Report
+> ### Observed behavior
+> - The ability to copy markdown and title links is currently restricted to contextual popouts/panes.
+> ### Expected behavior
+> - Users should be able to copy markdown and title links directly from the full ClickUp link page view.
+> ### Requested adjustment
+> - Implement a mechanism to extract link data when navigating the full ClickUp page URL directly, bypassing the pane-only dependency.
+> ---
+>
+> ### Problem
+> - Current link extraction logic is tied to the context of a sidebar or popout pane, preventing users from retrieving link data when visiting the primary page view.
+>
+> ### Requirement
+> - Provide functionality to copy title and markdown-formatted links regardless of whether the user is in a pane or on the source page.
+>
+> ### Solution
+> - Decouple the link extraction service from the UI pane component.
+> - Ensure the service can parse and return page metadata from the full browser view.
+>
+> ### Investigation
+> - Audit the existing `copyLink` method to identify hard-coded references to the pane/sidebar component state.
+> - Determine if the ClickUp metadata provider can be injected into the main page controller.
+>
+> ### Technical Scope
+> - **Backend/API:** Evaluate if the current data model requires an endpoint to fetch page metadata independently of the pane state.
+> - **Frontend:** Update the clipboard event listeners to identify page context and trigger the extraction utility.
+>
+> ### UI/UX Component
+> - Add/Ensure a 'Copy Link' action button is present and functional in the primary header of the ClickUp page view to provide consistent user interaction.
+>
+> **Estimation:** 5 Sprint Points.
+>
+> We don't need a Heavy investigation. The defect is fairly well established. We can connect you to PlayWright to inspect the source when ready.
+
 ## Current State
 
+- The `enable-copy-links-page-view` implementation is complete and ready for Phase 6 loaded-extension review. `content.js#getTaskMeta()` now owns active task ID/title/URL/context resolution, full-screen `/t/...` routes no longer depend on the displayed custom ID appearing in the URL, pane DOM-link behavior remains intact, and both existing popup Header copy controls delegate to the service. Automated, syntax, manifest, and authenticated live-provider gates pass; actual popup/pane interaction remains pending because the debugging Chrome session did not have the unpacked extension loaded.
 - The popup uses a minimal SaySlate-inspired visual system: a 312px shell, light/dark palette, inline SVG icons, a top-right theme toggle, and separate Layout, Header, and Task action groups.
 - Each action row keeps only a concise title on the left; all explanatory copy lives in hover/focus tooltips on the 32px controls. Header copy actions remain separate rows, while Task uses one `Full Markdown` row with copy and download controls side by side.
 - Theme preference persists locally under `clickup-wide-layout-theme`; light mode is the safe fallback if local storage is unavailable.
@@ -89,6 +135,71 @@ Cross-session implementation memory for the ClickUpWideLayout browser extension.
 - 2026-07-01: Rejected fallback `# ${title} - ${id}` when URL is missing; requirement only supports heading link Markdown.
 
 ## Session Log
+
+### 2026-08-11T17:09:39Z - ClickUpWideLayout
+
+- Summary: Implemented `enable-copy-links-page-view`. Added a bounded, uncached `getTaskMeta()` service with explicit full-page/pane/unknown context and safe URL precedence; delegated popup and content copy callers; preserved all existing UI and formatter contracts; and added resolver, exact-payload, retry, feedback, and SPA-navigation coverage.
+- Plan used: Phase 4 was explicitly skipped by the user as unnecessary; implementation used the accepted spec, refined test plan, and in-chat execution checklist.
+- Files/areas:
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\content.js`
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\popup.js`
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\tests\content-links.test.mjs`
+  - `C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\ClickUpWideLayout\tests\popup-markdown.test.mjs`
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/`
+- User-visible impact: The existing `ID + title` and `Markdown link` popup actions can resolve the current URL from a directly opened full-screen task even when ClickUp's route uses an internal ID. No new ClickUp-page control was added.
+- Self-review: Checked the installed diff against `docs/reviewers/pr-review-patterns.md`; named the context constants and added symmetric pane/nearby-DOM plus failure coverage before final gates.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | package audit | `Test-Path package.json` | Extension root | not available | No `package.json` or dependency surface. |
+  | package lint | `Test-Path package.json` | Extension root | not available | No configured lint command; syntax checks substitute. |
+  | syntax | `node --check popup.js`; `node --check content.js`; `node --check background.js` | Popup, content, background | pass | - |
+  | manifest | `Get-Content -Raw manifest.json \| ConvertFrom-Json \| Out-Null` | MV3 manifest | pass | No manifest change. |
+  | tests | `node --test tests/popup-markdown.test.mjs tests/content-links.test.mjs` | Resolver, popup payload/feedback, theme/full-ticket regressions | pass - 18 tests | Layout runtime remains Phase 6. |
+  | authenticated live provider | CDP evaluation of installed `content.js` on visible `PRDV-16313` | Normal custom-ID route plus temporary internal-ID mismatch route | pass | Original URL restored; zero extension-owned page controls. |
+  | loaded-extension popup/pane | Authenticated Chrome on port 9222 | Actual popup click/paste and pane interaction | pending Phase 6 | Unpacked extension was not loaded in the debugging Chrome session. |
+- Regression impact: `popup.html`, `popup.css`, `background.js`, `manifest.json`, full-ticket formatters/export, layout toggle, and theme implementation were not changed. Existing neighboring automated tests remain green.
+- PR/commit: Not applicable; the ClickUpWideLayout implementation folder is not a Git repository. The populated PR draft is the review handoff body.
+
+### 2026-08-11T16:49:19Z - ClickUpWideLayout
+
+- Summary: Completed Phase 3 probe/spec for `enable-copy-links-page-view`. Reconciled every candidate question against existing evidence without re-asking, locked eight implementation decisions and rejected paths, accepted the single five-criterion job story, wrote the internal extension spec, and refined every test assertion against an acceptance criterion.
+- Plan used: `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/investigations/enable-copy-links-page-view-recon-and-plan.md`.
+- Files/areas:
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/specs/enable-copy-links-page-view-locked-decisions.md`
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/specs/enable-copy-links-page-view-spec.md`
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/stories/`
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/testing/enable-copy-links-page-view-test-plan.md`
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/enable-copy-links-page-view-why-these-changes.md`
+- Spec review disposition: Not applicable — ClickUpWideLayout is a personal local non-Git extension, the user is the sole product/spec owner, and the canonical spec is delivered directly through orchestration rather than a shared wiki/PR surface.
+- User-visible impact: None yet; no product code or UI changed.
+- Tests run: Documentation artifact checks only; implementation gates remain in the refined test plan.
+
+### 2026-08-11T16:42:57Z - ClickUpWideLayout
+
+- Summary: Completed the report phase for `enable-copy-links-page-view`. Recorded the reclassification from a pane-only/UI problem to a shared context-resolution defect, reconciled the draft story, created the living Why, emitted the investigation/coverage/diagram package, and seeded executable resolver, popup, regression, and loaded-extension scenarios.
+- Plan used: `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/investigations/enable-copy-links-page-view-recon-and-plan.md`.
+- Files/areas:
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/orchestration.md`
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/enable-copy-links-page-view-why-these-changes.md`
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/stories/`
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/investigations/`
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/testing/enable-copy-links-page-view-test-plan.md`
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/enable-copy-links-page-view-pr-draft.md`
+- User-visible impact: None yet; investigation artifacts only. Product code remains untouched pending the spec and implementation-plan gates.
+- Tests run: `check-steps.ps1` artifact validation is run after materialization; product tests are deferred because no implementation file changed in this phase.
+
+### 2026-08-11T16:03:24Z - ClickUpWideLayout
+
+- Summary: Captured the `enable-copy-links-page-view` request as an immutable original ticket, scaffolded its orchestration ledger, and drafted the job story and acceptance-criteria baseline for Phase 0.
+- Plan used: Orchestration Phase 0 capture; no Plans row added because the orchestration ledger is the workflow status record.
+- Files/areas:
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/original-ticket.md`
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/orchestration.md`
+  - `docs/ClickUpWideLayout/tickets/enable-copy-links-page-view/stories/`
+- User-visible impact: None yet; capture artifacts only. The ClickUpWideLayout implementation folder was not touched.
+- Tests run: Not relevant — documentation-only Phase 0 capture with no product behavior change.
 
 ### 2026-08-07T20:43:23Z - ClickUpWideLayout
 
