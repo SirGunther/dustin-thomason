@@ -36,6 +36,98 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-08-13T03:05:00Z - WorkLists
+
+- Summary: Completed the remaining two bodies of work — the **Card Templates settings tab** and **W6, the agent wiring** in `dustin-thomason` — plus one small fix to the repo's test gate. All seven specified bodies of work are now implemented.
+- Problem: card templates were only reachable over HTTP or by hand-editing JSON, and nothing told an agent when or how to write ticket progress back to a card.
+- Requirement: templates authorable where the app's other configuration lives, and a written contract the agent follows — including when to refuse rather than guess.
+- Solution shipped:
+  - **Card Templates settings tab** — an eighth tab in the existing settings dialog, built on the Prompts panel's list-plus-editor shape so it inherits the `model-settings-*` styling wholesale. Fields for name, description, card body and default tag; a notes repeater with add / remove / move up / move down; and a **Use for new tickets** action that sets the designated template. The designated template cannot be deleted or re-designated from its own row, so the setting can never point at nothing.
+  - **Notes editor hint** — as you type a note, it says whether the text reads as a checklist ("the agent can tick its rows") or as plain prose. The server's parser stays the authority; this is an authoring aid.
+  - **W6 rule** — `agents/rules/worklists-card-sync.md`: the two card-id paths, evidence-not-plausibility for marking rows, read-and-write-in-one-exchange, the permission table, the five guards, and the stop-versus-skip distinction. Endpoint shapes are deliberately **not** restated — it points at `GET /openapi.json` as the live contract so the rule cannot drift from the API.
+  - **W6 orchestrate wiring** — a `Keeping the WorkLists card current` section, card-id capture added to Phase 0, a `WorkLists card` row in the ledger template, guard stops added to the notification guidance, three new do-nots, and a `BOARD` participant plus five board-write steps in `steps.csv` (`P0.board-id`, `P2.board`, `P3.board`, `P5.board`, `P6.board`).
+- Files/areas: `public/todolist2.js`, `public/apiService.js`, `public/todoliststyles2.css`, `package.json`, new `tests/card-templates-settings.test.js`; in `dustin-thomason`: `agents/rules/worklists-card-sync.md`, `agents/skills/orchestrate/SKILL.md`, `agents/skills/orchestrate/steps.csv`, and the regenerated `.claude/` / `.cursor/` / `agents-rules.md` / `workflow-index.md` outputs.
+- User-visible impact: a **Card Templates** tab in settings. The seven existing tabs keep their ids, labels, icons and order — asserted by test, not assumed.
+
+#### Verification gates
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | WorkLists | pass | Unchanged: 2 vulnerabilities below the high threshold |
+| lint | `npx prettier --check` over every touched file | this session's files | pass | — |
+| tests | `npm test` | WorkLists suite | **790 passing** | Exactly the same 4 pre-existing failures |
+| steps.csv | `render-sequence.ps1 -Checklist -Phase 0/2/3/5/6` | orchestrate step ledger | pass | validation OK, 56 steps, 23 participants |
+| sync-rules | `agents/scripts/sync-rules.ps1` | dustin-thomason generated outputs | pass | 15 rules, 6 skills, 11 docs mirrored |
+
+**Small fix to the test gate.** `npm test` was `node --test` with no path, which also discovered `argus-phase4b/4c/4d-stage/` staged inside this repo — foreign, cwd-dependent tests that fail from the repo root while passing 72/72 from their own directory. The script is now `node --test "tests/*.test.js"`. `npm test` reports 790 passing with zero foreign tests, so the gate the commit workflow depends on now actually measures WorkLists. Blast radius considered: the script is the only consumer, and scoping it can only narrow what runs — it cannot hide a WorkLists failure, because every WorkLists test lives in `tests/`.
+
+**The orchestrate step ledger caught its own defect.** A `label` containing commas was written unquoted, shifting the CSV columns; `render-sequence.ps1` failed validation with `check_by must be script or human` rather than silently accepting a malformed row. Fixed by quoting the label. Worth noting because it is the mechanism working as designed.
+
+- Tests added: 26 assertions in `tests/card-templates-settings.test.js` — tab registration and order, panel construction against the shared classes and helpers, the notes repeater's add / remove / reorder and its end-of-list disabling, state isolation from the prompt panel, refresh wiring, refusal to delete or re-designate the in-use template, one ApiService helper per route, and that the new CSS keeps the existing dark palette rather than introducing another.
+- Regression impact: the settings work is purely additive — one entry appended to the tab array, one panel appended to the dialog body, one call appended to the render pass, one load added to `refreshSettingsData`. No existing panel, handler or CSS rule was modified. The tab-order assertion is the guard against that changing by accident.
+- API docs: not relevant — this session added no HTTP surface. The card-template routes it consumes were documented in the previous session, and `openapi.js` was not touched.
+- Not done: nothing from the seven specified bodies of work. Remaining open items are the four confirmations and two spike questions in `007-open-decisions.md`, none of which block use.
+
+### 2026-08-13T02:10:00Z - WorkLists
+
+- Summary: Implemented five of the seven specified bodies of work for agent workflow sync — record-level data access, single-card read plus Copy Card ID, the checklist format parser, the note checklist patch with optimistic concurrency, card workflow section keys, and the Card Templates backend. **The Card Templates settings UI and the agent wiring (W6) are not done.**
+- Problem: Ticket progress lived in a card body and a checklist note that only a human kept current, so delegating the work to an agent left the board stale.
+- Requirement: An agent must know which card it is on, locate that card's checklist, mark specific rows and fill their detail lines, set the card's workflow values, and never silently destroy a concurrent human edit — while every existing touch point stays exactly as it is.
+- Solution shipped:
+  - **W1 record-level access** — `readSection` / `writeSection` / `getRecord` / `patchRecord` added beside `readDB` / `writeDB`, sharing the existing lock. No existing caller repointed.
+  - **W2 single-card read** — `GET /todos/:id` over `getRecord`, `ApiService.fetchTodoById`, and a `Copy Card ID` action (`fa-fingerprint`) in both the board and notes-pane card menus.
+  - **W3 parser** — `parseChecklist` / `findChecklistStep` / `isChecklistNote`. The checklist **format** is the contract, not a template.
+  - **W3 Card Templates backend** — new `cardTemplates` section, CRUD routes, a designated-template setting, and `POST /api/cards/from-template` which creates the card plus every note the template defines and **returns the new card's id**.
+  - **W4 note checklist patch** — `PATCH /api/notes/:noteId` addressing rows by section and label as read, with a **mandatory** `lastModified` precondition, all-or-none atomicity, and `409` / `422` distinguished. The existing `PUT` is untouched.
+  - **W5 card workflow keys** — `currentStep` / `waitingOn` / `nextUp` / `workAhead` as new optional keys on the existing `PATCH /todos/:id`, consumed by a handler that owns the markdown surgery, plus an **optional** `lastModified` precondition.
+- Files/areas: `dal.js`, `server.js`, `openapi.js`, `public/apiService.js`, `public/cardActions.js`, `public/todolist2.js`, `data/cardTemplates.example.json`, `.gitignore`; new tests `dal-record-access`, `checklist-format`, `card-section-fields`, `note-checklist-patch`, `card-templates`; cases added to `api.test.js` and `card-actions.test.js`.
+- User-visible impact: one new card-menu row, `Copy Card ID`. Everything else is API surface with no UI entry point yet.
+- Verified against real data: the parser reads **all nine** real checklist notes across all three heading generations (5, 17, 19, 20, 27, 30, 32, 34, 35 rows) and correctly reports the three prose notes as unrecognized. The earlier id-based design would have rejected four of those nine.
+- **Design gap closed during implementation:** a card created from a template is immediately accepted by the workflow-section keys, and its primary note is immediately accepted by the checklist patch. That was the open "nothing creates a card body scaffold" gap; it is now covered by tests in both directions.
+- Corrections made while implementing:
+  - Seeded card-template defaults use a fixed timestamp. `ensureCardTemplateStore` runs on every `readDB`, so a live clock made `createdAt` drift between reads until something persisted the seed.
+  - `GET /todos/:id` returns the record verbatim, so a card seeded straight to disk carries only what the fixture gave it. Every app-written card carries `lastModified`, which is what the agent needs; a test asserting otherwise was wrong, not the route.
+  - `readDBUnlocked`'s ENOENT-tolerant list gained `cardTemplates`, matching how `statuses`, `statusVisibility`, `classificationPrompts` and `schedulerTaskIds` were each added later. It cannot change behavior for any pre-existing section.
+
+#### Verification gates
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | WorkLists | pass | 2 vulnerabilities remain (1 low, 1 moderate), below the high threshold and unchanged by this work |
+| lint | `npx prettier --check` over the 14 touched files | files touched this session | pass | See the prettier side effect below |
+| tests | `node --test "tests/*.test.js"` | WorkLists suite | **762 passing** | Exactly the 4 pre-existing failures remain; see below |
+
+**Tests run — the scoped command was used deliberately.** `npm test` (`node --test` with no path) also discovers `argus-phase4b-stage/`, `argus-phase4c-stage/` and `argus-phase4d-stage/` inside this repo. Those are staged copies of a different project whose tests are cwd-dependent: they pass 72 of 72 when run from their own directory and fail from the WorkLists root. `phase4d` appears 114 times in the current run and **zero** times in the pre-change baseline, so those files arrived from other work, not from this session. Scoping to `tests/` is what isolates the WorkLists gate. **Follow-up worth doing: point the `test` script at `tests/` so the repo's own gate stops depending on what else is staged in the tree.**
+
+**The 4 pre-existing failures, unchanged:** `keeps all card actions in one menu definition`, `labels compact note action icon buttons accessibly`, `keeps AI note reveal targets across reload and missing server job results`, `wires Ctrl+Shift+Backslash as a context-aware global voice shortcut`. The baseline was 738 passing with these same 4. The card-actions one now differs by only the pre-existing `prompt-injection` entry — `copy-card-id` was added to both the code and that test's expected list, so the cause of the failure is unchanged.
+
+- Tests added: 112 new assertions across five new files — record access (26), checklist format (22), card section fields (23), note checklist patch (24), card templates (37, HTTP-level) — plus 7 cases in `api.test.js`. Coverage spans happy path, failure paths, edge cases (all three checklist generations, hand-edited notes, prose / tables / code fences, array `tag`, compound ids, bare-line sections) and graceful degradation (`400` / `404` / `409` / `422` shapes).
+- Regression impact: the additive-only constraint is asserted directly rather than assumed. Explicit tests prove `writeDB` still rewrites every section, `updateTodo` with no new key produces an identical result, `PUT /api/notes/:noteId` still replaces the whole body with no precondition, `POST /todos` and `POST /api/notes` contracts are unchanged, `GET /todos` still returns every card, the nine existing card-menu actions keep their order, and `markdownRenderer.js` was never modified.
+- API docs: **updated** — `GET /todos/{id}`, `PATCH /api/notes/{noteId}`, four card-template paths, four new `TodoPatch` keys plus its `lastModified`, and 12 new schemas. Every `$ref` in the document was verified to resolve.
+- **Prettier side effect worth knowing about.** `public/todolist2.js` grew 80 lines from a roughly 30-line addition: running the project formatter also reformatted in-progress uncommitted work already in that file, which was not prettier-clean (two other untouched files in the tree still fail prettier, which is how this was diagnosed). The file now passes the project lint gate, which it did not before. Nothing semantic changed, but the diff there is larger than this session's own additions.
+- Not done, and clearly bounded: the **Card Templates settings tab** (templates are fully usable over HTTP and hand-editable as JSON meanwhile) and **W6**, the agent wiring in `dustin-thomason`. Neither is started.
+
+### 2026-08-12T00:00:00Z - WorkLists
+
+- Summary: Planning-only session. Investigated agent-driven card and checklist updates, then produced a decision map, sequence diagram, work breakdown, four live project-level job stories, seven specs, an overall test plan, a job-story validation matrix, and a consolidated open-decisions list. **No WorkLists code was written or changed.**
+- Problem: Ticket progress lives in a WorkLists card body and a 35-item checklist note that only a human keeps current. When an agent does the work, the board goes stale immediately, so it stops serving the visibility and dashboarding it exists for.
+- Requirement: An agent completing a unit of ticket work must know which card it is on and verify it, locate that card's checklist, mark specific rows and fill their detail lines, set the card's workflow values and status, and do all of it without destroying a concurrent human edit — while every existing touch point stays exactly as it is.
+- Solution: Nine bodies of work, seven specified. Two new routes (`GET /todos/:id`, `POST /api/cards/from-template`) plus Card Template CRUD, a new `PATCH` verb beside the untouched notes `PUT`, new optional keys on the existing card `PATCH`, new record-level DAL functions beside the existing whole-database pair, a new `cardTemplates` section, and a **Card Templates** tab appended to the existing settings dialog. The agent's core duty is judgement — read the checklist's current rows and substantiate each one against the phase's real outputs.
+- Files/areas: `dustin-thomason/docs/WorkLists/features/agent-workflow-sync/` (001 decisions, 002 sequence, 003 breakdown, 004 test plan, 006 validation, 007 open decisions); `dustin-thomason/docs/WorkLists/tickets/agent-workflow-sync/` (original ticket, four live job stories, one retired to `dnu/`, index); seven ticket folders under `dustin-thomason/docs/WorkLists/tickets/`.
+- User-visible impact: None. Planning only.
+- Measured evidence recorded: 2,731 cards (~925 KB) and 515 notes; 9 cards use the workflow convention, of 45 mentioning a ticket id; the checklist grew 17 → 35 rows across three heading generations in six weeks; every DAL read loads all 12 section files and every write rewrites all 12; a card write legitimately needs 3 sections because of the column/board timestamp cascade; `atomicWrite` already retries `EBUSY`/`EPERM`/`ENOENT` five times.
+- Three design corrections found by tracing code: `markdownRenderer.js:155` escapes inline HTML, so hidden id markers in note text would render as visible literal text — this killed the embedded-id mechanism outright. The host-scoped data files (`todos-OfficeComputer1.json`, `boards-PDLP-D362HS3.json`) are referenced by nothing in the app, so there is no code-level multi-machine mechanism. And `POST /todos/:id/duplicate` returns the new card's id, which is what made an agent-created-ticket path viable at all.
+- Reframe applied: the checklist **format** is the contract, not a template. Removed per-item ids, template versions, positional addressing, deprecation records, the strict drift refusal, and two proposed note properties. W3, W4, and W6 rewritten; W8 largely dissolved; no acceptance criterion regressed and four improved.
+- Scope correction applied: a job story about reading progress across many tickets was **retired as out of scope** — it came from a misread of a passing line about visibility, and the effort is bounded to the card the agent is given an id for. Removed with it: W9, the "two copies of one value" decision, and four gap rows in the validation matrix. Retirement recorded in `stories/dnu/README.md`.
+- Card Templates added as a feature on the user's direction: one template defines a whole ticket — card body plus an ordered list of notes — authored in a new settings tab, with a setting naming which template the agent creates from. Replaces an earlier plan to duplicate a designated card, which returned the new id correctly but could only copy an existing card's drift rather than define the intended shape. New job story 05 written for it.
+- Two behaviours approved and specified: `currentStep` is written at **phase start** rather than completion, so the field says what is happening now; and every guard stop fires the completion-notification script, while a board-unreachable **skip** deliberately does not.
+- Tests run: **none — no code changed.** Not applicable rather than skipped.
+- Tests added/updated: none. The test plan and validation matrix are authored with empty results logs so neither reads as passing.
+- Regression impact: none — no file in the WorkLists repo was touched this session. Checked surface: `git status` in WorkLists lists the same 15 modified files and the same untracked prompt template as at session start; the two untracked staging directories are dated 2026-08-11, predating this session.
+- API docs: not relevant — no HTTP surface changed. `openapi.js` untouched; the specs record what it will need when implemented.
+- Tooling gates: not applicable — the session changed only markdown in `dustin-thomason`, which has no npm workspace.
+- Open decisions blocking implementation: **none.** Four confirmations remain (the feature's UI name, whether ticket creation is agent-only at first, agent un-mark permission, which note when a card has two checklist-shaped ones) plus two spike questions. Full list in `007-open-decisions.md`.
+
 ### 2026-07-16T15:23:43Z - WorkLists
 
 - Summary: Added the Duplicate Card action as a backend-owned card clone flow.

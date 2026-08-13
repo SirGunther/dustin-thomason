@@ -239,6 +239,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `spec-writing` | always | Required sections when authoring epic and story specs (artifacts, schema, migrations, DTOs, projections) — any repo in the workspace. |
 | `ticket-changelog` | always | Changelog alignment at task start; scaffold on branch start; verbatim requirements on first pass; session log before every PlanetDepos commit. |
 | `workflow-housekeeping` | scoped | When workflow docs or rules change in dustin-thomason, sync workflow-index and run validate-workflows.ps1. |
+| `worklists-card-sync` | scoped | How an agent writes ticket progress back to a WorkLists card and its checklist — the card id is supplied or created from a template, rows are marked only with evidence, writes carry a lastModified precondition, and every guard stop notifies instead of guessing. |
 
 ### Skills (`agents/skills/`)
 

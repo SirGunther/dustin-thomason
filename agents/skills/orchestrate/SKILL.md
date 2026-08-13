@@ -141,6 +141,7 @@ If this boundary is ever unclear at invocation (a free brief naming a folder tha
 
 - **Working-phase completions (0, 2, 3, 5, 6) notify immediately**, before printing that phase's handoff block (or, for the auto-advancing Phase 2, alongside its completed checklist).
 - **Plan-phase completions (1, 4) defer their notification** to the first action of the next Working phase, batched with that phase's own "starting" notice — the same deferred pattern already used for their ledger writes (`deferred (plan mode)`).
+- **A guard stop notifies too**, not only a phase completion — an unattended run's stop otherwise lives only in a transcript, which is exactly when nobody is watching. Message names the phase and the guard that fired.
 - Resolve the dustin-thomason repo root the same way `agent-completion-notification` does, then run (adjust for cwd):
 
   ```powershell
@@ -150,6 +151,17 @@ If this boundary is ever unclear at invocation (a free brief naming a folder tha
   # from elsewhere in the workspace (e.g. the implementation repo)
   & "<dustin-thomason>\scripts\notify-agent-complete.ps1" -Status "Completed" -Message "<Project>/<slug>: Phase <N> done, next is Phase <M> (<mode>)"
   ```
+
+## Keeping the WorkLists card current
+
+**When the ticket has a WorkLists card, each Working phase writes its progress to that card.** The rule that owns the behaviour is `worklists-card-sync` — load it before the first write. In outline:
+
+- **Phase 0 records the card id** (`P0.board-id`). Either the user supplies it, or — when the ticket has no card yet — the agent creates the ticket from the designated card template and takes the new id from the creation response. **State which path was taken**, and on the creation path report the id created.
+- **Each Working phase writes twice**: `currentStep` at the phase's **start**, then its checklist rows and `nextUp` at completion. Plan phases defer their phase-start write to the next Working phase, like their ledger writes.
+- **Rows are marked only with evidence.** The checklist's format is the contract, not any template, so the agent reads the rows as written and reasons about which its phase actually satisfied. Leaving a row unmarked is always safe; every unmarked row is named in the phase report.
+- **A guard stop notifies** (see Progress notifications). A board write that fails only because the server is down is a **skip**, not a stop: record it in the ledger, do not notify, and let the phase finish. The board reflects the work; it does not gate it.
+
+**This is skipped entirely when the ticket has no WorkLists card** — record `skipped (no WorkLists card)` on the board step and carry on.
 
 ## The handoff block
 
@@ -194,6 +206,8 @@ Plan-mode phases (1, 4) cannot write files. Their outputs are staged and land as
 ```markdown
 # Orchestration — <Project>/<slug>
 
+| WorkLists card | <todo-id, or "none"> |
+
 | Phase | Status | Artifacts | Date | Notes |
 | --- | --- | --- | --- | --- |
 | 0 Capture | pending | | | |
@@ -226,8 +240,9 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
   2. For ClickUp-backed tickets, use Playwright/browser observation as the preferred capture path: open the active ClickUp ticket page, identify the visible ticket fields and metadata from the rendered UI, and export the captured ticket to Markdown as `{ticket-id}-original-ticket.md`. Use API access only as a fallback or cross-check, not as the default source of truth. **ClickUp requires an authenticated session** — a freshly Playwright-launched browser context has no login and cannot see the page. Attach to a real, already-logged-in Chrome instead, per browser-loop-setup.md's "Attaching to an authenticated browser session" recipe; do not attempt a fresh headless/incognito launch against ClickUp and fall back to guessing selectors when it fails to load — that already happened once and cost a manual recovery.
   3. Create `original-ticket.md` (or `{ticket-id}-original-ticket.md` for PRDV tickets) per the artifact doc — the request **verbatim**, capture metadata, explicit constraints, context paths. No findings, no recommendations.
   4. **Draft the job stories** per `../job-story/SKILL.md` — synthesize the verbatim request, split it into one story per distinct problem, run the full sequence, and write `stories/` plus its index with each story `draft`. Anything the request left undecided becomes that story's Open Questions; do not decide it here. This is the acceptance-criteria baseline every later phase is measured against, and it is established **before** the investigation so the investigation cannot quietly define what done means.
-  5. Scaffold `orchestration.md` from the template above; mark Phase 0 `done`.
-  6. Align with the changelog's Current state / Plans / Attempt history before anything downstream.
+  5. **Record the WorkLists card id** in `original-ticket.md`'s Context Paths and in the ledger — supplied by the user, or returned by creating the ticket from the designated card template. Never search for it. See **Keeping the WorkLists card current**.
+  6. Scaffold `orchestration.md` from the template above; mark Phase 0 `done`.
+  7. Align with the changelog's Current state / Plans / Attempt history before anything downstream.
 - **Advance:** notify (Progress notifications), then handoff → Phase 1 (Plan).
 
 ## Phase 1 — Recon and plan (Plan)
@@ -342,3 +357,6 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 - Do not run without a visible, checked-off todo list where the harness does not surface one.
 - Do not fill the PR draft body before Phase 5 — Phase 2 stages the shell only; content waits until the change is implemented and verified.
 - Do not put change rationale (observed → expected → fix) in a source comment; it is PR-comment content (guardrails §7).
+- Do not search for the ticket's WorkLists card; the id is supplied or created, never matched on text.
+- Do not tick a checklist row you cannot point at evidence for, and do not invent a value for a detail line.
+- Do not let a failed board write block the phase — that is a skip, recorded in the ledger.

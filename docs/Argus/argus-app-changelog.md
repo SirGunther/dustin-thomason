@@ -10,6 +10,121 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### 2026-08-13T02:15:00Z — Argus
+
+- **Summary:** Completed Architecture Phase 4D — explicit transcript-to-context wiring and context selection. Added a governed session context policy, policy-gated audio startup, a highest-priority serial transcription gate, finalized-only context selection, singular authoritative source ownership, bounded lookback/forward context, deterministic topic signals, and alternate STT/selector replacement proofs.
+- **Plan used:** Record the accepted defaults; evolve context contracts additively; configure selection through an explicit control component; route fake PCM through the proven scheduler; connect only finalized segments; test each trigger independently and together; prove source/context invariants and both substitutions; update canonical memory after all gates.
+- **Files/Areas:** Catalog 1.6.0 and `transcript.context-policy`; `transcript.context-window` 1.4; graph run configuration propagation; context payload invariants; context policy source, transcription gate, alternate STT, alternate selector, evidence observer; `wiring/demo.transcript-context.json`; six Phase 4D tests; ADR-013; Phase 4D evidence; TODO/pending/readme/docs and canonical artifacts.
+- **User-visible impact:** Browser UI is unchanged. The executable architecture can now reproducibly turn the finalized working-document transcript into an exact policy-bearing context window, never a partial projection.
+- **Tests run:** Full regression 78/78; governance valid for 32 messages; generated reference current; concise, passthrough, Phase 4C transcript, and Phase 4D context graphs pass; 4/8/12 scaling evidence passes; dependency audit reports 0 vulnerabilities; local Markdown links pass.
+- **Tests added/updated:** Six Phase 4D cases prove nine-process policy-gated wiring, pause/size/topic/latency independently and simultaneously, non-overlapping source with bounded related context, transcription workload/concurrency evidence, STT and selector replacements, and default-deny partial exclusion.
+- **Regression impact:** All 72 Phase 4C tests remain green. Catalog grows from 31 to 32 messages. Existing 1.0 context fixtures and prior graphs remain compatible. No package, UI, microphone, real STT/model, storage engine, or immutable baseline change.
+- **Conflicts / exceptions:** Test policy thresholds are not production values. Forward context deliberately delays emission until the configured number of finalized future segments exists; drain flushes an incomplete candidate. Durable selector recovery and long-monologue bounds remain Phase 4E.
+
+### 2026-08-13T01:15:00Z — Argus
+
+- **Summary:** Completed Architecture Phase 4C — independently runnable transcript components and the working-document proof. Added deterministic PCM audio, fake STT with evolving partials/immutable words/utterance boundaries, contextual correction/formatting, the sole active transcript owner, and append-only permanent history. The proof visibly resolves `are you ready` to `Argus, you ready?` while retaining original STT, stable Argus-owned word IDs, alternatives, proposal identity, formatting provenance, revision 0, and the history receipt.
+- **Plan used:** Formalize the user's Microsoft-style live behavior and focused-highlighting preference; add only the missing request/boundary/result contracts; implement five isolated services; authorize their relationships in a new default-deny graph; prove happy path, invalid/corrupt/silence, replay/order, automatic-versus-review policy, revisions/history, lifecycle/recovery, and AI priority; update canonical memory only after gates pass.
+- **Files/Areas:** Three new governed transcript contracts/histories/fixtures; additive segment/review and AI-work contract evolution; service protocol versioned-output support; five component directories; `wiring/demo.transcript-pipeline.json`; Phase 4C component tests and evidence artifact; ADR-011/012; AI-lane docs; README/DOCS/TODO/pending decisions; canonical feature/decision/changelog/index artifacts.
+- **User-visible impact:** The browser POC is unchanged, but the executable architecture now produces the intended live-transcript semantics. A future UI can update one provisional row, settle correction/punctuation in place, convert it to an editable segment, and show subtle review affordances only for unresolved meaningful ambiguity.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| --- | --- | --- | --- | --- |
+| full regression and Phase 4C proof | `npm.cmd test` | All prior phases plus 11 new component/graph cases for valid/invalid/corrupt PCM, long/silence fixtures, evolving partials, immutable words, replay/gap/late, correction/review, edits/history, lifecycle/recovery, default-deny wiring, and AI order | pass — 72 tests, 0 failures | — |
+| governance integrity | `npm.cmd run contracts:check` | Catalog 1.5.0, exact fixtures, schemas, owners, histories, limits for 31 messages | pass | — |
+| generated-doc drift | `npm.cmd run contracts:docs:check` | Human-readable contract reference | pass — current | — |
+| three executable graphs | existing concise and passthrough commands plus `npm.cmd run demo:transcript` | Both extractor replacements and five-process transcript working-document proof | pass | First transcript run exposed missing observer wires for finalized/active projections; explicit result-collector wires were added and the rerun passed. |
+| scaling evidence | `npm.cmd run measure:runtime` | Existing 4/8/12 service-process scaling proof | pass — JSON metrics produced | POC evidence only; Phase 4F will benchmark PCM transport separately. |
+| dependency audit | `npm.cmd audit --omit=dev` | Production dependency tree | pass — 0 vulnerabilities | No package or lockfile change. |
+- **Tests added/updated:** Added 11 Phase 4C cases and updated the future-version sentinel. Tests prove actual bounded PCM chunks; deterministic long/silence/correction fixtures; no emitted raw-audio bytes; corrupt/checksum, contradictory chunk-ID reuse, gap, late, and replay behavior; correction component isolation; 0.90 automatic acceptance versus focused review flags; optimistic edit/stale rejection; revision-complete append history; graph completion and no partial leakage; state restart fail-closed; health/drain conformance; and transcription → correction/formatting → extraction → classification scheduling.
+- **Regression impact:** All 61 Phase 4B tests remain green. Governed messages grow from 28 to 31; catalog advances to 1.5.0. AI work, stored/history segment projections, and finalized segments advance additively while retained fixtures replay. The runtime protocol can emit the catalog version required by additive outputs. Existing browser code, packages, existing graphs, and immutable baseline are unchanged.
+- **API docs:** No HTTP/OpenAPI surface. Generated process-contract reference is current.
+- **Conflicts / exceptions:** Components are deterministic/in-memory. The fake 0.90 correction threshold is not a production claim. Exact review styling, real provider behavior, durable recovery/storage, context-trigger wiring, and transport benchmarks remain governed future work.
+- **Tooling gates:** Applicable regression, governance, generated-reference, graph, measurement, and audit gates pass.
+
+### 2026-08-13T00:40:00Z — Argus
+
+- **Summary:** Completed Architecture Phase 4B — transcript contracts and ownership. Added governed bounded audio, replaceable partial, immutable committed-word, contextual-correction proposal, active-segment update/state, and append-only permanent-history contracts. Formalized that similar-sounding alternatives remain evidence, contextual AI uses an exact bounded range plus versioned policy/instructions, only the active transcript owner accepts corrections, punctuation remains provisional until segment finalization, and logged-item context windows carry explicit versioned generation/context parameters.
+- **Plan used:** Translate the user's correction/punctuation/UI expectations into provider-neutral ownership first; evolve the catalog compatibly; add strict cross-field audio validation where JSON Schema cannot express decoded-byte relationships; preserve original STT and correction provenance through active revisions/history; prove valid and invalid boundaries; update canonical project memory only after regression passed.
+- **Files/Areas:** Contract catalog 1.4.0; eight new schemas, histories, and retained fixtures; additive `transcript.segment` 1.3.0 provenance/finalization fields; audio semantic-invariant validation; Phase 4B contract tests; generated contract reference; operation outcome map; transcript ownership evidence, ADR-009/010, pending-decision register, README/DOCS/TODO, and canonical decision/capability/changelog artifacts.
+- **User-visible impact:** The browser UI is unchanged. The implementation contract now supports the intended Microsoft-style read-only updating line, provider or adjacent contextual correction, visible similar-word candidates in a future UI, finalized punctuation, optimistic transcript edits, and append-only evidence without granting AI silent mutation authority.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| --- | --- | --- | --- | --- |
+| full regression and Phase 4B boundary proof | `npm.cmd test` | All prior architecture behavior plus eight new fixtures, audio corruption/bounds, partial authority exclusion, correction/logging context and prompt provenance, active/history evidence, and compatibility | pass — 61 tests, 0 failures | First run found an obsolete future-version sentinel after `transcript.segment` advanced to 1.3.0; corrected to test 1.4.0 and reran green. |
+| governance integrity | `npm.cmd run contracts:check` | Catalog evolution, exact fixture inventory, schemas, owners, histories, limits, and fixtures for 28 messages | pass | — |
+| generated-doc drift | `npm.cmd run contracts:docs:check` | Human-readable reference for catalog 1.4.0 | pass — current | — |
+| concise and alternate graphs | `node runtime/orchestrator.mjs wiring/demo.concise.json`; `node runtime/orchestrator.mjs wiring/demo.passthrough.json` | Existing replaceable extractor graphs under the evolved catalog | pass | Phase 4C transcript component graph is not implemented yet. |
+| scaling evidence | `npm.cmd run measure:runtime` | Existing 4/8/12-process proof after catalog/registry evolution | pass — JSON metrics produced | Values remain POC evidence, not production thresholds. |
+| dependency audit | `npm.cmd audit --omit=dev` | Installed production dependency tree | pass — 0 vulnerabilities | Isolated staging lacked registry/cache-log access; the approved live-workspace rerun passed. |
+- **Tests added/updated:** Added seven Phase 4B tests. They validate all new compatibility fixtures; PCM format/base64/byte/sample/checksum bounds; absence of durable authority in partial projections; acoustic alternatives and versioned contextual-prompt provenance; original STT/word/formatting evidence through active and history payloads; backward-compatible 1.0 segment/context replay; and bounded versioned logged-item generation directives.
+- **Regression impact:** All 54 Phase 3 tests remain green. Governed messages grow from 20 to 28. `transcript.segment` advances additively from 1.2.0 to 1.3.0 and changes accountable owner from capture to active state; retained 1.0.0 fixtures continue to replay. Existing services, graphs, packages, browser code, and immutable POC baseline are unchanged.
+- **API docs:** No HTTP/OpenAPI surface. Generated process-contract reference is current.
+- **Conflicts / exceptions:** No real microphone, STT, language-model, storage, or UI integration was added. Whether provider-native correction/punctuation is sufficient remains evidence-driven as STT-003; fake components are Phase 4C. No package change was needed.
+- **Tooling gates:** Applicable regression, governance, generated-reference, and both existing graph gates pass.
+
+### 2026-08-12T23:07:50Z — Argus
+
+- **Summary:** Formalized the Phase 4 transcript-pipeline plan after accepting ephemeral audio, PCM16/16 kHz/mono fake input, read-only partial hypotheses, incremental confident-word commitment, finalized editable segments, and finalized-only downstream/history flow. Expanded the Phase 4 backlog into contracts/ownership, component, wiring, behavioral/recovery, transport-evidence, and exit-gate sections. Added a central pending-decision register with safe defaults and evidence triggers for future packages, SDKs, providers, thresholds, storage, transport, native/container, credentials, observability, corpus, and desktop-host choices.
+- **Plan used:** Turn the user-approved defaults into explicit architecture decisions; decompose Phase 4 into checkable implementation/proof steps; make deferred choices discoverable before they can become accidental dependencies; synchronize code-adjacent and canonical project memory; verify documentation only because no runtime behavior changed.
+- **Files/Areas:** `TODO.md`; new root `PENDING-DECISIONS.md`; `Architecture/DesignDecisions.md`; repository `README.md` and `DOCS.md`; canonical documentation index, changelog, feature/capability catalog, and product/architecture decision register.
+- **User-visible impact:** No application behavior changed. Future implementers now have an ordered Phase 4 execution plan and one place to see which technology decisions are open, which safe default applies, what evidence is required, and when work must pause for a choice.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| --- | --- | --- | --- | --- |
+| Markdown reference/link audit | PowerShell resolver plus `rg` cross-reference checks over the staged repository and canonical artifacts | New pending-decision links, Phase 4 checklist references, ADR references, canonical index, current state, plan, features, and decision IDs | pass | Runtime tests not triggered: documentation/planning only; no runtime, schema, contract catalog, service, wiring, dependency, or UI file changed |
+- **Regression impact:** Documentation-only and isolated from executable behavior. Checked `runtime/`, `contracts/`, `services/`, `wiring/`, `tests/`, `package.json`, browser HTML/CSS/JS, and the immutable POC baseline; none are changed by this session.
+- **API docs:** No HTTP/OpenAPI surface and no process-contract schema/catalog change; generated contract reference is intentionally unchanged.
+- **Conflicts / exceptions:** No new package was installed because Phase 4 can begin with Node built-ins, Ajv, deterministic PCM fixtures, and fake components. Real microphone/STT/model/storage/transport choices remain explicitly deferred until their evidence trigger is reached.
+- **Tooling gates:** The repository defines runtime/contract gates, but this session changes planning and decision Markdown only. The applicable final gate is the documented link/reference audit.
+
+### 2026-08-12T21:40:00Z — Argus
+
+- **Summary:** Completed Architecture Phase 3 — Identity, Duplication, Ordering, and the global AI execution lane. Argus now explicitly uses at-least-once delivery with UUID-v4 message IDs, stable idempotency keys, canonical semantic fingerprints, graph-wide and service-local conflict detection, serialized idempotent consumers, per-session transcript ordering, optimistic logged-item revisions, stale AI-result rejection, and a durably journaled bounded AI scheduler. The one model lane is non-preemptive and concurrency-one; pending work is transcription first, logged-item extraction second, and classification enrichment last, with FIFO inside each workload.
+- **Plan used:** Capture the accepted policy in executable contracts; implement identity and ordering primitives; make the first state owner duplicate-safe and revision-aware; prove stale classification rejection; build the persistent scheduler/recovery boundary; wire nonfatal rejection to the supervisor; run concurrency, restart, scaling, compatibility, governance, graph, and audit gates; promote only after the isolated stage passed.
+- **Files/Areas:** `runtime/message-identity.mjs`, `ordered-stream.mjs`, `serial-ai-scheduler.mjs`, service protocol/provider/orchestrator; transcript selector and logged-item store; catalog/envelope plus six new contracts, histories, fixtures, and generated reference; both demo graphs; `tests/identity-ordering.test.mjs` and integration/wiring/governance tests; `Architecture/IdentityOrderingAndAiLane.md`, ADRs, component guidance, README, DOCS, and TODO.
+- **User-visible impact:** The browser UI is unchanged. Architecture messages are now auditable and replay-safe; transcript gaps, late inputs, stale edits, and stale classification suggestions have explicit outcomes. Optional classification is formally the lowest-priority AI workload and cannot silently mutate an item or displace queued transcription.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| --- | --- | --- | --- | --- |
+| full regression and Phase 3 concurrency | `npm.cmd test` | Governance, compatibility, isolation, supervision, identity conflicts/tamper, duplicate/late/gap handling, revisions/stale results, scheduler capacity/priority/FIFO/concurrency/restart, multi-instance identity, and wiring | pass — 54 tests, 0 failures | — |
+| governance integrity | `npm.cmd run contracts:check` | Catalog evolution, schemas, owners, histories, limits, and fixtures for 20 messages | pass | — |
+| generated-doc drift | `npm.cmd run contracts:docs:check` | Human-readable contract reference | pass — current | — |
+| concise and alternate graphs | `node runtime/orchestrator.mjs wiring/demo.concise.json`; `node runtime/orchestrator.mjs wiring/demo.passthrough.json` | Both replaceable extractors through identity-aware readiness, work, result, completion, drain, and exit | pass | — |
+| scaling evidence | `npm.cmd run measure:runtime` | 1/2/3 parallel pipelines: 4/8/12 service processes and per-instance producer namespaces | pass — JSON metrics produced | Values are POC evidence, not production thresholds |
+| dependency audit | `npm.cmd audit --omit=dev` | Installed production dependency tree | pass — 0 vulnerabilities | Initial sandbox registry/cache access was restricted; approved rerun passed |
+- **Tests added/updated:** Added or updated 12 Phase 3 cases, including the explicit rejection-wiring invariant. Proofs cover current envelope identity, exact replay, fatal ID/key conflicts, fingerprint tamper, independent session sequence, duplicate/gap/late selector behavior, optimistic update idempotency, stale classification rejection, single-lane priority/FIFO, non-preemption, bounded no-drop admission, slow-journal admission order, unfinished recovery, completed-result replay after restart, and same-implementation multi-instance producer isolation.
+- **Regression impact:** All 42 Phase 2 tests remain green. Catalog messages grow from 14 to 20 and current emitters move to envelope 1.2.0; retained 1.0.0 fixtures still replay. Demo control wires grow from 29 to 31 because rejection is explicit. The final measurement gate exposed a same-implementation producer collision, resolved by injecting the graph service-instance ID through the trusted provider and rejecting mismatched producer claims.
+- **API docs:** No HTTP/OpenAPI surface. Generated process-contract reference is current.
+- **Conflicts / exceptions:** The logged-item proof owner is still in memory; Phase 6 durable domain storage must persist equivalent idempotency/revision state. The scheduler boundary and journal are implemented and proven, but real model adapters are not yet wired. Classification review UI remains open. Native/OCI providers remain unimplemented.
+- **Tooling gates:** All defined package gates, both demos, 4/8/12-process measurement, and the production dependency audit pass.
+
+### 2026-08-12T20:45:00Z — Argus
+
+- **Summary:** Completed Architecture Phase 2 — Runtime Supervision. The graph now governs runtime kind, required/optional status, readiness, operation completion, drain, bounded queues, timeouts, opt-in retries, dead letters, and bounded restart/recovery. Launching is behind a trusted runtime-provider boundary with Node as the sole active provider; native and container declarations fail closed until providers exist. Required components fail fast only after declared recovery is exhausted.
+- **Plan used:** Implement the user-accepted defaults as contracts and schema rules first; adapt all isolated services; move Node spawning behind a provider registry; exercise fault/recovery behavior; collect POC scaling evidence; reconcile code-adjacent and canonical documentation; publish only after all gates pass.
+- **Files/Areas:** `runtime/` provider, queue, service protocol, and supervisor orchestration; `contracts/` schemas/catalog/history/fixtures/generated reference; all service manifests and implementations; demo wiring graphs; supervision fixtures/tests; measurement script; runtime architecture/evidence and polyglot strategy; README, TODO, and canonical feature/decision/changelog artifacts.
+- **User-visible impact:** The browser UI is unchanged. Architecture runs now wait for all required services to become ready, track actual work completion, drain explicitly, report process exits to the wired supervisor, and return POC metrics. Failure/recovery behavior is visible and graph-controlled instead of launcher-private.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| --- | --- | --- | --- | --- |
+| full regression and supervision | `npm.cmd test` | Governance, compatibility, isolation, wiring, replacement, readiness, timeout, retry/dead-letter, restart, optional degradation, queue overflow, undeclared output, and drain deadline | pass — 42 tests, 0 failures | — |
+| governance integrity | `npm.cmd run contracts:check` | Catalog evolution, schemas, owners, histories, limits, and artifact validation for 14 messages | pass | — |
+| generated-doc drift | `npm.cmd run contracts:docs:check` | Human-readable contract reference | pass — current | — |
+| concise and alternate graphs | `npm.cmd run demo`; `npm.cmd run demo:alternate` | Both extractor replacements through readiness, work receipts, result, completion, drain, and exit paths | pass | — |
+| scaling evidence | `npm.cmd run measure:runtime` | 1/2/3 parallel pipelines: 4/8/12 service processes | pass — JSON metrics produced | Values are POC evidence, not production thresholds |
+| dependency audit | `npm.cmd audit --omit=dev` | Installed production dependency tree | pass — 0 vulnerabilities | Initial sandbox request could not reach registry; approved network rerun passed |
+- **Tests added/updated:** Added 13 Phase 2 supervision cases and fault fixtures. The suite proves fail-closed unsupported providers, readiness failure, operation timeout without implicit retry, exact-wire retry, dead-letter exhaustion, stateless restart with unfinished-input replay, restart exhaustion, explicitly optional degradation, stateful recovery-owner validation, bounded queue overflow, undeclared output failure, drain deadline, and resource evidence.
+- **Regression impact:** Both existing extractor implementations remain interchangeable and all 29 pre-Phase-2 assertions remain green after being updated to distinguish domain outputs from explicit operation receipts. The catalog grows from 7 to 14 governed messages. Manifests move from `runtime.command` to discriminated `runtime.kind`.
+- **API docs:** No HTTP/OpenAPI surface. Generated process-contract reference is current.
+- **Conflicts / exceptions:** This is not an executable polyglot claim. Only the Node provider is installed. NDJSON remains the transport, overflow policy is fail, optional degradation has policy support but no optional demo service, and replay can duplicate work until Phase 3 idempotency/ordering rules are implemented.
+- **Tooling gates:** All defined package gates, both demos, scaling evidence, and the production dependency audit pass.
+
 ### 2026-08-12T18:49:37Z — Argus
 
 - **Summary:** Accepted and documented the polyglot/container-capable runtime direction in a root-level architectural strategy. The artifact distinguishes the language-neutral contract boundary from the current Node-only launcher, defines trusted Node/native/container provider shapes, preserves default-deny inbound/outbound authority, establishes container and transport constraints, and sets measurable proof criteria before Argus may claim executable polyglot support.
@@ -74,15 +189,17 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 Argus has two complementary POC layers:
 
 1. A zero-build browser UI demonstrates the desktop interaction model: capture states, raw transcript and neutral logged-item panes, edits/autosave, selection and copying, independent live scrolling, explicit source ranges, top-center notifications, session details, and deliberate finalization. Audio, speech recognition, model calls, filesystem persistence, and OS folder integration are simulated or deferred.
-2. A Node 22+ architecture proof executes four isolated service processes in an explicit graph. Versioned contracts, default-deny domain/control wires, visible runtime pseudo-components, deterministic extractor replacement, structured traces, explicit failure routing, and explicit workflow completion are covered by 29 automated tests. Ajv is the single maintained runtime dependency and compiles the JSON Schemas at the routing boundary.
+2. A Node 22+ architecture proof executes replaceable extraction graphs, a five-service working-document graph, and a nine-service finalized-context graph. Thirty-two governed messages, default-deny domain/control wires, supervision/recovery, identity/order/revision guarantees, the four-level serial AI lane, policy-driven context selection, and dual STT/selector replacement are covered by 78 automated tests. Ajv is the single maintained runtime dependency.
 
 The initial architectural ambiguity around hidden startup, supervision, result, and completion authority has been resolved: these capabilities occupy typed control/domain wires, while the runtime kernel retains only a finite documented set of process-hosting and validation mechanics.
 
 The live workspace is `C:\Users\dktho\OneDrive\PDProjects\Argus`. The immutable comparison baseline is `Argus-POC-v1-2026-08-12` beside the live workspace, with a ZIP and SHA-256 sidecar. Canonical project memory is this `C:\dustin-thomason\docs\Argus` directory.
 
-Contract Governance Phase 1 is complete: current contracts are version 1.1.0, every message has an owner/history/limit, 1.0.0 fixtures prove backward-compatible replay, plane moves require a major version, and categorized failures plus generated documentation are enforced. Phase 2 in the architecture backlog is runtime supervision. The first recommended product vertical after the governance/runtime foundation remains session state plus temporary transcript persistence because it exercises ownership, Stop/Resume, idempotency, and crash recovery without requiring audio hardware or a model provider.
+Contract Governance Phase 1, Runtime Supervision Phase 2, Identity/Ordering Phase 3, and Transcript Pipeline Phases 4A through 4D are complete for the POC. Catalog 1.6.0 governs 32 messages; retained older fixtures prove compatible replay and generated documentation is enforced. Phase 4E broadens behavioral and recovery proofs.
 
-Polyglot/container-capable execution is now an accepted architectural invariant. The current executable launcher remains Node-only; future Node/native/OCI providers must preserve explicit contracts, wires, lifecycle/supervision, permissions, and shared replacement evidence. `POLYGLOT-RUNTIME-STRATEGY.md` is the governing code-adjacent direction artifact.
+Raw audio will be ephemeral after transcription. Partial hypotheses are visible but read-only; confident words commit as immutable evidence. Provider/acoustic alternatives and adjacent contextual correction are governed proposals with exact context and versioned instructions, and only the active owner can accept them. Punctuation remains provisional until finalization; only finalized segments become editable or enter extraction/history. No real microphone, STT, model, storage, transport, or desktop SDK has been selected. `PENDING-DECISIONS.md` is the central queue for those choices and their evidence triggers.
+
+Polyglot/container-capable execution is an accepted architectural invariant. The trusted provider boundary and discriminated manifests are implemented, but Node is the sole active provider; future native/OCI providers must preserve the same contracts, wires, lifecycle/supervision, permissions, and shared replacement evidence. `POLYGLOT-RUNTIME-STRATEGY.md` remains governing.
 
 ## Plans
 
@@ -92,9 +209,11 @@ Polyglot/container-capable execution is now an accepted architectural invariant.
 - [2026-08-11] Separate neutral logged-item extraction from optional classification and expose transcript provenance. Status: implemented in UI/architecture direction; model-backed enrichment remains deferred.
 - [2026-08-11] Build the first Active Assistant look-and-feel prototype in plain HTML/CSS/JavaScript. Status: implemented.
 - [2026-08-12] Contract governance: semantic compatibility, plane-breaking enforcement, ownership/history, compatibility replay, Ajv boundary validation, generated documentation, payload limits, and canonical failure outcomes. Status: implemented.
-- Runtime supervision. Status: next architecture phase.
-- [2026-08-12] Polyglot runtime strategy: trusted launcher-provider boundary, default-deny container capabilities, shared cross-runtime conformance, and proof criteria. Status: direction accepted; implementation scheduled across runtime supervision and permissions/packaging.
-- Session state and temporary transcript persistence. Status: recommended implementation slice after governance.
+- [2026-08-12] Runtime supervision: readiness, operation receipts/timeouts, drain deadline, bounded queues, exact-wire retry/dead-letter, restart/recovery, exit facts, and measurements. Status: implemented for POC.
+- [2026-08-12] Polyglot runtime strategy: trusted launcher-provider boundary, default-deny container capabilities, shared cross-runtime conformance, and proof criteria. Status: provider boundary implemented; native/OCI providers and conformance remain pending.
+- Identity, idempotency, duplication, per-session ordering, optimistic revisions, stale-result rejection, and serial AI scheduling. Status: implemented for POC.
+- Phase 4 transcript pipeline plan (`TODO.md` Phase 4A-4F): ephemeral PCM fake audio, partial/committed/correction contracts, active/permanent owners, context triggers, recovery proofs, and transport benchmark. Status: Phases 4A through 4D complete; Phase 4E behavioral/recovery proof next.
+- Central pending technology/product decision register (`PENDING-DECISIONS.md`). Status: active governance artifact; resolve entries only when their evidence trigger is reached.
 - Real audio → transcription → context-window → logged-item integration. Status: deferred until supporting contracts and persistence are proven.
 
 ## Attempt history
@@ -117,3 +236,4 @@ These date-level milestones reconstruct the work completed before this canonical
 | 2026-08-12 | Executable atomic-architecture proof | Added contracts, manifests, isolated services, graph wiring, runtime, deterministic replacement, and automated contract/wiring/integration coverage. |
 | 2026-08-12 | Explicit control-plane resolution | Made lifecycle, supervision, result collection, and completion visible graph participants; documented the finite runtime kernel authority. |
 | 2026-08-12 | POC v1 preservation | Created an immutable comparison folder, ZIP, and SHA-256 sidecar without changing the live project. |
+| 2026-08-12 | Runtime supervision proof | Added runtime-neutral provider boundary, readiness, operation outcomes, drain, queue bounds, timeout, retry/dead-letter, restart/recovery, and scaling evidence. |

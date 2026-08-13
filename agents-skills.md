@@ -1185,6 +1185,7 @@ If this boundary is ever unclear at invocation (a free brief naming a folder tha
 
 - **Working-phase completions (0, 2, 3, 5, 6) notify immediately**, before printing that phase's handoff block (or, for the auto-advancing Phase 2, alongside its completed checklist).
 - **Plan-phase completions (1, 4) defer their notification** to the first action of the next Working phase, batched with that phase's own "starting" notice — the same deferred pattern already used for their ledger writes (`deferred (plan mode)`).
+- **A guard stop notifies too**, not only a phase completion — an unattended run's stop otherwise lives only in a transcript, which is exactly when nobody is watching. Message names the phase and the guard that fired.
 - Resolve the dustin-thomason repo root the same way `agent-completion-notification` does, then run (adjust for cwd):
 
   ```powershell
@@ -1194,6 +1195,17 @@ If this boundary is ever unclear at invocation (a free brief naming a folder tha
   # from elsewhere in the workspace (e.g. the implementation repo)
   & "<dustin-thomason>\scripts\notify-agent-complete.ps1" -Status "Completed" -Message "<Project>/<slug>: Phase <N> done, next is Phase <M> (<mode>)"
   ```
+
+## Keeping the WorkLists card current
+
+**When the ticket has a WorkLists card, each Working phase writes its progress to that card.** The rule that owns the behaviour is `worklists-card-sync` — load it before the first write. In outline:
+
+- **Phase 0 records the card id** (`P0.board-id`). Either the user supplies it, or — when the ticket has no card yet — the agent creates the ticket from the designated card template and takes the new id from the creation response. **State which path was taken**, and on the creation path report the id created.
+- **Each Working phase writes twice**: `currentStep` at the phase's **start**, then its checklist rows and `nextUp` at completion. Plan phases defer their phase-start write to the next Working phase, like their ledger writes.
+- **Rows are marked only with evidence.** The checklist's format is the contract, not any template, so the agent reads the rows as written and reasons about which its phase actually satisfied. Leaving a row unmarked is always safe; every unmarked row is named in the phase report.
+- **A guard stop notifies** (see Progress notifications). A board write that fails only because the server is down is a **skip**, not a stop: record it in the ledger, do not notify, and let the phase finish. The board reflects the work; it does not gate it.
+
+**This is skipped entirely when the ticket has no WorkLists card** — record `skipped (no WorkLists card)` on the board step and carry on.
 
 ## The handoff block
 
@@ -1238,6 +1250,8 @@ Plan-mode phases (1, 4) cannot write files. Their outputs are staged and land as
 ```markdown
 # Orchestration — <Project>/<slug>
 
+| WorkLists card | <todo-id, or "none"> |
+
 | Phase | Status | Artifacts | Date | Notes |
 | --- | --- | --- | --- | --- |
 | 0 Capture | pending | | | |
@@ -1270,8 +1284,9 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
   2. For ClickUp-backed tickets, use Playwright/browser observation as the preferred capture path: open the active ClickUp ticket page, identify the visible ticket fields and metadata from the rendered UI, and export the captured ticket to Markdown as `{ticket-id}-original-ticket.md`. Use API access only as a fallback or cross-check, not as the default source of truth. **ClickUp requires an authenticated session** — a freshly Playwright-launched browser context has no login and cannot see the page. Attach to a real, already-logged-in Chrome instead, per browser-loop-setup.md's "Attaching to an authenticated browser session" recipe; do not attempt a fresh headless/incognito launch against ClickUp and fall back to guessing selectors when it fails to load — that already happened once and cost a manual recovery.
   3. Create `original-ticket.md` (or `{ticket-id}-original-ticket.md` for PRDV tickets) per the artifact doc — the request **verbatim**, capture metadata, explicit constraints, context paths. No findings, no recommendations.
   4. **Draft the job stories** per `../job-story/SKILL.md` — synthesize the verbatim request, split it into one story per distinct problem, run the full sequence, and write `stories/` plus its index with each story `draft`. Anything the request left undecided becomes that story's Open Questions; do not decide it here. This is the acceptance-criteria baseline every later phase is measured against, and it is established **before** the investigation so the investigation cannot quietly define what done means.
-  5. Scaffold `orchestration.md` from the template above; mark Phase 0 `done`.
-  6. Align with the changelog's Current state / Plans / Attempt history before anything downstream.
+  5. **Record the WorkLists card id** in `original-ticket.md`'s Context Paths and in the ledger — supplied by the user, or returned by creating the ticket from the designated card template. Never search for it. See **Keeping the WorkLists card current**.
+  6. Scaffold `orchestration.md` from the template above; mark Phase 0 `done`.
+  7. Align with the changelog's Current state / Plans / Attempt history before anything downstream.
 - **Advance:** notify (Progress notifications), then handoff → Phase 1 (Plan).
 
 ## Phase 1 — Recon and plan (Plan)
@@ -1386,6 +1401,9 @@ Status vocabulary: `pending` / `in-progress` / `done` / `skipped (reason)` / `re
 - Do not run without a visible, checked-off todo list where the harness does not surface one.
 - Do not fill the PR draft body before Phase 5 — Phase 2 stages the shell only; content waits until the change is implemented and verified.
 - Do not put change rationale (observed → expected → fix) in a source comment; it is PR-comment content (guardrails §7).
+- Do not search for the ticket's WorkLists card; the id is supplied or created, never matched on text.
+- Do not tick a checklist row you cannot point at evidence for, and do not invent a value for a detail line.
+- Do not let a failed board write block the phase — that is a skip, recorded in the ledger.
 
 ## orchestrate/decisions.md
 
@@ -2313,11 +2331,13 @@ participant,SPEC,,19,,,,spec.md,,,,ticket-artifact,specs/<slug>-spec.md,,
 participant,IMPL,,20,,,,implementation-plan.md,,,,ticket-artifact,<slug>-implementation-plan.md,,
 participant,TI,,21,,,,testing-implementation.md,,,,ticket-artifact,testing/<slug>-testing-implementation.md,,
 participant,REV,,22,,,,spec reviewer,,,,actor,,,
+participant,BOARD,,23,,,,WorkLists card,,,,external,,,
 phase,P0,0,0,,,,Capture,,,SKILL.md Phase 0,,,Working,"original-ticket-artifact.md, job-story/SKILL.md, ticket-changelog rule, browser-loop-setup.md when the ticket lives in ClickUp"
 step,P0.ledger,0,10,write,AG,LEDGER,write the ledger,orchestration.md exists with a row per phase and a Resume footer,script,SKILL.md State ledger and resume,,,,
 step,P0.ticket,0,20,write,AG,TICKET,write the original ticket,"original-ticket.md Original Request is the request text unaltered, and the capture source is named - ClickUp page or user-provided text",human,original-ticket-artifact.md,,,,
 step,P0.changelog,0,30,write,AG,CLOG,write the changelog,"the changelog exists with Requirements verbatim, and Current state, Plans and Attempt history have been read",human,ticket-changelog rule,,,,
 step,P0.stories,0,40,write,AG,STORY,write the job stories and index,"at least one story at status draft with an index row, and no criterion names a design element",human,job-story/SKILL.md,,,,
+step,P0.board-id,0,45,write,AG,BOARD,record the card id,"the WorkLists card id is in the ledger - either supplied by the user or returned by creating the ticket from the designated card template, and which path was taken is stated",human,worklists-card-sync rule,,,,
 step,P0.advance,0,50,notify,AG,U,notify and hand off to Phase 1,"the handoff block was emitted verbatim, and no implementation-repo file has been touched",human,agent-completion-notification rule,,,,
 phase,P1,1,0,,,,Recon and plan,,,SKILL.md Phase 1,,,Plan,"investigation/SKILL.md, investigation-software-gaps.md, investigation-coverage-ledger.md - Problem Check is embedded in method Step 1 and never loaded separately, and investigation-question-coverage.md is never loaded"
 step,P1.consult,1,10,read,AG,COV,search prior tickets' coverage ledgers,the search ran before any investigative branch was opened and its result is in the plan,human,investigation-coverage-ledger.md,,,,
@@ -2338,6 +2358,7 @@ step,P2.concerns,2,70,write,AG,CONC,record any concern,"a concern named in the p
 step,P2.test-plan,2,80,write,AG,TP,seed the test plan,test-plan.md status reads seeded and every scenario names a criterion or the no-criterion flag,script,test-plan-artifact.md,,,,
 step,P2.pr-shell,2,90,write,AG,PR,write the PR shell,"pr-draft.md has all six headings, every body placeholder empty, and an unfilled note on top",script,pull-request-workflow.md,,,,
 step,P2.session-log,2,100,write,AG,CLOG,write the changelog session log,"the changelog has a session log entry naming what Phase 2 emitted, dated in UTC",script,ticket-changelog rule,,,,
+step,P2.board,2,105,write,AG,BOARD,write Investigation progress to the card,"currentStep was set at this phase's start, the rows this phase substantiated are ticked, and every row left unmarked is named in the report",human,worklists-card-sync rule,,,,
 step,P2.advance,2,110,notify,AG,U,notify and advance to Phase 3,the deferred Phase 1 notification was sent and Phase 3 began in the same mode,human,agent-completion-notification rule,,,,
 phase,P3,3,0,,,,Probe and spec,,,SKILL.md Phase 3,,,Working,"grill-me/SKILL.md, qa-to-spec-traceability.md, spec-writing rule, write-spec/SKILL.md and wiki-spec-authoring.md when a PRDV spec routes to the wiki"
 step,P3.reconcile,3,10,read,AG,CODE,trace any question the code can answer,no code-discoverable fact was carried to you as a decision,human,investigation/SKILL.md,,,,
@@ -2349,6 +2370,7 @@ step,P3.spec,3,60,write,AG,SPEC,write the spec,"spec.md exists, links locked-dec
 step,P3.spec-submit,3,65,notify,AG,REV,submit the spec to its reviewer,"the spec - or an addendum when the reviewer already authored the spec - was actually delivered to them, pushed and PR'd where a shared wiki is the review surface rather than only written locally; or recorded not-applicable naming who owns the spec and why no review is owed",human,spec-writing rule,,,,
 step,P3.test-plan,3,70,write,AG,TP,refine the test plan,test-plan.md status reads refined and each assertion maps to a criterion,script,test-plan-artifact.md,,,,
 step,P3.session-log,3,75,write,AG,CLOG,write the changelog session log,"the changelog has a session log entry naming the decisions locked and the spec written, dated in UTC",script,ticket-changelog rule,,,,
+step,P3.board,3,78,write,AG,BOARD,write Project Spec progress to the card,"the rows this phase substantiated are ticked, nextUp is set, and every row left unmarked is named in the report",human,worklists-card-sync rule,,,,
 step,P3.advance,3,80,notify,AG,U,notify and hand off to Phase 4,the handoff block was emitted verbatim,human,agent-completion-notification rule,,,,
 phase,P4,4,0,,,,Prep for implementation,,,SKILL.md Phase 4,,,Plan,"the spec, the report's handoff table and the test plan are already in the folder; new-branch-get-started.md and the build-implementation-guardrails rule"
 step,P4.impl-plan,4,10,stage,AG,IMPL,stage the implementation plan,"the plan carries ordered steps, each traced to the spec, the report or the test plan AND to an acceptance criterion",human,SKILL.md Phase 4,,,,
@@ -2364,12 +2386,14 @@ step,P5.testing-impl,5,80,write,AG,TI,write the testing-implementation doc,"test
 step,P5.session-log,5,90,write,AG,CLOG,write the changelog session log,the changelog has a session log entry for this work,script,ticket-changelog rule,,,,
 step,P5.gates,5,100,run,AG,CODE,"run audit, then lint, then tests","all three ran in that order and passed before the commit, with results reported as a table giving command, scope and outcome",human,git-commit-workflow rule,,,,
 step,P5.pr,5,110,write,AG,PR,write the PR body and open the PR,"pr-draft.md carries the description, test evidence and commit hash, and the PR is open",human,pull-request-workflow.md,,,,
+step,P5.board,5,120,write,AG,BOARD,"write Development, Testing and Deploy progress to the card","the rows this phase substantiated are ticked, the testing detail lines carry real UTC timestamps rather than invented ones, and status reads In Review once the PR is open",human,worklists-card-sync rule,,,,
 step,P5.advance,5,130,notify,AG,U,notify and hand off to Phase 6,the handoff block was emitted verbatim,human,agent-completion-notification rule,,,,
 phase,P6,6,0,,,,Wrap up,,,SKILL.md Phase 6,,,Working,"why-these-changes.md, cleanup-candidates.md, agent-completion-notification rule"
 step,P6.why,6,10,write,AG,WHY,write the why doc review,"why-these-changes.md has a categorized change breakdown, Scope, Net and Verified",script,why-these-changes.md,,,,
 step,P6.close-stories,6,20,write,AG,STORY,close the job stories,every story index row reads accepted or superseded,script,job-story/SKILL.md,,,,
 step,P6.close,6,30,write,AG,LEDGER,close the ledger,"orchestration.md Phase 6 reads done, Resume reads complete, and the cruft check is recorded",script,SKILL.md Phase 6,,,,
 step,P6.session-log,6,35,write,AG,CLOG,write the changelog session log,"the changelog has a closing session log entry, and Current state reflects what shipped",script,ticket-changelog rule,,,,
+step,P6.board,6,38,write,AG,BOARD,write Ticket Closeout progress to the card,"the closeout rows this phase substantiated are ticked and currentStep reads Closeout",human,worklists-card-sync rule,,,,
 step,P6.summary,6,40,notify,AG,U,give the review summary and hand back,each acceptance criterion was walked against what shipped citing the results log,human,agent-completion-notification rule,,,,
 
 ## workflow-housekeeping/SKILL.md

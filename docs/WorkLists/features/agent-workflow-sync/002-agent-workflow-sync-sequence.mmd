@@ -1,0 +1,111 @@
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant AG as Agent
+    participant E0 as POST /api/cards/from-template<br/>NEW ROUTE, path B only
+    participant E1 as GET /todos/{id}<br/>NEW ROUTE
+    participant E2 as GET /api/notes?eventId={id}<br/>EXISTING, already scoped
+    participant E3 as PATCH /api/notes/{noteId}<br/>NEW VERB, PUT stays untouched
+    participant E4 as PATCH /todos/{id}<br/>EXISTING route<br/>NEW optional keys
+    participant DAL as DAL record access<br/>getRecord / patchRecord<br/>NEW, added beside readDB
+    participant FS as data section files
+
+    Note over AG,E4: Only one record ever crosses the wire. Selection is always server side.
+    Note over DAL,FS: Existing endpoints keep writing every section. Only these new paths write one.
+    Note over DAL: Migrating the old callers onto this interface is a later change. Adjacent now, replace eventually.
+
+    alt PATH A. The ticket's card already exists
+        U->>AG: ENTRY POINT. Card id plus expected ticket id
+    else PATH B. No card yet, so the agent creates the ticket
+        U->>AG: ENTRY POINT. Ticket title and target column. NO card id supplied
+        AG->>E0: designated Card Template, title, columnId
+        E0->>DAL: read the cardTemplates section
+        DAL->>FS: read cardTemplates.json only
+        FS-->>DAL: INTERNAL. Templates in memory
+        DAL-->>E0: the designated template
+        DAL-->>DAL: addTodo creates the card from the template body, then one note per template entry in order
+        DAL->>FS: write todos, columns, boards and event-notes
+        FS-->>DAL: writes committed
+        DAL-->>E0: new card plus its new notes
+        E0-->>AG: 201 with todo.id. THIS is where the agent gets the id it works with
+        AG->>AG: Record the new id in the ledger and REPORT it. Never leave a created card unnamed
+    end
+
+    AG->>E1: card id in the path
+    E1->>DAL: getRecord todos, id
+    DAL->>FS: read todos.json only, not the other sections
+    FS-->>DAL: INTERNAL. Section parsed in memory, 2731 records
+    DAL-->>DAL: Select the single record whose id matches
+    DAL-->>E1: exactly one record, or nothing
+    E1-->>AG: 200 one card record with its lastModified, or 404
+
+    alt Card title carries the expected ticket id
+        AG->>AG: GUARD passes
+    else Title does not match, or 404
+        AG->>U: STOP. Report the mismatch and ask. Never write.
+        AG->>U: Notification fires naming the phase and the guard, so an unattended stop is not buried
+    end
+
+    loop Once per orchestrate phase
+        AG->>E4: PHASE START. body carries currentStep for the phase now beginning, plus lastModified
+        Note over AG,E4: Written at the START so the card says what is happening now, not what just finished. Plan-mode phases defer this to the next Working phase.
+        E4-->>AG: 200 updated card
+
+        AG->>E2: PHASE END. query eventId equals card id
+        Note over E2: Nothing new on this route. It already filters by eventId server side.
+        E2->>DAL: read the event-notes section
+        DAL->>FS: read event-notes.json only
+        FS-->>DAL: INTERNAL. Section parsed in memory, 515 notes
+        DAL-->>DAL: Filter to notes whose eventId matches the card
+        DAL-->>E2: only this card's notes
+        E2-->>AG: 200 notes, each with its own lastModified
+
+        AG->>AG: Find the checklist note by STRUCTURE. A heading with checkbox rows under it
+        alt No note has checklist structure
+            AG->>U: STOP plus notification. Nothing here to track.
+        end
+
+        AG->>AG: REASON over the rows just read. For each one, did this phase actually produce what it asks for
+        Note over AG: Judgement, not lookup. Nothing is stored, so nothing goes stale. Any checklist shape works.
+        AG->>AG: Mark only substantiated rows. Leave the rest unmarked and name them in the report
+        Note over AG: Unmarked is always safe. Wrongly marked is not. Never fabricate a detail value.
+
+        AG->>E3: ONE request. Rows addressed by section name and label AS JUST READ, plus the lastModified AS JUST READ
+        Note over AG,E3: Reading and writing are one exchange. The precondition is what makes matching on row text safe.
+        E3->>DAL: patchRecord event-notes, noteId, with expected lastModified
+        DAL->>FS: read event-notes.json
+        FS-->>DAL: INTERNAL. Section in memory
+        DAL-->>DAL: Parse the checklist and locate every named row
+        alt lastModified is stale
+            DAL-->>E3: conflict
+            E3-->>AG: 409 with the current lastModified
+            AG->>AG: Re-read, retry once, then surface the conflict rather than resolve it
+        else A row is missing or ambiguous
+            DAL-->>E3: bad request
+            E3-->>AG: 400 naming the row. Nothing written, not even the valid rows
+        else Note has no checklist structure
+            E3-->>AG: 422
+        else All rows resolve
+            DAL-->>DAL: TRANSFORM. Flip only the checkbox characters and the named detail lines
+            Note over DAL: Located by parsing, never re-rendered from it. Prose, tables and spacing stay byte identical.
+            DAL-->>DAL: Stamp the note's new lastModified
+            DAL->>FS: write event-notes.json only
+            FS-->>DAL: write committed via temp file rename
+            DAL-->>E3: updated note record
+            E3-->>AG: 200 updated note with its new lastModified
+        end
+
+        AG->>E4: body carries nextUp, any waitingOn, status, and the lastModified just read
+        Note over AG,E4: New OPTIONAL keys. With none of them present this route behaves exactly as it does today.
+        E4->>DAL: updateTodo, unchanged existing path
+        DAL-->>DAL: Field handler registry claims and consumes the four workflow keys
+        DAL-->>DAL: TRANSFORM. Write the four values into the markdown inside todo.text
+        Note over DAL: Later these become real card properties instead. Same request body, no caller change.
+        DAL-->>DAL: Validate status, stamp lastModified, stamp the card's column and boards
+        DAL->>FS: write every section, the existing behavior, deliberately left alone
+        FS-->>DAL: writes committed
+        DAL-->>E4: updated card record
+        E4-->>AG: 200 updated card with its new lastModified, or 400, or 409 if lastModified was sent and is stale
+    end
+
+    Note over U,FS: The board picks changes up on its own existing refresh. Nothing to build for that.
