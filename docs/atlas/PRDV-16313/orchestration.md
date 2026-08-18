@@ -18,6 +18,16 @@ Sibling ticket in the same epic: **PRDV-16312** (`docs/atlas/PRDV-16312/`) — s
 
 Resume: Phase 5 — Working mode, **blocked at `P5.gates` on the audit failure**; `P3.spec-submit` also still held
 
+## Save state — 2026-08-13
+
+**Committed locally on branch `PRDV-16313`: `c43be32ca4e5438873669870461010c0a54c2c31`** — *"PRDV-16313: Emit file.renamed.v1 on deliverable rename"*. Staged **only** this ticket's 14 paths; the four pre-existing dirty items (`.swcrc`, `notification-template-preview.html`, `package-lock.json`, untracked `scripts/`) were left alone.
+
+**Committed on Dustin's explicit instruction with the audit gate failing** — recorded in the commit body as a waiver, not a passed gate.
+
+**NOT PUSHED.** The pre-push hook runs `npm run test:integration`, which needs Postgres, and **Docker Desktop stopped** mid-session (`callisto-postgres` was "Up 22 hours" earlier, then the daemon became unreachable). All 7 integration suites fail in `beforeAll` on `Unable to connect to the database` — **every one of those files is pre-existing; none is this ticket's.** Push once Docker is back, or with an explicit `--no-verify` authorisation.
+
+**Toolchain damage caused by this session, and repaired:** `node_modules` was already missing bin shims for `prettier` and `lint-staged` (consistent with PRDV-16312's failed `npm ci`). Running `npm rebuild` to restore them **also broke `jest`** — `@jest/core` was absent, so `npm test` began failing where it had passed 364 suites earlier. Repaired with `npm install @jest/core --no-save`; **`package-lock.json` MD5 verified unchanged before and after (`9093526f…`)**, so the user's uncommitted lockfile work is intact. Prettier reformatted exactly one file, this ticket's assembler spec, and touched none of the user's dirty files.
+
 ## Two blockers and one gap, for whoever picks this up
 
 1. **`npm audit --audit-level=high` exits 1 — 6 high advisories. Pre-existing, not introduced here.** Blocks commit per `git-commit-workflow`. **Likely resolvable by rebasing**: the branch sits on stale `main` `71ce3cbf`, and `954f4adb PRDV-16391: npm audit fix` is one of the six commits on `origin/main` `645de730`. The rebase is blocked by a **pre-existing uncommitted `package-lock.json`** (plus `.swcrc`, `notification-template-preview.html`, untracked `scripts/`) that belong to **someone else's session** — deliberately not stashed or discarded while the user was away. **Needs the user's call.**
