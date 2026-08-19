@@ -1,6 +1,6 @@
 # Argus Feature and Capability Catalog
 
-This catalog describes the Argus POC as it exists on 2026-08-12. It distinguishes visible simulation from executable architecture so the prototype is not mistaken for a production implementation.
+This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishes visible simulation from executable architecture so the prototype is not mistaken for a production implementation.
 
 ## Status legend
 
@@ -61,6 +61,15 @@ This catalog describes the Argus POC as it exists on 2026-08-12. It distinguishe
 | Trigger evidence | Architecture proof — Phase 4D | The first satisfied signal closes a range, maximum latency is mandatory, and every simultaneous reason remains visible under stable primary precedence. | `selection`; `triggered_reasons` |
 | Transcription scheduler gate | Architecture proof — Phase 4D | Fake PCM traverses an explicit concurrency-one `transcription` workload gate without persisting audio as scheduler input. | `serial-transcription-gate` |
 | Dual replacement proof | Architecture proof — Phase 4D | An independent provider-B STT and independent alternate context selector each occupy the same graph position without neighbor or wire changes. | Phase 4D replacement tests |
+| Exact PCM redelivery | Architecture proof — Phase 4E | The transcription gate re-handles an exact duplicate and re-emits the currently delivered PCM while its protocol retains only an output fingerprint and its scheduler journal rejects raw audio. | `phase4e-behavior-recovery.test.mjs` |
+| Replay-safe transcript owners | Architecture proof — Phase 4E | Fake STT may replay deterministic evidence; active ownership keeps one logical word/revision state; permanent history returns one stable entry receipt per segment revision and rejects conflicting identity reuse. | Phase 4E replay case |
+| Stop/Resume-compatible active ownership | Architecture proof — Phase 4E/6 | Stop preserves active temporary state without moving permanent history; Resume continues the same session identity and ordering; late/stale input and writes after Close reject. | `tests/phase6-session-storage.test.mjs`; Phase 4E batch-harness case |
+| Long-monologue bounded surfaces | Architecture proof — Phase 4E/6 | Actual long input closes by configured size or maximum latency; authoritative ranges remain contiguous and non-overlapping; related context and graph queues remain bounded; durable history survives active-cache eviction and reload. | `TranscriptBehaviorPhase4EEvidence.md`; `SessionStoragePhase6Evidence.md` |
+| Governed session lifecycle | Architecture proof — Phase 6 | Record, Stop, Resume, and Close use versioned commands/outcomes, stable operation identity, explicit state transitions, idempotent replay, and conflicting identity failures. | `session.*` contracts; `runtime/session-lifecycle.mjs` |
+| Recoverable Close finalization | Architecture proof — Phase 6 | Close blocks writes, drains admitted work, persists active projections, reconciles append-only history, seals close evidence, and releases evictable cache. Recovery is proven before and after every phase. | `tests/phase6-session-storage.test.mjs` |
+| Root-scoped filesystem session storage | Architecture proof — Phase 6 POC | Versioned JSON metadata/current snapshots and append-only NDJSON histories live beneath `ARGUS_SESSION_ROOT`; replacement is atomic and no database or SDK is selected. | `runtime/session-storage.mjs`; ADR-015 |
+| Narrow session-folder locator | Architecture proof — Phase 6 | The locator accepts only a governed session identity, validates the resolved root-scoped folder, and returns active/permanent paths without arbitrary path access. | `services/session-folder-locator`; `session.folder-locate` |
+| Inline PCM transport evidence | Architecture proof — Phase 4F | Deterministic 100/250/500 ms PCM16 chunks traverse the governed envelope and capacity-32 queue at their representative cadence; base64/envelope expansion, latency, RSS, and explicit oversized rejection are recorded without production thresholds. | `TranscriptTransportPhase4FEvidence.md`; `benchmark:transport` |
 
 ## Logged Items pane
 
@@ -77,9 +86,13 @@ This catalog describes the Argus POC as it exists on 2026-08-12. It distinguishe
 | Editable logged text | UI POC | Supports direct editing and autosave; non-empty user text becomes current browser state. | `.editable-text` |
 | Individual copy | UI POC | Copies one item with optional timestamp and posts a toast. | `.row-copy` |
 | Simulated extraction delay | UI POC | Adds a concise logged item shortly after each simulated transcript segment. | `addLiveSample()` |
-| Stable segment-ID provenance | Architecture proof / specified | Contracts carry provenance boundaries; the browser currently demonstrates ranges with timestamps. Durable archived lookup remains pending. | `context-window.schema.json`, `logged-item-draft.schema.json` |
-| Model-backed extraction | Deferred | Two deterministic extractors prove replaceability; no LLM adapter is connected. | `services/log-extractor-*` |
-| Automatic classification | Contracted / not model-wired | Classification is a separate optional suggestion, bound to the item revision, and is the lowest-priority workload in the global AI lane. It is not a live-list identity and has no current badge. | ADR-004; `classification.suggestion` |
+| Stable segment-ID provenance | Architecture proof | Deterministic Phase 5A extraction retains the exact first/last finalized segment IDs, source timestamps, context-window ID, generator identity, and revision identity through active state and history append. | `Architecture/LoggedItemPipelinePhase5AEvidence.md` |
+| Governed active logged-item owner | Architecture proof | One in-memory owner alone mutates active logged-item text, applies user-authoritative optimistic revisions, replays duplicates, and rejects stale commands or conflicting item identity. | `services/active-logged-item-owner`, `logged-item.stored`, `logged-item.update` |
+| Separate append-only logged-item history | Architecture proof | A second in-memory owner accepts each exact revision idempotently and emits a stable append acknowledgement; it has no update port. | `services/permanent-logged-item-history`, `logged-item.history-append` |
+| User-authoritative update proposals | Architecture proof | Model-like updates are recorded as proposals and cannot replace active text until an explicit user acceptance; rejection produces no active revision. | `logged-item.update-proposed`, `logged-item.proposal-resolve` |
+| Deterministic logged-item pipeline | Architecture proof | Finalized context windows flow through either deterministic extractor to active state, permanent history, and an explicit evidence observer in a default-deny six-service graph. | `wiring/demo.logged-item-pipeline.json` |
+| Model-backed extraction | Architecture proof / production runtime deferred | A governed provider-neutral local HTTP adapter sends exact finalized context through `logged-item-extraction` on the graph's concurrency-one model lane; deterministic concise/passthrough fakes remain available. Strict versioned request/result shapes, loopback-only endpoint validation, bounded pending state, and a deterministic loopback endpoint prove behavior, but no production model/server is selected. | `services/log-extractor-local-http`; `services/serial-ai-model-lane`; `contracts/ai-work-request.schema.json`; `contracts/ai-work-completed.schema.json`; `Architecture/LoggedItemModelPhase5BEvidence.md`; MOD-001 |
+| Automatic classification | Architecture proof / UI deferred | Classification is a separate optional suggestion, bound to the stored item revision and evidence segment IDs, receives the exact finalized transcript context through an explicit wire, runs through lowest-priority `classification-enrichment`, and cannot block or mutate primary text. It is not a live-list identity and has no current badge. | `services/logged-item-classification-suggester`; `classification.suggestion` |
 | LLM revision of an existing item | Deferred | Current simulation appends items; it does not revise an existing item. Future proposals must not silently overwrite user edits. | Architecture backlog |
 | Delete row | Deferred / undecided | No transcript or logged-item delete button currently exists. Deletion semantics, provenance impact, and recovery need an explicit decision. | No current control |
 
@@ -94,7 +107,7 @@ This catalog describes the Argus POC as it exists on 2026-08-12. It distinguishe
 | Save-state feedback | UI POC | Shows “Saving changes…” and then “All changes saved.” |
 | Top-center toast region | UI POC | Stacks transient notifications in header negative space so new live rows remain unobscured. |
 | Reduced-motion support | UI POC | Respects the operating system/browser reduced-motion preference. |
-| Durable filesystem persistence | Deferred | Browser storage is only a POC stand-in; active and permanent session stores are not implemented. |
+| Durable filesystem persistence | Architecture proof — Phase 6 POC / UI integration deferred | The architecture POC persists session metadata, active transcript/logged-item snapshots, append-only permanent histories, and close evidence through the root-scoped filesystem boundary. The browser UI is not wired to it. |
 
 ## Session details and finalization
 
@@ -103,12 +116,12 @@ This catalog describes the Argus POC as it exists on 2026-08-12. It distinguishe
 | Session-details drawer | UI POC | Shows session ID, state, created time, duration, entry counts, proposed storage path, and proposed session files. |
 | Drawer close button | UI POC | Closes the drawer; the scrim and Escape key also close it. |
 | Storage path control | UI POC | Copies the proposed session path and confirms it with a toast. |
-| Session data preview | UI POC | Illustrates active transcript, active logged items, permanent history, and metadata artifacts. Names are illustrative, not an implemented disk contract. |
+| Session data preview | UI POC | Shows the Phase 6 artifact names as a UI preview; the browser is not directly authorized to read them. |
 | Open session folder (footer and drawer) | UI POC / deferred integration | Demonstrates the interaction and explains that a desktop build will call the operating-system shell. No folder is opened in the browser. |
 | Finalization summary | UI POC | Shows transcript/logged-item counts and warns that finalization prevents resume. |
 | Keep session open | UI POC | Cancels finalization; the scrim and Escape key do the same. |
 | Finalize & close | UI POC | Marks local state finalized, stops timers, persists, disables capture controls, and posts a confirmation. |
-| Transactional finalization | Deferred | Temporary-to-permanent file movement, idempotency, and crash recovery remain to be implemented and tested. |
+| Transactional finalization | Architecture proof — Phase 6 POC / desktop integration deferred | The service boundary proves atomic snapshots, idempotent append history, persisted close phases, final close evidence, and restart recovery. It does not claim production transactions or global durability. |
 
 ## Executable architecture proof
 
@@ -125,8 +138,8 @@ This catalog describes the Argus POC as it exists on 2026-08-12. It distinguishe
 | Replaceable extractor | Architecture proof | Concise and passthrough implementations share one manifest/contract position and both complete the graph. |
 | Structured trace output | Architecture proof | Service traces use standard error; domain/control messages use standard output. |
 | Contract-valid failure outcome | Architecture proof | Invalid service input is converted into an explicit `service.failure` message routed to the supervisor. |
-| Automated proof suite | Architecture proof | 78 tests cover all prior phases plus Phase 4D graph policy gating, four independent/coincident triggers, source/context ownership, scheduler routing, dual replacements, and partial isolation. |
-| Contract compatibility policy | Architecture proof | Semver-based backward-compatible minor policy accepts retained 1.0.0 messages under current 1.1.0 consumers and rejects unknown newer minors or different majors. |
+| Automated proof suite | Architecture proof | 107 tests pass in the final full gate; focused Phase 6 and Phase 4E suites cover lifecycle, storage, recovery, locator authority, eviction/reload, bounded queues, and long-monologue closure. |
+| Contract compatibility policy | Architecture proof | Semver-based backward-compatible minor policy governs catalog 1.8.0, accepts retained 1.0.0 messages where compatible, and rejects unknown newer minors or different majors. |
 | Plane-breaking governance | Architecture proof | Catalog evolution checks reject a domain/control move unless the contract major version increases. |
 | Contract ownership and history | Architecture proof | Every message declares an accountable owner and append-only message-specific changelog. |
 | Maintained JSON Schema validation | Architecture proof | A single Ajv instance compiles schemas once when the graph registry loads and validates envelopes, payloads, manifests, and graphs at the runtime boundary. |
@@ -152,27 +165,29 @@ This catalog describes the Argus POC as it exists on 2026-08-12. It distinguishe
 | Optimistic logged-item revision | Architecture proof | `logged-item.update` applies only when `expected_revision` matches; duplicate updates do not increment twice and stale edits are rejected. |
 | Stale AI-result protection | Architecture proof | A classification suggestion names the item revision analyzed and is rejected after a user edit advances authoritative state. |
 | Explicit nonfatal rejection | Architecture proof | `operation.rejected` is wired to the supervisor, clears pending work, appears in metrics/results, and does not falsely fail a required service. |
-| Global AI execution lane | Architecture proof | A bounded JSON-lines journal supports concurrency one, non-preemptive completion, transcription/correction/extraction/enrichment priority, FIFO per workload, explicit overflow, retries, restart recovery, and completed-result replay. |
+| Serial AI execution lane | Architecture proof | The generic scheduler supports concurrency one, non-preemptive completion, transcription/correction/extraction/enrichment priority, FIFO per workload, explicit overflow, retries, restart recovery, and completed-result replay. The Phase 5B model graph uses one in-memory-journal lane for extraction and classification; separate graph processes are not claimed to share a global scheduler, and durable global journaling remains deferred. |
+| Session/storage boundary | Architecture proof | Declared lifecycle/storage owners use the root-scoped JSON/NDJSON boundary; other services receive no ambient filesystem authority and communicate through governed messages. Close recovery and bounded active-history reload are executable proofs, not production durability claims. |
 
 ## Contract and service inventory
 
-- Domain contracts: `audio.chunk`; `transcript.partial`, `transcript.word-committed`, `transcript.word-correction-proposed`, `transcript.utterance-boundary`, `transcript.correction-request`, `transcript.correction-resolved`, `transcript.segment`, `transcript.segment-update`, `transcript.segment-stored`, `transcript.history-append`, `transcript.history-appended`, and `transcript.context-window`; `logged-item.draft`, `logged-item.stored`, `logged-item.update`, `classification.suggestion`, and `classification.suggestion-accepted`.
-- Control contracts: `transcript.context-policy`, `lifecycle.start`, `lifecycle.health-check`, `service.health`, `lifecycle.drain`, `service.drained`, `operation.completed`, `operation.rejected`, `service.failure`, `service.exited`, `dead-letter.message`, `workflow.completed`, `ai.work-request`, and `ai.work-completed`.
-- Executable services: prior components plus a context-policy source, serial transcription gate, alternate STT, alternate context selector, and finite-graph evidence observer.
-- Demo graphs: concise-extractor, passthrough-extractor, Phase 4C working-document, and Phase 4D finalized-context variants.
+- Domain contracts: `audio.chunk`; `transcript.partial`, `transcript.word-committed`, `transcript.word-correction-proposed`, `transcript.utterance-boundary`, `transcript.correction-request`, `transcript.correction-resolved`, `transcript.segment`, `transcript.segment-update`, `transcript.segment-stored`, `transcript.history-append`, `transcript.history-appended`, and `transcript.context-window`; `logged-item.draft`, `logged-item.stored`, `logged-item.update`, `logged-item.history-append`, `logged-item.history-appended`, `logged-item.update-proposed`, `logged-item.proposal-resolve`, `logged-item.proposal-resolved`, `classification.suggestion`, and `classification.suggestion-accepted`.
+- Control contracts: `transcript.context-policy`, `lifecycle.start`, `lifecycle.health-check`, `service.health`, `lifecycle.drain`, `service.drained`, `operation.completed`, `operation.rejected`, `service.failure`, `service.exited`, `dead-letter.message`, `workflow.completed`, `ai.work-request`, `ai.work-completed`, and the Phase 6 `session.record`, `session.recorded`, `session.stop`, `session.stopped`, `session.resume`, `session.resumed`, `session.close`, `session.closed`, `session.folder-locate`, and `session.folder-located` messages.
+- Executable services: prior components plus a context-policy source, serial transcription gate, alternate STT, alternate context selector, dedicated durable-capable active/history transcript and logged-item owners, the Phase 6 session lifecycle controller and folder locator, the Phase 5B serial model lane/local HTTP extractor/classifier, and finite-graph evidence observers.
+- Demo graphs: concise-extractor, passthrough-extractor, Phase 4C working-document, Phase 4D finalized-context, Phase 5A logged-item ownership, and Phase 5B local-model variants.
 - Runtime: Node 22+ orchestration host, trusted provider registry with Node active, bounded queues, explicit supervisor policy, and Ajv as the single maintained validation dependency.
 
 ## Known boundaries before a product build
 
 - The HTML POC and Node architecture proof are not wired together.
-- No microphone, audio capture, VAD, STT provider, LLM provider, or model credentials are present.
+- No microphone, audio capture, VAD, STT provider, production LLM provider/model, or model credentials are present. Phase 5B.1 uses only a deterministic loopback HTTP endpoint, and the model variables are allowlisted only to the components that require them.
 - No package, SDK, real provider, production threshold, storage engine, or desktop host has been selected for Phase 4; each deferred choice has an evidence trigger in `PENDING-DECISIONS.md`.
-- No durable session filesystem, archive, crash recovery, or operating-system folder integration is present.
-- The revision and stale-result contracts are proven against an in-memory owner; durable domain storage, merge proposals, and delete behavior are not present.
-- Native/container providers, transport line-size bounds, cross-runtime memory accounting, production thresholds, and a production security sandbox are not present.
-- At-least-once replay identity and scheduler restart idempotency are proven. Durable logged-item/session owners must persist equivalent idempotency and revision state before production recovery.
+- The Phase 6 session filesystem, archive, close recovery, and folder locator are implemented as a local replaceable POC boundary; browser/desktop folder opening and UI integration remain separate work.
+- Finalized active transcript revisions are evicted from a bounded in-memory cache after durable acceptance and resolve through permanent history. This proves the POC bound without claiming production memory accounting.
+- The revision, stale-result, logged-item proposal, lifecycle, and storage contracts are proven; delete behavior, backup, synchronization, encryption, migrations, and production durability are not present.
+- Native/container providers, production transport selection/line-size bounds, cross-runtime memory accounting, production thresholds, and a production security sandbox are not present.
+- At-least-once replay identity and generic scheduler restart idempotency are proven. The Phase 5B graph's AI journal is in memory; a durable globally shared AI journal and durable logged-item/session owners must be coordinated with integrated application/storage work before production recovery.
 - No optional classification review UI has been designed.
 - The session path and files shown in the drawer are illustrative.
 - The current browser implementation uses the internal word `derived` in some IDs/storage names; the user-facing product term is `Logged Item`.
 
-The prioritized engineering backlog remains in the live repository's `TODO.md`. Phases 4A through 4D are complete; broader behavioral and recovery proofs are next in Phase 4E. Unresolved technology and product selections are governed by `PENDING-DECISIONS.md`.
+The prioritized engineering backlog remains in the live repository's `TODO.md`. Phases 4A through 4F and Phase 5A/5B.1 are complete for review; Phase 4E still has only the active-history bound left open. Phase 6 and later phases have not started. Unresolved technology and product selections are governed by `PENDING-DECISIONS.md`.

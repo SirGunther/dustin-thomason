@@ -1,10 +1,15 @@
 ---
 paths:
-  - "docs/WorkLists/**/*.md"
+  - "docs/WorkLists/**/*"
+  - "**/WorkLists/**/*"
 ---
 <!-- generated from rules/worklists-card-sync.md by scripts/sync-rules.ps1; edit the source, not this file -->
 
 # WorkLists card sync (dustin-thomason)
+
+**How you get here.** The real trigger is being handed a WorkLists card id, or being asked to update a ticket's card, checklist or Current Step — none of which is a file path, so the globs above are only a backstop. The routing that actually matters is the `personal-methodology` intent table (always on) and the `orchestrate` skill's *Keeping the WorkLists card current* section.
+
+**What a caller must give you:** the **card id**, and the **ticket id the card should carry** so the guard can verify you are on the right card. Nothing else — endpoints come from `GET http://localhost:3010/openapi.json`.
 
 Read this when an agent is expected to keep a WorkLists ticket card current as it works — the card body's progress sections and the checklist rows in its note. Load it **before** the first write, not after.
 

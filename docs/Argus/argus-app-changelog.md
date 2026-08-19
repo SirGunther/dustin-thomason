@@ -10,6 +10,134 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### 2026-08-19 — Argus
+
+- **Summary:** Implemented Phase 6 Sessions and Storage as one complete batch. Added governed versioned Record/Stop/Resume/Close and folder-locator contracts, a root-scoped replaceable filesystem storage boundary, durable active transcript/logged-item snapshots, append-only NDJSON histories, idempotent close evidence, bounded active revision caching, and deterministic crash recovery before and after every close-finalization phase.
+- **Plan used:** Preserve default-deny ownership, at-least-once replay, stable session/revision identities, ephemeral raw audio, and the existing Phase 4–5 message boundaries. Use Node built-ins only for the POC and keep JSON/NDJSON behind service/storage owners so an embedded database remains a later replacement option.
+- **Files/Areas:** Session metadata and lifecycle contracts/history/fixtures/catalog 1.8.0/generated reference; `runtime/session-storage.mjs`; `runtime/session-lifecycle.mjs`; session lifecycle controller; session-folder locator; durable-capable transcript/logged-item owners; Phase 6 and completed Phase 4E tests; ADR-015; Phase 6 evidence; TODO/pending decisions; and canonical capability/index records.
+- **User-visible impact:** Browser UI remains unchanged. The executable architecture now has a governed local session lifecycle and storage proof; browser/desktop folder opening and UI integration remain separate boundaries.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| --- | --- | --- | --- | --- |
+| focused Phase 6 | `node --test tests/phase6-session-storage.test.mjs` | Contracts, lifecycle, Stop preservation, Close idempotency, locator, every recovery phase, bounded cache, and restart | pass — 6 tests, 0 failures | Local temporary directories only. |
+| completed Phase 4E proof | `node --test tests/phase4e-behavior-recovery.test.mjs` | Long-monologue bounded active state/queues/latency, durable history, eviction/reload, replay, and Stop/Resume-compatible ownership | pass — 3 tests, 0 failures | Deterministic fixtures; no production thresholds claimed. |
+| full regression | `npm.cmd test` | All repository tests | pass — 107 tests, 0 failures | — |
+| contract governance | `npm.cmd run contracts:check` | Catalog 1.8.0, 47 governed messages, artifacts, schemas, histories, fixtures, owners, and limits | pass | — |
+| generated reference | `npm.cmd run contracts:docs:check` | Generated contract documentation drift | pass after regeneration | — |
+
+- **Storage/recovery evidence:** JSON metadata/current projections use atomic temporary-file-and-rename replacement; permanent transcript/logged-item NDJSON entries are fingerprinted and idempotent; Stop preserves active state; Close blocks writes and recovers from both edges of all six finalization phases; sealed sessions do not reopen; evicted revisions reload and accept later revisions.
+- **Phase 4E closure:** Complete. The long-monologue proof now demonstrates bounded active revision cache, bounded graph queues, maximum-latency closure, durable transcript/history preservation, and valid revision behavior after eviction/reload.
+- **Conflicts / exceptions:** This is replaceable local POC storage, not production-grade/global durability. No database, storage SDK, backup, synchronization, encryption, migration, cloud storage, real microphone/STT, UI integration, Phase 7 work, or broad permission enforcement was added. The globally shared durable AI journal remains explicitly deferred.
+
+### 2026-08-19 — Argus
+
+- **Summary:** Completed Phase 5B.1 boundary hardening without expanding product scope. The model request/result protocol is now governed by versioned `ai.work-request@1.4.0` and `ai.work-completed@1.4.0` shapes with valid/invalid fixtures; sibling-service implementation imports are removed; endpoints are loopback-only HTTP; classification receives explicit transcript context; pending state is bounded and cleaned; purpose is bound to workload; and model configuration is manifest-allowlisted.
+- **Plan used:** Correct only the Phase 5B boundaries identified in the focused review. Preserve deterministic fakes, the existing extraction/classification graph positions, concurrency-one priority behavior, and optional classification degradation. Defer the durable globally shared AI journal to integrated application/storage work coordinated with Phase 6.
+- **Files/Areas:** Governed AI schemas/catalog history/generated reference/fixtures; shared model protocol; local extractor, model lane, classifier, manifests, Node provider environment filtering, explicit context wire, focused tests, Phase 5B evidence, TODO, pending decisions, README/DOCS, and canonical capability/changelog records. No new message type or dependency was added.
+- **User-visible impact:** Browser UI is unchanged. No production provider/model, credentials, durable product storage, durable global AI journal, Phase 6 lifecycle, microphone, or real STT was started.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| --- | --- | --- | --- | --- |
+| focused Phase 5B.1 | `node --test tests/phase5b-model-adapter.test.mjs` | Protocol fixtures, isolation, loopback config, explicit context, retry/failure, priority, configuration filtering, and pending capacity | pass — 14 tests, 0 failures | — |
+| full regression | `npm.cmd test` | All repository tests | pass — 101 tests, 0 failures | — |
+| governance integrity | `npm.cmd run contracts:check` | Catalog 1.7.0, 37 governed messages, schemas, histories, fixtures, owners, and limits | pass | — |
+| generated-doc drift | `npm.cmd run contracts:docs:check` | Human-readable contract reference | pass — current | — |
+
+- **Conflicts / exceptions:** `MOD-001` remains evidence-needed for a production local server/model. The Phase 5B model lane is graph-local with an in-memory journal; no cross-process global scheduler or durable global journal claim is made. Existing demos and measurement matrices were not rerun in this corrective batch per scope.
+### 2026-08-19T16:00:00Z — Argus
+
+- **Summary:** Completed Argus Phase 5B: a provider-neutral, environment-configured local HTTP model adapter now replaces the deterministic logged-item extractor through the existing `logged-item-extraction` scheduler workload. The adapter enforces exact finalized source/context, policy and instruction identity, bounded budgets, strict structured output, stable request identity, explicit retryable failures, and no guessed item on failure. Optional lowest-priority classification produces revision-bound suggestions without mutating active or permanent history.
+- **Plan used:** Preserve Phase 5A ownership; add only the missing model request/result boundary and service graph wiring; use built-in HTTP and no provider SDK; retain deterministic fakes; prove replacement, exact retry, timeout/unavailable/malformed/invalid-output handling, and optional classification; stop before Phase 6, UI, production-provider selection, credentials, and durable storage.
+- **Files/Areas:** `services/log-extractor-local-http`, `services/serial-ai-model-lane`, `services/logged-item-classification-suggester`, `wiring/demo.logged-item-model.json`, deterministic local endpoint helper, model demo script, focused Phase 5B tests, Phase 5B evidence, repository guidance, canonical feature catalog, and this changelog. No new governed messages were required; catalog 1.7.0 remains at 37 messages.
+- **User-visible impact:** Browser UI is unchanged. The executable architecture now proves local model extraction and optional classification contracts while production model/server choice remains unresolved under `MOD-001`.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| --- | --- | --- | --- | --- |
+| dependency audit | `npm.cmd audit --omit=dev` | Production dependency tree | pass — 0 vulnerabilities | — |
+| full regression | `npm.cmd test` | All repository tests | pass — 96 tests, 0 failures | — |
+| Phase 5B focus | `node --test tests/phase5b-model-adapter.test.mjs` | Model boundary, scheduler lane, failure/retry, replacement, and optional classification | pass — 9 tests, 0 failures | — |
+| affected regression | `node --test tests/phase5a-logged-items.test.mjs tests/identity-ordering.test.mjs tests/contract-governance.test.mjs tests/wiring.test.mjs` | Phase 5A ownership, scheduler/identity, governance, and graph wiring | pass — 34 tests, 0 failures | — |
+| governance integrity | `npm.cmd run contracts:check` | Catalog 1.7.0, schemas, histories, fixtures, owners, and limits | pass — 37 governed messages | — |
+| generated-doc drift | `npm.cmd run contracts:docs:check` | Human-readable contract reference | pass — current | — |
+| existing demos | `npm.cmd run demo`, `demo:alternate`, `demo:context`, `demo:logged-items` | Existing deterministic graphs | pass | Shared runtime/transport code was not changed; transcript/measurement/benchmark gates were not triggered. |
+| Phase 5B demo | `npm.cmd run demo:logged-item-model` | Deterministic local HTTP extraction/classification graph | pass | Deterministic endpoint only; no production model selected. |
+
+- **Conflicts / exceptions:** `MOD-001` remains evidence-needed for the local server/model and safe production defaults. The model lane is one shared scheduler process for this graph; the older standalone transcription gate remains a separate Phase 4 adapter graph, so no cross-process global-scheduler claim is made. Phase 6, browser UI integration, provider selection, credentials, packages, durable storage, microphone, and real STT were not started.
+### 2026-08-19T15:38:51Z — Argus
+
+- **Summary:** Verified the completed Phase 5A proof and authorized the bounded Phase 5B local-model-adapter/classification batch. The focused four-test suite and six-service logged-item graph reran successfully with zero rejections or dead letters.
+- **Plan used:** Preserve the Phase 5A ownership graph; prove a provider-neutral environment-configured HTTP adapter against a deterministic local test endpoint; retain the offline fake; route extraction/classification through the existing scheduler priorities; stop before Phase 6 and UI integration.
+- **Files/Areas:** `TODO.md` next-slice authorization and canonical Phase 5B plan status. No product code changed.
+- **Tests run:** `node --test tests/phase5a-logged-items.test.mjs` passed 4/4; `npm.cmd run demo:logged-items` completed six services with zero rejections and zero dead letters.
+- **Conflicts / exceptions:** The specific local model server/model remains unresolved under `MOD-001`; Phase 5B may use a deterministic local HTTP test endpoint but must not silently select a production runtime. Phase 6, UI integration, packaging, real microphone, and real STT remain out of scope.
+
+### 2026-08-19T14:18:00Z — Argus
+
+- **Summary:** Completed Argus Phase 5A: governed logged-item state and ownership. Reconciled the existing partial attempt, repaired deterministic replay identity and exact source provenance, completed separate active/history owners, added user-authoritative update proposals, wired the six-service Phase 5A graph, and added explicit evidence observation.
+- **Plan used:** Preserve ADR-014 boundaries; keep concise and passthrough extractors deterministic and interchangeable; derive item identity from governed session/window input; scope emitted message identity to service instances; update retained contract fixtures and generated references; stop before Phase 5B and Phase 6.
+- **Files/Areas:** Phase 5A extractors, active owner, permanent-history owner, producer-instance identity, retained fixtures, focused tests, logged-item graph, `Architecture/LoggedItemPipelinePhase5AEvidence.md`, TODO/README/DOCS, generated contract reference, and canonical feature/changelog/index records.
+- **User-visible impact:** Browser UI is unchanged. The executable architecture now proves exact logged-item source provenance, stable context replay, identity conflicts, optimistic revisions, append-only revision receipts, separate authority, and explicit proposal acceptance without connecting a model or durable storage.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| --- | --- | --- | --- | --- |
+| dependency audit | `npm.cmd audit --omit=dev` | Production dependency tree | pass — 0 vulnerabilities | No dependency files changed in this session. |
+| full regression | `npm.cmd test` | All prior phases plus Phase 5A | pass — 87 tests, 0 failures | — |
+| governance integrity | `npm.cmd run contracts:check` | Catalog 1.7.0, schemas, histories, retained fixtures, owners, and limits for 37 messages | pass | — |
+| generated-doc drift | `npm.cmd run contracts:docs:check` | Human-readable contract reference | pass — current | — |
+| concise graph | `npm.cmd run demo` | Existing deterministic concise extractor graph | pass | — |
+| alternate graph | `npm.cmd run demo:alternate` | Existing deterministic passthrough extractor graph | pass | — |
+| context graph | `npm.cmd run demo:context` | Existing finalized-context graph | pass | Shared runtime/transport code was not changed, so separate transcript/measurement/benchmark gates were not triggered. |
+| logged-item graph | `npm.cmd run demo:logged-items` | Six-service Phase 5A ownership/evidence graph | pass | Six services ready and drained; zero rejections/dead letters. |
+
+- **Regression repair:** The first final regression exposed an existing graph-instance identity collision after stable item identity was corrected. Producer-scoped output idempotency keys repaired the multi-instance isolation path without changing logical `item_id` or revision identity; the final 87-test run passed.
+- **Conflicts / exceptions:** Phase 4E remains 7/8 proven because bounded finalized active history depends on Phase 6 storage/eviction. Phase 5B local model integration, environment model configuration, scheduler extraction wiring, classification, durable storage, session lifecycle, packaging, microphone, real STT, and UI integration were not started.
+
+### 2026-08-18T20:47:56Z — Argus
+
+- **Summary:** Repaired the Phase 4F canonical closeout record and split the authorized Phase 5 logged-item work into two bounded batches. Phase 5A now covers deterministic logged-item state/ownership; Phase 5B covers the configurable local model adapter and optional classification.
+- **Plan used:** Keep the next-agent scope small, preserve the unfinished Phase 4E active-history bound for Phase 6, and record the user's model/state/failure defaults before implementation begins.
+- **Files/Areas:** Canonical changelog/current state/plans; `TODO.md` Phase 5A/5B checklist; `PENDING-DECISIONS.md`; ADR-014; canonical AD-023.
+- **User-visible impact:** None. This is governance and handoff preparation; no application behavior or browser UI changed.
+- **Tests run:** Documentation-only change; Phase 4F's focused test and transport benchmark were rerun before this update and passed. No product code changed after the recorded 83-test Phase 4F gate.
+- **Conflicts / exceptions:** Phase 4E remains 7/8 proven because bounded finalized active history depends on Phase 6 storage/eviction. Phase 5B, durable storage, packaging, and real microphone/STT work were not started.
+
+### 2026-08-18T19:46:40Z — Argus
+
+- **Summary:** Completed Phase 4F transport measurement and closeout. Added deterministic PCM16/16 kHz/mono 100/250/500 ms transport evidence, bounded-queue/registry measurement, and explicit oversized `audio.chunk` rejection without selecting a production transport or threshold.
+- **Files/Areas:** `scripts/benchmark-audio-transport.mjs`; `tests/phase4f-transport.test.mjs`; `Architecture/TranscriptTransportPhase4FEvidence.md`; Phase 4F checklist, decision register, repository docs, and canonical catalog.
+- **Tests run:** `npm.cmd audit --omit=dev`, full `npm.cmd test` (83 passing), contract governance/generated-doc checks, four graph demos, runtime scaling measurement, and the transport benchmark all passed.
+- **Decisions / limitations:** AUD-003, TRN-001, and TRN-002 remain evidence-needed for real-device/provider/user-session data. TRN-003 remains deferred to Phase 6 storage/eviction. The Phase 4E active-history bound is unchanged. Phase 5 and packaging were not started.
+
+### 2026-08-18T16:11:04Z — Argus
+
+- **Summary:** Completed the smallest defensible Architecture Phase 4E behavioral/recovery slice. Seven of eight checklist claims now have direct evidence: existing Phase 4C/4D cases were mapped and strengthened, exact audio redelivery now crosses the transcription gate without caching PCM, replay remains idempotent through fake STT/active state/permanent history, and a same-process intake pause/resume preserves session, ordering, revision, and provenance state. The long-monologue proof covers size/latency closure, contiguous ranges, bounded context, and bounded queues, but the active owner's in-memory finalized-session history remains unbounded; that checkbox stays open rather than starting Phase 6 storage.
+- **Plan used:** Reuse direct assertions for the first five claims; add only the missing post-edit provenance check; make the transcription gate re-handle duplicates while retaining only an output fingerprint; add deterministic long/replay/pause-resume cases; leave any guarantee requiring durable active-history eviction explicit and unchecked; update canonical memory after the full staged gates passed.
+- **Files/Areas:** Service protocol idempotent output fingerprints; serial transcription gate duplicate handling and raw-audio journal guard; interactive process-test batches; `tests/phase4e-behavior-recovery.test.mjs`; Phase 4C assertion strengthening; Phase 4E evidence artifact; TODO, README, DOCS, pending decision TRN-003; canonical capability, decision, changelog, and index artifacts.
+- **User-visible impact:** Browser UI is unchanged. The executable architecture now demonstrates exact-redelivery replay and Stop/Resume-compatible active ownership without adding lifecycle commands, raw-audio history, production persistence, or a real provider.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| --- | --- | --- | --- | --- |
+| dependency audit | `npm.cmd audit --omit=dev` | Installed production dependency tree | pass — 0 vulnerabilities | Initial sandboxed audit could not reach the registry or write the npm cache log; the approved registry-backed rerun passed. |
+| full regression and Phase 4E proof | `npm.cmd test` | All prior phases plus three new long/replay/pause-resume cases and strengthened Phase 4C assertions | pass — 81 tests, 0 failures | — |
+| governance integrity | `npm.cmd run contracts:check` | Catalog 1.6.0, schemas, fixtures, owners, histories, and limits for 32 messages | pass | No contract change. |
+| generated-doc drift | `npm.cmd run contracts:docs:check` | Human-readable contract reference | pass — current | — |
+| concise graph | `npm.cmd run demo` | Existing concise extractor graph | pass | — |
+| alternate graph | `npm.cmd run demo:alternate` | Existing passthrough extractor graph | pass | — |
+| transcript graph | `npm.cmd run demo:transcript` | Phase 4C five-process working-document graph | pass | — |
+| context graph | `npm.cmd run demo:context` | Phase 4D nine-process finalized-context graph | pass | — |
+| scaling evidence | `npm.cmd run measure:runtime` | Existing 4/8/12 service-process measurement | pass — JSON metrics produced | POC evidence only; Phase 4F transport benchmark was not started. |
+| documentation links | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\dktho\OneDrive\SCRIPTS ALL SYSTEMS\To Do List\WorkLists\argus-phase4e-stage\validate-markdown-links.ps1' -Live` | Promoted Phase 4E evidence, TODO, README, DOCS, pending decisions, and four canonical records | pass — 9 documents, 8 local links | The default script policy blocked the first staged invocation, and the first live invocation used an incorrect relative script path; the final read-only live-tree command passed. No HTTP links were involved. |
+- **Tests added/updated:** Added three Phase 4E cases. They prove actual long-fixture closure by configured size and maximum latency, bounded graph queue depth, four contiguous/non-overlapping synthetic source ranges with bounded related context, exact PCM redelivery through the gate/STT/active/history chain, unique logical word/revision/history identity, terminal conflict reuse, and a paused/resumed same-process active owner with late/stale rejection. The Phase 4C fake-STT case now asserts domain-event interleaving, and the edit case asserts unchanged word provenance after revision 1.
+- **Regression impact:** All 78 Phase 4D tests remain green. The suite grows to 81. The service protocol now stores an output fingerprint separately from optional retained outputs, allowing `retainOutputs: false` operations to re-handle duplicates without retaining raw PCM. Catalog 1.6.0, all 32 contracts, fixtures, generated reference, packages, lockfile, browser UI, graphs, and immutable comparison baseline remain unchanged.
+- **API docs:** No HTTP/OpenAPI surface and no process-contract schema/catalog change; the generated contract reference remains current.
+- **Conflicts / exceptions:** Phase 4E is not fully complete. Its long-monologue active-state checkbox remains open because the active owner retains finalized segments in memory for later edits and no Phase 6 storage/eviction boundary is authorized. This session does not claim crash recovery, process-restart durability, production thresholds, or lifecycle orchestration.
+- **Tooling gates:** All defined package, contract, graph, measurement, dependency, and local-link gates pass. Phase 4F and later phases were not started.
+
 ### 2026-08-13T02:15:00Z — Argus
 
 - **Summary:** Completed Architecture Phase 4D — explicit transcript-to-context wiring and context selection. Added a governed session context policy, policy-gated audio startup, a highest-priority serial transcription gate, finalized-only context selection, singular authoritative source ownership, bounded lookback/forward context, deterministic topic signals, and alternate STT/selector replacement proofs.
@@ -189,13 +317,13 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 Argus has two complementary POC layers:
 
 1. A zero-build browser UI demonstrates the desktop interaction model: capture states, raw transcript and neutral logged-item panes, edits/autosave, selection and copying, independent live scrolling, explicit source ranges, top-center notifications, session details, and deliberate finalization. Audio, speech recognition, model calls, filesystem persistence, and OS folder integration are simulated or deferred.
-2. A Node 22+ architecture proof executes replaceable extraction graphs, a five-service working-document graph, and a nine-service finalized-context graph. Thirty-two governed messages, default-deny domain/control wires, supervision/recovery, identity/order/revision guarantees, the four-level serial AI lane, policy-driven context selection, and dual STT/selector replacement are covered by 78 automated tests. Ajv is the single maintained runtime dependency.
+2. A Node 22+ architecture proof executes replaceable extraction graphs, a five-service working-document graph, a nine-service finalized-context graph, a six-service Phase 5A logged-item ownership graph, and an eight-service Phase 5B local-model/classification graph. Thirty-seven governed messages, default-deny domain/control wires, supervision/recovery, identity/order/revision guarantees, the four-level serial AI lane, policy-driven context selection, dual STT/selector replacement, replay across transcript owners, same-process intake pause/resume, deterministic logged-item ownership, exact model context/budget enforcement, retry behavior, explicit classification context, governed model protocol fixtures, and revision-bound optional classification are covered by 101 automated tests. Ajv is the single maintained runtime dependency.
 
 The initial architectural ambiguity around hidden startup, supervision, result, and completion authority has been resolved: these capabilities occupy typed control/domain wires, while the runtime kernel retains only a finite documented set of process-hosting and validation mechanics.
 
 The live workspace is `C:\Users\dktho\OneDrive\PDProjects\Argus`. The immutable comparison baseline is `Argus-POC-v1-2026-08-12` beside the live workspace, with a ZIP and SHA-256 sidecar. Canonical project memory is this `C:\dustin-thomason\docs\Argus` directory.
 
-Contract Governance Phase 1, Runtime Supervision Phase 2, Identity/Ordering Phase 3, and Transcript Pipeline Phases 4A through 4D are complete for the POC. Catalog 1.6.0 governs 32 messages; retained older fixtures prove compatible replay and generated documentation is enforced. Phase 4E broadens behavioral and recovery proofs.
+Contract Governance Phase 1, Runtime Supervision Phase 2, Identity/Ordering Phase 3, Transcript Pipeline Phases 4A through 4F, and Phase 5A are complete for review; Phase 5B.1 is implemented for review with a deterministic loopback endpoint and no production provider selection. Phase 4E has direct evidence for seven of eight claims; its active-history bound remains explicitly deferred because the in-memory active owner retains finalized segments for later revision and the required persistence/eviction boundary belongs to Phase 6. Phase 5A uses deterministic extraction, separate in-memory active/history owners, exact provenance, revision identity, and user-authoritative proposals. Phase 5B.1 adds strict versioned model request/result boundaries, bounded strict outputs and pending state, explicit retryable failure, loopback-only transport, scoped configuration, explicit classification context, and optional revision-bound classification. The final corrective gate passes with 101 full-regression tests and 14 focused tests. Catalog 1.7.0 governs 37 messages; retained older fixtures prove compatible replay and generated documentation is enforced.
 
 Raw audio will be ephemeral after transcription. Partial hypotheses are visible but read-only; confident words commit as immutable evidence. Provider/acoustic alternatives and adjacent contextual correction are governed proposals with exact context and versioned instructions, and only the active owner can accept them. Punctuation remains provisional until finalization; only finalized segments become editable or enter extraction/history. No real microphone, STT, model, storage, transport, or desktop SDK has been selected. `PENDING-DECISIONS.md` is the central queue for those choices and their evidence triggers.
 
@@ -206,15 +334,17 @@ Polyglot/container-capable execution is an accepted architectural invariant. The
 - [2026-08-12] Establish canonical Argus changelog, feature catalog, decision register, docs index, and repository pointer. Status: implemented.
 - [2026-08-12] Preserve the completed POC as an immutable folder, ZIP, and SHA-256 comparison baseline. Status: implemented.
 - [2026-08-12] Make domain/control planes, runtime pseudo-components, and kernel authority explicit in the executable proof. Status: implemented.
-- [2026-08-11] Separate neutral logged-item extraction from optional classification and expose transcript provenance. Status: implemented in UI/architecture direction; model-backed enrichment remains deferred.
+- [2026-08-11] Separate neutral logged-item extraction from optional classification and expose transcript provenance. Status: implemented in UI/architecture direction and Phase 5B architecture proof; production model-backed enrichment remains deferred.
 - [2026-08-11] Build the first Active Assistant look-and-feel prototype in plain HTML/CSS/JavaScript. Status: implemented.
 - [2026-08-12] Contract governance: semantic compatibility, plane-breaking enforcement, ownership/history, compatibility replay, Ajv boundary validation, generated documentation, payload limits, and canonical failure outcomes. Status: implemented.
 - [2026-08-12] Runtime supervision: readiness, operation receipts/timeouts, drain deadline, bounded queues, exact-wire retry/dead-letter, restart/recovery, exit facts, and measurements. Status: implemented for POC.
 - [2026-08-12] Polyglot runtime strategy: trusted launcher-provider boundary, default-deny container capabilities, shared cross-runtime conformance, and proof criteria. Status: provider boundary implemented; native/OCI providers and conformance remain pending.
 - Identity, idempotency, duplication, per-session ordering, optimistic revisions, stale-result rejection, and serial AI scheduling. Status: implemented for POC.
-- Phase 4 transcript pipeline plan (`TODO.md` Phase 4A-4F): ephemeral PCM fake audio, partial/committed/correction contracts, active/permanent owners, context triggers, recovery proofs, and transport benchmark. Status: Phases 4A through 4D complete; Phase 4E behavioral/recovery proof next.
+- Phase 4 transcript pipeline plan (`TODO.md` Phase 4A-4F): ephemeral PCM fake audio, partial/committed/correction contracts, active/permanent owners, context triggers, recovery proofs, and transport benchmark. Status: Phase 4F complete; Phase 4E is 7/8 proven with the active-history bound intentionally deferred to Phase 6.
+- Phase 5A logged-item state/ownership proof. Status: implemented for review; deterministic components, exact source provenance, separate in-memory active/history owners, revisions, replay, conflict behavior, proposals, and evidence observation only.
+- Phase 5B local model adapter and optional classification. Status: authorized next; environment-configured provider-neutral HTTP boundary, deterministic local test endpoint, retained fake, explicit retryable failure, and non-blocking lowest-priority classification. A specific local server/model remains unresolved under `MOD-001`.
 - Central pending technology/product decision register (`PENDING-DECISIONS.md`). Status: active governance artifact; resolve entries only when their evidence trigger is reached.
-- Real audio → transcription → context-window → logged-item integration. Status: deferred until supporting contracts and persistence are proven.
+- Context-window → logged-item integration. Status: Phase 5A deterministic ownership proof is complete for review; the local model endpoint remains Phase 5B, real audio/STT remains separately deferred, and durable persistence remains Phase 6.
 
 ## Attempt history
 

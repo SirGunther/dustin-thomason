@@ -593,6 +593,7 @@ Heavy **rebase/merge choreography**, tagging, signatures, husky internals. This 
 | **Fix** bug or regression (substantive) | Same as **Implement** — changelog alignment first when a ticket or project log exists |
 | **Explore** unfamiliar code, onboard to ticket, gather multi-area context | [context-fanout.mdc](./context-fanout.mdc) — read-only subagent fanout |
 | **Debug / verify** front-end **layout, CSS, or interaction** at runtime | [browser-loop-guardrails.mdc](./browser-loop-guardrails.mdc) — mandatory boundary rules; setup + tools: [browser-loop-setup.md](../docs/browser-loop-setup.md) |
+| Given a **WorkLists card id**, or asked to update a ticket's **card / checklist / Current Step** | [worklists-card-sync.mdc](./worklists-card-sync.mdc) — read it **before** the first write; needs the card id plus the ticket id the card should carry |
 
 ## Changelog memory (task start + commit)
 
@@ -1083,6 +1084,10 @@ For a full audit on demand, user invokes the **workflow-housekeeping** skill.
 ## worklists-card-sync
 
 # WorkLists card sync (dustin-thomason)
+
+**How you get here.** The real trigger is being handed a WorkLists card id, or being asked to update a ticket's card, checklist or Current Step — none of which is a file path, so the globs above are only a backstop. The routing that actually matters is the `personal-methodology` intent table (always on) and the `orchestrate` skill's *Keeping the WorkLists card current* section.
+
+**What a caller must give you:** the **card id**, and the **ticket id the card should carry** so the guard can verify you are on the right card. Nothing else — endpoints come from `GET http://localhost:3010/openapi.json`.
 
 Read this when an agent is expected to keep a WorkLists ticket card current as it works — the card body's progress sections and the checklist rows in its note. Load it **before** the first write, not after.
 

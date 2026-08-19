@@ -19,6 +19,7 @@ codex: include
 | **Fix** bug or regression (substantive) | Same as **Implement** — changelog alignment first when a ticket or project log exists |
 | **Explore** unfamiliar code, onboard to ticket, gather multi-area context | [context-fanout.mdc](./context-fanout.mdc) — read-only subagent fanout |
 | **Debug / verify** front-end **layout, CSS, or interaction** at runtime | [browser-loop-guardrails.mdc](./browser-loop-guardrails.mdc) — mandatory boundary rules; setup + tools: [browser-loop-setup.md](../docs/browser-loop-setup.md) |
+| Given a **WorkLists card id**, or asked to update a ticket's **card / checklist / Current Step** | [worklists-card-sync.mdc](./worklists-card-sync.mdc) — read it **before** the first write; needs the card id plus the ticket id the card should carry |
 
 ## Changelog memory (task start + commit)
 
