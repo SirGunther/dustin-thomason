@@ -1052,10 +1052,10 @@ The title, Document Control version, filename version, changelog version, and un
 7. Keep objective headers between five and seven words, excluding the `D` identifier.
 8. Record evidence without converting assumptions into completed validation.
 9. Use the overall **Mixed** status only in Document Control when applicable objectives have materially different outcomes and no single release-level result describes the review accurately.
-10. Place the explicit `user-validation-status` anchor immediately before the User Validation Status heading.
-11. Link every table identifier to a matching explicit objective anchor, such as `[D1](#d1)`.
+10. Link navigation to the complete renderer-generated heading slug, including both the identifier and objective title.
+11. Link every table identifier to its complete objective slug, such as `[D1](#d1-five-to-seven-word-objective-header)`.
 12. Place a **Return to User Validation Status** navigation control at the end of every objective section.
-13. Use short explicit anchors rather than generated heading anchors so navigation survives future header changes.
+13. Update the table link whenever an objective heading changes because its generated slug changes with it.
 
 ---
 
@@ -1091,22 +1091,18 @@ Choose the overall review status using the complete version outcome:
 - **Mixed:** Material objectives have different outcomes and no single release-level result is accurate.
 - **N/A:** The review is retained for reference but has no applicable validation objectives.
 
-<a id="user-validation-status"></a>
-
 ## User Validation Status
 
 Each row maps one-to-one to the identically numbered objective in this document. **Passed** means the objective met its expectation with applicable evidence. **Failed** means the expected behavior did not occur. **Blocked** means the objective could not be evaluated because a required dependency failed. **Pending** means the objective is ready but has not yet been evaluated. **N/A** means the objective does not apply and requires no action.
 
 | Id     | Item                                                      | Status  | Next step                               |
 | ------ | --------------------------------------------------------- | ------- | --------------------------------------- |
-| **[D1](#d1)** | **Five To Seven Word Objective Header** Brief description. | Pending | State the next concrete validation step. |
-| **[D2](#d2)** | **Another Version Specific Objective Header** Brief description. | Pending | State the next concrete validation step. |
+| **[D1](#d1-five-to-seven-word-objective-header)** | **Five To Seven Word Objective Header** Brief description. | Pending | State the next concrete validation step. |
+| **[D2](#d2-another-version-specific-objective-header)** | **Another Version Specific Objective Header** Brief description. | Pending | State the next concrete validation step. |
 
 ## Review Summary
 
 Summarize whether this version met expectations, identify any release-level failure or dependency block, and point to the next version or ticket when corrective work exists. Do not contradict the item statuses above.
-
-<a id="d1"></a>
 
 ### D1: Five To Seven Word Objective Header
 
@@ -1133,8 +1129,6 @@ Files: `path/to/file`
 [**↑ Return to User Validation Status**](#user-validation-status)
 
 ---
-
-<a id="d2"></a>
 
 ### D2: Another Version Specific Objective Header
 
