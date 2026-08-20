@@ -7,6 +7,7 @@
 - **Repo:** `atlas-front-end`, `callisto-back-end`
 - **Branch:** _(not created — Phase 5 per orchestrate)_
 - **PR:** _(link when opened)_
+- **Validation review:** [`PRDV-16403/review/v0.1.0-PRDV-16403-display-warnings-in-access-manager-validation-review.md`](PRDV-16403/review/v0.1.0-PRDV-16403-display-warnings-in-access-manager-validation-review.md) — v0.1.0, overall status Pending
 - **Orchestrated:** yes — ledger at `docs/atlas/PRDV-16403/orchestration.md`
 - **Sprint:** 2026-17 (8/19–9/1) · Priority High · 3 points
 
