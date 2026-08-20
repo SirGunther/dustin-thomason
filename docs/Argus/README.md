@@ -18,6 +18,7 @@ This directory is the canonical project record for Argus. It preserves what the 
 | [Phase 5A logged-item evidence](<../../../Users/dktho/OneDrive/PDProjects/Argus/Architecture/LoggedItemPipelinePhase5AEvidence.md>) | Deterministic logged-item identity, active/history ownership, user-authoritative proposals, replay/conflict/revision proof, and evidence observation | Update when Phase 5A behavior changes |
 | [Phase 5B local-model evidence](<../../../Users/dktho/OneDrive/PDProjects/Argus/Architecture/LoggedItemModelPhase5BEvidence.md>) | Provider-neutral local HTTP extraction, shared model lane, strict bounded outputs, explicit failure/retry, and optional revision-bound classification | Update when Phase 5B behavior changes |
 | [Phase 6 session/storage evidence](<../../../Users/dktho/OneDrive/PDProjects/Argus/Architecture/SessionStoragePhase6Evidence.md>) | Governed Record/Stop/Resume/Close lifecycle, root-scoped filesystem storage, close recovery, folder locator, and bounded active-history proof | Update when session lifecycle or storage evidence changes |
+| [Phase 7 UI boundary evidence](<../../../Users/dktho/OneDrive/PDProjects/Argus/Architecture/UiBoundaryPhase7Evidence.md>) | Versioned browser projections, loopback bridge, owner-routed edits, capability adapters, UI-owned state, provenance, and degraded behavior | Update when browser-boundary behavior or evidence changes |
 
 ## Artifact ownership
 

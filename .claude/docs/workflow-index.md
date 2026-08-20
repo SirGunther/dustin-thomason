@@ -265,6 +265,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `qa-to-spec-traceability.md` | Q and A to Spec Traceability |
 | `session-start.md` | Session start (optional) |
 | `ticket-changelog-workflow.md` | Ticket changelog workflow |
+| `user-validation-status-template.md` | User Validation Status Template |
 | `wiki-spec-authoring.md` | Wiki spec authoring (Callisto / Atlas) |
 
 ### Scripts (`scripts/`, `agents/scripts/`)

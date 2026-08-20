@@ -15,10 +15,10 @@ This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishe
 | --- | --- | --- | --- |
 | ARGUS / Active Assistant identity | UI POC | Establishes a compact desktop-assistant identity in the upper-left header. | `index.html`, `styles.css` |
 | Session identity button | UI POC | Shows the current session and opens the session-details drawer. | `#sessionDetailsButton` |
-| Session state indicator | UI POC | Changes appearance for stopped, recording, and finalized states. | `#sessionStateDot`, `updateSessionUI()` |
-| Session time | UI POC | Displays elapsed capture time and advances while recording. | `#elapsedTime`, `startTimers()` |
-| Record | UI POC | Starts or resumes simulated capture, advances time, and appends sample transcript/logged items. Disabled while recording or after finalization. | `#recordButton`, `beginRecording()` |
-| Stop | UI POC | Stops capture without finalizing; current browser state remains resumable. | `#stopButton`, `stopRecording()` |
+| Session state indicator | UI integrated | Renders the `ui.session-status` projection for stopped, recording, and finalized states. | `#sessionStateDot`, `renderSession()` |
+| Session time | UI integrated | Displays elapsed time from the session projection while the bridge demonstration is recording. | `#elapsedTime`, `ui.session-status` |
+| Record | UI integrated | Sends a governed session command to the lifecycle boundary; the browser changes only after the accepted status projection. | `#recordButton`, `ui.command` |
+| Stop | UI integrated | Sends a governed stop command without finalizing; the active session projection remains resumable. | `#stopButton`, `ui.command` |
 | Close session | UI POC | Opens a deliberate finalization confirmation instead of immediately ending the session. | `#closeSessionButton`, `openCloseModal()` |
 | Two-pane workspace | UI POC | Places Raw Transcript and Logged Items side by side at desktop widths. | `.workspace` |
 | Narrow-window fallback | UI POC | Stacks panes vertically below 840 px and simplifies selected header/footer content. | CSS media queries |
@@ -29,17 +29,17 @@ This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishe
 | Surface or control | Status | Current behavior | Implementation reference |
 | --- | --- | --- | --- |
 | Entry count | UI POC | Displays the number of transcript rows with singular/plural wording. | `#transcriptCount` |
-| Select all / Clear all | UI POC | Selects or clears every transcript row; selection survives incoming rows and local reloads. Hidden at compact widths. | `.select-all-button[data-kind="transcript"]` |
-| Copy selected | UI POC | Copies selected transcript rows in their source order and reports the count in a toast. Disabled with no selection. | `#copyTranscriptSelected`, `batchCopy()` |
-| Row selection checkbox | UI POC | Selects one transcript entry and persists that selection. | Row template checkbox |
+| Select all / Clear all | UI integrated | Selects or clears every transcript row; selection is UI-owned and survives incoming projections during the page lifetime. Hidden at compact widths. | `.select-all-button[data-kind="transcript"]`; `ui/ui-state.mjs` |
+| Copy selected | UI integrated | Routes selected transcript identities through the bridge in source order and reports the owner/capability result in a toast. | `#copyTranscriptSelected`; `copy` command |
+| Row selection checkbox | UI integrated | Selects one transcript entry in UI-owned state; it is never part of the authoritative transcript projection. | Row template; `ui/ui-state.mjs` |
 | Timestamp | UI POC | Shows the entry's capture time. | Row template `<time>` |
-| Editable transcript text | UI POC | Supports direct editing, autosaves non-empty input, and restores the previous value if left empty. Ctrl/Cmd+Enter commits by leaving edit mode. | `.editable-text` |
-| Individual copy | UI POC | Copies one row, shows a temporary copied state, and posts a notification. | `.row-copy` |
+| Editable transcript text | UI integrated | Finalized rows submit governed expected-revision edits; provisional rows stay read-only and rejected/stale results restore the owner projection. | `.editable-text`; `transcript.edit` |
+| Individual copy | UI integrated | Sends one row identity through the clipboard capability and posts its accepted/unavailable result. | `.row-copy`; `copy` command |
 | Native text selection | UI POC | Browser text selection remains available inside editable row content. | `.editable-text` |
-| Independent live scrolling | UI POC | Follows new transcript only when this pane is at the bottom. Scrolling upward preserves the user's position. | `paneState.transcript` |
-| Jump to live | UI POC | Appears when the user leaves the bottom, reports unseen rows, and restores live following. | `#transcriptJump` |
+| Independent live scrolling | UI integrated | Follows new transcript only when this pane is already following live content. Scrolling upward preserves the user's position. | `ui/ui-state.mjs`; `#transcriptScroll` |
+| Jump to live | UI integrated | Appears when the user leaves the bottom, reports unseen rows, and restores live following. | `#transcriptJump`; `jumpToLive()` |
 | Real speech-to-text stream | Deferred | The POC appends deterministic sample content; no microphone, VAD, or STT provider is connected. | `liveSamples`, `addLiveSample()` |
-| Edited text supplied to later model calls | Specified | Edits are authoritative in browser state, but no live model is connected yet. | UI requirements; architecture backlog |
+| Edited text supplied to later model calls | Governed boundary | Owner-accepted revisions become the only current projection; no browser-only edit is presented as authoritative. | `ui.command-result`; owner revisions |
 | Ephemeral raw audio | Governed for Phase 4B | Audio is released after terminal transcription and is not stored as a recording. A future retry buffer must be a separate bounded capability. | ADR-007; `PENDING-DECISIONS.md` AUD-001 |
 | Deterministic fake audio format | Governed for Phase 4B | `audio.chunk` bounds inline PCM16, 16 kHz, mono fixtures and validates format, canonical base64, byte/sample equality, and SHA-256 checksum; this does not select a real microphone SDK. | ADR-007; `audio-chunk.schema.json` |
 | Provisional transcript projection | Governed for Phase 4B | `transcript.partial` is a revisioned, replaceable utterance projection that remains read-only and has no extraction/history authority. | ADR-008; `transcript-partial.schema.json` |
@@ -81,11 +81,11 @@ This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishe
 | Copy selected | UI POC | Copies selected logged items in display order and reports the count. | `#copyDerivedSelected`, `batchCopy()` |
 | Row selection checkbox | UI POC | Selects one logged item and persists the selection. | Row template checkbox |
 | Logged time | UI POC | Shows when the logged item was produced. | Row template `<time>` |
-| Source context range | UI POC | Shows the first/last transcript timestamps considered for the item. Selecting it scrolls to and temporarily highlights matching transcript rows. | `.source-range`, `showSourceContext()` |
-| Missing active source handling | UI POC | Reports when the source transcript is outside the currently rendered window. | `showSourceContext()` |
-| Editable logged text | UI POC | Supports direct editing and autosave; non-empty user text becomes current browser state. | `.editable-text` |
-| Individual copy | UI POC | Copies one item with optional timestamp and posts a toast. | `.row-copy` |
-| Simulated extraction delay | UI POC | Adds a concise logged item shortly after each simulated transcript segment. | `addLiveSample()` |
+| Source context range | UI integrated | Displays exact first/last transcript segment IDs and timestamps. Selecting it scrolls to and temporarily highlights the ID-bounded transcript rows. | `.source-range`; `showSourceContext()` |
+| Missing active source handling | UI integrated | Invalid/missing source provenance is visibly degraded and never inferred in the browser. | `ui.logged-item-row.source` |
+| Editable logged text | UI integrated | Submits non-empty text through the logged-item owner with an expected revision; stale/rejected results do not overwrite newer state. | `.editable-text`; `logged-item.edit` |
+| Individual copy | UI integrated | Routes one item through the bridge clipboard capability with optional timestamp and posts a result toast. | `.row-copy`; `copy` command |
+| Simulated extraction delay | Architecture proof / UI integrated | The bridge emits a deterministic provisional transcript event followed by finalized transcript and logged-item projections while recording. | `ui/bridge.mjs`; SSE projections |
 | Stable segment-ID provenance | Architecture proof | Deterministic Phase 5A extraction retains the exact first/last finalized segment IDs, source timestamps, context-window ID, generator identity, and revision identity through active state and history append. | `Architecture/LoggedItemPipelinePhase5AEvidence.md` |
 | Governed active logged-item owner | Architecture proof | One in-memory owner alone mutates active logged-item text, applies user-authoritative optimistic revisions, replays duplicates, and rejects stale commands or conflicting item identity. | `services/active-logged-item-owner`, `logged-item.stored`, `logged-item.update` |
 | Separate append-only logged-item history | Architecture proof | A second in-memory owner accepts each exact revision idempotently and emits a stable append acknowledgement; it has no update port. | `services/permanent-logged-item-history`, `logged-item.history-append` |
@@ -103,11 +103,11 @@ This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishe
 | Ordered batch copy | UI POC | Preserves current row order and separates copied entries with newlines. |
 | Copy timestamps toggle | UI POC | Includes or omits `[time]` for both individual and batch copies; preference persists locally. |
 | Clipboard fallback | UI POC | Falls back to an off-screen textarea if the modern Clipboard API is unavailable. |
-| Browser autosave | UI POC | Stores transcript, logged items, edits, selection, session state, elapsed time, and timestamp preference in `localStorage`. |
-| Save-state feedback | UI POC | Shows “Saving changes…” and then “All changes saved.” |
+| Browser autosave | Removed by Phase 7 boundary | The browser does not persist authoritative transcript, logged-item, or session data. Owner acceptance/rejection is shown through the bridge result. |
+| Save-state feedback | UI integrated | Shows waiting-for-owner and owner-accepted/rejected feedback without claiming durable browser storage. |
 | Top-center toast region | UI POC | Stacks transient notifications in header negative space so new live rows remain unobscured. |
 | Reduced-motion support | UI POC | Respects the operating system/browser reduced-motion preference. |
-| Durable filesystem persistence | Architecture proof — Phase 6 POC / UI integration deferred | The architecture POC persists session metadata, active transcript/logged-item snapshots, append-only permanent histories, and close evidence through the root-scoped filesystem boundary. The browser UI is not wired to it. |
+| Durable filesystem persistence | Architecture proof — Phase 6 POC / storage capability unavailable in browser demo | The architecture POC persists session metadata, active transcript/logged-item snapshots, append-only permanent histories, and close evidence through the root-scoped filesystem boundary. The browser receives only an independent storage/session availability projection. |
 
 ## Session details and finalization
 
@@ -115,12 +115,12 @@ This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishe
 | --- | --- | --- |
 | Session-details drawer | UI POC | Shows session ID, state, created time, duration, entry counts, proposed storage path, and proposed session files. |
 | Drawer close button | UI POC | Closes the drawer; the scrim and Escape key also close it. |
-| Storage path control | UI POC | Copies the proposed session path and confirms it with a toast. |
-| Session data preview | UI POC | Shows the Phase 6 artifact names as a UI preview; the browser is not directly authorized to read them. |
-| Open session folder (footer and drawer) | UI POC / deferred integration | Demonstrates the interaction and explains that a desktop build will call the operating-system shell. No folder is opened in the browser. |
+| Storage path control | UI integrated / host-dependent | Sends only the session identity to the authorized folder resolver and clipboard capability; arbitrary paths are not accepted. |
+| Session data preview | UI integrated | Shows capability-neutral owner boundaries; the browser does not display or read storage file paths. |
+| Open session folder (footer and drawer) | UI integrated / host-dependent | Sends only session identity to the folder capability and visibly reports unavailable behavior when no authorized host adapter exists. |
 | Finalization summary | UI POC | Shows transcript/logged-item counts and warns that finalization prevents resume. |
 | Keep session open | UI POC | Cancels finalization; the scrim and Escape key do the same. |
-| Finalize & close | UI POC | Marks local state finalized, stops timers, persists, disables capture controls, and posts a confirmation. |
+| Finalize & close | UI integrated | Sends a governed close command; controls disable only after the accepted closed session projection. |
 | Transactional finalization | Architecture proof — Phase 6 POC / desktop integration deferred | The service boundary proves atomic snapshots, idempotent append history, persisted close phases, final close evidence, and restart recovery. It does not claim production transactions or global durability. |
 
 ## Executable architecture proof
@@ -138,8 +138,8 @@ This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishe
 | Replaceable extractor | Architecture proof | Concise and passthrough implementations share one manifest/contract position and both complete the graph. |
 | Structured trace output | Architecture proof | Service traces use standard error; domain/control messages use standard output. |
 | Contract-valid failure outcome | Architecture proof | Invalid service input is converted into an explicit `service.failure` message routed to the supervisor. |
-| Automated proof suite | Architecture proof | 107 tests pass in the final full gate; focused Phase 6 and Phase 4E suites cover lifecycle, storage, recovery, locator authority, eviction/reload, bounded queues, and long-monologue closure. |
-| Contract compatibility policy | Architecture proof | Semver-based backward-compatible minor policy governs catalog 1.8.0, accepts retained 1.0.0 messages where compatible, and rejects unknown newer minors or different majors. |
+| Automated proof suite | Architecture proof | 113 tests pass in the final full gate; focused Phase 7 coverage adds projections, command routing, capability fakes, bridge startup, provenance, and UI-owned state to the earlier lifecycle/storage/recovery suites. |
+| Contract compatibility policy | Architecture proof | Semver-based backward-compatible minor policy governs catalog 1.8.0 with 53 messages, accepts retained 1.0.0 messages where compatible, and rejects unknown newer minors or different majors. |
 | Plane-breaking governance | Architecture proof | Catalog evolution checks reject a domain/control move unless the contract major version increases. |
 | Contract ownership and history | Architecture proof | Every message declares an accountable owner and append-only message-specific changelog. |
 | Maintained JSON Schema validation | Architecture proof | A single Ajv instance compiles schemas once when the graph registry loads and validates envelopes, payloads, manifests, and graphs at the runtime boundary. |
@@ -168,10 +168,26 @@ This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishe
 | Serial AI execution lane | Architecture proof | The generic scheduler supports concurrency one, non-preemptive completion, transcription/correction/extraction/enrichment priority, FIFO per workload, explicit overflow, retries, restart recovery, and completed-result replay. The Phase 5B model graph uses one in-memory-journal lane for extraction and classification; separate graph processes are not claimed to share a global scheduler, and durable global journaling remains deferred. |
 | Session/storage boundary | Architecture proof | Declared lifecycle/storage owners use the root-scoped JSON/NDJSON boundary; other services receive no ambient filesystem authority and communicate through governed messages. Close recovery and bounded active-history reload are executable proofs, not production durability claims. |
 
+## Phase 7 UI boundary
+
+| Surface or capability | Status | Current behavior | Implementation reference |
+| --- | --- | --- | --- |
+| Browser projection boundary | Architecture proof / UI integrated | The HTML POC receives only validated session, transcript, logged-item, command-result, and service-status projections from a loopback-only Node bridge. | `ui/bridge.mjs`; `contracts/ui-*.schema.json`; `Architecture/UiBoundaryPhase7Evidence.md` |
+| Transcript event bridge | UI integrated | Provisional rows are read-only; finalized rows carry stable segment/revision identity and become editable only through the transcript owner command boundary. | `ui.transcript-row`; `app.js` |
+| Logged-item event bridge | UI integrated | Logged-item text and revisions come from explicit projections. Optional classification is a suggestion and does not block editing. | `ui.logged-item-row`; `app.js` |
+| Exact source provenance | UI integrated | Each logged item displays stable first/last segment IDs and exact timestamps; the browser highlights by IDs and visibly degrades missing provenance. | `ui.logged-item-row.source`; `showSourceContext()` |
+| Optimistic owner edits | Architecture proof / UI integrated | Transcript and logged-item edits carry expected revisions. Accepted owner projections replace the row; stale, validation, provisional, and unavailable results remain visible. | `ui.command`; `ui.command-result`; `ui/command-router.mjs` |
+| Copy capability | UI integrated / host-dependent | Individual and ordered batch copy preserve the timestamp preference and route through a replaceable clipboard adapter. The adapter reports host unavailability explicitly. | `platform-capabilities.mjs`; `copy` command |
+| Open-folder capability | UI integrated / host-dependent | The browser sends only a session identity. The authorized capability resolves the folder; no arbitrary browser path is accepted. | `platform-capabilities.mjs`; `open-folder` command |
+| UI-owned selection and scrolling | UI integrated | Row selection, select-all, independent pane following, unseen counts, jump-to-live, timestamp preference, and toasts stay in browser state. | `ui/ui-state.mjs`; `app.js` |
+| Individual degraded states | UI integrated | Transcript, logged-item pipeline, storage/session, clipboard, folder opening, and optional classification display independent availability states. Classification failure does not disable editing. | `ui.service-status`; `#serviceStatusList` |
+
+The Phase 7 demo starts with `npm.cmd run demo:ui` and opens at `http://127.0.0.1:4173`. `npm.cmd run demo:ui:smoke` validates deterministic startup. The browser bridge is not a desktop host: `APP-001` remains unresolved, and the final ambiguity-review treatment `UI-001` remains evidence-needed.
+
 ## Contract and service inventory
 
-- Domain contracts: `audio.chunk`; `transcript.partial`, `transcript.word-committed`, `transcript.word-correction-proposed`, `transcript.utterance-boundary`, `transcript.correction-request`, `transcript.correction-resolved`, `transcript.segment`, `transcript.segment-update`, `transcript.segment-stored`, `transcript.history-append`, `transcript.history-appended`, and `transcript.context-window`; `logged-item.draft`, `logged-item.stored`, `logged-item.update`, `logged-item.history-append`, `logged-item.history-appended`, `logged-item.update-proposed`, `logged-item.proposal-resolve`, `logged-item.proposal-resolved`, `classification.suggestion`, and `classification.suggestion-accepted`.
-- Control contracts: `transcript.context-policy`, `lifecycle.start`, `lifecycle.health-check`, `service.health`, `lifecycle.drain`, `service.drained`, `operation.completed`, `operation.rejected`, `service.failure`, `service.exited`, `dead-letter.message`, `workflow.completed`, `ai.work-request`, `ai.work-completed`, and the Phase 6 `session.record`, `session.recorded`, `session.stop`, `session.stopped`, `session.resume`, `session.resumed`, `session.close`, `session.closed`, `session.folder-locate`, and `session.folder-located` messages.
+- Domain contracts: `audio.chunk`; `transcript.partial`, `transcript.word-committed`, `transcript.word-correction-proposed`, `transcript.utterance-boundary`, `transcript.correction-request`, `transcript.correction-resolved`, `transcript.segment`, `transcript.segment-update`, `transcript.segment-stored`, `transcript.history-append`, `transcript.history-appended`, and `transcript.context-window`; `logged-item.draft`, `logged-item.stored`, `logged-item.update`, `logged-item.history-append`, `logged-item.history-appended`, `logged-item.update-proposed`, `logged-item.proposal-resolve`, `logged-item.proposal-resolved`, `classification.suggestion`, and `classification.suggestion-accepted`; Phase 7 `ui.session-status`, `ui.transcript-row`, and `ui.logged-item-row`.
+- Control contracts: `transcript.context-policy`, `lifecycle.start`, `lifecycle.health-check`, `service.health`, `lifecycle.drain`, `service.drained`, `operation.completed`, `operation.rejected`, `service.failure`, `service.exited`, `dead-letter.message`, `workflow.completed`, `ai.work-request`, `ai.work-completed`, and the Phase 6 `session.record`, `session.recorded`, `session.stop`, `session.stopped`, `session.resume`, `session.resumed`, `session.close`, `session.closed`, `session.folder-locate`, and `session.folder-located` messages; Phase 7 `ui.command`, `ui.command-result`, and `ui.service-status`.
 - Executable services: prior components plus a context-policy source, serial transcription gate, alternate STT, alternate context selector, dedicated durable-capable active/history transcript and logged-item owners, the Phase 6 session lifecycle controller and folder locator, the Phase 5B serial model lane/local HTTP extractor/classifier, and finite-graph evidence observers.
 - Demo graphs: concise-extractor, passthrough-extractor, Phase 4C working-document, Phase 4D finalized-context, Phase 5A logged-item ownership, and Phase 5B local-model variants.
 - Runtime: Node 22+ orchestration host, trusted provider registry with Node active, bounded queues, explicit supervisor policy, and Ajv as the single maintained validation dependency.
@@ -181,13 +197,13 @@ This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishe
 - The HTML POC and Node architecture proof are not wired together.
 - No microphone, audio capture, VAD, STT provider, production LLM provider/model, or model credentials are present. Phase 5B.1 uses only a deterministic loopback HTTP endpoint, and the model variables are allowlisted only to the components that require them.
 - No package, SDK, real provider, production threshold, storage engine, or desktop host has been selected for Phase 4; each deferred choice has an evidence trigger in `PENDING-DECISIONS.md`.
-- The Phase 6 session filesystem, archive, close recovery, and folder locator are implemented as a local replaceable POC boundary; browser/desktop folder opening and UI integration remain separate work.
+- The Phase 6 session filesystem, archive, close recovery, and folder locator are implemented as a local replaceable POC boundary; Phase 7 consumes only a storage/session availability projection and routes folder actions by session identity through a capability adapter.
 - Finalized active transcript revisions are evicted from a bounded in-memory cache after durable acceptance and resolve through permanent history. This proves the POC bound without claiming production memory accounting.
 - The revision, stale-result, logged-item proposal, lifecycle, and storage contracts are proven; delete behavior, backup, synchronization, encryption, migrations, and production durability are not present.
 - Native/container providers, production transport selection/line-size bounds, cross-runtime memory accounting, production thresholds, and a production security sandbox are not present.
 - At-least-once replay identity and generic scheduler restart idempotency are proven. The Phase 5B graph's AI journal is in memory; a durable globally shared AI journal and durable logged-item/session owners must be coordinated with integrated application/storage work before production recovery.
-- No optional classification review UI has been designed.
-- The session path and files shown in the drawer are illustrative.
+- Optional classification remains a suggestion and its final review UI remains unresolved under `UI-001`.
+- The browser drawer shows capability-neutral owner labels; it does not read or expose session file paths.
 - The current browser implementation uses the internal word `derived` in some IDs/storage names; the user-facing product term is `Logged Item`.
 
-The prioritized engineering backlog remains in the live repository's `TODO.md`. Phases 4A through 4F and Phase 5A/5B.1 are complete for review; Phase 4E still has only the active-history bound left open. Phase 6 and later phases have not started. Unresolved technology and product selections are governed by `PENDING-DECISIONS.md`.
+The prioritized engineering backlog remains in the live repository's `TODO.md`. Phases 4A through 4F, Phase 5A/5B.1, Phase 6, and Phase 7 are complete for review. Phase 8 permissions/packaging and Phase 9 observability have not started. Unresolved technology and product selections, including `APP-001` and `UI-001`, are governed by `PENDING-DECISIONS.md`.
