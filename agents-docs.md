@@ -969,7 +969,7 @@ When drafting a PR ([pull-request-workflow.md](pull-request-workflow.md)):
 
 # User Validation Status Template
 
-Use this template for a version-specific review. Every table row must map one-to-one to an identically numbered body objective. Do not add standalone status rows for behavior that lacks a corresponding objective header; place narrower checks inside the matching objective's optional Validation Details subsection.
+Use this template for a version-specific review. Every table row must map one-to-one to an identically numbered body objective. Every body objective must identify its directly affected or validation-relevant files with concise Markdown links. Do not add standalone status rows for behavior that lacks a corresponding objective header; place narrower checks inside the matching objective's optional Validation Details subsection.
 
 ## Canonical Template Location
 
@@ -1041,6 +1041,22 @@ The title, Document Control version, filename version, changelog version, and un
 5. Create a new review artifact for a corrective version and preserve the prior version's original outcome.
 6. Point failed or blocked Next steps to the specific follow-up version, ticket, or objective whenever known.
 
+## Affected File Link Rules
+
+Every body objective must place a concise `Files:` line immediately below its `### D<number>: <objective>` heading.
+
+Required layout:
+
+`Files: [Application shell](../../app.js), [UI state](../../ui/ui-state.mjs), [Focused regression](../../tests/example.test.mjs)`
+
+1. Use standard Markdown links so every listed file can be opened directly from the rendered review.
+2. Resolve each relative link from the generated review artifact in `<project-root>/docs/review/`.
+3. Use short descriptive labels such as `Application shell`, `UI state`, or `Focused regression`; do not expose a long raw path as the label.
+4. List only files directly affected by the objective or needed to validate it. Do not reproduce the complete implementation diff beneath every objective.
+5. Separate multiple links with commas and keep the complete file list on one line when practical.
+6. Verify every local link target exists when the review is created or updated.
+7. When an objective genuinely has no applicable local file, write `Files: N/A - <concise reason>` rather than inventing a link.
+
 ## Review Construction Rules
 
 1. Use sequential identifiers beginning with `D1`.
@@ -1056,6 +1072,7 @@ The title, Document Control version, filename version, changelog version, and un
 11. Link every table identifier to its complete objective slug, such as `[D1](#d1-five-to-seven-word-objective-header)`.
 12. Place a **Return to User Validation Status** navigation control at the end of every objective section.
 13. Update the table link whenever an objective heading changes because its generated slug changes with it.
+14. Include the required concise Markdown-linked `Files:` line beneath every objective heading.
 
 ---
 
@@ -1106,7 +1123,7 @@ Summarize whether this version met expectations, identify any release-level fail
 
 ### D1: Five To Seven Word Objective Header
 
-Files: `path/to/file`
+Files: [Application file](../../path/to/file), [Focused validation](../../tests/path/to/file.test.js)
 
 #### Problem
 
@@ -1132,7 +1149,7 @@ Files: `path/to/file`
 
 ### D2: Another Version Specific Objective Header
 
-Files: `path/to/another-file`
+Files: [Affected component](../../path/to/another-file), [Validation fixture](../../tests/fixtures/example.json)
 
 #### Problem
 
