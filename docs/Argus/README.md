@@ -20,6 +20,7 @@ This directory is the canonical project record for Argus. It preserves what the 
 | [Phase 6 session/storage evidence](<../../../Users/dktho/OneDrive/PDProjects/Argus/Architecture/SessionStoragePhase6Evidence.md>) | Governed Record/Stop/Resume/Close lifecycle, root-scoped filesystem storage, close recovery, folder locator, and bounded active-history proof | Update when session lifecycle or storage evidence changes |
 | [Phase 7 UI boundary evidence](<../../../Users/dktho/OneDrive/PDProjects/Argus/Architecture/UiBoundaryPhase7Evidence.md>) | Versioned browser projections, loopback bridge, owner-routed edits, capability adapters, UI-owned state, provenance, and degraded behavior | Update when browser-boundary behavior or evidence changes |
 | [Phase 7 user validation review](<../../../Users/dktho/OneDrive/PDProjects/Argus/docs/review/v0.1.0-phase-7-browser-poc-validation-review.md>) | User-owned D1–D6 validation status, corrective implementation checklist, notes, and revalidation evidence | Update only from observed user or executable evidence; preserve user-entered notes |
+| [Phase 7 corrective revalidation review](<../../../Users/dktho/OneDrive/PDProjects/Argus/docs/review/v0.1.0-phase-7-corrective-revalidation-validation-review.md>) | Fresh user validation cycle for active-edit preservation, complete provenance highlighting, optional classification presentation, and populated-state clarity | Preserve each completed review; create a successor artifact when new corrective implementation makes the current checklist obsolete |
 
 ## Artifact ownership
 

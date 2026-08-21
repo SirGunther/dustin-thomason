@@ -10,6 +10,13 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### Argus Phase 7 corrective revalidation 2026-08-21
+
+- **Summary:** Corrected the three Phase 7 issues found during the second hands-on review. Incoming projections now reconcile keyed rows without replacing an active editor; exact logged-item provenance persistently highlights the complete contributing transcript range; and optional classification is visibly separate, non-authoritative, independently unavailable or degraded, and non-blocking for logged-item editing.
+- **Verification:** Focused regression tests passed 10/10; the deterministic UI smoke passed with 24 projections; the complete regression passed 117/117; contract governance remained valid for 53 messages; generated contract documentation remained current.
+- **User validation:** Created a fresh [Phase 7 corrective revalidation review](../../../Users/dktho/OneDrive/PDProjects/Argus/docs/review/v0.1.0-phase-7-corrective-revalidation-validation-review.md). Its four objectives are pending Dustin's hands-on confirmation, and the superseded review remains unchanged as historical evidence.
+- **Scope:** Focused Phase 7 presentation corrections only. No owner, command route, contract, transport, listener scope, framework, Phase 8 behavior, microphone, STT, or model integration changed.
+
 ### 2026-08-21 — Argus
 
 - **Summary:** Corrected the shared Phase 7 browser startup path discovered during hands-on validation. Registered the missing `includeTimestamps` element, added a named required-element guard and permanent selector-drift regression, corrected logged-item copy command mapping, exposed explicit bridge connection state in the existing footer status treatment, and clarified session Stop versus terminal `Ctrl+C`.

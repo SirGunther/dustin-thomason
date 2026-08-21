@@ -45,7 +45,7 @@ result. The UI POC is not integrated into WorkLists yet; Phase 1 has not begun.
   in `PDProjects/Cairn/DECISIONS-PENDING.md`; the Phase 0D evidence is in
   `Architecture/Phase0DEvidence.md`.
 
-**Next:** two things, in order. Run the directory-handle probe manually in Chromium or Edge against `tests/fixtures/directory-handle-transfer` and record the result in `Architecture/Phase0DEvidence.md` — that is the only Phase 0 closure item. Then the three review fixes carried below, which are small and none of which blocks Phase 1: wire `vault-index`'s rejection port, drop the unused `text` field from `vault.index-request`, and promote the three browser harnesses to npm scripts.
+**Next:** run the directory-handle probe manually in Chromium or Edge against `tests/fixtures/directory-handle-transfer` and record the result in `Architecture/Phase0DEvidence.md`. That is the only Phase 0 closure item; the Phase 0D review follow-ups are implemented, and Phase 1 has not begun.
 
 ---
 
@@ -65,6 +65,80 @@ result. The UI POC is not integrated into WorkLists yet; Phase 1 has not begun.
 ## Session log
 
 _Newest first. Add one entry per working session or merge-worthy update._
+
+### 2026-08-21T17:44:28Z — Phase 0D follow-up review defects fixed as one cohesive batch
+
+- **Summary:** Fixed the four Phase 0D follow-up review defects without beginning Phase 1:
+  the verify script now resolves formatting at runtime, the canonical capability catalog is
+  current, the registry's `vault.index-request` rejection cases are committed as node tests,
+  and the preceding changelog entry uses the canonical shipping headings.
+- **Problem:** The verify chain embedded a machine-specific formatter path and Windows-only
+  `npm.cmd`; the capability catalog was stale about the node and kernel counts and the
+  `npm test` versus `verify` distinction; the registry's path-only and version-rejection rules
+  were not guarded; and the newest changelog entry omitted required canonical headings.
+- **Solution:** Added a zero-dependency runtime formatter resolver that reports and tolerates a
+  missing formatter while preserving real-gate failures; updated the capability prose; added
+  one live-registry node test covering accepted paths-only, rejected `text`, and rejected 1.0.0
+  envelopes; and restated the prior entry before adding this one with the canonical headings.
+- **Files/areas:** `package.json`, `tools/format-check.mjs`,
+  `tests/graph-prepare.test.mjs`, `README.md`, `Architecture/ComponentAuthoring.md`,
+  canonical `capabilities.md`, and this changelog. No contract schema, graph, component, or
+  protected POC file was edited.
+- **Tests run:** Final commands passed: `npm.cmd test` 24/24; `npm.cmd run contracts:check`
+  accepted 10 governed messages; `npm.cmd run graph:check` accepted 5 components and 23 wires
+  with no unwired ports; `npm.cmd run test:kernel` passed 18/18; `npm.cmd run test:standalone`
+  passed 12/12; and `npm.cmd run verify` passed all chained gates, including 3 worker-count
+  measurements with no threshold applied. A focused registry run passed 1/1, and the failure
+  propagation probe returned nonzero as required.
+- **Tests added/updated:** Added the live-registry test while leaving the existing 23-test
+  rejection matrix unchanged; the new test contains the three requested registry assertions.
+- **Regression impact:** The change is isolated to verification tooling, committed tests, and
+  documentation. `npm test` remains the fast node gate, `npm run verify` is the complete pass,
+  `TST-001` remains open, and the seven named open decisions/issues remain unresolved.
+- **API docs:** Not relevant — no HTTP surface, route, method, DTO, status, or auth metadata
+  changed.
+- **Tooling gates:** `npm.cmd run verify` completed with the runtime formatter result
+  `prettier not found; skipping formatting check`; the missing formatter was explicitly
+  tolerated, while all real gates passed. No npm dependency was added.
+- **Conflicts / exceptions:** No new conflict was recorded. The manual directory-handle probe
+  remains outstanding, and Phase 0 is not claimed closed.
+
+### 2026-08-21T00:00:00Z — Phase 0D follow-ups implemented as one cohesive batch
+
+- **Summary:** Completed all four Phase 0D review follow-ups without beginning Phase 1. The
+  graph now carries `vault-index`'s ordinary rejection to `@supervisor`; `vault.index-request`
+  is a path-only contract at schema version 2.0.0; the three browser harnesses are named npm
+  scripts; and the standalone DOM-owner assertion now measures observed output.
+- **Problem:** `graph:check` reported an unreachable `vault-index` rejection port, the index
+  boundary carried up to 2,000,000 unused characters per document, browser suites were not
+  represented by npm scripts, and the DOM-owner invalid-contract conjunct was a literal.
+- **Solution:** Added the exact `vault-index -> @supervisor` `operation.rejected` wire and a
+  graph-level malformed-path proof; removed `text` from the request schema and source/fixture
+  payloads while applying the breaking version rule in `contracts/catalog.json`; added
+  `test:kernel`, `test:standalone`, `measure:workers`, and `verify`; and removed the vacuous
+  DOM-owner field because the invalid path emits nothing to validate.
+- **Tests run:** `npm.cmd test` passed 23/23; `npm.cmd run contracts:check` accepted 10 governed
+  messages; `npm.cmd run graph:check` accepted 5 components and 23 wires with no declared but
+  unwired `vault-index` port; `npm.cmd run test:kernel` passed 18/18, including exactly one
+  malformed-path rejection from `vault-index` and zero failures; `npm.cmd run test:standalone`
+  passed 12/12, including registry rejection of a legacy payload carrying `text`.
+- **Tests added/updated:** Added the graph-level malformed-path proof, named the three browser
+  harnesses as npm scripts, and changed the standalone DOM-owner assertion to measure observed
+  output; the invalid path emits nothing to validate, so the vacuous field was removed.
+- **Regression impact:** The missing-document rejection remains one `operation.rejected` and zero
+  failures; the valid tree projection is byte-identical; `npm test` remains only the fast node
+  gate; the manual browser pages remain manual; `TST-001` stays open; and the seven named open
+  decisions/issues remain unresolved.
+- **Files/areas:** Phase 0 graph, contract catalog/schema, vault-source, standalone and kernel
+  harnesses, package scripts, README, roadmap, architecture evidence, canonical changelog, and
+  capabilities. The six protected POC files and the vendored renderer were not edited.
+- **API docs:** Not relevant — this batch changed no HTTP surface, route, method, DTO, status, or
+  auth metadata.
+- **Tooling gates:** `npm.cmd run verify` chains the node, contract, graph, kernel, standalone,
+  worker-cost, and `prettier --check .` gates. No npm dependency was added.
+- **Conflicts / exceptions:** No new conflict was recorded. The manual directory-handle page
+  remains a manual surface, the seven named open decisions/issues remain unresolved, and Phase 1
+  did not begin.
 
 ### 2026-08-21T00:00:00Z — Phase 0D reviewed and accepted with three follow-ups
 
