@@ -126,8 +126,8 @@ Choose the overall review status using the complete version outcome:
 
 Each row maps one-to-one to the identically numbered objective in this document. **Passed** means the objective met its expectation with applicable evidence. **Failed** means the expected behavior did not occur. **Blocked** means the objective could not be evaluated because a required dependency failed. **Pending** means the objective is ready but has not yet been evaluated. **N/A** means the objective does not apply and requires no action.
 
-| Id     | Item                                                      | Status  | Next step                               |
-| ------ | --------------------------------------------------------- | ------- | --------------------------------------- |
+| Id     | Item                                                      | Status  | Next step                               | Notes |
+| ------ | --------------------------------------------------------- | ------- | --------------------------------------- | --------------------------------------- |
 | **[D1](#d1-five-to-seven-word-objective-header)** | **Five To Seven Word Objective Header** Brief description. | Pending | State the next concrete validation step. |
 | **[D2](#d2-another-version-specific-objective-header)** | **Another Version Specific Objective Header** Brief description. | Pending | State the next concrete validation step. |
 

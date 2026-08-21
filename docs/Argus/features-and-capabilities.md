@@ -138,7 +138,7 @@ This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishe
 | Replaceable extractor | Architecture proof | Concise and passthrough implementations share one manifest/contract position and both complete the graph. |
 | Structured trace output | Architecture proof | Service traces use standard error; domain/control messages use standard output. |
 | Contract-valid failure outcome | Architecture proof | Invalid service input is converted into an explicit `service.failure` message routed to the supervisor. |
-| Automated proof suite | Architecture proof | 113 tests pass in the final full gate; focused Phase 7 coverage adds projections, command routing, capability fakes, bridge startup, provenance, and UI-owned state to the earlier lifecycle/storage/recovery suites. |
+| Automated proof suite | Architecture proof | 114 tests pass in the final full gate; focused Phase 7 coverage adds projections, command routing, capability fakes, bridge startup, required-element selector alignment, provenance, and UI-owned state to the earlier lifecycle/storage/recovery suites. |
 | Contract compatibility policy | Architecture proof | Semver-based backward-compatible minor policy governs catalog 1.8.0 with 53 messages, accepts retained 1.0.0 messages where compatible, and rejects unknown newer minors or different majors. |
 | Plane-breaking governance | Architecture proof | Catalog evolution checks reject a domain/control move unless the contract major version increases. |
 | Contract ownership and history | Architecture proof | Every message declares an accountable owner and append-only message-specific changelog. |
@@ -172,7 +172,7 @@ This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishe
 
 | Surface or capability | Status | Current behavior | Implementation reference |
 | --- | --- | --- | --- |
-| Browser projection boundary | Architecture proof / UI integrated | The HTML POC receives only validated session, transcript, logged-item, command-result, and service-status projections from a loopback-only Node bridge. | `ui/bridge.mjs`; `contracts/ui-*.schema.json`; `Architecture/UiBoundaryPhase7Evidence.md` |
+| Browser projection boundary | Architecture proof / UI integrated | The HTML POC receives only validated session, transcript, logged-item, command-result, and service-status projections from a loopback-only Node bridge. Required singleton selectors are guarded at startup, and the footer reports the bridge as connecting, available, or unavailable. | `ui/bridge.mjs`; `app.js`; `tests/ui-dom-bindings.test.mjs`; `Architecture/UiBoundaryPhase7Evidence.md` |
 | Transcript event bridge | UI integrated | Provisional rows are read-only; finalized rows carry stable segment/revision identity and become editable only through the transcript owner command boundary. | `ui.transcript-row`; `app.js` |
 | Logged-item event bridge | UI integrated | Logged-item text and revisions come from explicit projections. Optional classification is a suggestion and does not block editing. | `ui.logged-item-row`; `app.js` |
 | Exact source provenance | UI integrated | Each logged item displays stable first/last segment IDs and exact timestamps; the browser highlights by IDs and visibly degrades missing provenance. | `ui.logged-item-row.source`; `showSourceContext()` |
@@ -182,7 +182,7 @@ This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishe
 | UI-owned selection and scrolling | UI integrated | Row selection, select-all, independent pane following, unseen counts, jump-to-live, timestamp preference, and toasts stay in browser state. | `ui/ui-state.mjs`; `app.js` |
 | Individual degraded states | UI integrated | Transcript, logged-item pipeline, storage/session, clipboard, folder opening, and optional classification display independent availability states. Classification failure does not disable editing. | `ui.service-status`; `#serviceStatusList` |
 
-The Phase 7 demo starts with `npm.cmd run demo:ui` and opens at `http://127.0.0.1:4173`. `npm.cmd run demo:ui:smoke` validates deterministic startup. The browser bridge is not a desktop host: `APP-001` remains unresolved, and the final ambiguity-review treatment `UI-001` remains evidence-needed.
+The Phase 7 demo starts with `npm.cmd run demo:ui` and opens at `http://127.0.0.1:4173`. `npm.cmd run demo:ui:smoke` validates deterministic startup and lifecycle/edit/copy command flow. A transient Playwright run completed the browser flow with zero page errors, but D1–D5 remain pending user revalidation. The browser bridge is not a desktop host: `APP-001` remains unresolved, and the final ambiguity-review treatment `UI-001` remains evidence-needed.
 
 ## Contract and service inventory
 
@@ -206,4 +206,4 @@ The Phase 7 demo starts with `npm.cmd run demo:ui` and opens at `http://127.0.0.
 - The browser drawer shows capability-neutral owner labels; it does not read or expose session file paths.
 - The current browser implementation uses the internal word `derived` in some IDs/storage names; the user-facing product term is `Logged Item`.
 
-The prioritized engineering backlog remains in the live repository's `TODO.md`. Phases 4A through 4F, Phase 5A/5B.1, Phase 6, and Phase 7 are complete for review. Phase 8 permissions/packaging and Phase 9 observability have not started. Unresolved technology and product selections, including `APP-001` and `UI-001`, are governed by `PENDING-DECISIONS.md`.
+The prioritized engineering backlog remains in the live repository's `TODO.md`. Phases 4A through 4F, Phase 5A/5B.1, Phase 6, and the corrected Phase 7 implementation are complete for review. Phase 8 permissions/packaging remains paused for Phase 7 user revalidation; Phase 9 observability has not started. Unresolved technology and product selections, including `APP-001` and `UI-001`, are governed by `PENDING-DECISIONS.md`.

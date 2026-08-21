@@ -10,6 +10,20 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### 2026-08-21 — Argus
+
+- **Summary:** Corrected the shared Phase 7 browser startup path discovered during hands-on validation. Registered the missing `includeTimestamps` element, added a named required-element guard and permanent selector-drift regression, corrected logged-item copy command mapping, exposed explicit bridge connection state in the existing footer status treatment, and clarified session Stop versus terminal `Ctrl+C`.
+- **Browser evidence:** A transient Playwright 1.62.1 run against installed Google Chrome passed 1/1 in 11.7 seconds with zero page errors. It exercised bootstrap/SSE, Record and deterministic live projections, transcript/logged-item edits, exact provenance, selection, timestamp-aware copy through a fake capability, Stop preservation, Resume, Close, top-positioned toasts, and bridge disconnect feedback. Playwright was not added as a dependency.
+- **Verification:** Focused UI tests passed 7/7; the expanded `demo:ui:smoke` passed 24 bootstrap projections plus lifecycle/edit/copy flow; the complete regression passed 114/114; contract governance remained valid for 53 messages; generated contract documentation remained current.
+- **Validation status:** The corrective implementation checklist is complete except for user revalidation. D1–D5 and the user's notes remain unchanged; Phase 8 remains paused until that hands-on revalidation is recorded.
+- **Scope:** Focused Phase 7 correction only. No microphone/STT/model, desktop shell, Playwright dependency, Phase 8 permissions, or architecture redesign was added.
+
+### 2026-08-21 — Argus
+
+- **Summary:** Created the version-specific Phase 7 browser POC [user validation review](../../../Users/dktho/OneDrive/PDProjects/Argus/docs/review/v0.1.0-phase-7-browser-poc-validation-review.md) for Argus v0.1.0.
+- **Validation status:** Empty-state layout and visual clarity passed. Hands-on review then found no observable Record, transcript/logged-item, editing/copy, or session-command response, so D2–D5 failed and D1 remains pending clarification. The linked review now contains the corrective checklist; Phase 8 should wait for revalidation.
+- **Implementation impact:** Documentation only. No application behavior, contract, wiring, package, or test result changed.
+
 ### 2026-08-19 — Argus
 
 - **Summary:** Implemented Phase 7 UI Boundary as one cohesive batch. Added six governed browser-facing contracts, a loopback-only Node HTTP/SSE bridge, projection validation, closed UI command validation, owner-routed optimistic transcript/logged-item edits, deterministic clipboard/folder capability adapters, UI-owned selection/scroll state, exact source-range rendering, and independent degraded states.
