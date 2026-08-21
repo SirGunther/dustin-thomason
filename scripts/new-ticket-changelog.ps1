@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
   Scaffold docs/<system>/PRDV-XXXXX-changelog.md from the ticket template.

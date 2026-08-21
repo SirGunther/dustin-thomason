@@ -274,6 +274,8 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | ------ | ------- |
 | `bootstrap.ps1` | One-time per-machine baseline: wire dustin-thomason's agent rules into Claude Code globally. |
 | `gitcommit.ps1` |  |
+| `new-poc-snapshot.ps1` | Freeze a project as an immutable POC comparison baseline: a copy, a SNAPSHOT.md, |
+| `new-project-docs.ps1` | Scaffold the documentation spine for a personal project: the canonical record in |
 | `new-ticket-changelog.ps1` | Scaffold docs/<system>/PRDV-XXXXX-changelog.md from the ticket template. |
 | `notify-agent-complete.ps1` | POST agent session completion to a Power Automate manual-trigger webhook. |
 | `start-apps.ps1` |  |
