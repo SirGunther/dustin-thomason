@@ -66,6 +66,23 @@ result. The UI POC is not integrated into WorkLists yet; Phase 1 has not begun.
 
 _Newest first. Add one entry per working session or merge-worthy update._
 
+### 2026-08-21T00:00:00Z — Prettier declared as a dependency; the formatting gate is real again
+
+- **Summary:** Replaced the runtime formatter resolver with `prettier` as a declared devDependency. The formatting gate now runs on any machine instead of skipping when no formatter is found, and `npm audit` becomes applicable for the first time.
+- **Problem:** The previous batch made the `verify` chain portable by resolving a formatter at run time and tolerating its absence. That was the instruction, and it worked as specified — but on this machine `prettier` lives in the WorkLists workspace, so the resolver found nothing, printed `prettier not found; skipping formatting check`, and exited 0. `npm run verify` therefore reported success while `tests/graph-prepare.test.mjs` was unformatted. A gate that passes because it did not run is worse than no gate.
+- **Requirement:** The formatting gate must fail when the repository is unformatted, on any machine, without depending on a sibling project's `node_modules`.
+- **Solution:** Added `prettier` `^3.8.3` — matching the WorkLists constraint so both projects format identically — as the single devDependency. `format:check` is now `prettier --check .` and `format` is `prettier --write .`. Deleted `tools/format-check.mjs`; the resolver existed only to work around the missing dependency.
+- **Trade accepted:** the zero-dependency property is gone. It bought portability at the cost of a gate that silently did nothing, which was the wrong side of that trade. One dev-only, no-runtime-code dependency is the smaller cost.
+- **Files/areas:** `package.json`, `package-lock.json` (new), `tools/format-check.mjs` (deleted), `tests/graph-prepare.test.mjs` (formatting only), and canonically `capabilities.md`.
+- **User-visible impact:** None. `npm install` is now required before `format:check` or `verify`; every other gate still runs without it.
+- **Tests run:** `npm.cmd test` — **24/24**. `npm.cmd run contracts:check` — 10 governed messages, ok. `npm.cmd run graph:check` — accepted, 5 components, 23 wires. `node tests/kernel-browser.mjs` — **18/18**. `node tests/component-standalone.mjs` — **12/12**. `npm.cmd run format:check` — clean. `npm.cmd run verify` — exit 0. `npm.cmd audit --audit-level=high` — **0 vulnerabilities**.
+- **Negative tests, because a gate that cannot fail is not a gate:** injected a wrong-plane wire into `graphs/read-render.json` → `verify` exited **1** with three plane errors. Appended unformatted code to a test file → `verify` exited **1** on the formatting step. Both reverted; all gates re-run green afterwards.
+- **Tests added/updated:** None — not relevant: this changed tooling, not behaviour. The 24 node checks include the registry-rejection assertions added in the previous batch and are unchanged here.
+- **Regression impact:** `tests/graph-prepare.test.mjs` changed by whitespace only, confirmed by the suite still reporting 24/24. No contract, manifest, wire, or component was touched — the graph is still 5 components and 23 wires, and `vault.index-request` is still at `2.0.0`. The six protected POC files are byte-stable against the frozen snapshot and `vendor/markdown-renderer.js` is still byte-identical to `WorkLists/public/markdownRenderer.js`. `node_modules/` is already excluded by `new-poc-snapshot.ps1` and ignored by prettier, so the new dependency cannot leak into a future baseline.
+- **API docs:** Not relevant — no HTTP surface in this project.
+- **Tooling gates:** `audit` — now applicable and clean at 0 vulnerabilities. `lint` — no lint script; `format:check` is the gate and passes. Both rows in `capabilities.md` were `N/A`/skip-tolerant and are corrected.
+- **Conflicts / exceptions:** The zero-dependency property recorded in earlier entries no longer holds; stated here rather than left for a reader to discover. The manual directory-handle probe remains the only Phase 0 closure item, unchanged by this batch. WorkLists board not updated this session — no status change to report beyond the card's existing Current Step.
+
 ### 2026-08-21T17:44:28Z — Phase 0D follow-up review defects fixed as one cohesive batch
 
 - **Summary:** Fixed the four Phase 0D follow-up review defects without beginning Phase 1:
