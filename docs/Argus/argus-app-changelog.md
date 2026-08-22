@@ -10,6 +10,12 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### 2026-08-22T13:16:34Z — Argus Phase 8 independent review
+
+- **Outcome:** Independently re-ran the Phase 8 package, focused, UI-smoke, full-regression, contract, generated-document, and dependency-audit gates. Package verification passed for all 6 graphs; Phase 8 passed 20/20; UI smoke passed with 24 projections; the repository passed 137/137; all 53 governed messages passed; generated contract documentation was current; and the dependency audit found 0 vulnerabilities.
+- **Finding:** The behavior is sound, but the enforcement taxonomy overstates the host boundary. Node `--permission` checks and `--max-old-space-size` are enforced by the Node/V8 runtime, not by the operating system. The outbound-network declaration restricts approved endpoint configuration but cannot contain a component that directly opens a socket; the evidence already acknowledges that residual gap.
+- **Next action:** One terminology-only correction remains in runtime metadata, assertions, ADR/evidence, and canonical capability records. No permission behavior, graph, contract, package format, dependency, provider, audio/STT/model integration, native toolchain, or OCI engine should change while applying it. Phase 9 remains next after the existing gates are rerun.
+
 ### 2026-08-22T05:10:00Z — Argus Phase 8 permissions and packaging
 
 - **Summary:** Implemented Phase 8 as one cohesive batch on the accepted browser/Node POC host. Every service manifest now carries a required default-deny `permissions` block across nine authority classes plus an optional `resources` block; the Node provider translates the declaration into real `node --permission` flags; unavailable `native`/`container` providers and unsupportable capabilities fail closed before launch; and each wiring graph reduces to a deterministic inspectable package with per-file integrity hashes.
