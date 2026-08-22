@@ -31,8 +31,10 @@ Running changelog for Cairn, a markdown-vault UI intended for integration into t
 
 ## Current state
 
-**Phase:** Phase 0 implementation complete; closure is pending the manual directory-picker
-result. The UI POC is not integrated into WorkLists yet; Phase 1 has not begun.
+**Phase:** **Phase 0 is closed.** The directory-handle transfer probe was run by hand in
+Chromium on 2026-08-22 and passed — a transferred `FileSystemDirectoryHandle` still reads,
+and the main thread retains its own access. That was the last load-bearing Phase 0 claim.
+Architecture continues at Phase 1.
 
 - A runnable zero-build prototype exists at `PDProjects/Cairn`. Open `index.html` for the UI;
   the Phase 0 graph and probes require a served origin because Workers cannot be constructed
@@ -45,7 +47,9 @@ result. The UI POC is not integrated into WorkLists yet; Phase 1 has not begun.
   in `PDProjects/Cairn/DECISIONS-PENDING.md`; the Phase 0D evidence is in
   `Architecture/Phase0DEvidence.md`.
 
-**Next:** run the directory-handle probe manually in Chromium or Edge against `tests/fixtures/directory-handle-transfer` and record the result in `Architecture/Phase0DEvidence.md`. That is the only Phase 0 closure item; the Phase 0D review follow-ups are implemented, and Phase 1 has not begun.
+**Next:** Phase 1, contract governance, as a single batch for one agent: versioning and
+compatibility policy, contract ownership, replay tests against older fixtures, generated
+contract documentation with a drift gate, and `catalog_version` semantics.
 
 ---
 
