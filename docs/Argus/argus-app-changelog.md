@@ -10,6 +10,13 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### 2026-08-22 — Argus Phase 8 authorization
+
+- **Decision:** Accepted the browser UI and loopback Node bridge as the POC host while preserving every platform interaction behind explicit adapters, runtime providers, permissions, contracts, and wires. A future Electron, Tauri, or other product host remains deferred under `APP-001` and must be substitutable without changing domain owners or consumers.
+- **Phase 7 closeout:** Corrective revalidation D1–D4 passed. Active-editor position movement as a pane fills is retained as a deferred Phase 7A bug with an accepted freeze-while-editing expectation. A possible user-controlled classification toggle is recorded separately under `UI-002` rather than treated as a D3 defect.
+- **Phase 8 scope:** One cohesive POC batch will complete default-deny permission/resource declarations, enforce the restrictions the installed Node host can honestly provide, keep device/network/model access behind capability boundaries, produce deterministic inspectable package artifacts, and prove denial/integrity behavior. Real audio, STT, model-provider, desktop-shell, and Phase 9 work remain out of scope.
+- **Environment constraint:** Node 24.11.1 is installed with its permission model. No native compiler or Docker/Podman engine is installed, so actual native and OCI replacement proofs remain evidence-triggered and must not be claimed or installed without authorization.
+
 ### Argus Phase 7 corrective revalidation 2026-08-21
 
 - **Summary:** Corrected the three Phase 7 issues found during the second hands-on review. Incoming projections now reconcile keyed rows without replacing an active editor; exact logged-item provenance persistently highlights the complete contributing transcript range; and optional classification is visibly separate, non-authoritative, independently unavailable or degraded, and non-blocking for logged-item editing.

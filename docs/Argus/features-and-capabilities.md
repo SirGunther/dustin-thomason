@@ -182,7 +182,7 @@ This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishe
 | UI-owned selection and scrolling | UI integrated | Row selection, select-all, independent pane following, unseen counts, jump-to-live, timestamp preference, and toasts stay in browser state. | `ui/ui-state.mjs`; `app.js` |
 | Individual degraded states | UI integrated | Transcript, logged-item pipeline, storage/session, clipboard, folder opening, and optional classification display independent availability states. Classification failure does not disable editing. | `ui.service-status`; `#serviceStatusList` |
 
-The Phase 7 demo starts with `npm.cmd run demo:ui` and opens at `http://127.0.0.1:4173`. `npm.cmd run demo:ui:smoke` validates deterministic startup and lifecycle/edit/copy command flow. A transient Playwright run completed the browser flow with zero page errors, but D1–D5 remain pending user revalidation. The browser bridge is not a desktop host: `APP-001` remains unresolved, and the final ambiguity-review treatment `UI-001` remains evidence-needed.
+The Phase 7 demo starts with `npm.cmd run demo:ui` and opens at `http://127.0.0.1:4173`. `npm.cmd run demo:ui:smoke` validates deterministic startup and lifecycle/edit/copy command flow. Corrective revalidation D1–D4 passed. The newly observed active-editor position movement is a deferred Phase 7A bug. The browser/Node bridge is accepted as the POC host; `APP-001` now governs only a future desktop/product host, while `UI-001` and the optional-classification toggle decision `UI-002` remain deferred.
 
 ## Contract and service inventory
 
@@ -196,7 +196,7 @@ The Phase 7 demo starts with `npm.cmd run demo:ui` and opens at `http://127.0.0.
 
 - The HTML POC and Node architecture proof are not wired together.
 - No microphone, audio capture, VAD, STT provider, production LLM provider/model, or model credentials are present. Phase 5B.1 uses only a deterministic loopback HTTP endpoint, and the model variables are allowlisted only to the components that require them.
-- No package, SDK, real provider, production threshold, storage engine, or desktop host has been selected for Phase 4; each deferred choice has an evidence trigger in `PENDING-DECISIONS.md`.
+- No package, SDK, real provider, production threshold, storage engine, or future desktop/product host has been selected for Phase 4; the browser/Node POC host is accepted and every remaining choice has an evidence trigger in `PENDING-DECISIONS.md`.
 - The Phase 6 session filesystem, archive, close recovery, and folder locator are implemented as a local replaceable POC boundary; Phase 7 consumes only a storage/session availability projection and routes folder actions by session identity through a capability adapter.
 - Finalized active transcript revisions are evicted from a bounded in-memory cache after durable acceptance and resolve through permanent history. This proves the POC bound without claiming production memory accounting.
 - The revision, stale-result, logged-item proposal, lifecycle, and storage contracts are proven; delete behavior, backup, synchronization, encryption, migrations, and production durability are not present.
@@ -206,4 +206,4 @@ The Phase 7 demo starts with `npm.cmd run demo:ui` and opens at `http://127.0.0.
 - The browser drawer shows capability-neutral owner labels; it does not read or expose session file paths.
 - The current browser implementation uses the internal word `derived` in some IDs/storage names; the user-facing product term is `Logged Item`.
 
-The prioritized engineering backlog remains in the live repository's `TODO.md`. Phases 4A through 4F, Phase 5A/5B.1, Phase 6, and the corrected Phase 7 implementation are complete for review. Phase 8 permissions/packaging remains paused for Phase 7 user revalidation; Phase 9 observability has not started. Unresolved technology and product selections, including `APP-001` and `UI-001`, are governed by `PENDING-DECISIONS.md`.
+The prioritized engineering backlog remains in the live repository's `TODO.md`. Phases 4A through 4F, Phase 5A/5B.1, Phase 6, and Phase 7 corrective revalidation are complete; its editor-position bug is explicitly deferred. Phase 8 permissions/packaging is authorized for the browser/Node POC foundation, while actual native/OCI provider proofs remain evidence-triggered because their toolchains are not installed. Phase 9 observability has not started. Unresolved technology and product selections, including `APP-001`, `UI-001`, and `UI-002`, are governed by `PENDING-DECISIONS.md`.
