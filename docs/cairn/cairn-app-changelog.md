@@ -31,44 +31,1451 @@ Running changelog for Cairn, a markdown-vault UI intended for integration into t
 
 ## Current state
 
-**Phase:** **Phase 0 is closed.** The directory-handle transfer probe was run by hand in
-Chromium on 2026-08-22 and passed — a transferred `FileSystemDirectoryHandle` still reads,
-and the main thread retains its own access. That was the last load-bearing Phase 0 claim.
-Architecture continues at Phase 1.
+**Phase:** **The nine-phase architecture run is complete.** Phases 0 through 9 all landed on
+2026-08-22. Phase 9 added observability and acceptance: a route-level trace assembled from what
+components report about themselves, correlation chains walked causally, a generated graph
+diagram, deterministic replay for the pure functions that make replay mean anything, five kinds
+of injected fault, and eight acceptance budgets whose _shape_ is checked rather than trusted.
 
-- A runnable zero-build prototype exists at `PDProjects/Cairn`. Open `index.html` for the UI;
-  the Phase 0 graph and probes require a served origin because Workers cannot be constructed
-  from `file://`.
-- **Nothing writes to disk.** Sample-vault edits persist to `localStorage` (`cairn-poc-v1`); the real-folder path via the File System Access API is read-only.
+**The one thing left undone is the two manual probes**, and the second of them matters: until
+`Architecture/probes/vault-write-path.html` runs, **no file anyone chose has ever been written by
+this system**.
+
+Phase 8, permissions and packaging, remains true underneath it: Authority is declared in the
+manifest, denied by default, and — this is the part that took the work — the denials are
+classified by what actually enforces them. Three of six kinds are enforced by the platform, one
+by the Content Security Policy, and one (`indexeddb`) by nothing but the declaration itself. That
+last one is a real gap in a default-deny system and is recorded rather than rounded off.
+
+**Six of nine components hold no authority of any kind**, which is now a generated, gated
+artifact (`artifacts/AUTHORITY.md`) rather than a claim.
+
+Phase 7 remains true underneath it: the application runs _on_ the architecture rather than
+beside it. `index.html` boots the component graph, and `app.js` is a view that holds no vault,
+calls no renderer, splices nothing, and persists no document text.
+
+**No file anyone chose has been written.** Every write proof runs against the Origin Private
+File System — a real filesystem, but storage this origin created. The picked-folder path is a
+gesture-driven probe and is **PENDING MANUAL RUN**.
+
+- **Cairn now requires a served origin, and one specific server.** `npm run serve`, then
+  `http://127.0.0.1:8790/`. A `file://` page cannot construct a Worker at all, so double-clicking
+  `index.html` no longer runs the app. This was decided in Phase 0 and recorded then as the
+  largest single thing traded away; Phase 7 is where it bites.
+- **`npm run serve` is now `node tools/serve.mjs` and is not interchangeable with another static
+  server.** It sends the Content Security Policy as a header: no inline script, no `eval`, no
+  remote script, no remote image, no outbound request. Served by anything else there is no policy
+  at all and nothing in the page says so — a recorded gap, and the price of `index.html` being a
+  protected file again.
+- **An unsaved edit no longer survives a reload.** Document text has exactly one owner and the
+  page keeps no copy — a copy in browser storage would be a second thing claiming to be
+  current. Session state (open tabs, active document, expanded folders, favourites, view mode,
+  sidebar width) does persist.
+- **The workspace is single-root.** The component holding filesystem authority holds one root,
+  so the POC's additive multi-root workspace is not carried forward.
+- **The POC still writes nothing to disk** through the UI; the graph's write path exists and
+  has been exercised only against the Origin Private File System.
+- **The graph now can write, and has not written anything anyone chose.** `vault-writer` is
+  the only component that may modify a file. A write is refused unless the file's modification
+  time still matches what the text was taken at, is performed atomically via a temporary file
+  and a move, and is refused outright rather than falling back to a truncating write if the
+  platform cannot move. A failed or dry-run write never marks anything saved. Every proof runs
+  against the Origin Private File System; the picked-folder probe is **PENDING MANUAL RUN**.
+- **The open document set has exactly one owner**, and it is the only writer. Every edit is a
+  request against a revision; a checkbox click and a source-pane edit travel the same way, so
+  neither is privileged. A read hands over text and not authority, so re-opening a document
+  cannot discard an unsaved edit. A separate component holds the append-only history, and it
+  holds no text.
+- **Authority is declared and denied by default, and denial is three different things.** A
+  manifest declares every authority it holds with a stated reason and, where it applies, a named
+  resource; a declared effect with no block behind it is refused, and so is a block nothing
+  claims. `dom`, `clipboard`, and both filesystem halves are **platform**-enforced — genuinely
+  absent from a worker, proven by asking a bare worker rather than by asserting. `network` is
+  **policy**-enforced: `fetch` exists in every worker and only the CSP confines it. `indexeddb`
+  is **declaration**-enforced, which is to say not enforced at all — it exists in every worker
+  and cannot be removed.
+- **A session can be traced end to end, and the trace carries no note.** Every component
+  reports its own hops, because the kernel holds zero document-wire ports after bootstrap and
+  cannot observe the traffic it routes — a property the architecture rests on and was not going
+  to trade for easier tracing. A route record carries ids, types, and causation; `toNdjson()`
+  **refuses** to serialise a log carrying anything else. The cost is stated: the log can say a
+  toggle caused a render that ended in a projection 41ms later, and cannot say which line was
+  ticked.
+- **Acceptance thresholds exist and none of them is a pasted measurement.** Eight budgets, each
+  _derived_ from a value the graph already declares, _meaningful_ as a quantity outside this
+  project (a display frame), or _controlled_ against something measured in the same run — and
+  `classify()` reads each budget's own function source to check its declared kind matches how the
+  limit is built.
+- **Eight independently valuable DOM-free components** now exist: `vault-source`,
+  `vault-writer`, `markdown-renderer`, `document-projector`, `vault-index`, `document-owner`,
+  `edit-history`, and `capability-monitor`. The granularity gate the experiment rests on has
+  widened rather than collapsed.
+- **The interface holds no authoritative text**, and that is enforced three ways rather than
+  reviewed: no `ui.*` contract may declare a `text` field (a gate over the catalog), no
+  recorded `ui.*` fixture carries one (a gate over bytes on disk), and the live page in preview
+  mode holds nothing that could reconstruct the open document's markdown (a gate over the
+  running app). The one text-carrying contract that reaches it — `document.source-view` — is
+  request-driven and deliberately not named `ui.*`.
+- **Filesystem authority is held by exactly one component.** A `FileSystemDirectoryHandle` is not JSON and cannot be a message, so it is granted by the kernel against a manifest declaration; graph preparation rejects two holders, and every other component in the graph is proven to be refused it. The root persists in IndexedDB owned by that component, because `localStorage` does not exist in a worker.
 - Markdown rendering is delegated to a **verbatim copy** of `WorkLists/public/markdownRenderer.js` at `vendor/markdown-renderer.js`, so render output and the task-checkbox round-trip are proven for the integration target, not just for the POC.
 - Palette is lifted from `WorkLists/public/todoliststyles2.css` rather than newly chosen, per the WorkLists changelog constraint against introducing a second dominant palette.
 - Four independently valuable DOM-free components are proven: `vault-source`,
   `markdown-renderer`, `document-projector`, and `vault-index`. Open decisions remain listed
   in `PDProjects/Cairn/DECISIONS-PENDING.md`; the Phase 0D evidence is in
   `Architecture/Phase0DEvidence.md`.
+- Ten governed contracts at catalog `1.1.0`, each with a declared owner and a version history
+  whose steps the registry enforces. `contracts/CONTRACTS.md` is generated and gated against
+  drift; sixteen recorded envelopes in `tests/fixtures/replay/` replay against the current
+  consumers. Phase 1 evidence is in `Architecture/Phase1Evidence.md`.
+- Sixteen governed contracts at catalog `1.2.0`. Every component must be wired for eight
+  control contracts or the graph is rejected; every document wire carries a resolved deadline
+  and queue bound. `graphs/read-render.json` declares **no retry and no restart** — both are
+  proven in a fault-injection fixture graph under `tests/fixtures/graphs/` instead, and a node
+  test fails if the application graph ever declares either.
+- **Delivery is at-least-once, and consumers can now survive it.** An envelope may carry an
+  `idempotency_key`; the runtime suppresses a true duplicate by content before a handler sees
+  it, counts it on `component.health`, and reports a key reused with different content as an
+  `integrity.violation`. It is not exactly-once, the window is bounded and lost on restart, and
+  both limits are stated rather than implied.
+- **Twenty-one governed contracts at catalog `1.3.0`,** nine control contracts required to be
+  wired per component. The document-state owner that enforces revisions is a **fixture** under
+  `tests/fixtures/components/`, wired by no graph; `contracts:check` prints it as fixture-owned
+  rather than waving it through, and Phase 5 places the real one.
 
-**Next:** Phase 1, contract governance, as a single batch for one agent: versioning and
-compatibility policy, contract ownership, replay tests against older fixtures, generated
-contract documentation with a drift gate, and `catalog_version` semantics.
+**Next**, in the order it is worth doing:
+
+1. **Run the two manual probes.** `Architecture/probes/vault-read-boundary.html` and
+   `Architecture/probes/vault-write-path.html`. They need a user gesture no harness can supply,
+   and until the second runs the largest claim in the project is unproven: this system has never
+   written to a file a person chose.
+2. **Declare Playwright, or vendor a runner.** It is resolved by absolute path from the WorkLists
+   workspace, which makes every browser gate unrunnable on any other machine. It is the one item
+   keeping `TST-001` open and the only one on its list that is a decision rather than coverage.
+3. **`TT-001` — Trusted Types.** `innerHTML` is an unguarded sink that CSP does not govern.
+4. Then the open product decisions, none of which the architecture now blocks: `EDT-001`,
+   `EDN-001`, `BRK-001`, `SRC-001`, and `EMB-001`.
 
 ---
 
 ## Plans
 
-| Date       | Plan                                                              | Status        | Approach                                                                                                                                                                                                                                 |
-| ---------- | ----------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-08-21 | Phase 0D — boundary proofs and granularity gate                   | `implemented` | Added `vault-index`, standalone port-driven proofs, the manual directory-handle transfer page, worker-count measurements, and the Phase 0 evidence record.                                                                               |
-| 2026-08-20 | Feedback round 01 checklist — `PDProjects/Cairn/FEEDBACK-01.md`   | `superseded`  | 28 tracked items from the first review plus the SaySlate investigation. Split into `ROADMAP.md` (scope, status, Decisions resolved) and `DECISIONS-PENDING.md` (open choices with triggers); the file was then removed.                  |
-| 2026-08-21 | Atomic architecture build order — `PDProjects/Cairn/TODO.md`      | `active`      | Ten phases, riskiest claims first. Isolation unit is a Web Worker; a wire is a transferred `MessagePort`. Feasibility verdict and evidence in `Architecture/FeasibilityReview.md`.                                                       |
-| 2026-08-20 | Documentation spine + lightweight POC pass + reusable scaffolding | `implemented` | Adopt the SaySlate roadmap/changelog/decisions structure over the Argus canonical-record split; land the agreed design items in the POC; generalise the pattern into templates and two scripts; freeze the POC as an immutable baseline. |
-| 2026-08-20 | V1 scope agreed in-session (chat)                                 | `active`      | Adapter seam + tree + preview/source toggle + save + checkbox write-back + favorites + quick open. Explicitly defers full-text search, live/hybrid preview, wikilinks, and graph view.                                                   |
-| 2026-08-20 | POC 1 — look and feel (this session)                              | `implemented` | Zero-build HTML/CSS/JS prototype mirroring the shape of `Argus-POC-v1-2026-08-12`; embedded sample vault, no disk writes.                                                                                                                |
+| Date       | Plan                                                              | Status        | Approach                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------- | ----------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | Phase 9 — observability and acceptance                            | `implemented` | A route log assembled from what components report — the kernel cannot observe document traffic and was not given a way to — that refuses to carry a payload; correlation chains walked by causation rather than sorted by time; a Mermaid graph diagram from the resolved plan; deterministic replay for the renderer and the checkbox splice against bytes from an earlier session; five kinds of injected fault; and eight acceptance budgets whose declared shape is checked against their own source. Two findings recorded, both about tests that would have passed while measuring nothing. `TST-001` narrowed to one item and deliberately not closed; `TT-001` opened. Evidence in `Architecture/Phase9Evidence.md`. |
+| 2026-08-22 | Phase 8 — permissions and packaging                               | `implemented` | Authority declared per kind in the manifest and denied by default, with denial classified by what enforces it; a bare-worker probe that reports what the platform actually withholds rather than what it should; a Content Security Policy delivered as a header and proven in force with a same-origin control beside every blocked case; and the resolved graph shipped as generated, drift-gated artifacts. Two findings fixed, three recorded. `WASM-001` resolved out of scope, `EMB-001` narrowed. Evidence in `Architecture/Phase8Evidence.md`.                                                                                                                                                                       |
+| 2026-08-22 | Phase 7 — the DOM retrofit                                        | `implemented` | The shipped page rebuilt on the graph: `app.js` consumes only projections, every edit is a request against a revision, `capability-monitor` assembles capability state outside the interface, clipboard and picker sit behind adapters that keep nothing, and a new browser suite drives the real `index.html`. Three regressions recorded rather than smoothed over, and a latent kernel fan-out defect found and fixed. Evidence in `Architecture/Phase7Evidence.md`.                                                                                                                                                                                                                                                      |
+| 2026-08-22 | Phase 6 — write path                                              | `implemented` | One component with write authority, separate from the reader; a `lastModified` precondition that also refuses a write with no baseline; atomic temporary-file-and-move with no fallback; a dry-run mode; and a failure gate proven three ways. Two findings recorded about the platform. Evidence in `Architecture/Phase6Evidence.md`.                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-08-22 | Phase 5 — document state ownership                                | `implemented` | One owner for the open set with the read path re-routed through it, the checkbox splice as a governed message carrying the vendored implementation, a read that cannot overwrite an unsaved edit, no door for a rendered projection to come back through, and an append-only history with its own owner. Evidence in `Architecture/Phase5Evidence.md`.                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-08-22 | Phase 4 — vault read boundary                                     | `implemented` | Filesystem authority granted against a manifest declaration to exactly one component, a real `FileSystemDirectoryHandle` transferred and read in a worker on every run via the Origin Private File System, root persistence in IndexedDB proven across a separate graph, a closed read failure vocabulary, and permission re-grant as a governed control exchange. Resolved `ADP-001` and `ADP-002`. Evidence in `Architecture/Phase4Evidence.md`.                                                                                                                                                                                                                                                                           |
+| 2026-08-22 | Phase 3 — identity, ordering, and revisions                       | `implemented` | At-least-once made explicit, content-fingerprint idempotency with a bounded window, `integrity.violation` for a reused key, per-document ordering declared on the wire with a separate concurrency cap, and optimistic revision checks proven through a document-owner fixture's real ports. Evidence in `Architecture/Phase3Evidence.md`.                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-08-22 | Phase 2 — supervision                                             | `implemented` | Readiness gate plus kernel-enforced deadline, health and drain, per-operation deadlines with late results suppressed, bounded queues with observable depth, opt-in retry with a required dead-letter destination, bounded restart with peer rewiring, and `@host` as the pseudo-component that converts raw host observations into governed facts. Evidence in `Architecture/Phase2Evidence.md`.                                                                                                                                                                                                                                                                                                                             |
+| 2026-08-22 | Phase 1 — contract governance                                     | `implemented` | Versioning and compatibility policy in a pure module, ownership and per-contract history enforced by the registry, sixteen replay fixtures driven through both the boundary and a live worker, generated `contracts/CONTRACTS.md` with a drift gate, and stated `catalog_version` semantics. Evidence in `Architecture/Phase1Evidence.md`.                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-08-21 | Phase 0D — boundary proofs and granularity gate                   | `implemented` | Added `vault-index`, standalone port-driven proofs, the manual directory-handle transfer page, worker-count measurements, and the Phase 0 evidence record.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-08-20 | Feedback round 01 checklist — `PDProjects/Cairn/FEEDBACK-01.md`   | `superseded`  | 28 tracked items from the first review plus the SaySlate investigation. Split into `ROADMAP.md` (scope, status, Decisions resolved) and `DECISIONS-PENDING.md` (open choices with triggers); the file was then removed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-08-21 | Atomic architecture build order — `PDProjects/Cairn/TODO.md`      | `active`      | Ten phases, riskiest claims first. Isolation unit is a Web Worker; a wire is a transferred `MessagePort`. Feasibility verdict and evidence in `Architecture/FeasibilityReview.md`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-08-20 | Documentation spine + lightweight POC pass + reusable scaffolding | `implemented` | Adopt the SaySlate roadmap/changelog/decisions structure over the Argus canonical-record split; land the agreed design items in the POC; generalise the pattern into templates and two scripts; freeze the POC as an immutable baseline.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 2026-08-20 | V1 scope agreed in-session (chat)                                 | `active`      | Adapter seam + tree + preview/source toggle + save + checkbox write-back + favorites + quick open. Explicitly defers full-text search, live/hybrid preview, wikilinks, and graph view.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-08-20 | POC 1 — look and feel (this session)                              | `implemented` | Zero-build HTML/CSS/JS prototype mirroring the shape of `Argus-POC-v1-2026-08-12`; embedded sample vault, no disk writes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ---
 
 ## Session log
 
 _Newest first. Add one entry per working session or merge-worthy update._
+
+### 2026-08-23T00:00:00Z — Nine-phase run reviewed and accepted; no changes required
+
+- **Summary:** Independent review of the Phases 1 through 9 autonomous run. **Accepted, with nothing to fix.** Every architectural invariant from the handoff brief was verified against the code rather than read from the evidence documents, and every one holds. One critical finding I raised was my own measurement error and is retracted below.
+- **Problem:** A nine-phase run that reports its own success is not reviewed. The specific risks were the ones the handoff brief was written to prevent: an invariant quietly widened to make a phase work, a decision resolved that the run was not authorised to touch, a gate weakened to stay green, an unusable measurement presented as evidence, and the protected POC files drifting outside Phase 7.
+- **Requirement:** Verify each invariant from the code and from running the suites; confirm exactly the authorised decisions moved; and separate a defect in the implementation from a defect in my own review method.
+- **Solution:** Read the tree, ran every gate, and checked each invariant with a purpose-written probe rather than by inspection.
+
+### Gates, all re-run this session
+
+`contracts:check` — 34 governed messages, catalog 1.7.0. `contracts:docs:check` — current. `graph:check` — accepted, **9 components, 127 wires**, no declared-but-unwired port. `npm test` — **174/174**. `test:kernel` — **77/77**. `test:standalone` — **30/30**. `test:shell` — **35/35**. `test:authority` — **26/26** plus one recorded finding. `test:acceptance` — 5 measurements, each against a declared budget. `measure:workers` — 3 measurements, no threshold. `audit --audit-level=high` — **0 vulnerabilities**. `format:check` — clean. `verify` — exit 0.
+
+### Invariants verified independently
+
+- **One privileged component.** `dom-owner` is the only `main-thread` manifest, declares `privileged: true`, and holds `dom` and `clipboard`. Every other component is a worker and none declares `dom`.
+- **Kernel holds zero document-wire ports** with nine components running, alongside 88 pseudo-component ports — and `capabilityValuesHeld: 0`, so it holds no authority handle either.
+- **No `ui.*` projection carries authoritative text.** Checked the top-level fields of all four; the five contracts carrying a 2MB body are all `document.*` or `vault.*` and none reaches the DOM owner.
+- **Authority is split.** `vault-source` holds `filesystem-read` and `indexeddb`; `vault-writer` holds `filesystem-write` alone. Reader and writer are separate components, as Phase 6 required. Two `state: owner` components, `document-owner` and `edit-history`, per Phase 5.
+- **Zero cross-component implementation imports.**
+- **All 127 wires carry a `why`** — none missing.
+- **Write path is safe:** `lastModified` precondition, temporary file then `move()` onto the target, a dry-run mode, and the failure gate asserted in two suites — a failed save keeps the buffer dirty, keeps the tab open, and never marks saved.
+- **Dependencies:** `{}` runtime, `prettier` dev-only. `tools/serve.mjs` uses `node:` builtins only.
+- **Protected files:** `styles.css`, `theme.js`, and `sample-vault.js` byte-unchanged; `vendor/markdown-renderer.js` still byte-identical to `WorkLists/public/markdownRenderer.js`. `index.html` and `app.js` did change — that is Phase 7's retrofit, the one exception the brief allowed, and the look survived because the two stylesheets did not move.
+
+### Decisions — only the authorised ones moved
+
+`ADP-001` resolved to the File System Access API, with reasoning that names its costs rather than hiding them: Chromium only, no change watching, a re-grant gesture per lapsed session. `ADP-002` resolved to IndexedDB owned by the handle-holding component, proven by a root granted in one graph and recalled by another. Thirteen decisions held open. One new decision opened — `TT-001`, Trusted Types, because `innerHTML` remains an unguarded sink that CSP does not govern; recording a newly found gap is the register working rather than failing.
+
+### A finding I raised and retracted
+
+I first reported `ui.document-projection` as carrying `text`, which would have been a hard invariant breach. It was my check that was wrong: a field-walker that flattened nested schemas matched `outline[].text`, a heading label present since Phase 0. The implementation had in fact gone further than the invariant required, adding `document.source-view` as a deliberately non-`ui.*` contract for the source lend, with a wire comment stating that no `ui.*` contract carries text. Recorded because a review that hides a retracted finding is not a review, and because the lesson is mine: a check written for speed is not a check.
+
+- **Files/areas:** reviewed `contracts/`, `runtime/`, `components/`, `graphs/`, `tests/`, `Architecture/`, `artifacts/`, `tools/`. Changed nothing in the repository — `ROADMAP.md` and `README.md` were already current and accurate, including their honest open items.
+- **User-visible impact:** None.
+- **Tests run:** every gate listed above, this session, against the final tree. No count in this entry was copied from an evidence document.
+- **Tests added/updated:** None — not relevant: a review that changes the code it reviews is no longer a review. The gaps it found are recorded rather than patched.
+- **Regression impact:** None — no repository file was modified. Verified by re-running all twelve gates after the review rather than before it.
+- **API docs:** Not relevant — no HTTP surface. The WorkLists API was read only to update the board card.
+- **Tooling gates:** `audit` clean at 0 vulnerabilities; `format:check` clean; `verify` exit 0.
+- **Conflicts / exceptions:** `TST-001` stays open, correctly — Playwright is resolved by absolute path from the WorkLists workspace in six test files, confirmed by grep, so the suite runs on no other machine. Two probes stay `PENDING MANUAL RUN`: `vault-read-boundary.html` and `vault-write-path.html`, both needing a picked folder. Board card `todo-1787318488373` updated with a `lastModified` precondition; the status label could **not** move from `Unrefined` because the API returns `400 Task status is not available for this card's color tags` — the card now carries an `Information` tag, which is evidently not a status-enabling one, and changing a tag is not a permitted agent write.
+
+### 2026-08-22T00:00:00Z — Phase 9 observability and acceptance landed as one cohesive batch
+
+- **Summary:** The last phase. A session can now be traced end to end without the trace carrying
+  a single line of a note; correlation chains reconstruct causally; the graph draws itself; replay
+  is proven for the functions that make replay mean anything; five kinds of fault are injected and
+  observed; and eight acceptance budgets exist, none of which is a number somebody wrote down
+  after watching a run. Two findings recorded, both about tests that would have passed while
+  measuring nothing. No contract and no component was added.
+- **Problem:** Nothing could say what a session had actually done. The kernel keeps a trace, but
+  of lifecycle events — not of messages, because it cannot see them. And the project had no
+  acceptance thresholds at all, because the obvious way to write one violates its own standing
+  invariant: no assertion may contain a constant that reads as a measurement.
+- **Requirement:** A session must be reconstructable after the fact, causally rather than
+  chronologically, and the reconstruction must be shareable without sharing a note. Every failure
+  mode the architecture claims to handle must be _exercised_, not argued. And thresholds must be
+  requirements rather than photographs of one machine.
+- **Solution:** `runtime/trace-log.mjs` (route records, correlation chains, a durable NDJSON
+  form), `runtime/acceptance.mjs` (eight budgets and a classifier that reads their own source),
+  `tools/generate-graph-diagram.mjs` → `artifacts/GRAPH.md`, `tests/observability.test.mjs` (25
+  node checks), and `tests/acceptance-browser.mjs` (25 browser checks against a live graph under
+  the real Content Security Policy).
+- **The finding that shaped the phase: the kernel cannot see the traffic it routes.** A
+  document-plane wire is a `MessageChannel` whose ports were transferred to two components, and
+  after bootstrap the kernel holds **zero** document-wire ports — asserted since Phase 0 and the
+  reason the isolation claim means anything. Tracing from the kernel would need a kept port or a
+  routed message, and either destroys the property the architecture exists to establish. So
+  components report their own hops. **The log is therefore only as complete as that reporting**,
+  a component that failed to report leaves a hole, and there cannot be an independent observer.
+  That limit is stated rather than engineered around.
+- **A trace that carried payloads would give text a second owner.** Since Phase 5 authoritative
+  text has had exactly one. `ROUTE_FIELDS` is a whitelist, and `toNdjson()` **refuses** rather
+  than filters — silently dropping an unexpected field means the next person adds one, watches it
+  vanish, and concludes it was never written. Enforced three ways: a node test against a
+  contaminated log, a browser check that audits a real session's records **in the test runner**
+  rather than trusting a boolean the harness computed, and a regex over the serialised form
+  hunting for actual sentences from the document that was open. The cost is stated plainly: the
+  log can say a toggle caused a render that ended in a projection, and cannot say which line was
+  ticked.
+- **Correlation is walked, not sorted.** Two components emitting in the same millisecond sort
+  arbitrarily, so the chain follows `causation_id`. Depth is causal distance — the open of a
+  document is depth 0 through 4 across five components, and a chain that had collapsed to a flat
+  list would still contain the right messages, which is why the depth is asserted separately. A
+  record whose cause is missing becomes a **root**, never a dropped record: a log truncated at the
+  start would otherwise reconstruct as a complete session with an earlier beginning.
+- **Finding: a benchmark that measured a feature and called it latency.** The first latency probe
+  opened the same two documents in a loop and reported a **median of eight seconds**. Nothing was
+  slow — `document-owner` refuses to overwrite a document that is already open (the Phase 5 rule
+  that stops a stray re-read discarding an unsaved edit), so a re-open emits no projection and the
+  wait timed out at its ceiling. It was repeatable and stable, which is what a convincing wrong
+  number looks like. Now one cold open per boot, with the clock starting after readiness — and the
+  suite refuses a latency number built on refusals rather than edits, because a median over seven
+  rejections would be fast and meaningless.
+- **Finding: an assertion agreeing with itself.** The replay check counted `markdown-task-checkbox`
+  as a bare substring and found 6 tasks in a 2-task document — the renderer also emits
+  `markdown-task-checkbox-label` and `-text`. It now matches the input's own class attribute.
+- **Acceptance thresholds, and the trap.** A number pasted from a run looks like a requirement and
+  is a photograph of one machine. `runtime/acceptance.mjs` permits exactly three shapes —
+  **derived** from a value the graph already declares, **meaningful** as a quantity outside this
+  project (a display frame at 60Hz), or **controlled** as a ratio against something measured in
+  the same run. `classify()` reads each budget's own function source and fails when the declared
+  kind does not match how the limit is built; three node tests feed it deliberate cheats. The
+  harness measures and the suite judges, deliberately separated — a harness doing both could move
+  a threshold to meet a measurement.
+- **Measured this run, each against a budget not derived from it:** document round trip 10.8ms
+  against 166.7ms (ten frames); edit round trip 11.0ms against 66.7ms (four frames — tighter on
+  purpose, because direct manipulation attributes the delay to the tick); crash-to-ready 22ms
+  against the graph's own 4000ms readiness deadline; drain 11ms against its declared 400ms;
+  replacement wire delta 0 of 127 and neighbour delta 0; graph startup 46ms against 184ms, which
+  is three times nine times the 6.8ms one worker cost **in this same run**.
+- **Five kinds of fault, each observed rather than assumed:** a crash out of a timer becomes a
+  named `component.failure` from `@host` and the page survives; a reply past its wire's deadline
+  becomes a dead letter with its late result suppressed; a declared contract carrying a payload
+  its schema refuses is caught at the producer's own boundary and never reaches a wire; a declared
+  emit with no wire traces `dropped-no-wire` visibly; and authority that worked and then stopped
+  surfaces as a named read failure. **The fifth carries its caveat**: a genuine permission
+  revocation cannot be staged — OPFS has no permission model and a stand-in handle cannot be
+  transferred to a worker at all (`DataCloneError`, Phase 4) — so what is staged is a granted root
+  whose directory is removed out from under the component holding it. Different cause, same shape
+  of consequence. `invalid/<name>` was added to the `fault-renderer` fixture, because
+  `undeclared/` covered a contract a component does not declare and not the commoner case of a
+  component wired correctly and producing nonsense.
+- **Deterministic replay, proven where it means something.** The vendored renderer loads under
+  `node --test`, so five runs over the same recorded bytes produce one result; the recorded
+  `document.rendered` fixture's task counts match what the renderer produces from the recorded
+  `document.render-request` — **bytes from a different session**, not a second call in the same
+  one; and the checkbox splice is deterministic across five runs and idempotent by content. What
+  is **not** done is stated: replaying a whole recorded session back through nine live workers and
+  asserting identical output, because message ids and timestamps differ by construction and a
+  comparison ignoring them would be a second, weaker contract.
+- **Decisions.** `TST-001` **narrowed to one item and deliberately not closed** — see the
+  exception below. `TT-001` **opened**: `mount.innerHTML = projection.html` is an unguarded sink
+  that CSP does not govern; `require-trusted-types-for 'script'` would, and adopting it means
+  wrapping the vendored renderer in a policy object rather than editing it, because it is
+  byte-identical to WorkLists by rule.
+- **Contract changes:** none. Catalog stays at `1.7.0`, 34 messages, 9 components, 127 wires.
+  Observability that needed a new contract would have been observability inside the thing it
+  observes.
+- **Files/areas:** new `runtime/trace-log.mjs`, `runtime/acceptance.mjs`,
+  `tools/generate-graph-diagram.mjs`, `tests/observability.test.mjs`,
+  `tests/acceptance-browser.mjs`, `tests/acceptance-harness.html`, `tests/acceptance-harness.js`,
+  and `Architecture/Phase9Evidence.md`; generated `artifacts/GRAPH.md`. Changed
+  `runtime/component-runtime.mjs` (route records on send and arrival),
+  `tests/fixtures/components/fault-renderer/index.js` (an `invalid/` path), `package.json`,
+  `README.md`, `TODO.md`, `ROADMAP.md`, `DECISIONS-PENDING.md`,
+  `Architecture/KernelAuthority.md`, `Architecture/ComponentAuthoring.md`, and canonically this
+  changelog and `capabilities.md`.
+- **User-visible impact:** None in the app. Everything added is observation, measurement, and
+  documentation; no behaviour changed and no contract moved.
+- **Tests run:** final post-change state, in workflow order.
+
+| Gate            | Command                            | Scope                               | Result                                                                            |
+| --------------- | ---------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------- |
+| audit           | `npm.cmd audit --audit-level=high` | project dependencies                | **0 vulnerabilities**                                                             |
+| install         | `npm.cmd install`                  | project                             | **0 vulnerabilities**                                                             |
+| node            | `npm.cmd test`                     | `tests/*.test.mjs`                  | **174/174 passed**, 0 failed                                                      |
+| contracts       | `npm.cmd run contracts:check`      | catalog, owners, history, schemas   | **34 governed messages**, catalog **1.7.0**, `ok`                                 |
+| contract docs   | `npm.cmd run contracts:docs:check` | `contracts/CONTRACTS.md`            | **current** (34 messages, catalog 1.7.0)                                          |
+| artifacts       | `npm.cmd run artifacts:check`      | `artifacts/`                        | **current** (2 files + graph diagram, 9 components / 127 wires)                   |
+| graph           | `npm.cmd run graph:check`          | `graphs/read-render.json`           | **accepted: 9 components, 127 wires**, no declared-but-unwired port               |
+| kernel          | `npm.cmd run test:kernel`          | real Chromium                       | **77/77 checks passed**                                                           |
+| standalone      | `npm.cmd run test:standalone`      | each component's declared ports     | **30/30 focused checks passed**                                                   |
+| shell           | `npm.cmd run test:shell`           | the shipped `index.html`            | **35/35 checks passed**                                                           |
+| authority + CSP | `npm.cmd run test:authority`       | bare worker, and the policy served  | **26/26 checks passed**, 1 recorded finding                                       |
+| acceptance      | `npm.cmd run test:acceptance`      | traced session, 5 faults, 8 budgets | **25/25 checks passed**, 5 measurements                                           |
+| verify          | `npm.cmd run verify`               | every gate above plus formatting    | **exit 0**; 3 worker-count measurements, no threshold; `prettier --check .` clean |
+
+- **Tests added/updated:** A new node suite, `tests/observability.test.mjs` — 25 checks covering
+  the no-payload rule (including a contaminated log and a field nobody anticipated), the durable
+  round trip, causal reconstruction with a missing cause, deterministic replay of the renderer and
+  the splice against recorded bytes, and the budget classifier fed three deliberate cheats. A new
+  browser suite, `tests/acceptance-browser.mjs` — 25 checks against a live graph under the real
+  CSP. Node total 149 → 174. `npm run verify` now chains **eleven** gates.
+- **Negative tests:** the no-content audit runs in the test runner against the records themselves,
+  not against a boolean the harness computed; the causal chain is tested with its root deliberately
+  removed, to prove a truncated log does not reconstruct as a complete one; the latency suite
+  refuses a measurement built on refusals; the replacement check asserts the implementation
+  actually changed, after the first version compared two `undefined`s and reported success; the
+  budget classifier is fed a pasted literal, a fake "meaningful" unit, and a fake "controlled"
+  ratio, and catches all three.
+- **Regression impact:** `runtime/component-runtime.mjs` gained two trace calls on the hot path —
+  every send and every arrival in every component. All existing proofs pass unchanged: 77 kernel,
+  30 standalone, 35 shell, 26 authority, and every replay fixture. The route trace carries no
+  payload, so the added cost is a small object per message and no copy of any document. **All six
+  protected POC files unmodified in this phase**; `styles.css`, `theme.js`, `sample-vault.js`, and
+  `vendor/markdown-renderer.js` verified byte-identical to `Cairn-POC-v1-2026-08-20/Cairn/` by
+  SHA-256, `index.html` and `app.js` unchanged since Phase 7's permitted edits, and
+  `vendor/markdown-renderer.js` `diff`-clean against `WorkLists/public/markdownRenderer.js`.
+- **API docs:** Not relevant — no HTTP surface. Checked: no route, method, DTO, status, or auth
+  metadata exists to change. The analogous artifacts are the contract catalog and `artifacts/`;
+  both are generated and both are drift-gated above.
+- **Tooling gates:** `audit` — clean at 0 vulnerabilities. `lint` — not applicable: no lint script;
+  `format:check` is the gate and passes. **No dependency was added** — `prettier` remains the only
+  one, dev-only, across all nine phases.
+- **Conflicts / exceptions:** **The Phase 9 checklist said "Close `TST-001`"; the run's decision
+  register said it narrows but does not close. The register won, and the reason is recorded rather
+  than assumed: not closing is reversible and closing wrongly is not.** What the decision asks —
+  what harness, and where do specs live — is answered without ambiguity: eleven gates chained by
+  `npm run verify`, specs in `tests/`, and the POC checkbox splice and split-pane geometry the
+  decision specifically parked outside the harness now guarded inside it. **What keeps it open is
+  one item: Playwright is resolved by absolute path from the WorkLists workspace, making every
+  browser gate unrunnable on any other machine** — the part of this decision that has not moved
+  since Phase 0D. Three coverage gaps sit beside it but are not the decision: no visual regression
+  testing, two manual probes outstanding, and the clipboard path never exercised end to end.
+- **Still PENDING MANUAL RUN, and now the only unfinished work in the nine-phase run:**
+  `Architecture/probes/vault-read-boundary.html` (Phase 4) and
+  `Architecture/probes/vault-write-path.html` (Phase 6). Until the second runs, **no file anyone
+  chose has ever been written by this system** — the largest unproven claim remaining.
+
+---
+
+### 2026-08-22T00:00:00Z — Phase 8 permissions and packaging landed as one cohesive batch
+
+- **Summary:** Authority is now declared in the manifest, denied by default, and — the part that
+  took the work — classified by what actually enforces the denial. Three of six kinds are
+  enforced by the platform, one by a Content Security Policy that is now served and proven in
+  force, and one by nothing but the declaration. Two pre-existing defects were found and fixed;
+  three platform facts were recorded rather than smoothed over. No contract and no component was
+  added, which is the right shape for a phase about what components may _not_ do.
+- **Problem:** Every phase before this one arranged the system so a component had no _route_ to
+  something it should not touch. None of them asked the harder question: if a component tried
+  anyway, what would stop it? "Denied by default" was an intention with no mechanism behind it
+  and no way to read what any given component was actually permitted.
+- **Requirement:** Every authority a component holds must be declared with a stated reason, and
+  every authority it does not hold must be a readable statement rather than an absence. What
+  stops an undeclared component must be _established_, not assumed — and where nothing stops it,
+  that has to be written down. A component that somehow obtained note content must have nowhere
+  to send it. And a reader must be able to answer "what may this component do" without running
+  anything.
+- **Solution:** An `authority` block in the manifest schema (filesystem, storage, clipboard,
+  network), each requiring a `why` and, where it applies, a named resource. `AUTHORITY_KINDS` in
+  graph preparation carrying an `enforcement` field. A bare-worker probe that reports what it can
+  reach. A Content Security Policy served as a header by the new `tools/serve.mjs`. And
+  `artifacts/architecture.json` + `artifacts/AUTHORITY.md`, generated from the resolved plan and
+  gated against drift.
+- **Two defects found before any new code was written.** First: **the privileged component was
+  using an authority it never declared.** `dom-owner` calls `navigator.clipboard.writeText` —
+  added in Phase 7, in the file whose whole purpose is capability adapters — while its manifest
+  declared only `dom`. Nothing caught it because nothing was looking. Second: **"grantable" was
+  being inferred from a name.** The plan computed it as `side_effects.filter(e => e !== "dom")`,
+  so adding `clipboard` immediately made the clipboard a thing the kernel could _hand over_ —
+  which is meaningless, since there is no clipboard object to pass. The fix is not a longer
+  exclusion list: a manifest now declares **how** an authority arrives
+  (`source: "granted-handle"`), and only the filesystem does. An exclusion list has to be
+  remembered; a declaration has to be written.
+- **Denial is three different things, and saying so precisely is most of what this phase
+  produced.** `dom`, `clipboard`, `filesystem-read`, and `filesystem-write` are
+  **platform**-enforced: `document`, `window`, `localStorage`, `navigator.clipboard`, and
+  `showDirectoryPicker` are genuinely absent from a worker, and that is established by asking a
+  bare worker rather than by asserting it. `network` is **policy**-enforced: `fetch`,
+  `XMLHttpRequest`, and `WebSocket` all exist in every worker, so the boundary cannot be that the
+  API is missing. And `indexeddb` is **declaration**-enforced, which is to say not enforced:
+  `indexedDB` exists in every worker and cannot be removed, so the graph records who may use it
+  and nothing stops a component that ignores the graph. That is a real gap in a default-deny
+  system; it is in the generated artifact, pinned by a test, and printed by `graph:check`.
+- **A third platform fact recorded rather than counted as a win:** the Origin Private File System
+  is reachable by any worker with no grant of any kind. It is storage this origin created —
+  invisible to the user, not a folder anyone picked — which is exactly why the Phase 6 write
+  proofs run there. Calling it "filesystem access a component was denied" would have been false.
+- **The policy is a header, and the reason is a constraint before it is a preference.**
+  `index.html` is a protected file again from Phase 8, so `<meta http-equiv>` was not available.
+  A header policy is also strictly stronger — it can express `frame-ancestors`, it applies to
+  what the parser reached first, and it comes from the thing serving the document rather than
+  from inside it. The policy starts at `default-src 'none'` and names every directive explicitly,
+  including the three that do **not** fall back to it (`base-uri`, `form-action`,
+  `frame-ancestors`), because forgetting that is the classic way a policy that looks total leaves
+  a hole.
+- **Proven in force, with the control that gives it meaning.** Every blocked case is paired with
+  a same-origin equivalent that must succeed: a worker's cross-origin `fetch` against the same
+  worker's same-origin `fetch`, the page's against the page's, a remote `<script src>` against
+  the page's own modules. Without the controls, "the fetch failed" would be indistinguishable
+  from "this worker cannot fetch at all" and the suite would pass on a page that does nothing.
+  Also blocked: inline `<script>`, `eval()`, and the `Function` constructor — a component that
+  can build code from a string can build code from note content.
+- **The remote image is its own decision.** `img-src 'self' data:` refuses
+  `![](https://somewhere/?note=…)`, which is an exfiltration channel needing no script at all.
+  The cost is deliberate and real: a note referencing a remote image will not show it.
+- **And the policy permits the architecture.** All nine components still start under it, a
+  document still renders end to end, and the projection still carries no text. A CSP that forbade
+  the thing it protects would not be shippable, so that is a check rather than an assumption.
+- **A CSP finding from the harness itself:** the authority harness's own inline `<script
+type="module">` was refused on the first run. It was moved to an external module rather than
+  the policy being widened — a harness that needed `'unsafe-inline'` to run would have had to
+  weaken the thing it exists to prove. The app carries no inline script either, which is why the
+  policy costs it nothing.
+- **Decisions.** `WASM-001` **resolved out of scope**: cross-runtime replacement is already
+  proven by position (`markdown-renderer-minimal` swaps in with byte-identical wires); what Wasm
+  would add is _cross-language_ replacement, and it cannot be done without a toolchain, which is
+  a build step or a runtime dependency — both run-wide out of scope, and both would cost the
+  zero-build property. `EMB-001` **narrowed, still open**: no longer blocked on architecture (the
+  DOM owner is one component, holds no authoritative text, and reaches everything through a
+  kernel handle), now blocked on 38KB of global stylesheet in a protected file and a twenty-plus
+  `getElementById` surface that a shadow root would break.
+- **Contract changes:** none. Catalog stays at `1.7.0`, 34 messages, 9 components, 127 wires.
+- **Files/areas:** new `tools/serve.mjs`, `tools/generate-architecture-artifacts.mjs`,
+  `tests/authority.test.mjs`, `tests/authority-browser.mjs`, `tests/authority-harness.html`,
+  `tests/authority-harness.js`, `tests/authority-probe-worker.js`, and
+  `Architecture/Phase8Evidence.md`; generated `artifacts/architecture.json` and
+  `artifacts/AUTHORITY.md`. Changed `contracts/component-manifest.schema.json`,
+  `runtime/graph-prepare.mjs`, three component manifests (`vault-source`, `vault-writer`,
+  `dom-owner`), `tests/graph-prepare.test.mjs`, `package.json`, `.prettierignore`, `README.md`,
+  `DOCS.md`, `TODO.md`, `ROADMAP.md`, `DECISIONS-PENDING.md`,
+  `Architecture/KernelAuthority.md`, `Architecture/ComponentAuthoring.md`, and canonically this
+  changelog and `capabilities.md`.
+- **User-visible impact:** `npm run serve` is now Cairn's own server and is required — another
+  static server yields no security policy. Remote images in notes will not load, deliberately. No
+  other behaviour changed; the app under the policy is the app without it.
+- **Tests run:** final post-change state, in workflow order.
+
+| Gate            | Command                            | Scope                              | Result                                                                            |
+| --------------- | ---------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------- |
+| audit           | `npm.cmd audit --audit-level=high` | project dependencies               | **0 vulnerabilities**                                                             |
+| install         | `npm.cmd install`                  | project                            | **0 vulnerabilities**                                                             |
+| node            | `npm.cmd test`                     | `tests/*.test.mjs`                 | **149/149 passed**, 0 failed                                                      |
+| contracts       | `npm.cmd run contracts:check`      | catalog, owners, history, schemas  | **34 governed messages**, catalog **1.7.0**, `ok`                                 |
+| contract docs   | `npm.cmd run contracts:docs:check` | `contracts/CONTRACTS.md`           | **current** (34 messages, catalog 1.7.0)                                          |
+| artifacts       | `npm.cmd run artifacts:check`      | `artifacts/`                       | **current** (2 files)                                                             |
+| graph           | `npm.cmd run graph:check`          | `graphs/read-render.json`          | **accepted: 9 components, 127 wires**, no declared-but-unwired port               |
+| kernel          | `npm.cmd run test:kernel`          | real Chromium                      | **77/77 checks passed**                                                           |
+| standalone      | `npm.cmd run test:standalone`      | each component's declared ports    | **30/30 focused checks passed**                                                   |
+| shell           | `npm.cmd run test:shell`           | the shipped `index.html`           | **35/35 checks passed**                                                           |
+| authority + CSP | `npm.cmd run test:authority`       | bare worker, and the policy served | **26/26 checks passed**, 1 recorded finding                                       |
+| verify          | `npm.cmd run verify`               | every gate above plus formatting   | **exit 0**; 3 worker-count measurements, no threshold; `prettier --check .` clean |
+
+- **Tests added/updated:** A new node suite, `tests/authority.test.mjs` — 15 checks covering the
+  authority rejection matrix (a declared effect with no block, a block no effect claims, a worker
+  declaring the clipboard, two components naming the same database, a wildcard network origin),
+  the shipped graph's posture, and the policy's shape. A new browser suite,
+  `tests/authority-browser.mjs` — 26 checks that start the real CSP server and drive the page it
+  serves. Two `graph-prepare` assertions rewritten for the grantable fix, one of them added
+  outright (`a grant is refused for an authority that is ambient rather than handed`). Node total
+  133 → 149.
+- **Negative tests:** every blocked case carries a same-origin control that must succeed, so a
+  page that simply did nothing could not pass; the enforcement classification is pinned by a test
+  that fails if `indexeddb` is ever relabelled `platform` without that becoming true; the
+  grantable rule is asserted across every component for all four ambient kinds, not only for the
+  one that broke; and the "policy permits the architecture" check exists because a CSP that
+  forbade its own app would otherwise look like a success.
+- **Regression impact:** The manifest schema, graph preparation, and three manifests changed —
+  all on the path every existing proof runs through, and all of those proofs pass unchanged: the
+  read slice, the edit race, the splice, the history, the supervision matrix, the Phase 4 grant
+  and read-failure proofs, the Phase 6 write path, the Phase 7 shell suite, and every replay
+  fixture. **All six protected POC files were unmodified in this phase**; `styles.css`,
+  `theme.js`, `sample-vault.js`, and `vendor/markdown-renderer.js` verified byte-identical to
+  `Cairn-POC-v1-2026-08-20/Cairn/` by SHA-256, and `index.html`/`app.js` unchanged since Phase
+  7's permitted edits. `vendor/markdown-renderer.js` remains `diff`-clean against
+  `WorkLists/public/markdownRenderer.js`.
+- **API docs:** Not relevant — no HTTP surface. Checked: no route, method, DTO, status, or auth
+  metadata exists to change. The analogous artifacts are the contract catalog and, new in this
+  phase, `artifacts/`; both are generated and both are drift-gated above.
+- **Tooling gates:** `audit` — clean at 0 vulnerabilities. `lint` — not applicable: this repo has
+  no lint script; `format:check` is the gate and passes. `artifacts/` was added to
+  `.prettierignore` for the same reason `contracts/` already was: a formatter reflowing a
+  generated table makes the drift gate fight prettier and neither wins. **No dependency was
+  added** — `prettier` remains the only one, dev-only, and `tools/serve.mjs` is written against
+  `node:http` rather than pulling in a server package.
+- **Conflicts / exceptions:** **A protected-file constraint shaped this phase's main design
+  decision and is recorded as the reason rather than as a rationalisation.** The Content Security
+  Policy is delivered as a header because `index.html` could not be modified. It is also the
+  stronger of the two mechanisms, but the constraint came first. The consequence is a real gap:
+  **serving this directory with any other static server yields no policy at all, and nothing in
+  the page would say so.** Stated in the README, in `tools/serve.mjs`, in the generated
+  `artifacts/AUTHORITY.md`, and in `Architecture/Phase8Evidence.md`.
+- **Still PENDING MANUAL RUN, both carried forward unchanged:**
+  `Architecture/probes/vault-read-boundary.html` (Phase 4) and
+  `Architecture/probes/vault-write-path.html` (Phase 6). Phase 8 adds no new manual probe.
+
+---
+
+### 2026-08-22T00:00:00Z — Phase 7 DOM retrofit landed as one cohesive batch
+
+- **Summary:** The application now runs on the architecture rather than beside it. `index.html`
+  boots the component graph; `app.js` holds no vault, calls no renderer, splices nothing, and
+  persists no document text. Three new contracts, one new component, a browser suite against the
+  shipped page, and a latent kernel defect found and fixed. Three regressions are recorded
+  honestly rather than smoothed over.
+- **Problem:** Every phase before this one built something the POC did not use.
+  `FeasibilityReview.md` names this the main risk of the project: Argus built services first and
+  bridged a UI in last, and Cairn has to do the reverse — pull an existing, working UI apart
+  behind a boundary it currently ignores. The shortcut already worked, so removing it would look
+  like a regression.
+- **Requirement:** The interface must be able to draw a document without holding one. Every edit
+  must be a request against a revision, whichever surface it came from. State that is genuinely
+  the view's must stay in the view and cross no wire. What the graph can currently do must be
+  legible where a user would act on it. And the page a user actually opens must be guarded,
+  because every existing gate tested something _behind_ the boundary.
+- **Solution:** `app.js` rewritten as a view over projections; `index.html` reduced from three
+  classic script tags to one module script; `components/capability-monitor/` added;
+  `components/dom-owner/capabilities.js` added for the two main-thread-only capabilities; and
+  `tests/shell-browser.mjs` added as a new gate (`npm run test:shell`) that loads the real
+  `index.html` at a real URL with no harness in between.
+- **The invariant is now enforced three independent ways.** No `ui.*` contract may declare a
+  `text` field — a test walks the catalog and fails on any that does. No recorded `ui.*` replay
+  fixture carries one — a second test loads them from disk and checks the bytes. And the live
+  page in preview mode holds nothing that could reconstruct the open document's markdown — the
+  shell suite walks what the page is actually holding and looks for the source markers.
+- **That third assertion was written twice, and the first version was wrong in an instructive
+  way.** It flagged any key named `text` and immediately found `outline[].text` — a heading
+  caption, declared by the contract, already visible in the rendered HTML. Reading that as a
+  violation would have made the assertion mean something the architecture never claimed. It was
+  rewritten to check the question that matters: **can the interface reconstruct the file?** It
+  cannot.
+- **One contract does carry text, and it is deliberately not a projection.**
+  `document.source-view` lends the authoritative text to a source editor, only in answer to
+  `document.source-request`, and can only come back as a `document.replace-text` checked against
+  a revision. Naming it `ui.something` would have satisfied the letter of the invariant and
+  broken the sentence it came from. In preview mode the interface asks for nothing and holds
+  nothing; leaving split or source mode drops what it was lent, and both are asserted.
+- **A vacuous test caught before it could pass forever.** The check that a checkbox tick is not
+  believed until the owner confirms it originally ran an `evaluate` _after_ the click — and a
+  round trip from the test runner is slower than a message to a worker and back, so it was
+  reading the already-rebuilt view every time and would have passed no matter what the shell
+  did. It now observes from inside the click dispatch, via a listener on the same delegating
+  element registered after the shell's own.
+- **A latent kernel defect this phase exposed.** `held.hostFacts` was keyed by _contract_, so
+  adding `@host → capability-monitor : component.terminated` silently replaced the existing
+  `@host → @supervisor` wire for the same fact. Nothing failed: `graph:check` still accepted the
+  graph, every component still started, and one half of a declared fan-out simply stopped
+  arriving. It surfaced as one unrelated-looking kernel check reporting zero terminations.
+  `hostFacts` is now keyed per wire, `hostFact()` posts to every destination matching the
+  contract, the emission trace names each one, and a regression probe asserts both halves. **A
+  fact with two consumers that reaches one of them is worse than one that reaches neither,
+  because the half that arrived makes the system look like it is working.**
+- **A gap the new suite found in its own phase's work.** Broken capabilities were first written
+  onto the save-status line — and every subsequent projection overwrote it, so a degraded
+  capability announced itself and silently vanished a moment later. The save line now has
+  exactly one writer, which _consults_ capability state rather than being written to by it. Each
+  capability is surfaced where a user would act on it; the three with no control of their own
+  (`history`, `render`, `explorer`) are announced at the transition rather than given a
+  persistent badge that leads nowhere.
+- **Three regressions, taken knowingly and recorded rather than hidden:** `file://` no longer
+  runs the app (a `file://` page cannot construct a Worker — decided in Phase 0, biting here);
+  an unsaved edit does not survive a reload (the cost of text having exactly one owner, and the
+  shell suite asserts the loss rather than leaving it to be discovered); and the workspace is
+  single-root (`vault-source` holds one root, so the POC's additive multi-root workspace is not
+  carried forward).
+- **What did not shrink.** `app.js` went from 1444 to 1450 lines. A retrofit that removed six
+  responsibilities and stayed the same length saved nobody any code — what changed is _which_
+  code is there. `vault.files` went from 26 occurrences to 0, `renderTaskMarkdown` 2 → 0,
+  `updateTaskCheckboxMarkdown` 1 → 0, `walkDirectory` 3 → 0, `showDirectoryPicker` 3 → 0,
+  `navigator.clipboard` 1 → 0.
+- **Contract changes:** catalog `1.6.0` → `1.7.0`, `additive`. Three messages added
+  (`ui.capability-status`, `document.source-request`, `document.source-view`);
+  `document.rendered` and `ui.document-projection` both `1.0.0` → `1.1.0` for `word_count`. No
+  message went breaking. Both bumped contracts have a recorded fixture on each side, and the
+  older ones now replay as `older-minor` rather than `exact` — the additive bump proving itself
+  on bytes that never changed.
+- **Files/areas:** new `components/capability-monitor/`, `components/dom-owner/capabilities.js`,
+  `tests/shell-browser.mjs`, three payload schemas, five replay fixtures, and
+  `Architecture/Phase7Evidence.md`. Changed `app.js` and `index.html` (the two protected files
+  this phase was permitted to touch), `runtime/kernel.mjs`, `components/dom-owner/index.js` and
+  its manifest, `components/document-owner/index.js` and its manifest,
+  `components/markdown-renderer/`, `components/markdown-renderer-minimal/`,
+  `components/document-projector/`, `contracts/catalog.json`, two payload schemas,
+  `graphs/read-render.json`, `package.json`, `tests/kernel-harness.html`,
+  `tests/kernel-browser.mjs`, `tests/replay.test.mjs`, `tests/graph-prepare.test.mjs`,
+  `tests/supervision.test.mjs`, `tests/fixtures/replay/index.json`, `README.md`, `DOCS.md`,
+  `TODO.md`, `ROADMAP.md`, `DECISIONS-PENDING.md`, `contracts/README.md`,
+  `Architecture/KernelAuthority.md`, `Architecture/ComponentAuthoring.md`, and canonically this
+  changelog and `capabilities.md`.
+- **User-visible impact:** Substantial, and the first such impact of the run. The app is now the
+  graph: opening a document is an ask, a checkbox click is a governed message, and the rendered
+  view is derived output that arrived over a wire. A tick does not stay ticked until the owner
+  agrees. A failed save keeps the tab open and the buffer dirty and says which failure it was. A
+  capability that stops working is legible. Against that: the app needs a served origin, an
+  unsaved edit dies on reload, and the workspace is single-root.
+- **Tests run:** final post-change state, in workflow order.
+
+| Gate          | Command                            | Scope                             | Result                                                                            |
+| ------------- | ---------------------------------- | --------------------------------- | --------------------------------------------------------------------------------- |
+| audit         | `npm.cmd audit --audit-level=high` | project dependencies              | **0 vulnerabilities**                                                             |
+| install       | `npm.cmd install`                  | project                           | **0 vulnerabilities**                                                             |
+| node          | `npm.cmd test`                     | `tests/*.test.mjs`                | **133/133 passed**, 0 failed                                                      |
+| contracts     | `npm.cmd run contracts:check`      | catalog, owners, history, schemas | **34 governed messages**, catalog **1.7.0**, `ok`                                 |
+| contract docs | `npm.cmd run contracts:docs:check` | `contracts/CONTRACTS.md`          | **current** (34 messages, catalog 1.7.0)                                          |
+| graph         | `npm.cmd run graph:check`          | `graphs/read-render.json`         | **accepted: 9 components, 127 wires**, no declared-but-unwired port               |
+| kernel        | `npm.cmd run test:kernel`          | real Chromium                     | **77/77 checks passed**                                                           |
+| standalone    | `npm.cmd run test:standalone`      | each component's declared ports   | **30/30 focused checks passed**                                                   |
+| shell         | `npm.cmd run test:shell`           | the shipped `index.html`          | **35/35 checks passed**                                                           |
+| verify        | `npm.cmd run verify`               | every gate above plus formatting  | **exit 0**; 3 worker-count measurements, no threshold; `prettier --check .` clean |
+
+- **Tests added/updated:** A new suite, `tests/shell-browser.mjs` — 35 checks against the real
+  `index.html`, covering the graph booting from the shipped page, the explorer drawing only from
+  the tree projection, the text audit above, the checkbox round-trip including the
+  not-believed-until-confirmed behaviour, a stale edit refused with the drawn document unchanged,
+  split-pane geometry, the gutter tracking the source, the lend arriving and being dropped,
+  typing versus the settle, a failed save keeping the buffer dirty and the tab open, degraded and
+  unavailable capability rendering, session state surviving a reload, and the unsaved edit not
+  surviving it. Three node tests added (130 → 133): the Phase 7 additive bump replaying from
+  before it on both contracts, no `ui.*` fixture carrying text, and the one text-carrying
+  contract not being a projection. Two kernel checks added (75 → 77) for the host-fact fan-out.
+  Five replay fixtures recorded (41 → 46). Graph-count assertions updated for the ninth
+  component and the new wires.
+- **Negative tests:** the text audit asserts the _absence_ of a reconstructable document rather
+  than the presence of a projection; the stale-edit check asserts the drawn document is
+  unchanged after a refusal, not merely that a refusal arrived; the typing check counts edits
+  **during** typing (expecting zero) as well as after; the fan-out probe asserts the half that
+  was silently lost, not the half that always worked; and the reload check asserts the edit is
+  **gone**, making the accepted regression a gate rather than a note.
+- **Regression impact:** This phase touched the shipped page, the kernel's host-fact routing,
+  two contract versions, and every component that emits a render or a projection. All of it is
+  on the path every existing proof runs through, and all of those proofs pass: the read slice,
+  the edit race, the splice, the history, the supervision matrix, the Phase 4 grant and
+  read-failure proofs, the Phase 6 write path, and every replay fixture are green. **Two of the
+  six protected POC files were modified** — `index.html` and `app.js` — which is the exception
+  this phase was granted. `styles.css`, `theme.js`, `sample-vault.js`, and
+  `vendor/markdown-renderer.js` verified byte-identical to `Cairn-POC-v1-2026-08-20/Cairn/` by
+  SHA-256; `vendor/markdown-renderer.js` additionally verified byte-identical to
+  `WorkLists/public/markdownRenderer.js` by `diff`.
+- **API docs:** Not relevant — no HTTP surface in this project. Checked: no route, method, DTO,
+  status, or auth metadata exists to change. The contract catalog is the analogous artifact; its
+  generated documentation was regenerated and is covered by `contracts:docs:check` above.
+- **Tooling gates:** `audit` — clean at 0 vulnerabilities. `lint` — not applicable: this repo
+  has no lint script; `format:check` is the gate and passes. No dependency was added; `prettier`
+  remains the only one, dev-only.
+- **Conflicts / exceptions:** **The protected-file exception was used, and only as scoped.** Two
+  of the six files were modified; the other four are byte-identical to the frozen snapshot. That
+  constrained one decision worth naming: because `styles.css` was left untouched, a degraded
+  vault root is said in words rather than shown with a class the stylesheet does not define.
+  That is arguably the better answer anyway — a state a user must act on deserves text they can
+  read rather than a shade they have to interpret — but the constraint came first and is
+  recorded as such rather than presented as a design choice.
+- **Still PENDING MANUAL RUN, both carried forward unchanged:**
+  `Architecture/probes/vault-read-boundary.html` (Phase 4) and
+  `Architecture/probes/vault-write-path.html` (Phase 6). Phase 7 adds no new manual probe; the
+  gesture-driven surface it introduces is the same folder picker those two already drive.
+
+---
+
+### 2026-08-22T00:00:00Z — Phase 6 write path landed as one cohesive batch
+
+- **Summary:** The graph can now modify a file, and exactly one component may. A write is
+  conditional on the modification time the text was taken at, atomic via a temporary file and
+  a move, refused outright if the platform cannot move, and failure-gated so a refusal leaves
+  the buffer dirty and the tab open. A dry-run mode exercises the whole path with nothing at
+  risk. **No file anyone chose has been written**; every proof runs against the Origin Private
+  File System, and the picked-folder probe is pending a manual run.
+- **Problem:** Phase 4 gave one component the authority to read a real folder and Phase 5 gave
+  one component authority over what a document currently is, but nothing could persist either.
+  The roadmap names this the only part that can damage real notes, and states the constraint it
+  has to satisfy: never destroy user content after a failure — a failed write keeps the buffer
+  dirty, keeps the tab open, says so, and never marks saved.
+- **Requirement:** Exactly one component may modify a file, and it must be visible in the graph
+  which one. A write must be conditional on what was actually there, and a write with no
+  baseline must be refused rather than assumed safe. An interrupted write must never leave a
+  half-written note. And a failure must leave the user's work exactly where it was, with the
+  buffer still dirty.
+- **Solution:** `components/vault-writer/`, ~180 lines, declaring `filesystem-write` — which
+  graph preparation already restricted to at most one holder and forbade on the privileged
+  component. Four contracts added: `document.save`, `vault.write-request`,
+  `vault.write-succeeded`, `vault.write-failed`. `document.opened` took an additive bump to
+  carry the modification time the precondition compares against.
+- **A write is conditional, in two ways.** `changed-underneath` when the stamps differ —
+  proven by editing the file from outside the graph between the read and the save, after which
+  the write is refused with **both** stamps on the refusal and the other editor's work survives
+  byte for byte. And `unknown-baseline` when there is no stamp at all: a document opened from
+  the sample source has no file behind it, and "I do not know what was there" is not a reason
+  to overwrite it.
+- **Atomic, with no fallback.** `createWritable()` on the target truncates it the moment it
+  opens, so the text goes to `<name>.cairn-write-tmp` and is moved onto the target. A platform
+  that cannot move gets a **refusal**, not a truncating write — worse in the moment, better in
+  every other respect.
+- **Two findings recorded rather than tidied away.** First: **a naive write is already atomic
+  on this platform.** The intended control — a plain `createWritable()` onto the target, to
+  show the sampler could catch the failure it claims to rule out — cannot work, because
+  Chromium writes through a swap file and materialises it at close. An observably partial write
+  is not constructible through this API here, which means the temporary-file-and-move is a
+  _second_ guarantee whose necessity this suite cannot demonstrate. It is kept because relying
+  on an implementation detail the specification allows to vary is exactly what this project is
+  arranged to avoid, and the control is kept and its result reported rather than quietly
+  dropped.
+- **Second finding, and the more useful one:** an intermittent "14-byte partial write" looked
+  like a torn file for several runs. It was the sampler's own `"<<unreadable>>"` sentinel,
+  which happens to be fourteen characters long, being counted as fourteen bytes of content.
+  Chasing it established that **while `move()` replaces the target, a concurrent reader can
+  briefly fail to open the file** — it never reads partial content, and an immediate re-read
+  returns the whole file. That matters for Phase 7: a UI that re-reads during a save would
+  otherwise show a spurious "this file vanished". The sentinel is now a `Symbol`, the finding
+  is a named check, and the assertion was rewritten to test `confirmedTorn === 0` — a short
+  read that a second immediate read confirms — rather than "no short read ever happened", which
+  would have been a gate that fails intermittently for the harmless reason. That is precisely
+  how a real defect ends up being re-run until it disappears.
+- **The failure gate is an absence, so it is written down.** `saved_revision` advances only on
+  a confirmed write; the `vault.write-failed` handler does nothing and carries a comment saying
+  so, because an empty branch is indistinguishable from a forgotten one. Proven three ways: a
+  conflicting write, an interrupted write, and a dry run all leave the document dirty and its
+  tab open. A dry run marking something saved would make the safest operation in the system the
+  most dangerous one, so both the owner and the DOM owner check it explicitly.
+- **A bug this phase found in Phase 5's work:** the DOM owner took a document's revision only
+  from the rendered projection, so a save issued while a large document was still rendering
+  carried a revision the owner had already moved past and was refused as stale. It now takes
+  the revision from `document.edit-applied`, which is authoritative and arrives earlier.
+- **A second bug found in Phase 4's work:** the reader remembers its root in IndexedDB and
+  recalls it on start, so one browser probe's root became the next probe's starting state and
+  a grant could be silently attached over by a late recall. The harness now clears the store
+  between boots except where persistence is the point, and waits for the recall to reach a
+  conclusion before granting. `vault-source` also now traces an empty recall, because "started
+  on the sample root" and "the recall has not finished" were otherwise indistinguishable.
+- **Contract changes:** catalog `1.5.0` → `1.6.0`, `additive`. Four messages added;
+  `document.opened` `1.0.0` → `1.1.0`. No message went breaking.
+- **Files/areas:** new `components/vault-writer/`, four payload schemas, eight replay fixtures,
+  `Architecture/probes/vault-write-path.html`, and `Architecture/Phase6Evidence.md`. Changed
+  `contracts/catalog.json`, `contracts/payloads/document.opened.json`,
+  `components/vault-source/index.js`, `components/document-owner/index.js` and its manifest,
+  `components/dom-owner/index.js` and its manifest, `graphs/read-render.json`,
+  `tests/kernel-harness.html`, `tests/kernel-browser.mjs`, `tests/graph-prepare.test.mjs`,
+  `tests/supervision.test.mjs`, `tests/fixtures/replay/index.json`, `README.md`, `TODO.md`,
+  `ROADMAP.md`, `DECISIONS-PENDING.md`, `Architecture/KernelAuthority.md`,
+  `Architecture/ComponentAuthoring.md`, and canonically this changelog and `capabilities.md`.
+- **User-visible impact:** None in the POC, which is untouched. In the graph, an edited document
+  can now be saved — to storage this origin created, and to nothing a person picked.
+- **Tests run:** final post-change state, in workflow order.
+
+| Gate          | Command                            | Scope                             | Result                                                                                                     |
+| ------------- | ---------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| audit         | `npm.cmd audit --audit-level=high` | project dependencies              | **0 vulnerabilities**                                                                                      |
+| install       | `npm.cmd install`                  | project                           | **0 vulnerabilities**                                                                                      |
+| node          | `npm.cmd test`                     | `tests/*.test.mjs`                | **130/130 passed**, 0 failed                                                                               |
+| contracts     | `npm.cmd run contracts:check`      | catalog, owners, history, schemas | **31 governed messages**, catalog **1.6.0**, `ok`                                                          |
+| contract docs | `npm.cmd run contracts:docs:check` | `contracts/CONTRACTS.md`          | **current** (31 messages, catalog 1.6.0)                                                                   |
+| graph         | `npm.cmd run graph:check`          | `graphs/read-render.json`         | **accepted: 8 components, 98 wires**, no declared-but-unwired port                                         |
+| kernel        | `npm.cmd run test:kernel`          | real Chromium                     | **75/75 checks passed** (three consecutive runs)                                                           |
+| standalone    | `npm.cmd run test:standalone`      | each component's declared ports   | **30/30 focused checks passed**                                                                            |
+| verify        | `npm.cmd run verify`               | every gate above plus formatting  | **exit 0** (three consecutive runs); 3 worker-count measurements, no threshold; `prettier --check .` clean |
+
+- **Tests added/updated:** Seventeen write-path checks added to the kernel suite (58 → 75), all
+  against a real filesystem: write authority refused to every other component, a successful
+  write with the new stamp returned, no temporary file left behind, a dry run that touches
+  nothing and marks nothing saved, a conflicting write with both stamps named and the other
+  editor's work intact, a write with no baseline, a save of an unopened document, sampled
+  atomicity with the transition straddled, the transient-read-failure finding, the naive-write
+  finding, and a mid-write termination. Five graph-preparation assertions updated for the new
+  component and the write holder. The node suite stayed at 130.
+- **Negative tests:** the atomicity proof asserts the sampler saw both the old and new content,
+  so "it never saw a partial" has weight rather than being a statement about an idle sampler;
+  the interruption proof asserts the file is old-or-new and never a prefix; and the control that
+  could not demonstrate its failure mode is reported as a finding instead of being deleted.
+- **Regression impact:** `vault-source` now emits a modification time, `document-owner` gained
+  a save path and write-outcome handling, and `dom-owner` gained dirty tracking — all three are
+  on the path every existing proof runs through, and all of those proofs pass. The read slice,
+  the edit race, the splice, the history, the supervision matrix, the Phase 4 grant and
+  read-failure proofs, and every replay fixture are unchanged and green. Six protected POC files
+  verified byte-identical to `Cairn-POC-v1-2026-08-20/Cairn/` by SHA-256;
+  `vendor/markdown-renderer.js` verified byte-identical to
+  `WorkLists/public/markdownRenderer.js` by `diff`.
+- **API docs:** Not relevant — no HTTP surface in this project. Checked: no route, method, DTO,
+  status, or auth metadata exists to change. The contract catalog is the analogous artifact and
+  its generated documentation is covered by `contracts:docs:check` above.
+- **Tooling gates:** `audit` — clean at 0 vulnerabilities. `lint` — not applicable: this repo has
+  no lint script; `format:check` is the gate and passes. No dependency was added.
+- **Conflicts / exceptions:** **A stop condition was reached and is being reported rather than
+  decided.** The run's instructions name "Phase 6's write path is ready to run against a real
+  folder for the first time" as a stop. It is: the path is built, proven, and one gesture away
+  from a folder anyone chooses. `Architecture/probes/vault-write-path.html` is **PENDING MANUAL
+  RUN**, as is Phase 4's `vault-read-boundary.html`. Limitations named rather than papered over:
+  the `permission-required` and `not-found` write failures have code paths but no real cause to
+  exercise them, because an Origin Private File System permission cannot be revoked; there is no
+  conflict resolution and deliberately no "save anyway"; a temporary file left by a crashed
+  process is not cleaned up; and `lastModified` is the whole precondition — no content hash is
+  computed.
+
+### 2026-08-22T00:00:00Z — Phase 5 document state ownership landed as one cohesive batch
+
+- **Summary:** The open document set now has exactly one owner and it is the only writer. The
+  checkbox splice became a governed message carrying the vendored WorkLists implementation
+  unchanged. A read hands over text without handing over authority, so re-opening a document
+  cannot discard an unsaved edit. And what has _happened_ to a document lives in a separate,
+  append-only component that holds no text.
+- **Problem:** Phase 3 built the revision mechanism and proved it against a fixture, but in the
+  application graph the reader still handed text straight to a renderer and nothing owned it.
+  Two consequences followed. A checkbox click was a function call in the POC and had no
+  governed form at all, so "ticking a box rewrites exactly one line" was a property of one
+  codebase rather than of the architecture. And nothing prevented the failure the roadmap names
+  most often: a rendered projection being accepted back as authoritative text, which Phase 0
+  measured at **12 of 41 content lines lost, including every checkbox state**.
+- **Requirement:** Exactly one party must decide what a document currently is, because a
+  revision only means something if one party issues it. Every edit must be a request against a
+  revision, with neither edit path privileged over the other. A read must not be able to
+  overwrite an edit. Rendered output must have no route back to authoritative text. And what
+  happened to a document must be separable from what it is.
+- **Solution:** Two new components, both `state: "owner"`. `document-owner` holds
+  `path -> { text, revision }`, applies `document.toggle-task` and `document.replace-text`
+  against an optimistic revision check, and re-emits `document.render-request` from the new
+  text. `edit-history` receives `document.edit-applied` and appends. Three contracts added:
+  `document.opened`, `history.query`, `ui.history-projection`. The read path was re-routed:
+  `vault-source` now emits `document.opened` to the owner, and the owner emits the render
+  request onward.
+- **`document.opened` is not a rename.** `document.render-request` means "carry a document's
+  authoritative text _to a renderer_", and `vault-source → document-owner` is not that. Reusing
+  it would have been a naming lie, and it would have hidden the moment authority changes hands
+  — which is exactly the moment that decides whether a stray re-read can discard an edit.
+- **The splice is the vendored function, not a copy of it.** `document-owner` imports
+  `vendor/markdown-renderer.js` and calls `updateTaskCheckboxMarkdown`, so "the checkbox round
+  trip still works" stays a property of one function rather than of two that have to be kept in
+  step. Proven at the component's own ports: line count unchanged, **exactly one** line differs,
+  its index is the one that was named, every other line is byte-identical, and the changed line
+  is `- [x] two`. Proven again through the whole graph: `task_done` moves 1 → 2 while
+  `task_total` stays at 2.
+- **The round trip cannot happen because there is no door.** `document-owner` declares neither
+  `document.rendered` nor `ui.document-projection`, so no wire may carry either to it and no
+  inbound port for either exists. That was proven the only convincing way — by trying anyway:
+  both were pushed down a port the component _does_ hold, both were refused at its own boundary
+  by name, and the held text was byte-unchanged afterwards.
+- **A read may not overwrite an edit.** Re-opening an already-open document re-emits what the
+  owner _holds_, not what arrived. Proven directly: edit without saving, then send
+  `document.opened` carrying different text at a higher revision — the owner keeps the edit,
+  does not take the disk text, and does not treat the re-open as an edit at all.
+- **Active state and history are separate owners, and the reason is not tidiness.** They answer
+  different questions and fail differently: the owner must say what a document _is_, cheaply and
+  forever; a history must say what happened to it, and grows without bound doing so. One
+  component holding both means the thing that can never be discarded is holding the thing that
+  eventually must be. `edit-history` is append-only in the strongest sense available — it
+  **declares no contract that could remove or alter an entry**, so the guarantee does not rest
+  on the file refusing one, and that is asserted against its manifest rather than described.
+- **The Phase 3 fixture was retired.** `tests/fixtures/components/document-owner/` existed so
+  Phase 3's guarantees could be proven before their owner had a place in the graph. The real
+  component supersedes it; `contracts:check` no longer reports any fixture-owned contract, and
+  the test that asserted the fixture-only owner set now asserts it is empty.
+- **Contract changes:** catalog `1.4.0` → `1.5.0`, `additive`. Three messages added, none
+  changed. `ui.history-projection` follows the same rule every other `ui.*` contract does and
+  carries no text.
+- **Files/areas:** new `components/document-owner/`, `components/edit-history/`, three payload
+  schemas, three replay fixtures, and `Architecture/Phase5Evidence.md`. Changed
+  `contracts/catalog.json`, `components/vault-source/index.js` and its manifest,
+  `components/dom-owner/index.js` and its manifest, `graphs/read-render.json`,
+  `tests/kernel-harness.html`, `tests/kernel-browser.mjs`,
+  `tests/component-standalone-harness.html`, `tests/component-standalone.mjs`,
+  `tests/graph-prepare.test.mjs`, `tests/supervision.test.mjs`,
+  `tests/contract-governance.test.mjs`, `tests/fixtures/replay/index.json`, `README.md`,
+  `TODO.md`, `ROADMAP.md`, `DECISIONS-PENDING.md`, `Architecture/KernelAuthority.md`,
+  `Architecture/ComponentAuthoring.md`, and canonically this changelog and `capabilities.md`.
+  Deleted `tests/fixtures/components/document-owner/`.
+- **User-visible impact:** None in the POC, which is untouched. In the graph, a checkbox can now
+  be ticked through the whole chain and the result is visible in the rendered view.
+- **Tests run:** final post-change state, in workflow order.
+
+| Gate          | Command                            | Scope                             | Result                                                                                                     |
+| ------------- | ---------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| audit         | `npm.cmd audit --audit-level=high` | project dependencies              | **0 vulnerabilities**                                                                                      |
+| install       | `npm.cmd install`                  | project                           | **0 vulnerabilities**                                                                                      |
+| node          | `npm.cmd test`                     | `tests/*.test.mjs`                | **130/130 passed**, 0 failed                                                                               |
+| contracts     | `npm.cmd run contracts:check`      | catalog, owners, history, schemas | **27 governed messages**, catalog **1.5.0**, `ok`, no fixture-owned contract                               |
+| contract docs | `npm.cmd run contracts:docs:check` | `contracts/CONTRACTS.md`          | **current** (27 messages, catalog 1.5.0)                                                                   |
+| graph         | `npm.cmd run graph:check`          | `graphs/read-render.json`         | **accepted: 7 components, 82 wires**, no declared-but-unwired port                                         |
+| kernel        | `npm.cmd run test:kernel`          | real Chromium                     | **58/58 checks passed**                                                                                    |
+| standalone    | `npm.cmd run test:standalone`      | each component's declared ports   | **30/30 focused checks passed**                                                                            |
+| verify        | `npm.cmd run verify`               | every gate above plus formatting  | **exit 0** (three consecutive runs); 3 worker-count measurements, no threshold; `prettier --check .` clean |
+
+- **Tests added/updated:** Twelve ownership checks added to the standalone browser suite
+  (24 → 30 after the Phase 3 revision checks were rewritten against the real component): the
+  edit race, the splice's exactly-one-line guarantee including which line, the re-open rule, a
+  redelivered edit, both halves of the no-round-trip proof, and three history checks. Six
+  end-to-end checks added to the kernel suite (52 → 58): a click through the whole graph, the
+  rebuilt view carrying no text, the history entry, the replayed click, and the race resolved
+  across two different wires. The node suite stayed at 130 with counts and expectations updated
+  for the re-routed read path.
+- **Negative tests:** the no-round-trip proof works by attempting the thing that must not
+  happen and asserting both the refusal and that the text did not move; the re-open proof works
+  by sending disk text that must be ignored; the replay proof asserts **zero** extra outcomes
+  rather than a count that happens to match.
+- **Regression impact:** The read path was re-routed, which touches every existing proof through
+  it, so all of them were re-run: the vertical slice, the vendored renderer's markup, the
+  outline and task counts, the tree projection, the malformed-path rejection, the renderer
+  replacement with a byte-identical wire list, the removed-wire negative test, the Phase 4 grant
+  and read-failure proofs, and every Phase 2 supervision proof. `vault-source` now emits
+  `document.opened` instead of `document.render-request`; its manifest, the graph, and the
+  producer-declaration test were updated together. Six protected POC files verified
+  byte-identical to `Cairn-POC-v1-2026-08-20/Cairn/` by SHA-256, and
+  `vendor/markdown-renderer.js` verified byte-identical to `WorkLists/public/markdownRenderer.js`
+  by `diff` — which matters more this phase than any before it, because `document-owner` now
+  calls its splice.
+- **API docs:** Not relevant — no HTTP surface in this project. Checked: no route, method, DTO,
+  status, or auth metadata exists to change. The contract catalog is the analogous artifact and
+  its generated documentation is covered by `contracts:docs:check` above.
+- **Tooling gates:** `audit` — clean at 0 vulnerabilities. `lint` — not applicable: this repo has
+  no lint script; `format:check` is the gate and passes. No dependency was added.
+- **Conflicts / exceptions:** None new. The Phase 4 item
+  `Architecture/probes/vault-read-boundary.html` remains **PENDING MANUAL RUN**. `TST-001`
+  narrows and stays open. Limitations named rather than papered over: nothing survives a reload
+  — the open set and the history are both in memory, and neither component may restart because
+  neither declares a recovery owner; there is no undo; a history entry carries what changed and
+  not what it changed to, so it cannot reconstruct a document; `changed_lines` is a count and
+  not a diff; and past 1000 entries per document the oldest are dropped, with `count` still
+  reporting the truth.
+
+### 2026-08-22T00:00:00Z — Phase 4 vault read boundary landed as one cohesive batch
+
+- **Summary:** The first phase in which anything in this system touches something it did not
+  create. Filesystem authority belongs to exactly one component and arrives as a grant rather
+  than a message; a real directory handle is transferred into a worker and read there on every
+  automated run; the root persists in IndexedDB owned by the holder; every way a read can fail
+  has a name; and a permission re-grant is a governed control exchange. `ADP-001` and `ADP-002`
+  both resolved.
+- **Problem:** Phase 0 measured that `FileSystemDirectoryHandle` exists in a worker but that
+  `showDirectoryPicker()` does not, so acquisition is a main-thread gesture and the handle has
+  to get from there to a component somehow. Nothing in the architecture could carry it: a
+  handle is not JSON, has no payload schema, and cannot be validated — so it could not be a
+  message even if that were desirable. Meanwhile `vault-source` read an embedded fixture, no
+  rule stopped two components declaring filesystem access, a failed read was an
+  `operation.rejected` at a supervisor who could do nothing about it, and there was no way for a
+  worker — which has no user activation and never will — to ask for a permission it cannot
+  prompt for.
+- **Requirement:** Authority must be granted against a **declaration**, never against a
+  request, and "exactly one holder" must be settled before anything is handed over rather than
+  discovered afterwards. A failed read must reach whoever asked, naming which of a closed set of
+  things went wrong. A root must survive a session without the permission surviving with it, and
+  the gap between those two must be a governed exchange rather than a prompt at a call site.
+- **Solution:** Added `kernel.grantCapability(instance, capability, value)` — one new kernel
+  authority, deliberately narrow: it does not acquire the capability, never calls a method on
+  it, keeps none of it (`capabilityValuesHeld` is asserted `0`), and refuses any component that
+  did not declare it. The component checks the same thing again on arrival against its own
+  manifest. Graph preparation rejects two components declaring `filesystem-read`, two declaring
+  `filesystem-write`, and either declared by the privileged component. Three contracts added:
+  `vault.read-failed` with a closed `kind` enum, and `vault.permission-required` /
+  `vault.root-attached` as the two halves of the exchange. `vault-source` became a real read
+  adapter with IndexedDB persistence, split into `index.js` and `sources.js`.
+- **The proof got better than planned.** The intended approach was a stand-in handle, which
+  cannot work: a stub carries functions and is not structured-cloneable, so it cannot cross into
+  a worker at all. `navigator.storage.getDirectory()` can — it returns a **real**
+  `FileSystemDirectoryHandle` for the Origin Private File System and needs no user gesture. So
+  the kernel suite now builds a real vault with real files and real bytes, grants its handle
+  through the kernel, and asserts the DOM owner's projected HTML **contains the bytes written to
+  the real file**. Phase 0D proved that claim by hand; it is now proven on every run. A path
+  assertion alone would have passed just as happily if the component had quietly read its
+  sample root instead, which is why the assertion is on the bytes.
+- **What OPFS cannot prove, and where that went instead.** An OPFS handle's permission is
+  implicit and can never lapse, so three of the five read failures — permission revoked, a file
+  that vanished, bytes that are not text — have no automated form against a real filesystem. A
+  vocabulary with three untested words in it is a vocabulary nobody has checked, so
+  `sources.js` was split out and driven directly in node with a stand-in handle built to fail on
+  request. All five words are exercised, `NotAllowedError` and `SecurityError` are both proven to
+  read as permission rather than missing, and a closure test fails if a sixth failure mode ever
+  appears without a word.
+- **A Phase 0 proof changed, and got stronger.** A missing document used to reach `@supervisor`
+  as `operation.rejected`. It now reaches **whoever asked** as `vault.read-failed` with
+  `kind: "not-found"`. The original claim — an ordinary outcome is not a component failure — is
+  unchanged, and the check additionally asserts no supervisor rejection was raised. A read
+  failure the asker cannot see is a spinner that never stops.
+- **One claim narrowed rather than overstated.** "The main thread drops its handle reference and
+  can no longer read the folder" is only half achievable: Phase 0D measured that transferring a
+  handle does **not** revoke the sender's access, and the platform offers no way to. What is
+  proven is narrower — the privileged component exposes nothing that is or yields a directory
+  handle, checked against its **whole property surface** rather than against belief, and the host
+  drops its local reference immediately after granting. That is discipline supported by a
+  contract surface, not a platform guarantee, and it is recorded as such.
+- **Contract changes:** catalog `1.3.0` → `1.4.0`, `additive`. Three messages added; none
+  changed.
+- **Decisions resolved — the only two in this run scheduled to change state:**
+  - **`ADP-001`: the File System Access API.** An HTTP adapter is out of scope for this run by
+    constraint (no remote network access), and its supposed advantage — needing no server — was
+    never real: Phase 0 established that a served origin is _mandatory_, because `file://` cannot
+    construct a worker. What it would actually add is a server process with read and write access
+    to the user's folders, which is a security posture rather than a convenience. Meanwhile the
+    FSA read boundary is now proven rather than projected, and choosing it forecloses nothing —
+    `vault-source` is one component behind one contract, and same-position replacement is the
+    property this project is built on. Costs accepted and recorded: Chromium only, no watching,
+    and a re-grant gesture on any session where permission has lapsed. External-change detection:
+    **none**, with polling `lastModified` deferred to Phase 6, where it is already needed as a
+    write precondition.
+  - **`ADP-002`: IndexedDB, owned by the component holding the handle.** `localStorage` does not
+    exist in a worker; the handle may only live in one component; therefore the store may only
+    live there too. Proven automatically: a root granted in one graph is recalled and attached by
+    a **completely separate graph** with no grant of any kind, reporting `persisted: true`.
+- **Files/areas:** new `components/vault-source/sources.js`, three payload schemas,
+  `tests/vault-source.test.mjs`, `Architecture/probes/vault-read-boundary.html`, four replay
+  fixtures, and `Architecture/Phase4Evidence.md`. Changed `contracts/catalog.json`,
+  `contracts/README.md`, `runtime/graph-prepare.mjs`, `runtime/kernel.mjs`,
+  `runtime/component-host.mjs`, `components/vault-source/index.js`,
+  `components/vault-source/component.json`, `components/dom-owner/index.js` and its manifest,
+  `graphs/read-render.json`, `tests/kernel-harness.html`, `tests/kernel-browser.mjs`,
+  `tests/component-standalone-harness.html`, `tests/graph-prepare.test.mjs`,
+  `tests/supervision.test.mjs`, `tests/fixtures/replay/index.json`, `README.md`, `TODO.md`,
+  `ROADMAP.md`, `DECISIONS-PENDING.md`, `Architecture/KernelAuthority.md`,
+  `Architecture/ComponentAuthoring.md`, and canonically this changelog and `capabilities.md`.
+- **User-visible impact:** None in the POC, which is untouched. In the graph, a granted folder is
+  now readable end to end and a failed read reaches the asker with a reason.
+- **Tests run:** final post-change state, in workflow order.
+
+| Gate          | Command                            | Scope                             | Result                                                                                                     |
+| ------------- | ---------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| audit         | `npm.cmd audit --audit-level=high` | project dependencies              | **0 vulnerabilities**                                                                                      |
+| install       | `npm.cmd install`                  | project                           | **0 vulnerabilities**                                                                                      |
+| node          | `npm.cmd test`                     | `tests/*.test.mjs`                | **130/130 passed**, 0 failed                                                                               |
+| contracts     | `npm.cmd run contracts:check`      | catalog, owners, history, schemas | **24 governed messages**, catalog **1.4.0**, `ok`, one fixture-owned owner named                           |
+| contract docs | `npm.cmd run contracts:docs:check` | `contracts/CONTRACTS.md`          | **current** (24 messages, catalog 1.4.0)                                                                   |
+| graph         | `npm.cmd run graph:check`          | `graphs/read-render.json`         | **accepted: 5 components, 56 wires**, no declared-but-unwired port                                         |
+| kernel        | `npm.cmd run test:kernel`          | real Chromium                     | **52/52 checks passed**                                                                                    |
+| standalone    | `npm.cmd run test:standalone`      | each component's declared ports   | **24/24 focused checks passed**                                                                            |
+| verify        | `npm.cmd run verify`               | every gate above plus formatting  | **exit 0** (three consecutive runs); 3 worker-count measurements, no threshold; `prettier --check .` clean |
+
+- **Tests added/updated:** `tests/vault-source.test.mjs` (12 checks against a stand-in handle:
+  every word in the failure vocabulary, both enumeration bounds, the off-by-one at the size
+  limit, every permission state, and the closure check). Five graph-preparation rejections added
+  for filesystem authority. Thirteen checks added to the kernel suite (39 → 52) driven through a
+  **real** OPFS handle: the grant boundary and its six refusals, a real transferred read whose
+  bytes are asserted, enumeration skipping, the two real-filesystem failure modes, the DOM
+  owner's property surface, and IndexedDB persistence across a separate graph. The node suite
+  went 113 → 130.
+- **Negative tests:** the grant is refused for every non-declaring component in the graph, for an
+  unknown instance, and for an undeclared capability, with `grantsMade()` asserted empty
+  afterwards; graph preparation is proven to reject two filesystem holders and a privileged one;
+  and the projected-bytes assertion is specifically designed so the proof cannot pass on the
+  sample root.
+- **Regression impact:** `vault-source` was rewritten and is the read boundary the whole graph
+  depends on, so every existing proof through it was re-run and passes: the vertical slice, the
+  vendored renderer's markup, the outline and task counts, the tree projection, the malformed
+  path rejection, the renderer replacement with a byte-identical wire list, and the removed-wire
+  negative test. The one behavioural change is the missing-document outcome, updated deliberately
+  and covered above. `dom-owner` gained a `failedReads()` accessor and accepts one more contract;
+  it neither emits nor holds anything new. Six protected POC files verified byte-identical to
+  `Cairn-POC-v1-2026-08-20/Cairn/` by SHA-256; `vendor/markdown-renderer.js` verified
+  byte-identical to `WorkLists/public/markdownRenderer.js` by `diff`.
+- **API docs:** Not relevant — no HTTP surface in this project. Checked: no route, method, DTO,
+  status, or auth metadata exists to change. The contract catalog is the analogous artifact and
+  its generated documentation is covered by `contracts:docs:check` above.
+- **Tooling gates:** `audit` — clean at 0 vulnerabilities. `lint` — not applicable: this repo has
+  no lint script; `format:check` is the gate and passes. No dependency was added; `prettier`
+  remains the only one and is dev-only. IndexedDB and the Origin Private File System are platform
+  APIs, not dependencies.
+- **Conflicts / exceptions:** **One item is PENDING MANUAL RUN.**
+  `Architecture/probes/vault-read-boundary.html` boots the real graph, grants a **picked** folder,
+  and — after a reload — shows whether the remembered root re-attaches or asks for permission as a
+  governed fact. Only a picked handle's permission can lapse, so no automated run can replace it;
+  everything it exercises is proven in some other form, and what only it can show is the same code
+  path against a folder the operating system rather than the origin controls. `TST-001` narrows and
+  stays open. Limitations named rather than papered over: no external-change detection at all; a
+  root is walked once on attach so a file added later is invisible; `no-root` is unreachable in the
+  shipped graph because a sample root is always attached; and the "main thread can no longer read"
+  claim is discipline, not a platform guarantee.
+
+### 2026-08-22T00:00:00Z — Phase 3 identity, ordering, and revisions landed as one cohesive batch
+
+- **Summary:** Delivery was already at-least-once as a matter of fact; this batch makes it
+  survivable. An operation can be identified and a duplicate handled once, a key reused with
+  different content is refused as its own kind of fact, operations on one document cannot
+  overtake each other, and an edit computed against text that has since moved is refused
+  without overwriting anything.
+- **Problem:** Phase 2 made retry real, and retry re-runs a handler from the start without
+  being able to un-emit what an earlier attempt already sent. From that point delivery was
+  at-least-once in fact rather than in caveat, and nothing downstream could survive it: a
+  duplicate was indistinguishable from a second operation, a queue was ordered globally so one
+  document held up every other, and no mutation named the revision it was computed against —
+  so a checkbox click and a source-pane edit racing would both apply, which is the failure the
+  whole roadmap calls "two paths can now claim to hold the current text."
+- **Requirement:** A consumer must be able to tell "the same operation, again" from "a second
+  operation that happens to look similar", without the runtime learning what a document is.
+  Operations on one document must not overtake each other, and two documents must not hold each
+  other up. Every mutation must name the revision it was computed against, and a refusal must
+  name the revision the owner actually holds so the asker can recover rather than guess.
+- **Solution:** The envelope gained an optional `idempotency_key`; the component runtime
+  remembers keys with a content fingerprint, suppresses true duplicates, and emits the new
+  `integrity.violation` contract for a key reused with different content. A document wire may
+  declare `ordering_key` — a payload _field name_, so the runtime partitions by something it
+  was told rather than something it inferred. Four new document contracts carry edits and their
+  outcomes, and a `document-owner` fixture enforces the revision check in both directions.
+- **A test found a real gap, twice.** Partitioning a queue by document made concurrency possible
+  where there had been none, and the first bound test showed the consequence at once: with a
+  distinct key per message, every message started a handler while the queue truthfully reported
+  nothing waiting, so the declared depth bounded nothing. The fix is a **separate** declared
+  limit, `max_concurrent_operations`, defaulting to 1 — what a wire did before partitions
+  existed. It is deliberately not derived from `max_queue_depth`; they bound what may wait and
+  what may run, and would only look interchangeable while nothing had exercised the difference.
+  Fixing that then surfaced a second gap: admission treated free slots as capacity even when the
+  component was not ready, which would have let the pre-ready buffer grow unbounded. Admission
+  now asks whether the message could actually start.
+- **A flaky gate was found and fixed rather than re-run.** The first `verify` of this phase
+  reported 38/39 in the kernel suite while the same suite passed standalone. The cause was a
+  supervision proof waiting a fixed duration instead of for the fact it asserts: a timed-out
+  operation is dead-lettered when its last attempt runs out of deadline, and the handler only
+  tries to deliver its late result some time _after_ that — so waiting for the dead letter
+  stopped looking before the suppression had happened. Every timing-sensitive supervision proof
+  now waits on a condition with a generous ceiling, and the kernel suite was run three times
+  consecutively plus three full `verify` chains to confirm it.
+- **Contract changes:** catalog `1.2.0` → `1.3.0`, `additive`. Five messages added
+  (`document.toggle-task`, `document.replace-text`, `document.edit-applied`,
+  `document.edit-rejected`, `integrity.violation`); `component.health` took an additive minor to
+  `1.1.0` for `duplicates_suppressed`; the envelope gained an optional `idempotency_key`, which
+  is additive to every contract at once because the envelope is not separately versioned. No
+  message went breaking. `document.edit-applied` carries no text and `integrity.violation`
+  carries no content, for the same reason `ui.document-projection` has no `text` field.
+- **Ownership honesty:** `document-owner` owns four of the new contracts and does not yet exist
+  in the application graph. Rather than either forcing it into `components/` early or letting the
+  ownership check pass silently, `contracts:check` now accepts a fixture owner **and prints it**,
+  and a node test asserts the fixture-only owner set is exactly `["document-owner"]` — stated,
+  not discovered.
+- **Files/areas:** new `tests/identity.test.mjs`,
+  `tests/fixtures/components/document-owner/`, five payload schemas, six replay fixtures, and
+  `Architecture/Phase3Evidence.md`. Changed `contracts/catalog.json`,
+  `contracts/envelope.schema.json`, `contracts/graph.schema.json`,
+  `contracts/payloads/component.health.json`, `contracts/README.md`,
+  `runtime/supervision.mjs`, `runtime/component-runtime.mjs`, `runtime/component-host.mjs`,
+  `runtime/kernel.mjs`, `runtime/graph-prepare.mjs`, `runtime/contract-registry.mjs`, all six
+  component manifests and three fixture manifests, `graphs/read-render.json`,
+  `tests/fixtures/graphs/supervision.json`, both browser harnesses and both drivers,
+  `tests/contract-governance.test.mjs`, `tests/supervision.test.mjs`,
+  `tests/component-runtime.test.mjs`, `tests/graph-prepare.test.mjs`, `README.md`, `TODO.md`,
+  `ROADMAP.md`, `DECISIONS-PENDING.md`, `Architecture/KernelAuthority.md`,
+  `Architecture/ComponentAuthoring.md`, and canonically this changelog and `capabilities.md`.
+- **User-visible impact:** None. The POC UI is untouched. The read slice now orders per document
+  and may run up to four reads at once, which is a declared cap rather than a measured one.
+- **Tests run:** final post-change state, in workflow order.
+
+| Gate          | Command                            | Scope                             | Result                                                                                                     |
+| ------------- | ---------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| audit         | `npm.cmd audit --audit-level=high` | project dependencies              | **0 vulnerabilities**                                                                                      |
+| install       | `npm.cmd install`                  | project                           | **0 vulnerabilities**                                                                                      |
+| node          | `npm.cmd test`                     | `tests/*.test.mjs`                | **113/113 passed**, 0 failed                                                                               |
+| contracts     | `npm.cmd run contracts:check`      | catalog, owners, history, schemas | **21 governed messages**, catalog **1.3.0**, `ok`, one fixture-owned owner named                           |
+| contract docs | `npm.cmd run contracts:docs:check` | `contracts/CONTRACTS.md`          | **current** (21 messages, catalog 1.3.0)                                                                   |
+| graph         | `npm.cmd run graph:check`          | `graphs/read-render.json`         | **accepted: 5 components, 53 wires**, no declared-but-unwired port                                         |
+| kernel        | `npm.cmd run test:kernel`          | real Chromium                     | **39/39 checks passed** (three consecutive runs)                                                           |
+| standalone    | `npm.cmd run test:standalone`      | each component's declared ports   | **24/24 focused checks passed**                                                                            |
+| verify        | `npm.cmd run verify`               | every gate above plus formatting  | **exit 0** (three consecutive runs); 3 worker-count measurements, no threshold; `prettier --check .` clean |
+
+- **Tests added/updated:** `tests/identity.test.mjs` (15 checks: duplicate suppression,
+  content-not-identity comparison, opt-in keys, a malformed key refused at the envelope
+  boundary, integrity violations, the bounded window proven to forget, ordering within and
+  across documents, a missing ordering field refused, the separate queue bound and concurrency
+  cap, and the default of one). Six revision checks added to the standalone browser suite,
+  driven through the document-owner fixture's real ports: the edit race, the refused edit not
+  overwriting, a late edit, an out-of-order edit, a redelivered edit, and two independent
+  documents. The node suite went 98 → 113; the standalone browser suite went 17 → 24; the
+  kernel suite stayed at 39 and every timing-sensitive proof in it was made condition-driven.
+- **Negative tests:** every ordering and identity guarantee is proven by the thing that should
+  _not_ happen — a duplicate that does not reach the handler, an evicted key that does, a
+  conflicting key that is refused rather than applied, a slow document that does not delay
+  another, and a refused edit whose text is absent when the owner is asked what it holds.
+- **Regression impact:** Two shared-infrastructure changes carried real risk and were exercised
+  accordingly. (1) The inbound queue became partitioned; every Phase 2 queue and drain proof
+  still passes, and the case that broke — admission while not ready — was caught by the Phase 2
+  test rather than by review. (2) Admission semantics changed; the Phase 2 browser overflow
+  proof, which asserts `sent − bound − 1` refusals on a wire with no declared concurrency, is
+  unchanged and still passes. Every Phase 0 and Phase 1 proof passes untouched: the kernel holds
+  zero document-wire ports, no projection carries authoritative text, ordinary rejections stay
+  distinct from failures, the renderer replacement still swaps in with a byte-identical wire
+  list, and all 26 replay fixtures replay — now including a real additive bump on
+  `component.health`. Six protected POC files verified byte-identical to
+  `Cairn-POC-v1-2026-08-20/Cairn/` by SHA-256; `vendor/markdown-renderer.js` verified
+  byte-identical to `WorkLists/public/markdownRenderer.js` by `diff`.
+- **API docs:** Not relevant — no HTTP surface in this project. Checked: no route, method, DTO,
+  status, or auth metadata exists to change. The contract catalog is the analogous artifact and
+  its generated documentation is covered by `contracts:docs:check` above.
+- **Tooling gates:** `audit` — clean at 0 vulnerabilities. `lint` — not applicable: this repo has
+  no lint script; `format:check` is the gate and passes. No dependency was added; `prettier`
+  remains the only one and is dev-only.
+- **Conflicts / exceptions:** None recorded. No decision in `DECISIONS-PENDING.md` changed state
+  — `ADP-001` remains the only one scheduled to, in Phase 4. `TST-001` narrows and stays open.
+  Limitations named rather than papered over: idempotency is not exactly-once and its window is
+  bounded and lost on restart; ordering is per wire and per key, not across wires; the
+  fingerprint is structural, so two payloads meaning the same thing but differing in any field
+  count as different content; and nothing yet appends to an edit history.
+
+### 2026-08-22T00:00:00Z — Phase 2 supervision landed as one cohesive batch
+
+- **Summary:** The graph is now supervised. A component is not wired live until it reports
+  ready, against a deadline the kernel enforces; health and drain are asked for over declared
+  wires; every document wire carries an operation deadline and a queue bound; retry and restart
+  are opt-in, bounded, and refused by graph preparation unless they are declared completely.
+  `worker.onerror`, a lapsed deadline, and a termination are no longer handled at the
+  construction site — they are emitted as `@host` facts on wires the graph must declare.
+- **Problem:** Phase 0 stated the absence plainly: "No supervision. No readiness deadline, no
+  drain, no timeout, no bounded queue, no retry, no restart, no dead-letter delivery.
+  `@supervisor` records; it does not act." Every failure mode the architecture could name was a
+  fact nobody acted on. A component that never started was waited on forever. A handler that
+  hung took its wire with it. A burst of work accumulated in a port queue nobody could measure.
+  A worker error was converted into a `component.failure` **inside the kernel's construction
+  code**, claiming `@supervisor` as its producer — the exact "handled inline at the construction
+  site" the to-do names.
+- **Requirement:** Every failure must be nameable at a specific boundary, bounded by a number
+  the graph declared, and visible as a governed fact rather than a side effect. A component
+  must be stoppable safely, restartable only where that is provably safe, and observable while
+  it is degrading rather than only after it has stopped.
+- **Solution:** Six new control contracts (`supervision.health-check`, `component.health`,
+  `supervision.drain`, `component.drained`, `component.terminated`, `supervision.dead-letter`),
+  a new `@host` pseudo-component, a pure `runtime/supervision.mjs` holding every policy and the
+  restart budget, and a shared `runtime/component-runtime.mjs` holding the inbound pipeline.
+  `runtime/graph-prepare.mjs` gained the supervision rejection matrix;
+  `runtime/kernel.mjs` gained deadlines, drain, termination, and restart-with-rewiring.
+- **Structural change worth naming: the privileged component stopped running a weaker
+  protocol.** Phase 0 had two copies of the component protocol — one for workers, one inside
+  the kernel for `dom-owner`. That is survivable while the protocol is "validate, then call the
+  handler"; it stops being survivable the moment the protocol has a readiness gate, a queue
+  bound, a deadline, retry, and drain, because the privileged component then gets _less_
+  supervision than everything it talks to. That is the granularity drift `FeasibilityReview.md`
+  names as the most likely failure mode. The pipeline now lives once and both hosts are thin
+  adapters; the privileged component's diagnostics travel the same port as every worker's.
+- **How restart was made to work at all.** A wire is a `MessageChannel` whose ends were
+  transferred and whose references the kernel dropped, so a replaced component leaves its peers
+  holding dead ports and the kernel with no port to hand them new ones. The kernel does still
+  hold the `Worker` it constructed, so a restart recreates exactly the channels touching that
+  instance and delivers each peer its new end as a `kernel: "rewire"` message. A rewire may only
+  replace a port for a contract the peer's manifest already declares — it can never introduce a
+  capability. The kernel holds zero document-wire ports before and after.
+- **A real gap found by a failing test, not by review.** The queue-overflow proof first reported
+  zero refusals despite seven overflow traces: the fixture component did not declare
+  `operation.rejected`, so the runtime's fallback turned every overflow into a
+  `component.failure`. A full queue is an ordinary refusal, not a broken component, and
+  conflating them leaves supervision unable to tell the difference. `operation.rejected` is now
+  a **required** wire for every component in every graph (+3 wires in the application graph),
+  and the fallback survives only as a last resort.
+- **Contract changes:** catalog `1.1.0` → `1.2.0`, `additive` — six messages added, none
+  changed, so the catalog major does not move. Every field on the new contracts carries
+  `maxLength` or numeric bounds. `supervision.dead-letter` deliberately carries **no payload**:
+  a dead letter carrying the document would leak authoritative text to a supervisor, which is
+  the same boundary `ui.document-projection` exists to protect.
+- **Files/areas:** new `runtime/supervision.mjs`, `runtime/component-runtime.mjs`, six payload
+  schemas, `tests/component-runtime.test.mjs`, `tests/supervision.test.mjs`,
+  `tests/fixtures/components/{fault-source,fault-renderer,never-ready}/`,
+  `tests/fixtures/graphs/supervision.json`, seven replay fixtures, and
+  `Architecture/Phase2Evidence.md`. Changed `contracts/catalog.json`,
+  `contracts/graph.schema.json`, `contracts/README.md`, `runtime/graph-prepare.mjs`,
+  `runtime/kernel.mjs`, `runtime/component-host.mjs`, all six component manifests,
+  `graphs/read-render.json`, `tests/kernel-harness.html`, `tests/kernel-browser.mjs`,
+  `tests/graph-prepare.test.mjs`, `tests/contract-governance.test.mjs`,
+  `tests/fixtures/replay/index.json`, `README.md`, `TODO.md`, `ROADMAP.md`,
+  `DECISIONS-PENDING.md`, `Architecture/KernelAuthority.md`,
+  `Architecture/ComponentAuthoring.md`, and canonically this changelog and `capabilities.md`.
+- **User-visible impact:** None. The POC UI is untouched and the read slice behaves identically
+  for every message that arrives within its declared bounds.
+- **Tests run:** final post-change state, in workflow order.
+
+| Gate          | Command                            | Scope                             | Result                                                                            |
+| ------------- | ---------------------------------- | --------------------------------- | --------------------------------------------------------------------------------- |
+| audit         | `npm.cmd audit --audit-level=high` | project dependencies              | **0 vulnerabilities**                                                             |
+| install       | `npm.cmd install`                  | project                           | **0 vulnerabilities**                                                             |
+| node          | `npm.cmd test`                     | `tests/*.test.mjs`                | **98/98 passed**, 0 failed                                                        |
+| contracts     | `npm.cmd run contracts:check`      | catalog, owners, history, schemas | **16 governed messages**, catalog **1.2.0**, `ok`                                 |
+| contract docs | `npm.cmd run contracts:docs:check` | `contracts/CONTRACTS.md`          | **current** (16 messages, catalog 1.2.0)                                          |
+| graph         | `npm.cmd run graph:check`          | `graphs/read-render.json`         | **accepted: 5 components, 48 wires**, no declared-but-unwired port                |
+| kernel        | `npm.cmd run test:kernel`          | real Chromium                     | **39/39 checks passed**                                                           |
+| standalone    | `npm.cmd run test:standalone`      | each component's declared ports   | **17/17 focused checks passed**                                                   |
+| verify        | `npm.cmd run verify`               | every gate above plus formatting  | **exit 0**; 3 worker-count measurements, no threshold; `prettier --check .` clean |
+
+- **Tests added/updated:** `tests/component-runtime.test.mjs` (13 checks driving the pipeline
+  directly with stub ports — readiness gate, duplicate start, queue bound, observable depth,
+  operation deadline, late-emit suppression, retry to dead letter, no-retry to failure,
+  undeclared and invalid output, drain, work-during-drain, and supervision bypassing the queue)
+  and `tests/supervision.test.mjs` (27 checks: the policy table, the rolling restart budget,
+  both graphs as they ship, and the restart/retry/required-wiring rejection matrix). The node
+  suite went 58 → 98. The kernel browser suite went 19 → 39: twenty supervision checks driven
+  through a fault-injection fixture graph in real Chromium. `tests/component-standalone.mjs`
+  is unchanged at 17.
+- **Negative tests, because a gate that cannot fail is not a gate:** every supervision rule is
+  proven by mutating a real graph and asserting rejection — restart on the privileged component,
+  restart of a state owner with no recovery owner, a component naming itself as its own recovery
+  owner, a recovery owner outside the graph, a dead-letter destination that is not an endpoint,
+  a consumer with no dead-letter port, a dead-letter destination named but not wired, supervision
+  policy on a control wire, and each of the five required supervision wires removed one at a
+  time. The crash proofs assert the raw `worker.onerror` observation was recorded, so they cannot
+  pass on a worker that quietly did nothing.
+- **Regression impact:** The read slice is unchanged in behaviour. Every Phase 0 and Phase 1
+  proof still passes untouched: the kernel holds zero document-wire ports, no projection carries
+  authoritative text, the missing-document and malformed-path cases still produce exactly one
+  `operation.rejected` and zero `component.failure`, the renderer replacement still swaps in with
+  a byte-identical wire list, cutting the projection wire still removes the capability visibly,
+  and every Phase 1 replay fixture still replays. The application graph gained no component and
+  no document wire — all 25 new wires are supervision. Shared infrastructure that moved: the
+  component protocol (now one implementation instead of two, exercised by all 39 kernel checks
+  and all 17 standalone checks), graph preparation (the full 24-check Phase 0 rejection matrix
+  still passes), and the registry (unchanged). Six protected POC files verified byte-identical to
+  `Cairn-POC-v1-2026-08-20/Cairn/` by SHA-256; `vendor/markdown-renderer.js` verified
+  byte-identical to `WorkLists/public/markdownRenderer.js` by `diff`.
+- **API docs:** Not relevant — no HTTP surface in this project. Checked: no route, method, DTO,
+  status, or auth metadata exists to change. The contract catalog is the analogous artifact and
+  its generated documentation is covered by `contracts:docs:check` above.
+- **Tooling gates:** `audit` — clean at 0 vulnerabilities. `lint` — not applicable: this repo has
+  no lint script; `format:check` is the gate and passes. No dependency was added; `prettier`
+  remains the only one and is dev-only.
+- **Conflicts / exceptions:** None recorded. No decision in `DECISIONS-PENDING.md` changed state
+  — `ADP-001` remains the only one scheduled to, in Phase 4. `TST-001` narrows and stays open:
+  the POC's checkbox splice and split-pane geometry remain unguarded until Phase 7. Two
+  limitations are named rather than papered over: a deadline bounds an awaitable operation and
+  not a busy loop (a spinning worker is terminated, not timed out), and retry can double-apply
+  an effect because it re-runs a handler that may already have emitted — which is why the
+  application graph declares retry on nothing and why Phase 3 follows.
+
+### 2026-08-22T00:00:00Z — Phase 1 contract governance landed as one cohesive batch
+
+- **Summary:** Contracts are now governed rather than merely defined. A stated compatibility
+  policy replaces exact-version matching, every contract names a declared owner and carries a
+  version history whose steps are enforced, sixteen recorded envelopes replay against the
+  current consumers, and `contracts/CONTRACTS.md` is generated with a drift gate chained into
+  `verify`. The graph, the components, and the six protected POC files were not touched.
+- **Problem:** Phase 0 shipped ten contracts with a version number and no policy behind it.
+  `schema_version` had to match exactly, so there was no answer to what an older recorded
+  message means; "a change of plane is breaking" lived in a README, which is a convention
+  rather than a check; three contracts were owned by the word `component`, which names nobody;
+  `catalog_version` existed with no stated semantics; and there was no human-readable contract
+  documentation at all, generated or otherwise. `FeasibilityReview.md` names contract churn as
+  a primary risk precisely because there is no separate process here to fail loudly.
+- **Requirement:** A contract's version must mean something a machine enforces, in both
+  directions: what a consumer accepts, and what a change is allowed to cost. Ownership must
+  point at a real party. A superseded shape must be refused by name rather than partly read.
+  Contract documentation must be current or the build must be red.
+- **Solution:** Added `runtime/contract-versions.mjs` — a pure policy module holding the
+  compatibility rule and the version-step rule — and applied it in `runtime/contract-registry.mjs`,
+  which now also validates the catalog against a new `contracts/catalog.schema.json` and audits
+  ownership, per-message history, and `catalog_version` generations. Added
+  `tools/generate-contract-docs.mjs` and the generated `contracts/CONTRACTS.md`, plus
+  `contracts:docs` and `contracts:docs:check` scripts, with the check chained into `verify`.
+  Added `tests/contract-governance.test.mjs` and `tests/replay.test.mjs`, and sixteen recorded
+  envelopes under `tests/fixtures/replay/`.
+- **Two additive contract bumps, both used:** `lifecycle.start` 1.0.0 → 1.1.0 gains optional
+  `catalog_version`, stamped by the kernel and recorded in each component's `started` trace as
+  provenance for a replayed session. `operation.rejected` 1.0.0 → 1.1.0 gains optional
+  `rejected_schema_version`, filled in by the component host when a boundary refusal was a
+  version conflict — so a version refusal is a named field rather than a phrase inside a reason
+  string. Both are optional, which is what makes their pre-bump fixtures replayable.
+- **`catalog_version` 1.0.0 → 1.1.0.** No message went breaking, so the catalog major does not
+  move. Recorded semantics: major on any breaking message, minor on an addition or additive
+  bump, patch on editorial. `vault.index-request` went 1.0.0 → 2.0.0 inside generation 1.0.0
+  before these semantics existed; that generation is recorded as `initial`, the strongest kind,
+  so the rule holds across it without a special case. Recorded rather than tidied.
+- **Two to-dos marked satisfied by Phase 0 rather than rebuilt.** The canonical failure and
+  rejection contracts: `contracts/payloads/component.failure.json` and
+  `contracts/payloads/operation.rejected.json`, wired in `graphs/read-render.json`, with
+  `graph-prepare.mjs` → `REQUIRED_CONTROL_WIRING` rejecting a component whose failure would be
+  invisible. Maximum payload bounds: every field on the six document-plane contracts carries
+  `maxLength` or `maxItems`.
+- **One correction to the brief, stated rather than smoothed over.** "Every payload already
+  carries maxLength or maxItems bounds" holds for the document plane but not the control plane:
+  `component.failure.reason`, `component.failure.detail`, `component.ready.component_name`,
+  `lifecycle.start.graph_name`, and `operation.rejected.reason` have no ceiling, and the
+  envelope's `correlation_id`, `causation_id`, and `timestamp` are unbounded above. None is
+  reachable from vault content, so the pathological-vault risk the item names is closed; the
+  residual risk is an unbounded component-authored reason string, which is a supervision concern.
+  Not fixed here: the item was scoped out of this phase, and adding a bound to an existing field
+  is a narrowing, so closing it means five breaking bumps inside a batch whose catalog generation
+  is declared additive. Recorded with the exact one-line rule in `Architecture/Phase1Evidence.md`.
+- **Files/areas:** new `runtime/contract-versions.mjs`, `contracts/catalog.schema.json`,
+  `contracts/CONTRACTS.md` (generated), `tools/generate-contract-docs.mjs`,
+  `tests/contract-governance.test.mjs`, `tests/replay.test.mjs`, sixteen fixtures plus an index
+  under `tests/fixtures/replay/`, and `Architecture/Phase1Evidence.md`. Changed
+  `contracts/catalog.json`, `contracts/payloads/lifecycle.start.json`,
+  `contracts/payloads/operation.rejected.json`, `contracts/README.md`,
+  `runtime/contract-registry.mjs`, `runtime/component-host.mjs`, `runtime/kernel.mjs`,
+  `tests/component-standalone-harness.html`, `tests/component-standalone.mjs`,
+  `tests/kernel-harness.html`, `tests/kernel-browser.mjs`, `package.json`, `README.md`,
+  `TODO.md`, `ROADMAP.md`, `DECISIONS-PENDING.md`, `Architecture/KernelAuthority.md`,
+  `Architecture/ComponentAuthoring.md`, and canonically this changelog and `capabilities.md`.
+- **User-visible impact:** None. The POC UI is untouched and the graph's behaviour is unchanged
+  for every message at its current version.
+- **Tests run:** final post-change state, in workflow order.
+
+| Gate          | Command                            | Scope                             | Result                                                                            |
+| ------------- | ---------------------------------- | --------------------------------- | --------------------------------------------------------------------------------- |
+| audit         | `npm.cmd audit --audit-level=high` | project dependencies              | **0 vulnerabilities**                                                             |
+| install       | `npm.cmd install`                  | project                           | **0 vulnerabilities**                                                             |
+| node          | `npm.cmd test`                     | `tests/*.test.mjs`                | **58/58 passed**, 0 failed                                                        |
+| contracts     | `npm.cmd run contracts:check`      | catalog, owners, history, schemas | **10 governed messages**, catalog **1.1.0**, `ok`                                 |
+| contract docs | `npm.cmd run contracts:docs:check` | `contracts/CONTRACTS.md`          | **current** (10 messages, catalog 1.1.0)                                          |
+| graph         | `npm.cmd run graph:check`          | `graphs/read-render.json`         | **accepted: 5 components, 23 wires**, no unwired port                             |
+| kernel        | `npm.cmd run test:kernel`          | real Chromium                     | **19/19 checks passed**                                                           |
+| standalone    | `npm.cmd run test:standalone`      | each component's declared ports   | **17/17 focused checks passed**                                                   |
+| verify        | `npm.cmd run verify`               | every gate above plus formatting  | **exit 0**; 3 worker-count measurements, no threshold; `prettier --check .` clean |
+
+- **Tests added/updated:** `tests/contract-governance.test.mjs` (27 checks: the compatibility
+  table, the version-step table, version parsing and ordering, six envelope-level policy cases,
+  thirteen catalog-governance refusals, two `@protocol` ownership proofs, and both documentation
+  gate checks) and `tests/replay.test.mjs` (7 checks over sixteen fixtures). The node suite went
+  24 → 58. The kernel browser suite gained one check (18 → 19): every component records the
+  catalog generation it started under. The standalone browser suite gained five (12 → 17): the
+  live-worker replay. The existing 24 node checks and 18 kernel checks were not weakened.
+- **Negative tests, because a gate that cannot fail is not a gate:** the documentation drift
+  gate is exercised by appending a line to `contracts/CONTRACTS.md`, asserting the checker exits
+  non-zero with `has drifted from the catalog`, and restoring the file — that assertion is
+  committed, not a one-off. Thirteen catalog-governance tests each mutate the real catalog and
+  assert the registry refuses to be built, including a plane change recorded as additive and a
+  breaking message change placed in an additive catalog generation.
+- **Regression impact:** The graph is unchanged at 5 components and 23 wires; `graph:check`
+  reports no declared-but-unwired port. The kernel holds zero document-wire ports after
+  bootstrap, and every projection the DOM owner received still lacks `text`. The missing-document
+  and malformed-path proofs still produce exactly one `operation.rejected` and zero
+  `component.failure`. The replacement proof still swaps `markdown-renderer-minimal` in with a
+  byte-identical wire list. Relaxing the version check from exact-match to the compatibility
+  policy is the one behavioural change to a shared boundary: the previously-guarded
+  `vault.index-request` 1.0.0 rejection still fails and still contains `envelope declares`, and
+  is now additionally covered by a machine-readable `version_conflict` assertion. Six protected
+  POC files verified byte-identical to `Cairn-POC-v1-2026-08-20/Cairn/` by SHA-256, and
+  `vendor/markdown-renderer.js` verified byte-identical to `WorkLists/public/markdownRenderer.js`
+  by `diff`.
+- **API docs:** Not relevant — no HTTP surface in this project. Checked: no route, method, DTO,
+  status, or auth metadata exists to change. The contract catalog is the analogous artifact and
+  its generated documentation is covered by `contracts:docs:check` above.
+- **Tooling gates:** `audit` — clean at 0 vulnerabilities. `lint` — not applicable: this repo
+  has no lint script; `format:check` is the gate and passes. `contracts:docs:check` is new and is
+  chained into `verify` from this phase onward.
+- **Conflicts / exceptions:** One brief correction, recorded above: the maximum-payload-bounds
+  item was described as already satisfied for every payload, and it is satisfied for the document
+  plane only. Marked satisfied for the risk it names, with the control-plane gap and its closing
+  rule recorded rather than silently fixed. No runtime dependency was added; `prettier` remains
+  the only dependency and is dev-only. No decision in `DECISIONS-PENDING.md` changed state —
+  `ADP-001` remains the only one scheduled to, in Phase 4. `TST-001` narrows and stays open: the
+  POC's checkbox splice and split-pane geometry remain unguarded until Phase 7.
 
 ### 2026-08-21T00:00:00Z — Prettier declared as a dependency; the formatting gate is real again
 

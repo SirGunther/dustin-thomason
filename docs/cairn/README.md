@@ -6,11 +6,13 @@ do, what was decided and why, and what was verified in each development session.
 Cairn is a markdown vault UI — a folder of notes that reads like OneNote and behaves like
 VS Code — intended for eventual integration into WorkLists.
 
-Phase 0 implementation is complete; closure is pending the manual directory-picker result.
-The original UI POC remains a direct-open, zero-build artifact; the Phase 0 worker graph and
-its browser probes require a served origin. The graph now has four independently valuable
-DOM-free components plus the privileged DOM owner, with the Phase 0D evidence recorded in
-`PDProjects/Cairn/Architecture/Phase0DEvidence.md`.
+Phase 0 closed 2026-08-22 with the manual directory-picker result; Phases 1 through 6 —
+contract governance, supervision, identity/ordering/revisions, the vault read boundary,
+document state ownership, and the write path — landed the same day. **No file anyone chose has
+been written**; two gesture-driven probes are pending a manual run. The original UI POC remains a direct-open, zero-build artifact;
+the worker graph and its browser probes require a served origin. The graph has **seven**
+independently valuable DOM-free components plus the privileged DOM owner, with evidence in the
+`PDProjects/Cairn/Architecture/Phase*Evidence.md` series.
 
 ## Start here
 
