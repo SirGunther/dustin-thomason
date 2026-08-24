@@ -10,6 +10,30 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### 2026-08-24 — GitHub and local workspace migration
+
+- **Outcome:** Migrated the complete Argus working directory from OneDrive to `C:\Argus` and pushed the source, contracts, architecture, documentation, and immutable POC baseline to [SirGunther/Argus](https://github.com/SirGunther/Argus) at commit `0f30b0b9fe7c8960c19955bf526778514c8a2ca9`.
+- **Repository boundary:** Generated dependencies, runtime output, models, and Electron build artifacts remain available locally under `C:\Argus` but are excluded from Git. The preserved POC folder, ZIP, and checksum sidecar now live under `C:\Argus\archive`.
+- **Verification:** The local `main` SHA exactly matched GitHub `main`; 415 files were tracked; the worktree was clean; no deployable credentials were found; and the archived ZIP matched the source SHA-256 `FCED3C8652A999EF7F82F9E6546121E71AF839130D960C133DC3459F8BCC3E11` before OneDrive removal.
+
+### 2026-08-24T21:01:07Z — Argus real Electron operational completion
+
+- **Provisioning:** `npm.cmd run setup:real` now fails closed and idempotently provisions whisper.cpp v1.9.1, `ggml-base.en.bin`, Ollama 0.32.15, and `llama3.2:3b`, recording exact paths, model identity, and SHA-256 values only after real probes pass.
+- **Runtime behavior:** Physical capture measures actual audio energy, requires genuine speech, and queues a bounded 1,200 ms pause flush while continuing capture. Whisper utterance and word identities advance across repeated flushes while provider timestamps/probabilities and temporary-file cleanup are preserved.
+- **Lifecycle:** Added governed `session.new`; closed sessions remain persisted/read-only and the trusted Electron/Node boundary creates the next session identity through the lifecycle owner.
+- **Packaging:** The installed path bundles the final Whisper executable, required DLLs, and model while excluding the source/build cache.
+- **Verification boundary:** Dependency provisioning, source production startup, capability probes, contract drift checks, and Record → Stop → Close → New Session checks passed. The final unpacked package currently terminates on this Windows machine because its Chromium GPU helper reports `0xC0000135`, followed by Electron `0x80000003`; physical-microphone spoken-input acceptance, accuracy/latency/resource measurements, and optional classification remain pending/deferred.
+
+### 2026-08-24T20:00:00Z — Argus standalone Electron integration
+
+- **Outcome:** Implemented the real standalone Electron application path. The main process owns media permission requests, the durable user-data session root, host capabilities, shutdown, and the supervised production graph; the context-isolated preload exposes only validated bootstrap, command, bounded audio-chunk, capture-failure, capability, and projection channels.
+- **Real adapters:** Added Electron `getUserMedia` capture with an AudioWorklet resampler and bounded PCM16/16 kHz/mono chunks; added the whisper.cpp `v1.9.1` adapter using provisioned `ggml-base.en.bin`; and adapted the provider-neutral model lane to Ollama `llama3.2:3b` without SDK coupling or fake fallback.
+- **Provisioning:** Added `npm.cmd run setup:real`, which builds whisper.cpp, downloads the model, records SHA-256 and paths, and records Ollama availability in `runtime-output/real-dependencies.json`. Missing real dependencies remain visible as degraded capabilities.
+- **Packaging:** Added Electron Forge configuration and `npm.cmd run package:win`; rebuilt the Squirrel installer, win32/x64 zip, and unpacked executable. The source host startup smoke passed; packaged startup remains blocked by the Windows GPU-helper failure recorded in the current operational evidence.
+- **Governance:** Added the production graph, `audio.flush` contract, real STT/model service manifests, interactive supervised graph host, Node-runtime enforcement taxonomy, ADR-019, and resolved implementation choices for `APP-001`, `AUD-002`, `STT-001`, and `MOD-001`. `SEC-001`, native/OCI execution, and physical microphone/model acceptance remain open.
+- **Verification:** Graph validation passed for 12 components/19 wires; contract governance passed for 54 messages; generated contract docs and 7 graph packages verified; supervised lifecycle smoke passed Record/Stop/Close with durable evidence; syntax checks passed; Windows artifacts built successfully.
+- **Next:** Repair packaged Windows startup, then use a physical microphone with Ollama available and record accuracy, latency, resource, and failure evidence.
+
 ### 2026-08-22T13:16:34Z — Argus Phase 8 independent review
 
 - **Outcome:** Independently re-ran the Phase 8 package, focused, UI-smoke, full-regression, contract, generated-document, and dependency-audit gates. Package verification passed for all 6 graphs; Phase 8 passed 20/20; UI smoke passed with 24 projections; the repository passed 137/137; all 53 governed messages passed; generated contract documentation was current; and the dependency audit found 0 vulnerabilities.
@@ -40,7 +64,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 - **Summary:** Corrected the three Phase 7 issues found during the second hands-on review. Incoming projections now reconcile keyed rows without replacing an active editor; exact logged-item provenance persistently highlights the complete contributing transcript range; and optional classification is visibly separate, non-authoritative, independently unavailable or degraded, and non-blocking for logged-item editing.
 - **Verification:** Focused regression tests passed 10/10; the deterministic UI smoke passed with 24 projections; the complete regression passed 117/117; contract governance remained valid for 53 messages; generated contract documentation remained current.
-- **User validation:** Created a fresh [Phase 7 corrective revalidation review](../../../Users/dktho/OneDrive/PDProjects/Argus/docs/review/v0.1.0-phase-7-corrective-revalidation-validation-review.md). Its four objectives are pending Dustin's hands-on confirmation, and the superseded review remains unchanged as historical evidence.
+- **User validation:** Created a fresh [Phase 7 corrective revalidation review](../../../Argus/docs/review/v0.1.0-phase-7-corrective-revalidation-validation-review.md). Its four objectives are pending Dustin's hands-on confirmation, and the superseded review remains unchanged as historical evidence.
 - **Scope:** Focused Phase 7 presentation corrections only. No owner, command route, contract, transport, listener scope, framework, Phase 8 behavior, microphone, STT, or model integration changed.
 
 ### 2026-08-21 — Argus
@@ -53,7 +77,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ### 2026-08-21 — Argus
 
-- **Summary:** Created the version-specific Phase 7 browser POC [user validation review](../../../Users/dktho/OneDrive/PDProjects/Argus/docs/review/v0.1.0-phase-7-browser-poc-validation-review.md) for Argus v0.1.0.
+- **Summary:** Created the version-specific Phase 7 browser POC [user validation review](../../../Argus/docs/review/v0.1.0-phase-7-browser-poc-validation-review.md) for Argus v0.1.0.
 - **Validation status:** Empty-state layout and visual clarity passed. Hands-on review then found no observable Record, transcript/logged-item, editing/copy, or session-command response, so D2–D5 failed and D1 remains pending clarification. The linked review now contains the corrective checklist; Phase 8 should wait for revalidation.
 - **Implementation impact:** Documentation only. No application behavior, contract, wiring, package, or test result changed.
 
@@ -353,7 +377,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 - **Summary:** Established `C:\dustin-thomason\docs\Argus` as the canonical project-memory location and created an indexed documentation set: this changelog, a comprehensive capability/control inventory, and a product/layout decision register. Added a short `DOCS.md` pointer to the live Argus repository so contributors reach the canonical record without creating a duplicate changelog.
 - **Plan used:** Inspect the agents changelog rules and existing personal-project examples; inventory the live UI, architecture, contracts, services, wiring, tests, backlog, and immutable POC archive; create canonical documents; verify links and rerun the architecture suite; record the evidence here.
-- **Files/Areas:** `C:\dustin-thomason\docs\Argus\README.md`, `argus-app-changelog.md`, `features-and-capabilities.md`, `product-and-layout-decisions.md`; `C:\Users\dktho\OneDrive\PDProjects\Argus\DOCS.md`.
+- **Files/Areas:** `C:\dustin-thomason\docs\Argus\README.md`, `argus-app-changelog.md`, `features-and-capabilities.md`, `product-and-layout-decisions.md`; the live repository's `DOCS.md` (now at `C:\Argus\DOCS.md`).
 - **User-visible impact:** The working application is unchanged. Future development now has one discoverable source for what Argus currently does, what every visible control means, which features are simulated or deferred, why layout/product decisions exist, and how each session was verified.
 - **Tests run:**
 
@@ -376,7 +400,7 @@ Argus has two complementary POC layers:
 
 The initial architectural ambiguity around hidden startup, supervision, result, and completion authority has been resolved: these capabilities occupy typed control/domain wires, while the runtime kernel retains only a finite documented set of process-hosting, validation, and permission-translation mechanics.
 
-The live workspace is `C:\Users\dktho\OneDrive\PDProjects\Argus`. The immutable comparison baseline is `Argus-POC-v1-2026-08-12` beside the live workspace, with a ZIP and SHA-256 sidecar. Canonical project memory is this `C:\dustin-thomason\docs\Argus` directory.
+The live workspace is `C:\Argus`, backed by [SirGunther/Argus](https://github.com/SirGunther/Argus). The immutable comparison baseline is stored under `C:\Argus\archive`, with its ZIP and SHA-256 sidecar. Canonical project memory is this `C:\dustin-thomason\docs\Argus` directory.
 
 Phases 1 through 8 are implemented for review. Phase 4E has direct evidence for seven of eight claims; its active-history bound was addressed by Phase 6 durable storage. Phase 5B.1 provides strict versioned model request/result boundaries, bounded outputs and pending state, explicit retryable failure, loopback-only transport, scoped configuration, and optional revision-bound classification against a deterministic local endpoint — no production server or model is selected. Phase 7 is user-revalidated for D1–D4, with the editor-position bug deferred as Phase 7A and still open.
 
@@ -427,3 +451,10 @@ These date-level milestones reconstruct the work completed before this canonical
 | 2026-08-12 | Explicit control-plane resolution | Made lifecycle, supervision, result collection, and completion visible graph participants; documented the finite runtime kernel authority. |
 | 2026-08-12 | POC v1 preservation | Created an immutable comparison folder, ZIP, and SHA-256 sidecar without changing the live project. |
 | 2026-08-12 | Runtime supervision proof | Added runtime-neutral provider boundary, readiness, operation outcomes, drain, queue bounds, timeout, retry/dead-letter, restart/recovery, and scaling evidence. |
+# 2026-08-24 — Electron operational completion
+
+Implemented and provisioned the remaining real Electron path. `npm.cmd run setup:real` now fails closed and idempotently provisions whisper.cpp v1.9.1, `ggml-base.en.bin`, Ollama 0.32.15, and `llama3.2:3b`, recording exact paths, model identity, and SHA-256 values only after real probes pass. The packaged app bundles the final Whisper executable, required DLLs, and model while excluding the source/build cache.
+
+Physical capture now uses actual audio energy to gate a bounded 1,200 ms pause flush, continues recording after finalization, and preserves repeated Whisper utterance/word identity plus provider timestamps/probabilities. Added governed `session.new`; closed sessions remain persisted/read-only and the trusted Electron/Node boundary creates the next session identity through the lifecycle owner.
+
+Operational status: dependency provisioning, production startup, capability probes, contract drift checks, and Record → Stop → Close → New Session lifecycle checks passed. Physical-microphone spoken-input acceptance, accuracy/latency/resource measurements, and optional classification remain pending/deferred.

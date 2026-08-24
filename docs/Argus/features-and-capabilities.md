@@ -1,13 +1,26 @@
 # Argus Feature and Capability Catalog
 
-This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishes visible simulation from executable architecture so the prototype is not mistaken for a production implementation.
+This catalog describes the Argus standalone application as it exists on 2026-08-24. It distinguishes the deterministic browser POC from the executable Electron production path and records the remaining physical acceptance evidence.
 
 ## Status legend
 
 - **UI POC:** implemented in browser HTML/CSS/JavaScript; behavior is locally simulated.
+- **Standalone integrated:** implemented in the Electron host and production graph; real external dependencies may still be visibly unavailable until provisioned.
 - **Architecture proof:** executed through isolated Node processes and covered by automated tests.
 - **Specified:** behavior or boundary is documented but not yet connected end to end.
 - **Deferred:** intentionally reserved for a later implementation slice.
+
+## Standalone Electron host
+
+| Surface or capability | Status | Current behavior | Implementation reference |
+| --- | --- | --- | --- |
+| Desktop host | Standalone integrated / packaged launch blocked | Electron owns the application window, media permission boundary, durable per-user session root, host capabilities, supervised graph, and shutdown. The unpacked Windows package currently hits a GPU-helper startup failure on this machine. | `electron/main.cjs`; `wiring/production-electron.json` |
+| Renderer boundary | Standalone integrated / packaged launch blocked | Context isolation is enabled, Node integration is disabled, and preload exposes only validated bootstrap, command, audio, flush, failure, capability, and projection channels. | `ui/desktop-preload.cjs` |
+| Real microphone capture | Standalone integrated / physical acceptance pending | `getUserMedia` captures mono input; an AudioWorklet resamples to 16 kHz; bounded PCM16 chunks carry sequence, time, length, and SHA-256 evidence. | `ui/audio-capture.mjs`; `ui/audio-worklet.mjs` |
+| Real transcription | Standalone integrated / provisioned; physical acceptance blocked | whisper.cpp `v1.9.1` with `ggml-base.en.bin` emits actual partials, token probabilities, word timing, punctuation hint, and terminal boundaries. Missing runtime/model is a visible unavailable capability. | `services/whisper-cpp-stt`; `scripts/setup-real-dependencies.mjs` |
+| Real local model | Standalone integrated / provisioned; physical acceptance blocked | Ollama `llama3.2:3b` is selected behind the provider-neutral HTTP lane. JSON-only response parsing rejects malformed or guessed output; no fake fallback is activated. | `services/serial-ai-model-lane`; `MOD-001` |
+| Durable lifecycle | Standalone integrated | Record, Stop, Resume, and Close route through the real session lifecycle and root-scoped filesystem storage. Stop/Close flush the audio wire before lifecycle transition. | `runtime/desktop-application.mjs`; `runtime/session-storage.mjs` |
+| Windows distribution | Built; launch blocked on this machine | Electron Forge produces Squirrel installer, win32/x64 zip, and unpacked executable artifacts. The unpacked executable currently terminates when its Chromium GPU helper reports `0xC0000135`, followed by Electron `0x80000003`. | `forge.config.cjs`; `npm.cmd run package:win`; `Architecture/RealElectronOperationalEvidence.md` |
 
 ## Primary window
 
@@ -91,7 +104,7 @@ This catalog describes the Argus POC as it exists on 2026-08-19. It distinguishe
 | Separate append-only logged-item history | Architecture proof | A second in-memory owner accepts each exact revision idempotently and emits a stable append acknowledgement; it has no update port. | `services/permanent-logged-item-history`, `logged-item.history-append` |
 | User-authoritative update proposals | Architecture proof | Model-like updates are recorded as proposals and cannot replace active text until an explicit user acceptance; rejection produces no active revision. | `logged-item.update-proposed`, `logged-item.proposal-resolve` |
 | Deterministic logged-item pipeline | Architecture proof | Finalized context windows flow through either deterministic extractor to active state, permanent history, and an explicit evidence observer in a default-deny six-service graph. | `wiring/demo.logged-item-pipeline.json` |
-| Model-backed extraction | Architecture proof / production runtime deferred | A governed provider-neutral local HTTP adapter sends exact finalized context through `logged-item-extraction` on the graph's concurrency-one model lane; deterministic concise/passthrough fakes remain available. Strict versioned request/result shapes, loopback-only endpoint validation, bounded pending state, and a deterministic loopback endpoint prove behavior, but no production model/server is selected. | `services/log-extractor-local-http`; `services/serial-ai-model-lane`; `contracts/ai-work-request.schema.json`; `contracts/ai-work-completed.schema.json`; `Architecture/LoggedItemModelPhase5BEvidence.md`; MOD-001 |
+| Model-backed extraction | Standalone integrated / provisioning pending | The provider-neutral local HTTP adapter sends exact finalized context through `logged-item-extraction` on the graph's concurrency-one model lane; the standalone path selects Ollama `llama3.2:3b` while deterministic fakes remain available for tests. Strict versioned request/result shapes, loopback-only endpoint validation, bounded pending state, and JSON-only response parsing remain enforced. | `services/log-extractor-local-http`; `services/serial-ai-model-lane`; `contracts/ai-work-request.schema.json`; `contracts/ai-work-completed.schema.json`; `Architecture/LoggedItemModelPhase5BEvidence.md`; MOD-001 |
 | Automatic classification | Architecture proof / UI deferred | Classification is a separate optional suggestion, bound to the stored item revision and evidence segment IDs, receives the exact finalized transcript context through an explicit wire, runs through lowest-priority `classification-enrichment`, and cannot block or mutate primary text. It is not a live-list identity and has no current badge. | `services/logged-item-classification-suggester`; `classification.suggestion` |
 | LLM revision of an existing item | Deferred | Current simulation appends items; it does not revise an existing item. Future proposals must not silently overwrite user edits. | Architecture backlog |
 | Delete row | Deferred / undecided | No transcript or logged-item delete button currently exists. Deletion semantics, provenance impact, and recovery need an explicit decision. | No current control |
@@ -199,7 +212,7 @@ The Phase 7 demo starts with `npm.cmd run demo:ui` and opens at `http://127.0.0.
 | Deterministic inspectable packages | Architecture proof | `npm run package:graph` writes one artifact per graph recording the graph, contract catalog and every schema/changelog, each manifest with fully expanded authority and declared files, the shared component libraries, and an integrity block with a package digest. `npm run package:graph:verify` re-derives and compares. | `runtime/package-inventory.mjs`; `scripts/package-graph.mjs` |
 | Package refusals | Architecture proof | Path escape, undeclared component files, secrets, and integrity drift are refused with explicit codes. The undeclared-file rule forced three components to declare their helper modules through `runtime.includes`. | `PACKAGE_PATH_ESCAPE`; `UNDECLARED_PACKAGE_FILE`; `PACKAGED_SECRET_DETECTED`; `PACKAGE_INTEGRITY_VIOLATION` |
 
-The intended enforcement matrix separates Node-runtime-enforced, adapter/configuration-restricted, and deferred claims. The executable matrix still needs the terminology-only correction recorded in the live `TODO.md`: outbound configuration is restricted, but this Node host does not contain direct sockets. Full evidence is in `Architecture/PermissionsPackagingPhase8Evidence.md`; ADR-018 records the decision. Native and OCI proofs remain evidence-triggered under `NAT-001` and `CNT-001` because no compiler and no container engine is installed.
+The intended enforcement matrix separates Node-runtime-enforced, adapter/configuration-restricted, and deferred claims. Outbound configuration is restricted, but this Node host does not contain direct sockets. Full evidence is in `Architecture/PermissionsPackagingPhase8Evidence.md`; ADR-018 records the decision. Native and OCI proofs remain evidence-triggered under `NAT-001` and `CNT-001` because no compiler and no container engine is installed.
 
 ## Contract and service inventory
 
@@ -212,9 +225,9 @@ The intended enforcement matrix separates Node-runtime-enforced, adapter/configu
 
 ## Known boundaries before a product build
 
-- The HTML POC and Node architecture proof are not wired together.
-- No microphone, audio capture, VAD, STT provider, production LLM provider/model, or model credentials are present. Phase 5B.1 uses only a deterministic loopback HTTP endpoint, and the model variables are allowlisted only to the components that require them.
-- No package, SDK, real provider, production threshold, storage engine, or future desktop/product host has been selected for Phase 4; the browser/Node POC host is accepted and every remaining choice has an evidence trigger in `PENDING-DECISIONS.md`.
+- The HTML POC and Node architecture proof remain available as a deterministic comparison path; the packaged Electron host uses the production graph and does not import the demo bridge.
+- Real microphone, whisper.cpp STT, and Ollama model integration are present but require `npm.cmd run setup:real` and physical-device/model acceptance. No external model credentials are selected.
+- Production audio cadence, speech accuracy, model quality, resource thresholds, update/signing, and durable global AI journaling remain evidence-triggered in `PENDING-DECISIONS.md`.
 - The Phase 6 session filesystem, archive, close recovery, and folder locator are implemented as a local replaceable POC boundary; Phase 7 consumes only a storage/session availability projection and routes folder actions by session identity through a capability adapter.
 - Finalized active transcript revisions are evicted from a bounded in-memory cache after durable acceptance and resolve through permanent history. This proves the POC bound without claiming production memory accounting.
 - The revision, stale-result, logged-item proposal, lifecycle, and storage contracts are proven; delete behavior, backup, synchronization, encryption, migrations, and production durability are not present.
@@ -224,4 +237,11 @@ The intended enforcement matrix separates Node-runtime-enforced, adapter/configu
 - The browser drawer shows capability-neutral owner labels; it does not read or expose session file paths.
 - The current browser implementation uses the internal word `derived` in some IDs/storage names; the user-facing product term is `Logged Item`.
 
-The prioritized engineering backlog remains in the live repository's `TODO.md`. Phases 4A through 4F, Phase 5A/5B.1, Phase 6, and Phase 7 corrective revalidation are complete. Phase 8 behavior and packaging pass, with one terminology-only enforcement-matrix correction open before closeout; the Phase 7A editor-position bug is explicitly deferred. Actual native/OCI provider proofs remain evidence-triggered because their toolchains are not installed and must not be installed without authorization. Phase 9 observability has not started. Unresolved technology and product selections, including `APP-001`, `UI-001`, `UI-002`, `SEC-001`, `NAT-001`, and `CNT-001`, are governed by `PENDING-DECISIONS.md`.
+The prioritized engineering backlog remains in the live repository's `TODO.md`. Phases 4A through 4F, Phase 5A/5B.1, Phase 6, Phase 7 corrective revalidation, and the Electron standalone integration are implemented. The next acceptance slice is real dependency provisioning plus physical microphone/model measurement; the Phase 7A editor-position bug is explicitly deferred. Actual native/OCI provider proofs remain evidence-triggered because their toolchains are not installed and must not be installed without authorization. Phase 9 observability has not started. Unresolved technology and product selections, including `UI-001`, `UI-002`, `SEC-001`, `NAT-001`, and `CNT-001`, are governed by `PENDING-DECISIONS.md`.
+# Current operational status — 2026-08-24
+
+The Windows Electron path is operationally provisioned for final user validation, but packaged startup is blocked on this machine by the Chromium GPU helper (`0xC0000135`, followed by Electron `0x80000003`). It uses real Electron microphone capture, pinned whisper.cpp v1.9.1 with `ggml-base.en.bin`, and Ollama `llama3.2:3b` through the governed local model lane. Missing dependencies fail visibly; no fake audio, fake STT, deterministic extractor, demo-state, or simulated fallback participates in the packaged path.
+
+The capture pipeline detects pauses from actual microphone energy, requires genuine speech, flushes after a bounded 1,200 ms pause, and continues recording. Repeated utterances receive distinct authoritative identities. Stop and Close flush; Close seals persisted data; New Session creates a new lifecycle-owned identity and leaves the closed session available for read-only review.
+
+Physical-input acceptance is blocked until packaged startup is repaired. After that, launch the rebuilt package, grant microphone access, speak multiple separated statements, and review real transcript/logged-item output. Optional classification remains deferred and is not advertised as available.
