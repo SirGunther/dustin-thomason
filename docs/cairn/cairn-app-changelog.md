@@ -31,15 +31,16 @@ Running changelog for Cairn, a markdown-vault UI intended for integration into t
 
 ## Current state
 
-**Phase:** **The nine-phase architecture run is complete, and no manual step remains.** Both gesture-driven probes ran by hand in Chromium on 2026-08-23 against real picked folders and passed, so `ADP-001` and `ADP-002` are proven against a real folder rather than an OPFS stand-in. Phases 0 through 9 all landed on
+**Phase:** **The nine-phase architecture run is complete and the application is usable.** The app saves to a picked folder end to end. The first field test on a real vault, 2026-08-23, returned **ten open items** — four bugs, four unbuilt features, two tasks — tracked in `ROADMAP.md` under **Field-test defects (2026-08-23)**. `FEAT-001` (inline editing in preview) is the one blocking ordinary use, and `EDN-001` is reopened to decide it. Underneath that, `ADP-001` and `ADP-002` are proven against a real picked folder rather than an OPFS stand-in. Phases 0 through 9 all landed on
 2026-08-22. Phase 9 added observability and acceptance: a route-level trace assembled from what
 components report about themselves, correlation chains walked causally, a generated graph
 diagram, deterministic replay for the pure functions that make replay mean anything, five kinds
 of injected fault, and eight acceptance budgets whose _shape_ is checked rather than trusted.
 
-**The one thing left undone is the two manual probes**, and the second of them matters: until
-`Architecture/probes/vault-write-path.html` runs, **no file anyone chose has ever been written by
-this system**.
+**Files a person chose are now written.** Both gesture-driven probes ran by hand and passed,
+and the application itself saves: attach a folder, tick a checkbox, `Ctrl` `S`, exactly one line
+changed on disk. What is left undone is the ten field-test items above, and the folder-add
+regression check that would have caught the read-only defect this session fixed.
 
 Phase 8, permissions and packaging, remains true underneath it: Authority is declared in the
 manifest, denied by default, and — this is the part that took the work — the denials are
@@ -178,6 +179,938 @@ gesture-driven probe and is **PENDING MANUAL RUN**.
 ## Session log
 
 _Newest first. Add one entry per working session or merge-worthy update._
+
+### 2026-08-24T00:00:00Z — The caret jumped to the top on every edit: reconciliation was never running
+
+- **Summary:** The reconciliation added last session -- meant to stop the caret being destroyed on
+  every commit -- never executed. One line decided it, and it was the wrong line. Fixed, gated, and
+  a forty-line helper written on a theory was removed once a negative test showed it did nothing.
+- **Problem:** Every edit sent the caret to the start of the document about a second after typing
+  stopped -- the commit debounce. Reconciliation was supposed to prevent exactly this.
+- **Requirement:** An edit must not move the caret, and the reason it does not must be checkable.
+- **Solution:** `drawProjection` maintains its own `dataset.path` marker instead of trusting a
+  caller to, plus a shell check that fails if the wholesale redraw returns.
+
+### A MutationObserver settled it in one run
+
+```text
+before typing : caret block 2, offset 6, original node attached
+just after    : caret block 2, offset 8, original node attached
+after commit  : caret block -1, offset 0, original node DETACHED
+mutations     : { type: childList, target: ARTICLE, added: 5, removed: 5 }
+```
+
+`added: 5, removed: 5` -- every block replaced. So reconciliation was not running at all.
+
+**Why:** it compared `mount.dataset.path` against the incoming path to decide whether this was the
+same document. Two callers exist -- the DOM owner's mount path and the shell's `renderDoc` -- and
+only the DOM owner set that marker. The shell, which is the one that actually draws, never did. So
+the comparison was always `undefined !== path`, every commit took the different-document branch, and
+every node was replaced.
+
+An invariant a function depends on is one that function should maintain. It now writes the marker
+itself, in both branches, and the caller cannot forget.
+
+### A helper removed because a negative test said it was idle
+
+The same change added `patchTextInPlace`: forty lines that walked two block trees and wrote text
+into existing nodes rather than replacing the element, on the reasoning that the edited block's
+markup always changes and so its caret always dies.
+
+Disabling it changed nothing -- the guard still passed. The reasoning was wrong: by the time a
+projection arrives, the browser has already put the typed text in the DOM, so the block being typed
+in **already matches what is arriving**. The projection is confirmation, not news, and the plain
+identical-markup check already skips it.
+
+Removed rather than kept. Forty lines that claimed to protect the caret and did not would have taken
+the credit for this fix and gone untested indefinitely.
+
+### The gate that should have existed two sessions ago
+
+Caret handling has now been patched six times -- block index, source line, focus order,
+nearest-block fallback, not-redrawing-what-did-not-change, and this. Every one of those shipped with
+no check, so each was free to reintroduce the last one's bug, and the user reported the same symptom
+three times in different clothes.
+
+Two checks in `tests/shell-browser.mjs` assert the property rather than the mechanism: after an edit
+settles the caret is in the same block at the same offset, **and the text node it was in was never
+detached**. The second is the one that bites -- a caret can be restored to the right place and still
+have visibly jumped on the way; a node that was never detached cannot have.
+
+Proven by reinstating the wholesale redraw: `afterCommit: {block: -1, offset: 0}`,
+`sameNodeStillAttached: false`. The exact symptom reported, caught by name.
+
+- **Files/areas:** `components/dom-owner/index.js`, `tests/shell-browser.mjs`.
+- **User-visible impact:** Editing no longer moves the cursor.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | Cairn | pass, 0 vulnerabilities | — |
+| lint | — | Cairn | not applicable | no `lint` script; `format:check` is the equivalent gate and runs inside `verify` |
+| tests | `npm run verify` | all 14 gates | **14/14 pass, exit 0** | shell 42 → 44 |
+
+- **Tests added/updated:** Two shell checks, proven to fail when the redraw is reinstated. This
+  closes the gap recorded in the previous two entries.
+- **Regression impact:** `graph:check` still reports 9 components and 127 wires; no component,
+  contract, or wire changed. `drawProjection` reads only the markup it is handed and the projection
+  still carries no authoritative text -- both audits asserting that still pass. `vendor:check` 4/4.
+- **API docs:** Not relevant — no HTTP surface.
+- **Tooling gates:** `audit` clean; `format:check` clean; `verify` exit 0.
+- **Conflicts / exceptions:** I reported the previous session's residual caret loss as "one loss at
+  one moment" when the evidence in that same session showed `blockIndex: -1` after typing -- which is
+  every edit that commits. That was an understatement of a defect I had measured, and the user found
+  it before I did. Still open: `BUG-001`, `FEAT-002`, `FEAT-003`, `FEAT-004`, `TST-001`, `TT-001`.
+  **Cairn is still not a git repository** -- fifth session.
+
+### 2026-08-24T00:00:00Z — The caret stopped moving on its own; the mechanism meant to save it was moving it
+
+- **Summary:** The user reported the cursor jumping unpredictably after Enter -- to the end of the
+  previous sentence, to a prior paragraph, once to the very top of the document. Instrumented,
+  traced, and fixed by removing work rather than adding more.
+- **Problem:** Every commit redrew the whole document, so the caret's nodes were destroyed on every
+  settled keystroke and had to be re-derived. The re-derivation could fail, or succeed differently,
+  depending on the new block map -- which is why one cause produced three different destinations and
+  looked random from the outside.
+- **Requirement:** Typing must not move the caret. Pressing Enter at the end of a document must
+  leave it where it is.
+- **Solution:** Two changes, both subtractive. Blocks whose markup is unchanged are no longer
+  replaced, and an edit consisting only of empty appended blocks is no longer committed at all.
+
+### Instrumented before changing anything
+
+```text
+before                          after
+Enter 1: caret block 5          Enter 1: caret block 5
+Enter 2: caret block 4 off 28   Enter 2: caret block 6
+Enter 3: caret block 5          Enter 3: caret block 7
+type   : "# more textTitle"     type   : "...at the end.\n\n\nhello\n"
+```
+
+The caret now advances as a person would expect, and three Enters followed by typing produce two
+blank lines and the text on its own line -- which is what was asked for.
+
+### The mechanism meant to preserve the caret was displacing it
+
+`renderDoc` did `dom.preview.innerHTML = projection.html`, replacing every node on every commit.
+Since the rendered document is the editing surface, that destroyed the caret each time. Four
+attempts had been made across two sessions to put it back -- by block index, by source line, by
+fixing the focus order, by falling back to the nearest block -- and each fixed one case and exposed
+another.
+
+**Four patches to one symptom is the point at which the symptom is not the problem.** Restoring a
+caret after destroying its node is harder than not destroying the node, and it is a problem with no
+reason to exist: when a projection arrives after an edit, nearly every block in it is byte-identical
+to what is already on screen. `drawProjection` now compares each incoming block's `outerHTML` to the
+one in place and leaves matches alone. A block that genuinely changed shape is still replaced, and
+the restoration still covers that -- which is the case it was written for.
+
+The second half mattered more. Even with reconciliation the caret still jumped, because the restore
+was running when the caret had **survived** -- computing a destination for the line just written,
+finding no block for it (a trailing blank renders as no element), falling back to the nearest block,
+and dragging the caret to the end of the previous paragraph. Restoration is now skipped when the
+caret is still in the document, and an edit that is only empty appended blocks is not committed at
+all: no projection, no re-render, nothing that could move anything. The blank lines are not lost --
+they are on screen, and the first typed character commits them together with the text.
+
+### Two attempts that failed, recorded rather than quietly dropped
+
+Preserving the browser's temporary empty paragraph through reconciliation had no effect. Skipping
+restoration when the caret survived, on its own, made things worse -- the caret ended up detached and
+the next keystroke reached the heading. Both were attempts to compensate for the round trip; the
+round trip was what needed to go. The attempt cap in the browser-loop guardrails is what stopped a
+fourth.
+
+### Still not right
+
+After the first character is typed into a brand-new block, the caret is lost once and a click is
+needed to carry on. One loss at one moment, rather than a jump on every keystroke. Not diagnosed to
+a cause, and deliberately not guessed at.
+
+- **Files/areas:** `app.js`, `components/dom-owner/index.js`.
+- **User-visible impact:** Enter no longer moves the cursor. Typing after Enter writes the blank
+  lines and the text where they belong.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | Cairn | pass, 0 vulnerabilities | — |
+| lint | — | Cairn | not applicable | no `lint` script; `format:check` is the equivalent gate and runs inside `verify` |
+| tests | `npm run verify` | all 14 gates | **14/14 pass, exit 0** | — |
+
+- **Tests added/updated:** None, and this is now the second session running with that gap on this
+  feature. The reproduction is a scratch script because asserting it needs real `Enter` keypresses
+  and the shell checks use `execCommand`. Residual risk: reconciliation and the deferral are both
+  untested, and a future change could reinstate the wholesale redraw with no gate objecting.
+  Smallest thing that closes it -- a shell check that presses Enter three times at the end of the
+  sample document and asserts the caret's block index only ever increases.
+- **Regression impact:** `graph:check` still reports 9 components and 127 wires; no component,
+  contract, or wire changed. `drawProjection` lives in the DOM owner, which already holds `dom`, and
+  it reads only the markup it was handed -- the projection still carries no authoritative text, and
+  both audits that assert that still pass. Re-verified on the real 312-line CRLF document: the
+  paragraph edit still lands on line 10 alone, all 452 backticks intact, no page errors. The lines
+  reported as differing after line 11 are a one-line insertion shifting the rest, not content
+  changes -- confirmed by the backtick count and by the file gaining exactly one line.
+- **API docs:** Not relevant — no HTTP surface.
+- **Tooling gates:** `audit` clean; `format:check` clean; `verify` exit 0.
+- **Conflicts / exceptions:** Still open: the single caret loss above, `BUG-001`, `FEAT-002`,
+  `FEAT-003`, `FEAT-004`, `TST-001`, `TT-001`. **Cairn is still not a git repository** -- fourth
+  session, and this one involved reverting two failed attempts by hand because there was no other
+  way to undo them.
+
+### 2026-08-24T00:00:00Z — Enter twice at the end of a document; three defects behind one message
+
+- **Summary:** The user pressed Enter twice at the end of a document and got *"That change was too
+  large to place, so nothing was changed."* Reproduced, and it turned out to be three separate
+  defects sharing one symptom, the worst of which was silent.
+- **Problem:** Two blank lines are the easiest possible edit -- there is nothing to locate -- so a
+  message about the change being too large was wrong on its face.
+- **Requirement:** Pressing Enter at the end of a document adds blank lines. A refusal, when one is
+  genuinely warranted, must not move the caret.
+- **Solution:** Handle any number of appended blocks, write an empty appended block as the blank
+  line it is, and put the caret back on a named source line after any refusal.
+
+### Reproduced first
+
+```text
+start        : children 3, snapshot 3, source unchanged
+after Enter 1: children 4, snapshot 3, source unchanged     <- committed nothing
+after Enter 2: children 3, snapshot 3, toast "too large to place"
+after typing : source "# more textTitle"                    <- typing landed in the heading
+```
+
+### Three defects, one message
+
+1. **An empty appended block returned early without committing**, so the snapshot never advanced.
+2. **The insert branch demanded exactly one new element** and refused otherwise. Written that way
+   because one was the case in front of me, not because more is ambiguous.
+
+   These two contradicted each other, and only pressing Enter *twice* revealed it: the first Enter
+   wrote nothing, so the second was seen as a two-block insertion and refused. Either rule alone
+   would have been harmless.
+
+3. **Every refusal called `renderDoc()` and lost the caret.** Redrawing replaces the nodes the
+   caret was in, so it went to the start of the document and the *next* keystroke landed in the
+   first heading. This is the one that mattered: a refused edit that silently relocates your typing
+   into a different line is worse than the refusal, and worse than most alternatives, because you
+   would not notice until you read the top of the file. All four refusal paths now go through
+   `revertKeepingCaret`, which names the line to return to and says what happened rather than
+   passing judgement on the size of the change.
+
+### A fourth, found while fixing the third
+
+`restoreCaretAtSource` returned false for any line with no block, and a **trailing blank line has
+no block** -- the renderer only emits a spacer once something follows it, so the last blank in a
+file draws nothing. That was the actual mechanism by which typing reached the heading. The caret now
+falls back to the end of the last block at or before the line asked for, which is where it visibly
+is anyway when the line it wants has nothing on screen to sit in.
+
+### Known limitation, stated rather than left to be found
+
+After Enter at the end of a document, typed text joins the **preceding** block instead of starting a
+new one. The blank lines are written to the source correctly; there is simply nowhere on screen for
+the caret to sit, because a trailing blank renders as nothing. Starting a new paragraph at the end
+of a file therefore does not work yet. This is a consequence of the rendered document being the
+editing surface and is not a mis-mapped edit -- nothing is written to the wrong place.
+
+- **Files/areas:** `app.js` only.
+- **User-visible impact:** Enter at the end of a document works and writes blank lines. The
+  spurious error is gone. A refusal no longer moves the caret.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | Cairn | pass, 0 vulnerabilities | — |
+| lint | — | Cairn | not applicable | no `lint` script; `format:check` is the equivalent gate and runs inside `verify` |
+| tests | `npm run verify` | all 14 gates | **14/14 pass, exit 0** | — |
+
+- **Tests added/updated:** None, and that is the gap. The reproduction was a scratch script, not a
+  suite check, because asserting it needs real `Enter` keypresses and the shell suite's checks are
+  written with `execCommand`. Residual risk: the interaction between the empty-block early return
+  and the block-count limit was invisible to every gate and remains untested; another rule pair
+  could contradict the same way. Smallest thing that closes it -- a shell check that presses Enter
+  twice at the end of the sample document and asserts two blank lines in the source and no toast.
+- **Regression impact:** No component, contract, wire, or graph changed -- `graph:check` still
+  reports 9 components and 127 wires. `vendor:check` 4/4. Re-verified on the real 312-line CRLF
+  document: the paragraph edit still lands on line 10 alone, all 452 backticks intact, no page
+  errors.
+- **API docs:** Not relevant — no HTTP surface.
+- **Tooling gates:** `audit` clean; `format:check` clean; `verify` exit 0.
+- **Conflicts / exceptions:** Still open: starting a new paragraph at the end of a file, `BUG-001`,
+  `FEAT-002`, `FEAT-003`, `FEAT-004`, `TST-001`, `TT-001`. **Cairn is still not a git repository**,
+  now the third session where a diff would have helped and had to be improvised.
+
+### 2026-08-24T00:00:00Z — The document became the editing surface; the textarea model was removed
+
+- **Summary:** Editing now happens in the rendered document. `#preview` is `contenteditable`, no
+  box appears, nothing changes shape, and an edit lands in the markdown that produced it with
+  every piece of inline syntax intact. The previous click-to-open-a-textarea design was removed
+  entirely, not adapted.
+- **Problem:** The user rejected the previous design in exactly the right terms: *"you have turned
+  these into little boxes or notation sections that become editable and separate once I click on
+  them. This changes the overall look and feel of the entire document."* A text box is a place you
+  go **to**, so every click changed how the document looked. What was wanted is Word's behaviour --
+  the page stays the page, the cursor goes into it, you type -- with markdown as the input method.
+- **Requirement:** The rendered document is the editing surface. No mode switch, no separate
+  field, nothing that alters the document's appearance when clicked. Typed markdown is interpreted
+  in place.
+- **Solution:** `contenteditable` on the rendered view, with the source kept authoritative: an
+  edit is never a reconstruction of the document, only a **patch** to the lines the edited block
+  came from.
+
+### The defect that shaped the whole design
+
+The obvious implementation -- read the edited block off the page and write it to the source --
+**deletes every backtick, asterisk, and link target in that block.** The rendered view shows
+`WorkBoardDB.json` where the source says `` `WorkBoardDB.json` ``, so the text on screen is not
+the text in the file. Observed directly: typing three characters produced a commit that reverted
+the edit, because the "new text" disagreed with the source everywhere the source had syntax.
+
+That is the whole-document round trip `EDN-001` resolved against, reappearing at inline scope. The
+answer is the same: never reconstruct, only patch.
+
+`components/dom-owner/apply-delta.mjs` describes an edit as a delta -- what was inserted, what was
+removed, where -- and applies it to the markdown at the corresponding position, located by a unique
+anchor of surrounding text. It **refuses** rather than guesses when no unique anchor exists: a
+refused edit costs one retype, a misplaced one corrupts a line the person was not editing and may
+go unnoticed for days. Fourteen unit tests cover inline code, bold, links, task checkboxes, list
+markers, deletions, and both refusal paths.
+
+`MarkdownEditor.htmlToMarkdown` is deliberately unused for the same reason -- it is a whole-field
+round trip, affordable on a three-line card note and destructive on a 312-line document.
+
+### Verified against the document the user named
+
+`docs/Temp/split-monolithic-json-to-section-files.md`, 312 lines, CRLF, edited with real keystrokes
+in a real browser:
+
+```text
+previewIsEditable      : true
+noTextBoxAnywhere      : true
+blocks / children      : 157 / 157
+typingSurvived         : true
+caretStillInDocument   : true
+changed line indices   : [10]
+backticks in file      : 452 before, 452 after
+lines ending in CR     : 311 before, 311 after
+page errors            : none
+```
+
+The edit was made **after an inline-code span**, which is the case the naive implementation
+destroys. All 452 backticks survived.
+
+### What works, and what does not
+
+**Works:** clicking into any block and typing; editing across inline syntax; the caret staying
+where it was; one source line changed per edit; CRLF preserved; the ribbon present and unchanging;
+paste as plain text; `Esc` to abandon.
+
+**Does not work yet:** starting a *new* construct. Pressing Enter and typing `- ` inserts the line
+into the source correctly -- verified, line 11 of the real document became `- ` -- but the caret is
+then lost, so the text typed after it lands elsewhere. Five attempts, each finding a real and
+distinct cause: a `<br>` contributing no character to `textContent` so the "current line" was the
+whole block; a block index that shifts when a line is inserted; `caretSourcePosition` returning
+null for an element that has no block yet; focus not restored before the selection; and the
+vendored renderer requiring content after a bullet marker before it is a list at all
+(`/^\s*[-*+]\s+(.+)$/`). The remaining failure is not yet diagnosed to a cause and is **not**
+being nudged further.
+
+### Six defects found and fixed along the way
+
+1. **Rendered text is not markdown** -- the delta design above.
+2. **The same edit applied twice.** The lend that arrives *after* a commit re-triggered the commit,
+   because "an edit is waiting" was inferred from the dirty flag -- and dirty means *unsaved*,
+   which stays true after a successful commit. Now an explicit flag.
+3. **`<br>` collapses in `textContent`**, so the line the caret was on was always the whole block
+   and no live transformation could ever match.
+4. **A new top-level element was invisible to the commit.** The comparison walked
+   `min(children, snapshot)` pairs, so an element past the end of the snapshot was never examined
+   -- typing `- ` on a new line produced no change, no error, and no toast.
+5. **Non-breaking spaces.** A contenteditable substitutes U+00A0 to keep a typed trailing space
+   visible, so `"EDIT "` reached the source as `"EDIT\u00a0"` -- a character nobody typed that looks
+   identical in every editor. Normalised on the way in.
+6. **`refusalMessage` was deleted by accident** with the old editor section, so every refused edit
+   threw a `ReferenceError` from the message handler. Caught by the shell suite, not by me.
+
+- **Files/areas:** `app.js` (the editor section replaced wholesale), new
+  `components/dom-owner/apply-delta.mjs`, new `tests/apply-delta.test.mjs`, `styles.css`,
+  `tests/shell-browser.mjs`.
+- **User-visible impact:** The document is directly editable. The boxes are gone.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | Cairn | pass, 0 vulnerabilities | — |
+| lint | — | Cairn | not applicable | no `lint` script; `format:check` is the equivalent gate and runs inside `verify` |
+| tests | `npm run verify` | all 14 gates | **14/14 pass, exit 0** | node 186 → 200; shell 43 → 42 (five checks for the removed model deleted, three written for the new one) |
+
+- **Tests added/updated:** Fourteen unit tests for `applyRenderedDelta`. Three shell checks for
+  live editing, deliberately against `Notes/table.md` because it contains inline code and a link --
+  an edit that survives there proves the syntax the rendering hides is preserved, which editing a
+  plain paragraph would not. The five checks written for the textarea design were **deleted rather
+  than adapted**: they asserted the behaviour that was wrong.
+- **Regression impact:** No component, contract, wire, or graph changed -- `graph:check` still
+  reports 9 components and 127 wires. `vendor:check` 4/4: all three authoring modules are still
+  byte-identical and `htmlToMarkdown` is left unused rather than modified. The projection still
+  carries no authoritative text; the shell suite's text audit and the replay suite's `no ui.*
+  fixture on disk carries authoritative text` both still pass, so making the view editable did not
+  put source on the `ui.*` plane.
+- **API docs:** Not relevant — no HTTP surface.
+- **Tooling gates:** `audit` clean; `format:check` clean; `verify` exit 0.
+- **Conflicts / exceptions:** `outline: none` on the editable document is deliberate and is not the
+  usual accessibility mistake -- the element is a document body, not a control, and its focus is
+  shown by the text caret sitting in it. `EDN-001` should now be re-recorded: the mechanism is not
+  WorkLists' textarea-and-toolbar, which is a card-note editor; it is a live rendered surface with
+  delta-mapped commits. Still open: the new-construct caret above, `BUG-001`, `FEAT-002`,
+  `FEAT-003`, `FEAT-004`, `TST-001`, `TT-001`. **Cairn is still not a git repository**, which is why
+  the only diff available this session came from a copy left in a temp directory by chance.
+
+### 2026-08-23T00:00:00Z — Nothing loaded: a cached `index.html` against a fresh `app.js`
+
+- **Summary:** The user reported that loading a file or folder did nothing. Reproduced, traced to
+  browser caching, and fixed at both the cause and the fragility it exposed.
+- **Problem:** `tools/serve.mjs` sent **no cache directives at all** — no `Cache-Control`, no
+  `ETag`, no `Last-Modified`. Chrome applied its own heuristics and served a cached
+  `index.html` alongside a freshly fetched `app.js`. The mixture was not merely stale, it was
+  **incoherent**: the new script looked for the ribbon element the old markup did not contain,
+  `dom.mdRibbon` came back null, and setting `.hidden` on it threw inside `renderDoc` — which
+  runs for every tree and every document projection. The app started, drew a file tree, and then
+  displayed nothing, with the cause visible only in the console. A plain refresh does not fix
+  this, because a plain refresh is what produces it.
+- **Requirement:** A zero-build application whose files are only correct as a set must not be
+  cacheable piecemeal. Separately, a presentational enhancement must not be able to stop a
+  document from rendering.
+- **Solution:** `cache-control: no-store, must-revalidate` on every response, and every ribbon
+  reference in the shell guarded.
+
+### Reproduced, then fixed
+
+Simulating the stale pair — current `app.js`, `index.html` with the ribbon markup removed:
+
+```text
+before: CONSOLE: Cairn: the view threw while handling ui.tree-projection
+        TypeError: Cannot set properties of null (setting 'hidden')
+            at renderDoc (app.js:515)
+        ... and again for ui.document-projection
+after : clicking a file loads it; previewChildren 5; no errors at all
+```
+
+`no-store` rather than `no-cache`: `no-cache` still stores the response and revalidates, which
+leaves ETag and 304 behaviour in play. There is nothing to gain from caching a loopback dev
+server, and one silent broken-app incident already cost more than the caching was worth.
+
+### Not a defect, but it reads like one
+
+Attaching a folder selects nothing — `activePath` becomes null, because the previously open
+document is not in the new root. The tree populates and the document area stays empty until a
+file is clicked. That is deliberate and matches VS Code, but combined with the regression above
+it is indistinguishable from "nothing is loading", so it is written down here rather than left
+to be rediscovered.
+
+- **Files/areas:** `tools/serve.mjs`, `app.js` (six guarded ribbon references),
+  `tests/authority-browser.mjs`.
+- **User-visible impact:** Loading a file or folder works again. No hard refresh will ever be
+  needed to pick up a change.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | Cairn | pass, 0 vulnerabilities | — |
+| lint | — | Cairn | not applicable | no `lint` script; `format:check` is the equivalent gate and runs inside `verify` |
+| tests | `npm run verify` | all 14 gates | **14/14 pass, exit 0** | authority 26 → 27 |
+
+- **Tests added/updated:** One authority check that the server forbids caching, proven to fail
+  when the header is removed (`{"cache-control": null}`). The null-ribbon path is guarded but not
+  covered by a test: asserting it needs the suite to serve a deliberately mismatched
+  `index.html`, which the current harness serves straight from the repository. Residual risk: a
+  future required element could be introduced with the same fragility and no automated signal.
+  Smallest thing that closes it — a harness that serves a variant document with a named element
+  removed and asserts a document still renders.
+- **Regression impact:** No component, contract, wire, or graph changed — `graph:check` still
+  reports 9 components and 127 wires. The header addition is inspected by `test:authority`,
+  which also confirms the CSP is unchanged. Inline editing re-verified end to end against the
+  real 312-line CRLF document after the fix: caret at 21 where clicked, changed line indices
+  `[10]`, 311 CR-terminated lines before and after, no page errors.
+- **API docs:** Not relevant — no HTTP surface. `tools/serve.mjs` is a static server; its
+  response headers are the only contract and both are now asserted.
+- **Tooling gates:** `audit` clean; `format:check` clean; `verify` exit 0.
+- **Conflicts / exceptions:** I moved on to `FEAT-002` and `BUG-001` while the user had not yet
+  confirmed inline editing worked on their machine — and it did not, for this reason. The
+  evidence I had was headless Playwright against an OPFS copy, which cannot see a browser cache.
+  Headless verification is not confirmation that a person can use the thing. Still open:
+  `BUG-001`, `FEAT-002`, `FEAT-003`, `FEAT-004`, both tasks, `TST-001`, `TT-001`. No commit made
+  and no board card updated — neither was asked for.
+
+### 2026-08-23T00:00:00Z — Inline editing works; three field-test defects closed
+
+- **Summary:** `FEAT-001` is working and verified against the real 312-line CRLF document the
+  user named. `BUG-002` and `BUG-003` are fixed on the way, because inline editing depends on
+  the lend that `BUG-002` broke. Four new shell checks and twelve new unit tests, each proven
+  to fail when its subject is broken.
+- **Problem:** The previous session delivered groundwork and no editable UI. The user restarted
+  the server, refreshed, and still could not edit — which is the only measure that counted.
+- **Requirement:** Click a block and type in it, with the ribbon already there and the caret
+  where the click landed. Committing must change only that block's lines.
+- **Solution:** WorkLists' own modules, wrapped: `markdownEditor.js` builds the ribbon,
+  `markdownAuthoring.js` handles list continuation, `editSession.js` carries the selection. The
+  block's source line range comes from `blocks` on the projection; the text is asked for and
+  lent; only the lent lines in range go into the textarea; the commit splices that range back.
+
+### Verified against the named document
+
+`docs/Temp/split-monolithic-json-to-section-files.md` — 17,222 bytes, 312 lines, CRLF. Copied
+to a scratch folder first; the original's hash is unchanged.
+
+```text
+ribbon present before any click : true (10 buttons, all disabled)
+blocks / rendered children      : 157 / 157   (agree)
+editor holds only that block    : true
+caret landed where clicked      : 21  (clicked the "W" of `WorkBoardDB.json`)
+stray carriage return in editor : none
+changed line indices on disk    : [10]
+lines before / after            : 312 / 312
+lines ending in CR              : 311 before, 311 after
+page errors                     : none
+```
+
+### The line-ending defect this nearly shipped with
+
+The first version split on newline and rejoined with newline. On a CRLF document that leaves a
+carriage return on every untouched line and strips it from the edited one — the file still
+parses, the test still passes, and the document quietly acquires mixed line endings that show
+up as a whole-file diff. The "changed exactly one line" guarantee would have been false while
+appearing to hold.
+
+`components/dom-owner/splice-lines.mjs` keeps a `{ text, newline }` pair per line and rejoins
+with each line's own terminator — the shape the vendored `updateTaskCheckboxMarkdown` already
+uses, so the checkbox path and the inline-edit path agree about what a line is. Twelve unit
+tests in `tests/splice-lines.test.mjs` cover CR, LF, CRLF, mixed, no-trailing-newline,
+longer-than-range, shorter-than-range, and out-of-range.
+
+### `BUG-002` and `BUG-003`
+
+`BUG-002`: the want is now recorded and the document's own projection arriving is what re-asks
+for the lend — an event, not a timer. A second instance surfaced during this work: after an
+inline edit in **preview** mode the lend was never refreshed, because the refresh was
+conditioned on the mode rather than on holding a lend. That would have spliced the next edit
+against superseded text. Both fixed.
+
+`BUG-003`: `refusalMessage()` chooses words by kind. A refused *request for text* no longer
+claims an edit was lost.
+
+### Six wrong turns, all caught
+
+1. **Literal control characters written into `app.js` three times.** Generating source
+   containing `\r`/`\n` through the shell put real CR and LF bytes into the file, breaking a
+   regex across lines: *"Invalid regular expression: missing /"*. Resolved by removing the need
+   — the split now calls `splitSourceLines`, which is the tested function the commit path
+   already uses. One definition of "a line" for both halves beats two that must agree.
+2. **An import announced but never written.** A script printed `ok: import spliceLines`, then
+   aborted on a later anchor before its single write. `spliceLines` was referenced but
+   unimported for two calls.
+3. **The caret computed after the block was replaced.** `caretPositionFromPoint` answers about
+   what is at a point *now*; after the swap that is the textarea. Moved before the swap.
+4. **The first click dropped the click.** On a freshly opened document the text is not lent
+   yet, so the click was deferred — and the deferred reopen passed no event, putting the caret
+   at the end. This is the branch a person hits **first**, which is the worst place to lose your
+   place. The coordinates now travel with the intent.
+5. **Three test failures blamed on the caret code that were the test's own**: a `line-height` of
+   `normal` making the click Y `NaN`; a preview pane still scrolled 2730px from an earlier check,
+   putting the measured box 2484px above the viewport; and an element held across a scroll that a
+   re-render had detached.
+6. **A block taller than the viewport cannot have its top on screen once centred.** The fixture
+   paragraph is 1368px tall in a 720px viewport, so every offset-from-`box.top` click point was
+   off screen. The click point is now the intersection of block and viewport, which states the
+   constraint instead of nudging an offset until it lands.
+
+Attempts 1–3 on the caret check were nudges. From attempt 4 each failure was diagnosed to a
+named cause before changing anything, which is what the browser-loop guardrails ask for and
+what should have happened from the start.
+
+### Guards, proven negatively
+
+Four shell checks (35 → 43 with the earlier work) and twelve unit tests. Each broken
+deliberately:
+
+| Break | Result |
+| ----- | ------ |
+| splice the whole document instead of the range | **124 lines differ** instead of 1; check fails |
+| caret always at end of block | caret check fails |
+| ribbon only mounted while editing | presence check fails |
+
+- **Files/areas:** `app.js`, new `components/dom-owner/splice-lines.mjs`, new
+  `tests/splice-lines.test.mjs`, `tests/shell-browser.mjs`, `index.html`, `styles.css`,
+  `ROADMAP.md`.
+- **User-visible impact:** Clicking any block in Preview or Split opens an editor for that
+  block. The ribbon is present before the first click and inert until one. `Esc` cancels,
+  clicking away keeps, `Ctrl`+`Enter` commits.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | Cairn | pass, 0 vulnerabilities | — |
+| lint | — | Cairn | not applicable | no `lint` script; `format:check` is the equivalent gate and runs inside `verify` |
+| tests | `npm run verify` | all 14 gates | **14/14 pass, exit 0** | 186 node (was 174), 43 shell (was 38), vendor 4/4 |
+
+- **Tests added/updated:** Twelve unit tests for `spliceLines`; four shell checks for the
+  interaction. Line-ending fidelity is asserted at the unit level, not through the browser — the
+  sample fixtures are LF-only, so a browser assertion could not fail there and would be testing
+  the same function twice while appearing to test two things.
+- **Regression impact:** `graph:check` still reports 9 components and 127 wires; no component,
+  contract, wire, or plane changed. `vendor:check` 4/4 — the three authoring modules are wrapped,
+  never edited. The projection still carries no `text` field: the shell suite's text audit and
+  the replay suite's `no ui.* fixture on disk carries authoritative text` both still pass, so
+  editing did not put source on the `ui.*` plane. The four protected POC files remain
+  byte-stable against the frozen snapshot.
+- **API docs:** Not relevant — no HTTP surface. `tools/serve.mjs` is a static server whose only
+  contract is the CSP header, checked unchanged by `test:authority`.
+- **Tooling gates:** `audit` clean; `format:check` clean; `verify` exit 0.
+- **Conflicts / exceptions:** The caret mapping is a heuristic and is documented as one: a unique
+  anchor window is preferred, and where the rendered and markdown strings cannot be aligned it
+  falls back to a length-scaled offset. On the repetitive shell fixture every anchor is
+  non-unique, so the scaled path is what runs there — it landed at 796 of 1757 characters, in
+  the clicked region. A missed point now means the **start** of the block rather than the end,
+  chosen deliberately: both are wrong, and only one of them loses the user's place. Still open:
+  `BUG-001`, `FEAT-002`, `FEAT-003`, `FEAT-004`, both tasks, `TST-001`, `TT-001`. No commit made
+  and no board card updated — neither was asked for.
+
+### 2026-08-23T00:00:00Z — `FEAT-001` groundwork: the vendor parity gate, and the block-to-source-line map
+
+- **Summary:** Built the two things inline editing needs before any UI can be written: a gate
+  proving the vendored files match their WorkLists originals, and a map from each rendered
+  block to the source lines that produced it. Stopped deliberately before the click handler.
+- **Problem:** `FEAT-001` blocks ordinary use. `EDN-001` turned out to be answered already by
+  WorkLists rather than open, so the work is wiring an existing implementation — but two
+  foundations were missing. The interface cannot read markdown back out of the DOM to edit a
+  paragraph, because `ui.document-projection` carries no authoritative text by design and by
+  gate. And three newly vendored files had nothing verifying they were what they claimed.
+- **Requirement:** A click in the rendered view must name a source line range, so the owner can
+  splice only those lines — the same single-line guarantee the checkbox path already holds.
+  And the vendored files must be provably identical to their originals, because the whole
+  argument for vendoring rather than adapting is that drift shows up as a diff.
+- **Solution:** A `vendor:check` gate, and a `blocks()` scanner beside the renderer with a
+  cross-check against the renderer's real output. Both proven by breaking them.
+
+### The parity claim was never checked
+
+"Byte-identical to the WorkLists original" lived **only in source comments**
+(`tests/observability.test.mjs`, `components/markdown-renderer/index.js`) — and in changelog
+entries of mine that reported it under **Regression impact** as though something had verified
+it. Nothing had. The claim happened to be true every time it was made, which is the worst case:
+an unfalsifiable assertion with a perfect record.
+
+`tools/check-vendor-parity.mjs` is now a gate (`npm run vendor:check`, wired into `verify`).
+It compares sha256 per file, and **treats absence as failure rather than skip** — an
+unreadable WorkLists checkout reports `UNVERIFIABLE` and exits non-zero, because "I could not
+check" must never render as "checked". A file in `vendor/` with no declared original fails as
+`UNDECLARED`, so vendoring something without recording where it came from cannot pass quietly.
+
+Proven to fail three ways: appending a byte → `DRIFTED` with both hashes named; adding an
+undeclared file → `UNDECLARED`; removing a declared file → `MISSING`. All exit 1. Currently
+4/4 identical.
+
+### The block map, and why it is a second parser
+
+`components/markdown-renderer/blocks.mjs` returns one `{kind, start_line, end_line}` per
+top-level rendered element. It cannot live inside the vendored renderer, which is now gated on
+byte parity, so it mirrors that renderer's loop rather than reimplementing markdown — every
+branch in the same order, because order decides which construct wins on an ambiguous line.
+
+The hazard is obvious: a second parser that quietly disagrees with the first. Three checks in
+the standalone suite, over ten documents including nine hand-built edge cases (leading blanks
+the renderer suppresses, an unterminated fence, a blank splitting one list into two, a table
+followed immediately by prose):
+
+1. block count equals the renderer's **top-level child count in a real DOM**;
+2. no range overlaps the one before it;
+3. every task checkbox's own `data-markdown-line-index` falls inside a `list` block.
+
+`kind: "blank"` blocks are included precisely so the count can be **exact**. The renderer emits
+a `markdown-blank-line` div per authored blank; excluding those would have made this an
+approximate check, and an approximate check on a parser pair is no check at all.
+
+Proven by breaking the scanner three ways: suppressing blank blocks failed check 1 on seven
+documents; letting a blank line not close the open run failed check 1; shifting list ranges by
+one failed **only** check 3 — which is the evidence the three checks are not redundant.
+
+### Live confirmation, and the boundary
+
+On `Notes/hello.md` in the running app: 7 blocks against 7 rendered top-level children, counts
+agree, and the ranges are right — `heading[0]`, `blank[1]`, `paragraph[2]`, `blank[3]`,
+`heading[4]`, `blank[5]`, `list[6-7]`. The projection still has **no `text` field** and no
+source marker anywhere in it. Carrying line ranges is not carrying text, and that is asserted
+rather than assumed: the shell suite's text audit and the replay suite's
+`no ui.* fixture on disk carries authoritative text` both still pass.
+
+### Contracts
+
+`document.rendered` and `ui.document-projection` each took an additive minor to 1.2.0 for
+optional `blocks`; catalog 1.8.0 → 1.9.0. The two 1.1.0 fixtures were reclassified
+`exact` → `older-minor` and new 1.2.0 fixtures added, so neither contract loses exact-match
+coverage to a version bump — the same handling as the earlier `vault.index-request` 2.1.0
+case. The new fixtures' `blocks` value is what the scanner actually returns, confirmed by
+running it, not hand-written.
+
+### Two mistakes, both caught by gates
+
+1. **The catalog bump wrote to a key that does not exist.** My script appended to `history`;
+   the file's key is `catalog_history`. The conditional was `if "history" in cat`, so it
+   silently did nothing — an unguarded no-op, the exact failure class I have hit repeatedly.
+   `contracts:check` caught it precisely: *"catalog_version is 1.9.0 but the newest
+   catalog_history entry is 1.8.0."* Ten gates failed at once, which is the gate suite working.
+2. **The `BUG-004` guard's first version added a third document to the `SAMPLE` fixture** and
+   broke four unrelated assertions, one a recorded replay fixture. Reverted in the previous
+   session; noted here because the same temptation recurred and was declined.
+
+- **Files/areas:** new `tools/check-vendor-parity.mjs`, new
+  `components/markdown-renderer/blocks.mjs`, `components/markdown-renderer/index.js`,
+  `components/document-projector/index.js`, both payload schemas, `contracts/catalog.json`,
+  `tests/component-standalone.mjs`, `tests/fixtures/replay/` (two new fixtures + index),
+  `package.json`, `tools/verify.mjs`, `ROADMAP.md`.
+- **User-visible impact:** None yet, deliberately. The map is carried but nothing consumes it.
+  Inline editing is not usable until the click handler and ribbon land.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | Cairn | pass, 0 vulnerabilities | — |
+| lint | — | Cairn | not applicable | no `lint` script; `format:check` is the equivalent gate and runs inside `verify` |
+| tests | `npm run verify` | all 14 gates | **14/14 pass, exit 0** | 174 node, catalog 1.9.0, vendor 4/4, 77 kernel, 33 standalone, 38 shell, 26 authority |
+
+- **Tests added/updated:** Three block-parity checks (standalone 30 → 33), the `vendor:check`
+  gate (13 → 14 gates), two replay fixtures, two reclassified fixture rows. Every new check
+  was proven to fail when the thing it guards is broken — six deliberate breakages in total.
+- **Regression impact:** `graph:check` still reports 9 components and 127 wires; no wire,
+  component, or plane changed. Both contract changes are **additive and optional**, so a
+  producer that omits `blocks` still validates — proven by the 1.0.0 and 1.1.0 fixtures still
+  replaying as `older-minor`. The textless `ui.*` boundary is unchanged and still asserted by
+  two independent checks. `vendor/` is byte-identical 4/4. The three editor modules are
+  **still not imported anywhere**, so they cannot affect runtime.
+- **API docs:** Not relevant — no HTTP surface. `tools/serve.mjs` is a static server whose
+  only contract is the CSP header, checked unchanged by `test:authority`.
+- **Tooling gates:** `audit` clean; `format:check` clean; `contracts:docs` and `artifacts`
+  regenerated after the catalog bump; `verify` exit 0.
+- **Conflicts / exceptions:** `check-vendor-parity.mjs` resolves the WorkLists checkout by
+  absolute path, the same limitation as `TST-001` — Cairn declares no dependency on WorkLists,
+  and inventing one to make a check portable would be a worse trade than recording the limit.
+  The gate at least fails loudly rather than skipping when the path is wrong. Still open:
+  `TST-001`, `TT-001`, and the gap that a page served by anything other than `npm run serve`
+  receives no policy. No commit made and no board card updated — neither was asked for.
+
+### 2026-08-23T00:00:00Z — `BUG-004` fixed: the outline scroll used a derived rate, not a measured one
+
+- **Summary:** Fixed the source-pane outline drift, added three regression checks, and proved
+  they fail when the old code is put back. Also vendored the three WorkLists editor modules
+  that `EDN-001` turned out to already be answered by.
+- **Problem:** Clicking an outline heading scrolled the source pane to the wrong place, and
+  the error grew the further down the document the heading sat — about 11 lines mid-document,
+  and off screen entirely near the end.
+- **Requirement:** The heading must land where it was asked to land, at any depth. A fix that
+  made one document look right while leaving the arithmetic wrong would not satisfy this,
+  because the error is a function of line number rather than a constant.
+- **Solution:** `goToHeading()` computed the per-line height as
+  `dom.source.scrollHeight / lines.length`. `scrollHeight` includes `.source-input`'s padding
+  — 16px top and `45vh` bottom, which is 405px on a 900px window — so that 421px was spread
+  across the line count, inflating **the rate**. A rate error multiplies by the line number,
+  which is exactly why the drift grew with depth. Replaced with `line-height` and
+  `padding-top` read from `getComputedStyle`, and corrected the viewport measurement to the
+  textarea (the actual scroller) rather than the pane containing it and the gutter.
+
+### Measured, same document shape that produced the report
+
+| Heading | Before | After |
+| ------- | ------ | ----- |
+| middle of the document | 7.34 lines off | **0.02 lines off** |
+| last heading | clamped, 1.56 lines off | **0.02 lines off** |
+| first heading | clamped at `scrollTop: 0`, visible | unchanged — correct, a line cannot sit a third down when scroll cannot go negative |
+
+True line height `20.25px`; the old code derived `21.992px` from the same element, an 8.6%
+inflation. No constant was introduced, and none was tuned.
+
+### The guard, and proof it works
+
+Three checks in `tests/shell-browser.mjs`: the outline read the real heading lines, every
+heading lands a third down **or** is clamped and still visible, and at least one heading was
+unclamped so the check could actually fail. The invariant is asserted rather than a tolerance,
+because a loose tolerance would let the two clamped headings mask a broken middle one.
+
+Proven by re-injecting the old rate: `offByLines` went to **-7.34** at the middle heading and
+the suite reported 37/38, exit 1. Then restored and confirmed 38/38.
+
+### Two wrong turns, both caught by the gates
+
+1. **The first guard added a third document to the `SAMPLE` fixture** and broke four unrelated
+   assertions that enumerate the sample vault — one of them a **recorded replay fixture**,
+   which by definition cannot be edited to suit a new test. Reverted. The tall document is now
+   built through the owner with `replaceText`, which exercises the same render-and-project
+   path and touches no fixture. The existing fixtures could not have been used: at 9 and 8
+   lines their whole text fits the pane, so `scrollTop` is always 0 and the assertion would
+   have passed no matter what the arithmetic did.
+2. **The expected last-heading line was asserted as 119 and is 120.** The suite caught it
+   immediately, which is the reason that check asserts the line numbers at all instead of only
+   the landings.
+
+- **Also landed:** `vendor/markdown-editor.js`, `vendor/markdown-authoring.js`, and
+  `vendor/edit-session.js`, copied byte-identical from `WorkLists/public/`. This follows from
+  `EDN-001` being answered by the existing WorkLists implementation rather than by a choice
+  among three mechanisms — the three options previously recorded against that decision were
+  mine and unfounded, and the app that already solves this was never consulted.
+- **Found and not yet fixed:** the "byte-identical to the WorkLists original" claim is
+  asserted **only in source comments** (`tests/observability.test.mjs`,
+  `components/markdown-renderer/index.js`). **No gate compares the bytes.** Parity is true
+  right now — all four files verified with `cmp` this session, renderer sha256
+  `374f065ec2ed124634fe831ffc347785215bfcdd9241bab5b11d6832dd0fe97b` on both sides — but
+  earlier session entries reported it under **Regression impact** as though it had been
+  checked. It had not. That is an unfalsifiable claim presented as a gate result, and the
+  parity gate is the next thing to build.
+- **Files/areas:** `app.js` (`goToHeading`), `tests/shell-browser.mjs` (three checks),
+  `vendor/` (three new files), `ROADMAP.md`.
+- **User-visible impact:** Clicking an outline heading in Split or Source mode now lands on
+  that heading at any depth.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | Cairn | pass, 0 vulnerabilities | — |
+| lint | — | Cairn | not applicable | no `lint` script in this project; `format:check` is the equivalent gate and runs inside `verify` |
+| tests | `npm run verify` | all 13 gates | **13/13 pass, exit 0** | shell suite 38/38, up from 35 |
+
+- **Tests added/updated:** Three checks added to `tests/shell-browser.mjs` (35 → 38), plus a
+  negative proof that they fail when the defect is restored. This is the first of the five
+  consecutive user-path defects to ship **with** a regression guard.
+- **Regression impact:** No component, contract, wire, or graph changed — `graph:check` still
+  reports 9 components and 127 wires. The edit is confined to one block inside `goToHeading`
+  in the shell, which holds no authoritative text; `scrollHeight` no longer appears in any
+  executable line of `app.js`. The three new `vendor/` files are **not yet imported anywhere**,
+  so they cannot affect runtime behaviour — verified by the unchanged component and wire
+  counts. The four protected POC files remain byte-stable against the frozen snapshot.
+- **API docs:** Not relevant — no HTTP surface. `tools/serve.mjs` is a static server whose
+  only contract is the CSP header, checked unchanged by `test:authority`.
+- **Tooling gates:** `audit` clean; `format:check` clean; `verify` exit 0.
+- **Conflicts / exceptions:** One constraint recorded in code rather than in the changelog
+  alone: the new arithmetic assumes one source line occupies one visual row, which holds only
+  while the textarea is `wrap="off"`. That is pinned by `EDT-002`, and the comment names the
+  dependency so a future soft-wrap decision cannot silently break it. Still open: the vendor
+  parity gate described above, `TST-001`, `TT-001`, and the gap that a page served by anything
+  other than `npm run serve` receives no policy. No commit made and no board card updated —
+  neither was asked for.
+
+### 2026-08-23T00:00:00Z — The app became usable, then the first field test returned ten items
+
+- **Summary:** Two pieces of work. First, the application was found to be read-only while
+  telling the user saving was enabled, and fixed. Second, the first session using Cairn on a
+  real vault produced ten items; each was reproduced headlessly against the live page and
+  then classified as a bug, a feature, or a task.
+- **Problem:** "Do we have a live version, can it be used?" could not be answered from the
+  code without checking, and checking found that it could not. Afterwards, real use produced
+  a list of complaints with no shared vocabulary — a mode toggle that was never a
+  substitute for inline editing sat in the same paragraph as a hardcoded sample path.
+- **Requirement:** A defect list is only actionable if each item names the observation that
+  reproduces it and the class of work it needs. "It drifts by about eleven lines" is a
+  symptom; the derived quantity producing the drift is a fix.
+- **Solution:** Fixed the write-grant defect, then reproduced all ten reports against the
+  live page before writing any of them down. Recorded in `ROADMAP.md` under
+  **Field-test defects (2026-08-23)** with IDs `BUG-001`–`BUG-004`,
+  `FEAT-001`–`FEAT-004`, `TASK-001`–`TASK-002`, plus a viewable board published as an
+  artifact.
+
+### The app was read-only and said otherwise
+
+`addFolder()` called `requestVaultFolder(grant)` with no options, so the picker opened in
+`read` mode and `vault-writer` never received `filesystem-write` — while the success toast
+announced *"Saving is enabled for this folder."* The first `Ctrl` `S` then failed with *"no
+vault folder is attached"*, which was not even the real reason, since a folder was attached.
+Separately the save line read **"Saved to disk"** the moment a folder attached, before
+anything had been written.
+
+Three fixes: pass `{ write: true }`; name the missing *write* authority in the `no-root`
+message; and gate "Saved to disk" on a real non-dry-run `vault.write-succeeded` having
+occurred. Verified in the running app — picker mode `readwrite`, both grants landing, and
+`Ctrl` `S` reporting `Saved note.md.` End to end on the case reported as buggy (the **last**
+checkbox in a list): `changedLines: [6]`, `6: "- [ ] three" -> "- [x] three"`, line count
+unchanged. Promising a capability that was never granted is the same class of defect as
+reporting a save that did not happen, pointing the other way.
+
+### Ten field-test items, each reproduced first
+
+**Bugs (4).** `BUG-001` boot issues `domOwner.open("Notes/hello.md")` — a literal
+sample-vault path — before any index arrives, so every launch on a real folder toasts
+`hello.md could not be found.` Deterministic, not a race. `BUG-002` `openDoc()` sends `open`
+and `source-request` back to back; the lend is refused because the owner has not processed
+the open, and nothing retries, so the source pane stays blank (`msUntilSourcePopulated:
+null` after 2s) until the user navigates away and back. `BUG-003` that refusal is labelled
+`Edit refused:` when nothing was edited — one branch covering every refusal kind, telling
+the user they lost work when they did not. `BUG-004` `goToHeading()` derives line height as
+`scrollHeight / lineCount`, and `scrollHeight` includes the `45vh` scroll-past-end padding
+(405px at 900px) plus 16px top; measured true `20.25px` against derived `21.992px`, an 8.6%
+inflation multiplied by the line number — about 12 lines off mid-document and 18 at the
+end of a 242-line file.
+
+**Features never built (4).** `FEAT-001` inline editing in preview. **`EDN-001` is reopened**:
+it was deferred on the recorded grounds that the Preview/Source toggle covered the stated
+need, and the field test established it does not. That is the one item blocking ordinary use.
+The resolved constraint stands — never whole-document HTML round-tripping, measured at 12 of
+41 lines lost. `FEAT-002` synchronised preview/source scrolling; reproduced absent
+(`sourceMoved: false`). It shares the block-to-line mapping with `BUG-004` and should be
+built alongside it rather than twice. `FEAT-003` multi-root workspaces — **the only
+regression here**: present in POC 1 and dropped in the Phase 7 retrofit, marked in `app.js`
+as _"One root at a time now: the component that holds filesystem authority holds one
+handle."_ Restoring it means `vault-source` holding a set of handles and `ROOT_KEY` becoming
+a collection. `FEAT-004` VS Code preview tabs; three single clicks left `tabCount: 3`.
+
+**Tasks (2).** `TASK-001` explain the permission prompt before the picker opens — Chrome's
+readwrite dialog reads as a request to save something rather than to grant access to a
+location, and it appears now precisely because of the write-grant fix above. `TASK-002`
+copied code blocks carry CRLF from a file written with `\n` only.
+
+**Confirmed working.** Save to disk end to end; hyperlinks; and **code-block copy**, which was
+an open question — button present, status `Copied`, clipboard held exactly the block's text.
+That closes the "clipboard path feature-detected but never exercised end to end" coverage gap
+recorded under `TST-001`. Outline navigation in the **preview** pane is correct; `BUG-004` is
+the source pane alone.
+
+- **Also corrected:** `ROADMAP.md` still asserted *"Still nothing has been written to a file
+  anyone chose"* and that the picked-folder probe was pending. Both were false as of the
+  previous session. A stale claim in the document that exists to state current scope is worse
+  than no claim.
+- **Files/areas:** `Cairn/app.js` (three fixes), `Cairn/ROADMAP.md` (new **Field-test
+  defects** section, head paragraph, three existing sections cross-referenced),
+  `Cairn/DECISIONS-PENDING.md` (`EDN-001` Deferred → Open).
+- **User-visible impact:** The application saves to a picked folder. Before this session it
+  could not, and said it could.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | Cairn | pass, 0 vulnerabilities | — |
+| lint | — | Cairn | not applicable | no `lint` script in this project; `format:check` is the equivalent gate and is included in `verify` |
+| tests | `npm run verify` | all 13 gates | **13/13 pass, exit 0** | 174 node, 34 messages at catalog 1.8.0, 9 components/127 wires, 77 kernel, 30 standalone, 35 shell, 26 authority, 5 acceptance, 3 worker measurements, format clean |
+
+- **Tests added/updated:** None — and this is the session's clearest gap. The write-grant
+  defect is the **fifth consecutive** user-path defect to ship behind a green suite (CSP, port
+  collision, missing index, hardcoded line 0, now read-only grants). Every automated suite
+  grants capabilities explicitly, so nothing has ever exercised the button a person presses.
+  Residual risk: any future change to `addFolder` or the picker options has no automated
+  signal. The smallest thing that closes it is a shell-suite check that stubs
+  `showDirectoryPicker`, asserts the requested mode is `readwrite`, asserts both grants land,
+  and asserts a save succeeds — which would have caught this outright. Five in a row is a
+  missing test, not bad luck.
+- **Regression impact:** No component, contract, wire, or graph changed — `graph:check`
+  reports the same 9 components and 127 wires. `app.js` is the shell, which holds no
+  authoritative text; the three edits touch the capability request, one message string, and
+  one status string. The four protected POC files remain byte-stable against the frozen
+  snapshot and `vendor/markdown-renderer.js` is still byte-identical to
+  `WorkLists/public/markdownRenderer.js`. The remaining changes are documentation.
+- **API docs:** Not relevant — Cairn exposes no HTTP surface; `tools/serve.mjs` is a static
+  file server whose only contract is the CSP header, checked unchanged by `test:authority`.
+- **Tooling gates:** `audit` clean; `format:check` clean via `npm run format` then
+  `verify`; `verify` exit 0.
+- **Conflicts / exceptions:** Board card not updated this session and no commit made —
+  neither was asked for, and both are named as next steps rather than assumed. `TST-001`
+  (Playwright resolved by absolute path from the WorkLists workspace in six test files, so
+  the suite runs on no other machine) and `TT-001` (`innerHTML` unguarded sink) remain open,
+  as does the recorded gap that a page served by anything other than `npm run serve`
+  receives no policy.
 
 ### 2026-08-23T00:00:00Z — Both manual probes ran and passed; three probe defects fixed on the way
 

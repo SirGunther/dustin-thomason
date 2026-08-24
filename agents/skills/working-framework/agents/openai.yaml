@@ -1,0 +1,4 @@
+interface:
+  display_name: "Working Framework"
+  short_description: "Guide visible self-reflection and task execution"
+  default_prompt: "Use $working-framework to complete this task with visible self-reflection, execution, critique, and future guidance."
