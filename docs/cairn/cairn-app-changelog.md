@@ -31,7 +31,7 @@ Running changelog for Cairn, a markdown-vault UI intended for integration into t
 
 ## Current state
 
-**Phase:** **The nine-phase architecture run is complete.** Phases 0 through 9 all landed on
+**Phase:** **The nine-phase architecture run is complete, and no manual step remains.** Both gesture-driven probes ran by hand in Chromium on 2026-08-23 against real picked folders and passed, so `ADP-001` and `ADP-002` are proven against a real folder rather than an OPFS stand-in. Phases 0 through 9 all landed on
 2026-08-22. Phase 9 added observability and acceptance: a route-level trace assembled from what
 components report about themselves, correlation chains walked causally, a generated graph
 diagram, deterministic replay for the pure functions that make replay mean anything, five kinds
@@ -144,15 +144,11 @@ gesture-driven probe and is **PENDING MANUAL RUN**.
 
 **Next**, in the order it is worth doing:
 
-1. **Run the two manual probes.** `Architecture/probes/vault-read-boundary.html` and
-   `Architecture/probes/vault-write-path.html`. They need a user gesture no harness can supply,
-   and until the second runs the largest claim in the project is unproven: this system has never
-   written to a file a person chose.
-2. **Declare Playwright, or vendor a runner.** It is resolved by absolute path from the WorkLists
+1. **Declare Playwright, or vendor a runner.** It is resolved by absolute path from the WorkLists
    workspace, which makes every browser gate unrunnable on any other machine. It is the one item
    keeping `TST-001` open and the only one on its list that is a decision rather than coverage.
-3. **`TT-001` — Trusted Types.** `innerHTML` is an unguarded sink that CSP does not govern.
-4. Then the open product decisions, none of which the architecture now blocks: `EDT-001`,
+2. **`TT-001` — Trusted Types.** `innerHTML` is an unguarded sink that CSP does not govern.
+3. Then the open product decisions, none of which the architecture now blocks: `EDT-001`,
    `EDN-001`, `BRK-001`, `SRC-001`, and `EMB-001`.
 
 ---
@@ -182,6 +178,41 @@ gesture-driven probe and is **PENDING MANUAL RUN**.
 ## Session log
 
 _Newest first. Add one entry per working session or merge-worthy update._
+
+### 2026-08-23T00:00:00Z — Both manual probes ran and passed; three probe defects fixed on the way
+
+- **Summary:** The two gesture-driven probes ran by hand against real folders and passed, closing the last outstanding work from the nine-phase run. Getting there exposed three defects — all in the probes and tooling, none architectural — plus one open observation that could not be reproduced.
+- **Problem:** Phases 4 and 6 rested on claims no automated suite can reach, because `showDirectoryPicker()` needs a user gesture. Both probes had sat `PENDING MANUAL RUN` since those phases landed. When finally exercised, neither worked.
+- **Requirement:** A probe a person cannot run is not evidence. The claims had to be observed against a folder someone actually picked, and each failure traced to its own cause rather than lumped together as "the probe is broken."
+- **Solution:** Fixed each defect as it surfaced, re-ran, and recorded the observed output in `Phase4Evidence.md` and `Phase6Evidence.md`.
+
+### What the probes proved
+
+Read boundary, against `C:\dustin-thomason\docs\WorkLists` — 38 documents, `persisted: true`, `grants this session: 0`, the handle recalled from IndexedDB after a reload with **no** re-grant gesture. The document read was three levels deep, so the recursive walk, tree build, and read all work on real nested structure rather than a flat fixture. `projection carries text: false` — the DOM boundary holding on live data.
+
+Write path, against a scratch folder — both grants landed on two separate components, and `capability values kernel holds: 0`, so the kernel kept neither. `changed_lines: 1` on a real file, twice. The dry run wrote nothing and left the document dirty; the real save cleared dirty and kept the tab open.
+
+Step 5, the conflict check, reported `no conflict detected` — correctly, since it was pressed without editing the file elsewhere first. The precondition is proven automatically and more strictly in `tests/kernel-browser.mjs`: _a file changed underneath is refused, naming both modification times_, and _the other editor's work survives, the buffer stays dirty, and the tab stays open_. The manual step is a convenience, not the proof.
+
+### Three defects, none architectural
+
+1. **The CSP killed both probes silently.** Their scripts and styles were inline, and `tools/serve.mjs` sends `script-src 'self'` with no `unsafe-inline`. The pages rendered and every button was dead. Phase 8 added that policy after Phases 4 and 6 wrote these pages, and the authority suite checks the header's _directives_ rather than whether a page still functions under one — the policy was tested as a string, not as a constraint. Scripts and a shared stylesheet are now external files.
+2. **`tests/kernel-browser.mjs` bound port 8790**, the same port as `npm run serve`, so following the documented workflow made the suite fail with `EADDRINUSE`. Moved to 8791.
+3. **The write probe toggled line 0, hardcoded**, so step 3 could only work on a document whose first line was a checkbox — `Notes/hello.md` has checkboxes and was still refused with "line 0 is not a task line". It now asks the owner to lend the text via `document.source-request`, finds the first real task line, and says plainly when a document has none. A thrown click handler also printed nothing to the page, which is exactly how "button 3 did nothing" happens; all five steps now report failures where the person is looking.
+
+### One open observation, deliberately not closed
+
+While using the app, a checkbox click appeared to revert while a different item appeared checked. Not reproduced across three layers: the renderer's `data-markdown-line-index` values match the real source lines exactly for that file (`14,15,16` on both sides); `updateTaskCheckboxMarkdown` changes only the line it is given; and clicking the last box in the live app changed only the last box. The file's first task was already `- [x]` from an earlier probe run, and its three items read `this is an item`, `item 2`, `item 3` — so a refused edit against a stale revision fits the description, since the shell reverts the box by design and toasts the refusal. Recorded as open rather than explained away. If it recurs, the distinguishing observation is whether a toast appears at the moment the box reverts.
+
+- **Also fixed:** `npm run verify` was an `&&` chain of twelve gates whose counts were buried at different depths across thousands of lines of output. It is now `tools/verify.mjs`, printing one table with each gate's count and showing full output only for a gate that fails. A gate that exits 0 but whose count cannot be parsed reports "passed, no count reported" rather than a bare ok. Proven to still fail correctly by injecting a wrong-plane wire and by appending unformatted code — exit 1 both times.
+- **Files/areas:** `Architecture/probes/{vault-read-boundary,vault-write-path}.{html,js}`, new `Architecture/probes/probe.css`, `tests/kernel-browser.mjs`, new `tools/verify.mjs`, `package.json`, the evidence documents for Phases 4 through 9, `KernelAuthority.md`, `TODO.md`, and `ROADMAP.md`.
+- **User-visible impact:** The two probe pages work. No change to the application.
+- **Tests run:** `npm run verify` — **13/13 gates, exit 0**: 174 node checks, 34 governed messages at catalog 1.8.0, contract docs current, artifacts current, 9 components and 127 wires accepted, 77 kernel, 30 standalone, 35 shell, 26 authority, 5 acceptance budgets, 3 worker measurements, formatting clean, 0 vulnerabilities. Run after every change, not before.
+- **Tests added/updated:** None for the probe fixes — blocked by the same constraint the probes exist for: the picker needs a gesture. Residual risk: a future CSP tightening could break these pages again with no automated signal. The smallest thing that would close it is a suite that loads each probe page under `tools/serve.mjs` and asserts zero console errors and a wired first button, which would have caught defect 1 outright.
+- **Regression impact:** No component, contract, wire, or graph changed. The four protected POC files are byte-stable against the frozen snapshot and `vendor/markdown-renderer.js` is still byte-identical to `WorkLists/public/markdownRenderer.js`. The port move touches only which socket the kernel suite binds.
+- **API docs:** Not relevant — no HTTP surface. The WorkLists API was read only to update the board card.
+- **Tooling gates:** `audit` clean; `format:check` clean; `verify` exit 0.
+- **Conflicts / exceptions:** Board card `todo-1787318488373` updated with a `lastModified` precondition. The status label still could not move from `Unrefined`: the API returns `400 Task status is not available for this card's color tags`, and the card's `Information` tag is evidently not status-enabling. This is the **third** session reporting it, so it is structural rather than incidental — the status field is gated on a card property no agent write may set. `TST-001` and `TT-001` remain open, as does the recorded gap that a page served by anything other than `npm run serve` receives no policy.
 
 ### 2026-08-23T00:00:00Z — Nine-phase run reviewed and accepted; no changes required
 
