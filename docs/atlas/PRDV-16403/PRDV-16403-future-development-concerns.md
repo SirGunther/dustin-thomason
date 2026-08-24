@@ -114,3 +114,33 @@ The feature's whole risk profile is visual and stateful — empty versus failed,
 3. **Add a documented local override.** Contradicts the explicit JSDoc above and would weaken a production authorization path. **Not recommended**, and recorded here so the option is visibly rejected rather than quietly unconsidered.
 
 **Tracked as decision D7.** Owner: Dustin / Product.
+
+---
+
+## C5 — The contact search gives no signal that Enter is required, and renders nothing at all until it is pressed
+
+**Status:** open · **Verified in code:** 2026-08-22 · **Created or widened by this ticket:** **no** — pre-existing in a component this ticket does not touch. Recorded because it cost real time during this ticket's manual validation and presented as a defect.
+
+**The finding:** the contact search in `ContactManagementPanel.vue` is search-on-submit, and nothing in the UI says so.
+
+The input binds to `searchInput` (L27, L103). The query is handed a *different* ref, `submittedSearchTerm` (L28, L39), and `useSearchContacts` disables itself while that ref is empty (`useSearchContacts.ts` L32, L78). The only thing that copies one ref into the other is `commitSearch` (L78-80), reachable solely through `@keyup.enter` (L100).
+
+Three things then combine to leave the user with no feedback at all:
+
+- The placeholder reads `Search for contact name` (`common.json` → `callisto.contactManagement.searchPlaceholder`) and does not mention Enter.
+- The magnifier is a decorative `q-icon` in the input's `#prepend` slot (L106-107) with no click handler, so it looks like a search control and does nothing when clicked.
+- Every status message is gated on `hasSubmitted` (L41-42, L47, L52). Before Enter, the spinner, the `No contacts found.` message and the error message are all suppressed and the results list is empty. The panel renders **nothing** — there is no state distinguishing "you have not searched yet" from "the search is broken".
+
+**Observed during this ticket (2026-08-22):** typing a seeded contact's name into the panel produced an empty result area and read as a failure of the seeded data or of the new endpoint. Browser inspection confirmed no search request had been issued at all — because none was supposed to have been. The time went into diagnosing a component that was working correctly.
+
+**Why it is recorded here rather than fixed:** `ContactManagementPanel.vue` is pre-existing shipped UI outside this ticket's scope, and the fix is a copy-and-affordance change owned by whoever owns that panel's design — not a drive-by in a read-only warnings feature.
+
+**What would resolve it** — any one of these closes the gap, cheapest first:
+
+1. Change the placeholder to name the interaction, e.g. `Search for contact name and press Enter`. One locale string, no logic touched.
+2. Render a pre-submit prompt where the status messages already render, shown when `!hasSubmitted`, so an untouched panel says something rather than nothing.
+3. Make the magnifier a real submit control that calls `commitSearch`, so the icon that looks clickable is.
+
+**Why it matters beyond this ticket:** the same silent-empty pattern will read as a defect to every new user of the Access Manager, and to every future engineer validating a feature that depends on finding a contact first. The cost is not a broken feature; it is repeated misdiagnosis of a working one.
+
+**Owner:** unassigned. Belongs with the client-access UI design owner — worth raising alongside the outstanding copy questions already open on this ticket.
