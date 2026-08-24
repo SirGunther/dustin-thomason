@@ -5,9 +5,9 @@
 - **ClickUp:** [PRDV-16403](https://app.clickup.com/t/43227262/PRDV-16403)
 - **Parent epic:** [PRDV-14828](https://app.clickup.com/t/86aexmuhx) — View Warnings in Access Manager
 - **Repo:** `atlas-front-end`, `callisto-back-end`
-- **Branch:** _(not created — Phase 5 per orchestrate)_
-- **PR:** _(link when opened)_
-- **Validation review:** [`PRDV-16403/review/v0.1.0-PRDV-16403-display-warnings-in-access-manager-validation-review.md`](PRDV-16403/review/v0.1.0-PRDV-16403-display-warnings-in-access-manager-validation-review.md) — v0.1.0, overall status Pending
+- **Branch:** `PRDV-16403` in both `atlas-front-end` and `callisto-back-end` — pushed 2026-08-24
+- **PR:** [atlas-front-end #563](https://github.com/planetdepos/atlas-front-end/pull/563) · [callisto-back-end #431](https://github.com/planetdepos/callisto-back-end/pull/431) — both open, no reviewers requested
+- **Validation review:** [`PRDV-16403/review/v0.1.0-PRDV-16403-display-warnings-in-access-manager-validation-review.md`](PRDV-16403/review/v0.1.0-PRDV-16403-display-warnings-in-access-manager-validation-review.md) — v0.1.0, overall status Passed — cleared to ship
 - **Orchestrated:** yes — ledger at `docs/atlas/PRDV-16403/orchestration.md`
 - **Sprint:** 2026-17 (8/19–9/1) · Priority High · 3 points
 
@@ -85,6 +85,77 @@ _No Plans rows are maintained for this ticket._ It runs under the `orchestrate` 
 ## Session log
 
 _Newest first. Add one block before each commit (agents) or end of work session (you)._
+
+### 2026-08-24T17:05:00Z - atlas-front-end + callisto-back-end (branch `PRDV-16403`) - SHIPPED
+
+- **Summary:** Dustin closed the three open review items and directed the ticket to ship. Both repos committed, pushed, and PR'd. **This is the ship entry**; the entry below it covers the code work that preceded it.
+- **The three items, as Dustin resolved them:**
+  - **D8 - closed.** Derrick Dieso confirmed **400 is correct** directly to Dustin in conversation. The other two deviations (added `ProceedingsReadAuthGuard`, `FetchClientAccessListAction` as template) change no HTTP contract; recorded, not blocking.
+  - **D9 - ships as-is, stated in the PR** rather than gated on a product decision. Interim behaviour written into both PR bodies: Contact and Firm warnings are live today; Case warnings reads "None" and Case remarks reads "No remarks info" in every environment until PRDV-16392 maps the data; no code change needed when it lands.
+  - **D10 - passed by code, and the earlier "incomplete" call was retracted.** "Grants" meant access-grant rows in the **local dev database**, empty after a rebuild, so the Client Access list had no row to click - a local test-data gap, not a codebase gap. Both entry points assign the same `accessManagerContact` prop (`ProceedingDetailPage.vue:99-118`), `ClientAccessContact.contactId` is a contact id, and the panel reads only `contact.id` + `proceedingId`, so the two paths cannot diverge.
+- **Audit gate waived on Dustin's explicit instruction.** The high findings are known and pre-existing across these repos; `--no-verify` used on both commits at his direction. Recorded here because it is a deliberate override of `git-commit-workflow`, not an oversight.
+- **`package-lock.json` deliberately left out of the Callisto commit.** Its diff is purely `"peer": true` flag churn from a local `npm install` - no dependency added, no resolved version changed - and folding it in would have put a second narrative in the commit.
+- **Commits:**
+  - `callisto-back-end` - `2ab33cd4a0e5a5907e6316efc45589f48c4cd7a1` - *PRDV-16403: Add access manager warnings read endpoint*
+  - `atlas-front-end` - `98299b1c8906af3c6635502411f9d376dd324a20` - *PRDV-16403: Display RB warnings in access manager*
+- **PRs (no reviewers requested on either):**
+  - [callisto-back-end #431](https://github.com/planetdepos/callisto-back-end/pull/431)
+  - [atlas-front-end #563](https://github.com/planetdepos/atlas-front-end/pull/563)
+- **Both PRs cross-reference each other and say to land together** - the Atlas panel is dead without the Callisto endpoint.
+- **Carried into the PR bodies rather than left implied:** the DOMPurify happy-dom gap and the hand-verification that covers it; the untested Callisto integration spec; the unusable `tsc` gate and the two pre-existing GCA suite failures; the red audit; and that the failure state has **not** been observed in a browser against a real refused connection.
+
+#### Verification gates
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| lint | `npm run lint` | callisto-back-end | pass (exit 0) | `eslint --fix` rewrote nothing |
+| lint | `npm run lint` | atlas-front-end | pass (exit 0) | - |
+| typecheck | `npx vue-tsc --noEmit` | atlas-front-end | pass (exit 0) | - |
+| tests | `npx vitest run --maxWorkers 1` | atlas-front-end, full suite | pass - 127 files, 1117 passed, 4 skipped | - |
+| audit | `npm audit --audit-level=high` | both repos | **waived** | Known pre-existing high findings; waived on Dustin's explicit instruction, `--no-verify` on both commits |
+| tests | - | callisto-back-end | **not re-run this session** | No Callisto file changed since the 2026-08-18 run recorded below (14 suites / 57 tests green on the contacts module). Lint re-run and clean against the pushed tree |
+
+#### Shipping checklist
+
+- **Tests run** - see table. Atlas full suite green against the exact tree that was pushed.
+- **Tests added/updated** - covered by the entry below; nothing further added in this pass.
+- **Regression impact** - no code changed in this pass; it is commit, push and PR only. The preceding entry carries the regression analysis.
+- **API docs** - swagger helper shipped with the Callisto commit: `ApiOperation`, both `ApiParam`s, and 200/400/500 on `AccessManagerWarningsResponseDTO`, documenting 400 per the confirmed deviation.
+- **Conflicts / exceptions** - audit gate waived and `--no-verify` used, both on explicit instruction, recorded above. Two verification gaps ship open and are named in the PR bodies: the D4 browser check against a real refused connection, and DOMPurify's stripping (no automated coverage under happy-dom; verified by hand in a browser).
+
+### 2026-08-24T16:20:00Z - atlas-front-end (branch `PRDV-16403`)
+
+- **Summary:** Chased down the D4 discrepancy - the prior session's claim that the "Warnings/remarks failed to load" message was *"in the code and covered by the component spec"* while never inducing a real failure. The claim was half true, and the false half hid a real defect. **The failure path had never been executed anywhere.** `RbWarningsPanel.spec.ts` is handed an `error` **prop** and never runs a query; `useAccessManagerWarnings.spec.ts` mocks `useQuery` outright and never returns an error from it; `AccessManagerOverlay.spec.ts` mocks the composable. Nothing connected a rejected request to the rendered message. Building that connection surfaced a genuine defect and three false-passing specs.
+- **The defect (fixed):** the warnings query took vue-query's default `retry: 3`, which **compounds** with the three transient-network retries `globalApi/apiClient.ts` already performs. A refused connection becomes 4 query attempts x 4 requests = **16 requests**, and the panel holds a spinner for roughly **35s** (4 x 7s axios backoff + 7s query backoff) before the failure wording can appear; a plain 500 takes ~7s. Measured, not inferred - a scratch harness showed the error surfacing at t=7s after 4 fetch calls for a 500. Fixed with `retry: 1`, matching the `retry: 1` the other Callisto read queries use, which bounds the wait to vue-query's single 1s backoff.
+- **Four false-passing specs (fixed):**
+  - `RbWarningsPanel.spec.ts` stubbed `q-banner` as `true`, which **swallows the banner's default slot**. It asserted the error *element* existed but could never see the message inside it - a wrong i18n key would have passed. The stub now renders its slot, plus an assertion on the wording.
+  - `AccessManagerOverlay.spec.ts` mocked the composable with plain `{ value: null }` literals instead of refs. **Vue only unwraps refs**, so `error` arrived at the panel as a truthy object and the overlay spec rendered the *failure banner* in every one of its tests while asserting it proved the panel body. It passed only because `rb-warnings-panel-body` renders in every branch. The mock now returns real refs and the assertion names the branch.
+  - `useAccessManagerWarnings.spec.ts`'s error test was **vacuous** - the `useQuery` mock hard-coded `error: ref(null)`, so "the exposed error stays null" asserted `null === null` and the `instanceof Error` narrowing had zero coverage. The mock's refs are now drivable and the narrowing is tested both ways.
+  - `AccessManagerOverlay.spec.ts`'s *"the warnings query does not feed the overlay loading state"* test asserted the **absence of `warningsPlaceholder`** - a locale key that no longer exists anywhere in `src/`. It could never fail. Replacing it needed two passes: asserting the body still renders was **also** vacuous, because the spec's `OverlayStub` ignores its `loading` prop, and a deliberate mutation coupling `isWarningsLoading` into the overlay's `:loading` still passed. It now asserts `findComponent({ name: 'Overlay' }).props('loading')` directly, which does catch that mutation.
+- **New coverage:** `__specs__/AccessManagerWarningsFailurePath.spec.ts` (6 tests) drives a rejected request through the **real** query client, composable, panel, and locale file, asserting the literal string "Warnings/remarks failed to load" renders, no section heading does, and neither empty-state wording appears. It also asserts the *success* path renders both empty wordings through the same wiring, so their absence during a failure is not vacuous, and it bounds the attempt count at 2.
+- **Every fix was mutation-checked.** Reverting `retry: 1` fails 4 tests; renaming the i18n key fails 2; coupling `isWarningsLoading` into the overlay's `:loading` fails 1. None of the three was caught by the suite as it stood before this session.
+- **Files - `atlas-front-end` (1 new, 4 modified):** new `AccessManagerOverlay/__specs__/AccessManagerWarningsFailurePath.spec.ts`; modified `composables/useAccessManagerWarnings.ts` (`retry: 1` plus rationale comment), `composables/__specs__/useAccessManagerWarnings.spec.ts`, `components/__specs__/RbWarningsPanel.spec.ts`, `__specs__/AccessManagerOverlay.spec.ts`.
+- **Commits:** none - nothing committed or pushed in either repo.
+- **Notes:** No production behaviour changed beyond the retry bound. The D4 **browser** check stays open: only a real refused connection through `apiClient` exercises that layer, and the timing is only observable in a browser. Its step in the review now says to expect a few seconds of spinner first, so a tester does not misread the wait as a failure of the check.
+
+#### Verification gates
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | atlas-front-end | **fail (exit 1)** - 15 vulns, 12 high | **Pre-existing, not mine.** Every high finding is transitive `undici` via `npm` and `semantic-release`. No dependency was added or changed this session - `package.json` and `package-lock.json` are unmodified in `git status`. The 2026-08-18 entry recorded this gate green, so this is advisory drift, not a regression from this work. **Blocks commit under `git-commit-workflow` until triaged or waived.** |
+| lint | `npm run lint` | atlas-front-end | pass (exit 0) | Failed once on a prettier wrap warning under `--max-warnings 0`; fixed with `npx eslint --fix` on that file, re-run clean |
+| tests | `npx vitest run --maxWorkers 1` | atlas-front-end, full suite | pass - 127 files, 1117 passed, 4 skipped | Run after lint, against the final tree |
+| tests | `npx vitest run --maxWorkers 1 src/callisto/pages/JobProceedingPages/ProceedingDetailPage/components/AccessManagerOverlay` | Access Manager overlay tree | pass - 10 files, 84 tests | 83 before this session |
+| typecheck | `npx vue-tsc --noEmit` | atlas-front-end | pass (exit 0) | - |
+| tests | - | callisto-back-end | **not run** | **Out of scope:** this session changed no Callisto file. `git status` on that repo is identical to the state the 2026-08-18 entry left it in, so its gates are unchanged and those results stand |
+
+#### Shipping checklist
+
+- **Tests added/updated** - 1 new suite (6 tests) covering the failure path end to end; 3 existing suites corrected across 4 assertions that were passing without proving anything. Happy, failure, recovery-on-retry, and retry-bound cases all asserted.
+- **Regression impact** - full Atlas suite run, 127 files green. The only production change is `retry: 1` on a query used solely by `RbWarningsPanel`; the isolating boundary is the composable, which has exactly one caller (`AccessManagerOverlay.vue` L69-72) and feeds only that panel. `useAccessManager`'s own queries were deliberately left on their defaults - out of this ticket's scope.
+- **API docs** - not relevant: no HTTP contract touched. The endpoint path, DTO shape, and swagger decorators live in `callisto-back-end`, which this session did not modify; route, method, and response shape checked and unchanged.
+- **Tooling gates** - audit fails pre-existing (see table); lint, typecheck, and the full test suite pass.
+- **Conflicts / exceptions** - the D4 browser check remains unperformed and is honestly recorded as such in the review doc; the automated result is labelled "**This is not the browser check**" there so it cannot be mistaken for one.
 
 ### 2026-08-18T22:05:00Z — callisto-back-end, atlas-front-end (branch `PRDV-16403`)
 
@@ -172,17 +243,26 @@ _None yet._
 
 ---
 
-## Current state (as of 2026-08-18)
+## Current state (as of 2026-08-24 - shipped)
 
-**Nothing implemented. No branch, no code, no tests — by design.**
+**Shipped. Both repos committed, pushed, and PR'd on 2026-08-24. Awaiting review.**
 
-Phase 0 of the orchestrated run is `done`; Phase 1 (Recon and plan, Plan mode) is next and has not started. On disk: the ClickUp capture, the orchestration ledger, this changelog, and three `draft` job stories. Both implementation repos are untouched — `atlas-front-end` is clean on `main` (`02c98e1e`), `callisto-back-end` is clean on `PRDV-16313` (`c43be32c`).
+| Repo | Commit | PR |
+| ---- | ------ | -- |
+| `callisto-back-end` | `2ab33cd4a0e5a5907e6316efc45589f48c4cd7a1` | [#431](https://github.com/planetdepos/callisto-back-end/pull/431) |
+| `atlas-front-end` | `98299b1c8906af3c6635502411f9d376dd324a20` | [#563](https://github.com/planetdepos/atlas-front-end/pull/563) |
 
-The read-only touch-point verification recorded in **Context** is recon input for Phase 1, **not** an approved plan. The five deltas listed there are open and unreconciled.
+**Land them together** - the Atlas panel is dead without the Callisto endpoint, and both PR bodies say so.
 
-**Corrected 2026-08-18T21:10:00Z:** all four fields are buildable now — PRDV-16391 merged to `origin/main` and the three `cases` columns exist (see Context). The ticket's Sequencing note is moot. **PRDV-16392** (DMS CDC mapping) still governs whether real case data arrives, so the case values may read `null` in every environment; that is a data gap, not a code blocker.
+All ten review objectives Passed. D8 closed on Derrick's direct confirmation that **400 is correct**; D9 ships as-is with its interim behaviour written into both PRs; D10 passed **by code** - the two Access Manager entry points assign the same contact prop, so they cannot diverge, and the empty Client Access list was local test data rather than a code gap. The empty-warning wording ships as **"None"** (Figma) rather than the ClickUp AC's "No warning info", on Dustin's call.
 
-Phase 1 also surfaced a live risk to **manual** verification (finding F9): `IS_GRANTING_CLIENT_ACCESS_ENABLED` must be on the Cognito user, PRDV-16312 already failed to make that stick, and the `CALLISTO_DEV_FEATURE_FLAG_OVERRIDES` workaround PRDV-15776 records **does not exist** — `IsFeatureAllowedTS` is Cognito-claims-only by explicit JSDoc and no override exists in either repo. Decision D7 owns unblocking it.
+**What the feature does today, until PRDV-16392 ships:** Contact warnings and Firm warnings show real data. Case warnings reads **"None"** and Case remarks reads **"No remarks info"** in every environment, because the three `cases` columns exist and are read but nothing writes to them yet. **No code change is needed when 16392 lands** - both sections populate on their own.
+
+**Two verification gaps shipped open, named in the PR bodies rather than left implied:** the D4 **browser** check against a genuinely refused connection, and **DOMPurify's stripping**, which has no automated coverage because it misbehaves under happy-dom - verified by hand in a browser on 2026-08-24 instead. The Callisto repository integration spec (9 cases) is committed but has never run; its queries were verified against real Postgres by hand.
+
+**Known-red and deliberately waived:** `npm audit --audit-level=high` across both repos, on pre-existing transitive findings. Waived on Dustin's explicit instruction; `--no-verify` used on both commits. Also pre-existing and unrelated: `npx tsc --noEmit` fails on Callisto `main` (11 files, stale `@planetdepos/orbital-docking-protocol`, zero overlap with this ticket) and two `granting-client-access` suites fail on the same package.
+
+**Next:** review on both PRs, then the D4 browser check when convenient.
 
 ---
 
