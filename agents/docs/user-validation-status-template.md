@@ -90,29 +90,45 @@ Required layout:
 
 ## Validation Detail Rules
 
-Every validation checkbox must tell the reviewer exactly what to do and exactly what observable result constitutes success.
+Every validation checkbox must begin with a clear objective that states what the reviewer is trying to prove. The exact word `Prove` is required so the purpose of the check remains explicit. Nest the action and expected result beneath that objective so the reviewer can quickly understand the goal, perform the check, and determine whether it passed.
 
 Required layout:
 
-`- [ ] **Action:** <specific user action, command, request, input, or selection>. **Expected:** <specific visible, returned, or persisted result>.`
+```markdown
+- [ ] **Prove:** <specific behavior or outcome the reviewer must establish>.
+  - **Action:** <specific user action, command, request, input, or selection>.
+  - **Expected:** <specific visible, returned, or persisted result>.
+```
 
 UI example:
 
-`- [ ] **Action:** Select a logged-item source range. **Expected:** The transcript scrolls to its first contributing row and highlights every row in the exact referenced range.`
+```markdown
+- [ ] **Prove:** A logged-item source range is visible in its transcript context.
+  - **Action:** Select a logged-item source range.
+  - **Expected:** The transcript scrolls to its first contributing row and highlights every row in the exact referenced range.
+```
 
-API example:
+API-only example:
 
-`- [ ] **Action:** Load the linked fully seated contact-firm fixture and send GET /api/firms/<fixture-id> with the documented test client. **Expected:** The response is HTTP 200; id, name, primary_contact_id, and seat_count match the fixture, and contacts contains the linked seated contacts.`
+```markdown
+- [ ] **Prove:** A firm response includes its linked seated contacts.
+  - **Action:** Load the linked fully seated contact-firm fixture and send `GET /api/firms/<fixture-id>` with the documented test client.
+  - **Expected:** The response is HTTP 200; `id`, `name`, `primary_contact_id`, and `seat_count` match the fixture, and `contacts` contains the linked seated contacts.
+```
 
-1. Cover every requirement with at least one validation checkbox. Do not leave a requirement without a concrete way to validate it.
-2. Identify the exact control label, page, command, endpoint and method, test record, fixture, input, or sequence the reviewer must use.
-3. State any required setup immediately beneath `#### Validation Details` as `Validation setup: <exact prerequisite>`. Include the startup command, URL, account or role, seed data, fixture link, or initial state when it is not already obvious.
-4. Make the expected result directly observable. Name the visible state, message, navigation, response status, required fields and values, persisted record, or other evidence that determines pass or fail.
-5. Do not use vague criteria such as `works correctly`, `all fields are populated`, `returns the right data`, or `looks good`. Name the fields and conditions or link the governing schema or fixture and identify the specific values that must match.
-6. Keep one coherent action-result pair per checkbox. Split unrelated behaviors into separate checks so a partial result can be recorded accurately.
-7. Write the instructions for the actual reviewer. Do not assume they know an internal tool, fixture ID, route, environment, or prerequisite that the review does not identify.
-8. Automated tests may support readiness, but they do not replace a hands-on checkbox. When a check requires a technical client, provide the exact runnable command or a direct link to a prepared request or test fixture.
-9. If the action cannot be performed with currently available access or data, identify the missing dependency and use `Blocked`; do not write an unexecutable validation step.
+1. Cover every requirement with at least one validation checkbox. Do not leave a requirement without a concrete way to prove it.
+2. Write each `Prove` statement as a concise, human-readable objective describing the behavior or outcome that determines success. Do not use the action itself as the objective.
+3. Prefer proof that is directly observable in the product UI. When data is meant to populate a screen, ask the reviewer to confirm the specific data is visible and correct on that screen rather than inspect the network tab, HTTP traffic, developer tools, logs, or internal data flow.
+4. Use technical validation only when the behavior has no user-visible result or when the requirement specifically concerns an API, integration, persistence boundary, or other non-UI contract. Do not require technical inspection when the same outcome can be proved from the user experience.
+5. Keep validation fast and focused. Include only the minimum action and observation needed to prove the objective; move implementation diagnostics and exploratory troubleshooting out of the hands-on checklist.
+6. Identify the exact control label, page, command, endpoint and method, test record, fixture, input, or sequence the reviewer must use.
+7. State any required setup immediately beneath `#### Validation Details` as `Validation setup: <exact prerequisite>`. Include the startup command, URL, account or role, seed data, fixture link, or initial state when it is not already obvious.
+8. Make the expected result directly observable. Name the visible state, message, navigation, response status, required fields and values, persisted record, or other evidence that determines pass or fail.
+9. Do not use vague criteria such as `works correctly`, `all fields are populated`, `returns the right data`, or `looks good`. Name the fields and conditions or link the governing schema or fixture and identify the specific values that must match.
+10. Keep one coherent proof objective and one supporting action-result pair per checkbox. Split unrelated behaviors into separate checks so a partial result can be recorded accurately.
+11. Write the instructions for the actual reviewer. Do not assume they know an internal tool, fixture ID, route, environment, or prerequisite that the review does not identify.
+12. Automated tests may support readiness, but they do not replace a hands-on checkbox. When a check genuinely requires a technical client, provide the exact runnable command or a direct link to a prepared request or test fixture.
+13. If the action cannot be performed with currently available access or data, identify the missing dependency and use `Blocked`; do not write an unexecutable validation step.
 
 ## Review Construction Rules
 
@@ -130,7 +146,7 @@ API example:
 12. Place a **Return to User Validation Status** navigation control at the end of every objective section.
 13. Update the table link whenever an objective heading changes because its generated slug changes with it.
 14. Include the required concise Markdown-linked `Files:` line beneath every objective heading.
-15. Format every Validation Details checkbox as an explicit **Action** and **Expected** pair, with exact setup when required.
+15. Format every Validation Details checkbox as an explicit **Prove** objective with indented **Action** and **Expected** sub-points, with exact setup when required.
 
 ---
 
@@ -200,8 +216,12 @@ Files: [Application file](../../path/to/file), [Focused validation](../../tests/
 
 Validation setup: Start the project with `<exact command>`, open `<exact URL>`, and load `<named test state or fixture>`.
 
-- [ ] **Action:** Select `<exact control label>` and provide `<specific input>`. **Expected:** `<specific visible state, message, or persisted value>` appears.
-- [ ] **Action:** Perform `<next exact reviewer action>`. **Expected:** `<observable result that determines pass or fail>` occurs.
+- [ ] **Prove:** `<specific user-visible behavior or outcome>` is available to the reviewer.
+  - **Action:** Select `<exact control label>` and provide `<specific input>`.
+  - **Expected:** `<specific visible state, message, or persisted value>` appears.
+- [ ] **Prove:** `<next distinct user-visible behavior or outcome>` occurs.
+  - **Action:** Perform `<next exact reviewer action>`.
+  - **Expected:** `<observable result that determines pass or fail>` occurs.
 
 [**↑ Return to User Validation Status**](#user-validation-status)
 
@@ -228,6 +248,8 @@ Files: [Affected component](../../path/to/another-file), [Validation fixture](..
 
 Validation setup: Load [Named validation fixture](../../tests/fixtures/example.json) and start `<service>` with `<exact command>`.
 
-- [ ] **Action:** Send `<METHOD> <endpoint>` using `<exact client, command, or linked prepared request>`. **Expected:** The response is HTTP `<status>` and `<named fields>` match the linked fixture values.
+- [ ] **Prove:** The API returns `<specific contract behavior or outcome>`.
+  - **Action:** Send `<METHOD> <endpoint>` using `<exact client, command, or linked prepared request>`.
+  - **Expected:** The response is HTTP `<status>` and `<named fields>` match the linked fixture values.
 
 [**↑ Return to User Validation Status**](#user-validation-status)
