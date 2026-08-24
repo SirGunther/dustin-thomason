@@ -144,3 +144,35 @@ Three things then combine to leave the user with no feedback at all:
 **Why it matters beyond this ticket:** the same silent-empty pattern will read as a defect to every new user of the Access Manager, and to every future engineer validating a feature that depends on finding a contact first. The cost is not a broken feature; it is repeated misdiagnosis of a working one.
 
 **Owner:** unassigned. Belongs with the client-access UI design owner — worth raising alongside the outstanding copy questions already open on this ticket.
+
+---
+
+## C6 — DOMPurify does not sanitize correctly under happy-dom, so nothing in Atlas verifies its XSS protection
+
+**Status:** open · **Verified in code:** 2026-08-24 · **Created by this ticket:** no — the defect is in the shared test environment; this ticket is the first place it was noticed.
+
+### Executive summary (stands alone)
+
+Atlas renders backend-authored HTML through `v-html` in two places: the pre-existing `src/globalComponents/Notifications/components/NotificationBody.vue`, and this ticket's `RbWarningsPanel.vue` (RB case remarks). Both rely on `DOMPurify.sanitize` as the only thing standing between backend content and the DOM.
+
+Under the repo's `happy-dom` test environment, DOMPurify does **not** behave: probed directly, it strips safe tags while letting `<script>` and `<iframe>` through. So a spec cannot assert that sanitization works — and neither `v-html` site has ever had that assertion. `RbWarningsPanel.spec.ts` works around it by mocking `dompurify` and asserting only what the component owns (that RB html is always routed through the sanitizer and never bound raw), which is the right scope for a component spec but leaves the sanitizer itself unverified repo-wide.
+
+This is a test-environment defect, not a production one — DOMPurify is expected to behave correctly in a real browser. The risk is that a future regression in sanitization (a version bump, a config change, a new `v-html` site bound raw) would not be caught by any test.
+
+### Evidence
+
+- `RbWarningsPanel.spec.ts:12-15` — the mock and the comment recording the happy-dom behaviour.
+- `NotificationBody.vue:32-34` — the pre-existing `DOMPurify.sanitize` call; its spec makes no sanitization assertion.
+- Both sites use the same `<!-- eslint-disable vue/no-v-html -->` shape, so the pattern is established and will be copied again.
+
+### Options
+
+1. **Accept, documented.** What this ticket does. The component-level assertion (routed through the sanitizer, never bound raw) is the part a component spec can own, and it is in place for the new surface.
+2. **Add a jsdom-environment spec for sanitization.** Vitest allows a per-file environment via a docblock; one small spec run under `jsdom` could assert `<script>`/`<iframe>` stripping for real, covering both `v-html` sites. Cheapest real fix.
+3. **Investigate the happy-dom interaction.** Establish whether it is a version issue or a known incompatibility, and decide the repo's environment accordingly. Widest, and properly a repo-level decision rather than this ticket's.
+
+**Recommended:** option 2, as follow-up work — it restores the missing guarantee without changing the repo's test environment.
+
+**Why it matters beyond this ticket:** `v-html` + DOMPurify is now the established pattern for rendering backend HTML in Atlas, and the next engineer will copy it. Whether the sanitizer actually sanitizes is a repo-wide guarantee, not a per-feature one, so it should not be decided inside a feature branch.
+
+**Owner:** unassigned. Belongs with whoever owns the Atlas test-environment configuration.
