@@ -102,7 +102,9 @@ _Newest first. Add one block before each commit (agents) or end of work session 
   - [callisto-back-end #431](https://github.com/planetdepos/callisto-back-end/pull/431)
   - [atlas-front-end #563](https://github.com/planetdepos/atlas-front-end/pull/563)
 - **Both PRs cross-reference each other and say to land together** - the Atlas panel is dead without the Callisto endpoint.
-- **Carried into the PR bodies rather than left implied:** the DOMPurify happy-dom gap and the hand-verification that covers it; the untested Callisto integration spec; the unusable `tsc` gate and the two pre-existing GCA suite failures; the red audit; and that the failure state has **not** been observed in a browser against a real refused connection.
+- **PR bodies rewritten 2026-08-24 after Dustin rejected the first pass as overbuilt.** Validated against real merged PRs in both repos (`atlas-front-end` #560/#555/#554, `callisto-back-end` #429/#427/#425). House style is short: bare ClickUp URL, the job story plus a couple of sentences on what changed, then screenshots or brief bullets of what was checked. **Commit hashes, gate tables, gate commands, Problem/Requirement/Solution headings and caveat catalogues do not belong in a PR body** - they belong here. Recorded in `PRDV-16403-pr-draft.md` so the next ticket does not repeat it.
+- **What the trimmed bodies keep, because a reviewer cannot infer it:** the interim case-section behaviour, the 400-not-404 deviation and Derrick's confirmation, that case values repeat per proceeding by design, and that sanitisation was checked in a browser because DOMPurify misbehaves under the test environment. **What moved out of them and lives only here:** gate results, the untested Callisto integration spec, the unusable `tsc` gate, the two pre-existing GCA suite failures, the red audit, and the unperformed D4 browser check.
+- **Neither PR has screenshots**, which is the evidence this team expects; the checklist boxes are unchecked on both until Dustin adds them.
 
 #### Verification gates
 
@@ -262,7 +264,7 @@ All ten review objectives Passed. D8 closed on Derrick's direct confirmation tha
 
 **Known-red and deliberately waived:** `npm audit --audit-level=high` across both repos, on pre-existing transitive findings. Waived on Dustin's explicit instruction; `--no-verify` used on both commits. Also pre-existing and unrelated: `npx tsc --noEmit` fails on Callisto `main` (11 files, stale `@planetdepos/orbital-docking-protocol`, zero overlap with this ticket) and two `granting-client-access` suites fail on the same package.
 
-**Next:** review on both PRs, then the D4 browser check when convenient.
+**Next:** add screenshots to both PRs and check the boxes, then review. The D4 browser check when convenient.
 
 ---
 
