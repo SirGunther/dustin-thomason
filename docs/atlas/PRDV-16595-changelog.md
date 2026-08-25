@@ -53,11 +53,15 @@ The `overrides` block in the ticket body is Callisto's committed `package.json` 
 
 **The epic-reframing finding.** All four repos already carry `overrides` blocks, and each repo's audit failures correspond exactly to what its block is missing or has let go stale. Callisto's is complete; nova-back-end's is partially stale (`brace-expansion ^5.0.8` vs patched `5.0.9`; `js-yaml ^4.2.0` inside a range vulnerable through `4.3.0`); nova-orbital has no OTel entries at all and takes six findings for it; europa lacks js-yaml/brace-expansion/multer/fast-uri entries and is flagged for precisely those. The correspondence holds in both directions — nova-back-end's OTel overrides *are* current and it reports zero OTel findings against the same internal `pathfinder-observability-pkg` dependency that gives nova-orbital six.
 
-So PRDV-16423 is one overrides block developed in Callisto and never propagated, plus floor drift where it was partially copied. Stories 2 and 3 should **port Callisto's block**, not re-derive fixes.
+So PRDV-16423 is one overrides block developed in Callisto and never propagated, plus floor drift where it was partially copied.
+
+**But propagating the block is not the remedy — measured, not assumed.** Ported to Europa (lockfile-only, reverted), Callisto's applicable entries took 7 high → **5**; plain `npm audit fix` takes it → **0** with `package.json` untouched. Callisto's overrides are *scoped*, which makes them precise to Callisto's tree shape and therefore non-portable: Europa reaches `brace-expansion` via eslint/jest parents rather than `minimatch@10`, and `js-yaml` via `@istanbuljs/load-nyc-config` rather than `@nestjs/swagger`, so both entries miss. Three of Europa's seven (`axios`, `form-data`, `fast-uri`) have no entry in the block at all.
+
+Corrected direction: **`npm audit fix` for Nova and Europa** (both measured to 0); **override needed only for nova-orbital**, whose 6 OTel findings are `fixAvailable: false` so `audit fix` cannot reach them. Callisto's scoped pathfinder entry is the leading candidate there because nova-orbital declares the *identical* parent `@planetdepos/pathfinder-observability-pkg@^0.2.13` — same tree shape, the one case where a scoped override should transfer. **That is unverified**: the GitHub Packages auth gap blocks every `@planetdepos` resolution locally.
 
 **Accepted residual:** 5 low + 2 moderate, all `aws-sdk` → bundled `uuid`. npm offers only `--force` installing `aws-sdk@1.18.0` (downgrade-shaped major). Outside AC scope, not gate-blocking. Accept and document.
 
-**Open, and genuinely yours:** whether "ratify the pattern" is worth 3 points now that no Callisto code changes, and whether the propagation work is re-pointed onto stories 2 and 3. Recommendation in the epic changelog.
+**Re-pointing recommendation (pointing itself is the user's call — Kat asked for self-refinement).** PRDV-16595 no longer involves a Callisto code change; its deliverable is ratification plus the corrected direction for the other two stories. Recommend **3 → 1**, with the freed 2 moving to **3-Europa**, which carries the real regression risk (`axios` and the Nest platform layer on hot paths, ~1005 packages re-resolved). **2-Nova** should hold or gain, since nova-orbital is the only repo needing a genuine override and the only one that cannot currently be verified locally.
 
 ---
 
@@ -91,6 +95,27 @@ _None — no implementation attempted or required._
 - Marked **1 row**: Preliminary → "Generated ticket for the work to be done" (evidence: `PRDV-16595-original-ticket.md` on disk).
 - **Left unmarked, everything else.** Deploy & PR → Pre-Push → "Run `npm audit`": audits were run and are clean, but that row belongs to pre-push of implemented work. Investigation → "Investigation Report": the state artifact is analysis, not that report.
 - Set `currentStep` and `nextUp`; left `waitingOn` empty (nothing blocks this story — the GitHub Packages PAT gap from the epic session affects nova-orbital only). Status left `Unrefined`: no Investigation Report emitted, so the `In Progress` transition does not apply. `workAhead` left untouched — user's field.
+
+### 2026-08-25T14:22:00Z — europa-back-end (measurement, reverted)
+
+**Summary.** Tested the "port Callisto's overrides block" direction I had recorded earlier the same session. **It failed the test**, and the direction has been corrected in this changelog, in the state artifact, and on the epic card.
+
+**Why the test.** The cross-repo correspondence matrix explains *why* each repo fails, but says nothing about whether porting is the right *remedy*. I had extrapolated one to the other and written the extrapolation onto the epic card, where it would have steered stories 2 and 3. It needed measuring.
+
+**Method.** `europa-back-end` was confirmed to have no `@planetdepos` dependencies, so the auth gap did not interfere. Two runs, each `--package-lock-only` and reverted via `git checkout -- package.json package-lock.json`:
+
+| Run | Change | Result |
+| --- | --- | --- |
+| A | Added Callisto's applicable entries (`minimatch@10`→`brace-expansion ^5.0.9`, `@nestjs/swagger`→`js-yaml ^5.2.3`, `multer ^2.2.0`) | 7 high → **5 high** |
+| B | Plain `npm audit fix`, no manifest change | 7 high → **0** |
+
+**Root cause of the failure.** Callisto's overrides are *scoped* — precise to Callisto's tree shape, and therefore not portable. Europa reaches `brace-expansion` through `@eslint/config-array`, `@eslint/eslintrc`, `@jest/reporters`, `eslint` and root, not `minimatch@10`; and `js-yaml` through `@istanbuljs/load-nyc-config` and root, not `@nestjs/swagger`. Both scoped entries missed. Only `multer` cleared (taking `@nestjs/platform-express` with it, since that finding was purely via multer). `axios`, `form-data` and `fast-uri` were never addressable — no entry exists for them.
+
+**Conclusion.** The transferable asset is the *technique*, not the JSON. Corrected per-repo direction recorded in Current state.
+
+**Nova-orbital remains unverified.** Its 6 OTel findings are `fixAvailable: false`, so `audit fix` cannot reach them and an override genuinely is required. Callisto's scoped pathfinder entry is the leading candidate because nova-orbital declares the identical parent spec `@planetdepos/pathfinder-observability-pkg@^0.2.13`. Confirmed the specs match; **could not test the fix** — auth gap. Not presented as verified.
+
+**Files/areas:** `docs/atlas/PRDV-16595-changelog.md`, `docs/atlas/PRDV-16595/PRDV-16595-callisto-remediation-state.md`. `europa-back-end` verified back at clean `main` `34da474` (`git status --porcelain` empty).
 
 #### Shipping checklist
 

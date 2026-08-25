@@ -75,10 +75,39 @@ Read the table either direction and it holds. Where a repo has a current overrid
 ## What this story should actually deliver
 
 1. **Confirm the AC.** `npm audit --audit-level=high` exits 0 on `main`. Done — verified this session.
-2. **Ratify the block** as the canonical remediation pattern for the epic, and record it somewhere the other two stories can consume rather than re-derive.
+2. **Ratify the block** as Callisto's remediation and record the *technique* for the epic — scope overrides narrowly, cross a major version when the floor has no margin. Per the measurement below, do **not** publish the block itself as a drop-in for the other repos; it does not port.
 3. **Record the accepted residual.** Callisto still carries 5 low + 2 moderate, all `aws-sdk` → bundled `uuid`. npm's only offer is `--force` installing `aws-sdk@1.18.0`, a downgrade-shaped major. Out of AC scope (`high`/`critical` only) and not gate-blocking. Accept and document; do not fix.
 4. **Name the maintenance defect.** A hand-maintained floor silently drifts back inside new advisory ranges — nova-back-end's `brace-expansion: ^5.0.8` against a patched `5.0.9` is the live example, and its `js-yaml: ^4.2.0` is the second. This block will need re-verification every time the advisory DB moves. That is a follow-up story on the epic (Renovate/Dependabot), not work for PRDV-16595.
 
+## Measured: the block does NOT port. Tested, 2026-08-25T14:20Z
+
+The obvious inference from the matrix above — "propagate Callisto's block to the other repos" — was tested on `europa-back-end` and **is wrong**. Both runs were lockfile-only and reverted; Europa has no `@planetdepos` dependencies, so the GitHub Packages auth gap did not interfere.
+
+| Approach on Europa | 7 high becomes | `package.json` |
+| --- | --- | --- |
+| Port Callisto's applicable entries (`minimatch@10`→`brace-expansion`, `@nestjs/swagger`→`js-yaml`, `multer`) | **5 high** | modified |
+| Plain `npm audit fix` | **0** | untouched |
+
+**Why porting underperforms — and it is the same property that makes Callisto's block good.** Callisto uses *scoped* overrides, which pin a version only under a named parent. That precision is a statement about **one repo's dependency tree shape**, and Europa's shape differs:
+
+- `brace-expansion` stayed flagged despite `minimatch@10` → `^5.0.9`, because Europa reaches it through `@eslint/config-array`, `@eslint/eslintrc`, `@jest/reporters`, `eslint`, and root — not through `minimatch@10`.
+- `js-yaml` stayed flagged despite `@nestjs/swagger` → `^5.2.3`, because Europa also reaches it via `@istanbuljs/load-nyc-config` and root, outside the scoped parent.
+- Only `multer` cleared, which also cleared `@nestjs/platform-express` (its finding was purely via multer).
+- `axios`, `form-data` and `fast-uri` have no entry in Callisto's block at all — 3 of Europa's 7 were never addressable this way.
+
+**A scoped override is not a portable artifact.** It is tuned to the tree it was written against. The transferable thing is the *technique* (scope narrowly, cross a major when the floor has no margin), not the JSON.
+
+### Corrected per-repo direction
+
+| Repo | Remedy | Verified? |
+| --- | --- | --- |
+| `callisto-back-end` | none — already at 0 high | ✅ measured |
+| `nova-back-end` | plain `npm audit fix`, lockfile-only | ✅ measured → 0 |
+| `europa-back-end` | plain `npm audit fix`, lockfile-only. **Do not port the block** | ✅ measured → 0 |
+| `nova-orbital-back-end` | override needed — `audit fix` cannot help (its 6 OTel findings are `fixAvailable: false`) | ❌ **not verified — auth blocked** |
+
+Nova-orbital is the one place Callisto's block is a genuine candidate, and for a specific reason: it declares the **identical** parent, `@planetdepos/pathfinder-observability-pkg@^0.2.13`, same as Callisto. Same parent, same version range, same child chain — the one case where the tree shape matches and a scoped override should transfer. That is reasoning, not a measurement: it **could not be tested**, because every `@planetdepos` resolution fails locally (`~/.npmrc` token 401, `gh` token missing `read:packages`). Treat it as the leading candidate to verify first, not as a confirmed fix.
+
 ## Correction to the epic-level triage
 
-The PRDV-16423 baseline artifact recommended deriving nova-orbital's OTel fix from scratch and raising its `js-yaml` floor to `^4.3.1`. Both are superseded by this finding: the fix already exists in Callisto, uses scoped rather than flat overrides, and pins `js-yaml` to `^5.2.3`. Port Callisto's block; do not re-derive.
+The PRDV-16423 baseline artifact recommended deriving nova-orbital's OTel fix from scratch and raising its `js-yaml` floor to `^4.3.1`. The `^4.3.1` advice is superseded — Callisto's proven pin is `^5.2.3` on the 5.x line (latest `5.4.0`), and a 4.x floor tracks a range vulnerable through `4.3.0` with no margin. The from-scratch derivation is *partly* superseded: Callisto's scoped pathfinder entry is the candidate to try first, but per the measurement above a ported block is not automatically a working block, and nova-orbital's remains unverified.
