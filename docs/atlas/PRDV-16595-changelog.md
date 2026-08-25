@@ -61,7 +61,23 @@ Corrected direction: **`npm audit fix` for Nova and Europa** (both measured to 0
 
 **Accepted residual:** 5 low + 2 moderate, all `aws-sdk` → bundled `uuid`. npm offers only `--force` installing `aws-sdk@1.18.0` (downgrade-shaped major). Outside AC scope, not gate-blocking. Accept and document.
 
-**Re-pointing recommendation (pointing itself is the user's call — Kat asked for self-refinement).** PRDV-16595 no longer involves a Callisto code change; its deliverable is ratification plus the corrected direction for the other two stories. Recommend **3 → 1**, with the freed 2 moving to **3-Europa**, which carries the real regression risk (`axios` and the Nest platform layer on hot paths, ~1005 packages re-resolved). **2-Nova** should hold or gain, since nova-orbital is the only repo needing a genuine override and the only one that cannot currently be verified locally.
+**Re-pointing recommendation — WITHDRAWN 2026-08-25T15:05Z.** The earlier recommendation (3 → 1, on the grounds that no Callisto code change was required) is retracted. Derrick's "freebie" remark at standup referred only to the Callisto vulnerability *check*; Larry Adams then added the Pathfinder remediation ask and explicitly stated the ticket *"doesn't actually have everything you need."* **3 points stands** — the work is real, it is just in `planetdepos/pathfinder-observability-pkg` rather than in `callisto-back-end`.
+
+---
+
+## Reframed by standup — 2026-08-25
+
+**The ask is Pathfinder, not Callisto.** Larry Adams, verbatim: *"can you update Pathfinder to remediate all of these so that we can stop overriding them in the higher apps? Because that's really what I'm trying to get at here. We have a lot of overrides here."* Earlier in the same exchange: *"you can get away with override, but at some point we got to kind of stop, you know, kind of nip it."*
+
+The overrides are the symptom; `@planetdepos/pathfinder-observability-pkg` is the cause. The objective is to **delete** overrides, not propagate them — which also retires the porting question from the prior session entirely.
+
+**Method given by Derrick Dieso:** *"stress test those, like one at a time, remove, yeah, like remove like the FDIR, PICO match override, and then MPM audit, see if that works."* Executed — results below.
+
+**Explicitly out of scope — separate ticket.** Karl Amber raised critical vulnerabilities in the Alpine Docker base image and has wired Trivy into a quality check so ECR scan results surface locally rather than requiring a trip to AWS. Derrick: *"those would be two different tickets, because they're looking at for vulnerabilities in two different sources."* Larry agreed; Derrick confirmed a ticket was cut. Karl also confirmed base-image findings do not appear in `npm audit`, which independently corroborates the gate identified under PRDV-16423.
+
+**Requested hygiene.** Larry asked that the `package.json` overrides block be posted in each ticket before work starts — he did it for Callisto himself (*"I just put it in that ticket right there"*) and asked for the same before Nova and Europa: *"show the package JSON, let other developers know this is what you're tackling."*
+
+**Sprint context (not scope).** Derrick flagged that three PRs in Callisto and three in Atlas have no reviewers, and that getting reviews moved to QA for the 9/30 release outranks pulling in new work; Larry showed a plateauing burndown. Recorded because it affects sequencing, not because it changes this ticket.
 
 ---
 
@@ -116,6 +132,32 @@ _None — no implementation attempted or required._
 **Nova-orbital remains unverified.** Its 6 OTel findings are `fixAvailable: false`, so `audit fix` cannot reach them and an override genuinely is required. Callisto's scoped pathfinder entry is the leading candidate because nova-orbital declares the identical parent spec `@planetdepos/pathfinder-observability-pkg@^0.2.13`. Confirmed the specs match; **could not test the fix** — auth gap. Not presented as verified.
 
 **Files/areas:** `docs/atlas/PRDV-16595-changelog.md`, `docs/atlas/PRDV-16595/PRDV-16595-callisto-remediation-state.md`. `europa-back-end` verified back at clean `main` `34da474` (`git status --porcelain` empty).
+
+### 2026-08-25T15:05:00Z — callisto-back-end override stress-test + Pathfinder specification
+
+**Summary.** Standup reframed the ticket from "remediate Callisto" to "remediate Pathfinder so the apps can stop overriding." Executed Derrick's one-at-a-time stress-test on Callisto's eight override entries and derived the exact Pathfinder change set. No code committed; all runs reverted.
+
+**Stress-test.** Each entry deleted individually, `npm install --package-lock-only`, `npm audit`, revert. Callisto re-resolves despite the dead GitHub Packages token (the pathfinder tarball is already pinned in the lockfile), so **all eight entries were testable** — no gaps. Baseline all-present: H0 C0 M2 L5.
+
+| Removed | Result | Verdict |
+| --- | --- | --- |
+| `@planetdepos/pathfinder-observability-pkg` | **H6** | load-bearing — Larry's target |
+| `tar` → `>=7.5.7` | **H4 + C1** | load-bearing — app-level |
+| `@nestjs/swagger` → `js-yaml` | **H2** | load-bearing — app-level |
+| `dependency-cruiser` / `@angular-devkit/core` / `fdir` → `picomatch` | H0 ×3 | **deletable** |
+| `minimatch@10` → `brace-expansion` | H0 | **deletable** |
+| `multer` | H0 | **deletable** |
+| all removed | **H12 C1** | total suppressed exposure |
+
+**Five of eight entries are dead weight** — deletable today with zero audit impact. Individual results sum exactly to the all-removed total (6+2+4=12 high), so there are no interaction effects.
+
+**Critical found, currently override-suppressed.** Removing the `tar` override exposes **1 critical** plus 4 high via `sqlite3` → `node-gyp` → `cacache`/`make-fetch-happen` → `tar`. This is the only critical-severity finding anywhere in the epic, and Callisto satisfies the AC today only because an override is holding it back. Flagged for escalation — exactly the fragility Larry described.
+
+**Pathfinder specification derived.** Read `planetdepos/pathfinder-observability-pkg` `package.json` via `gh api` (repo is private; the contents API worked where the npm registry did not). Published `0.2.13` declares `@opentelemetry/auto-instrumentations-node: ^0.77.0` (vulnerable range is `0.57.0–0.77.0`, so it resolves *inside* it), `@opentelemetry/sdk-node: ^0.219.0` (pulls `propagator-jaeger@2.8.0`; `0.220.0` is the first with patched `2.9.0`), `@opentelemetry/exporter-trace-otlp-http: ^0.219.0`, and its own stale `overrides: {"js-yaml": "^4.2.0"}`. Callisto's override block pins precisely the corrected versions — **the override is the specification for the upstream fix**. Full change set in the artifact.
+
+**Secondary design finding.** Callisto's `"@nestjs/common": "$@nestjs/common"` entry is peer-alignment, not a security pin. Pathfinder declares `@nestjs/common: ^11.0.0` as a hard dependency with an empty `peerDependencies`, which is what forces consumers to align it by hand. Moving it to a peerDependency upstream would retire that entry too. Not a vulnerability, so not gating.
+
+**Files/areas:** `docs/atlas/PRDV-16595-changelog.md`, `docs/atlas/PRDV-16595/PRDV-16595-callisto-remediation-state.md`. `callisto-back-end` verified back at clean `main` `56eead71`. Nova and Europa untouched this session.
 
 #### Shipping checklist
 

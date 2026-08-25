@@ -109,3 +109,40 @@ _None yet — no implementation attempted._
 - **API docs** — not relevant: no HTTP surface touched. No route, DTO, or decorator in any repo was read or modified.
 - **Tooling gates** — not applicable: `dustin-thomason` has no root `package.json`, so audit/lint/test gates do not exist for the changed files (docs only). The app-repo audits run this session were *measurements for the ticket*, not commit gates, and none of those repos is being committed.
 - **Conflicts / exceptions** — the WorkLists server was unreachable at the start of the session (`localhost:3010` connection refused); per `worklists-card-sync`, a skip is not a stop. The user restarted it mid-session and the card writes completed normally, so no skip was ultimately recorded.
+
+---
+
+### 2026-08-25T16:55:00Z — nova-orbital-back-end, auth-gated measurements (user-executed)
+
+**Summary.** The one repo in the epic that could not be measured is now measured. Dustin ran `~/pf-check.sh` in a Git Bash shell holding a valid `GITHUB_TOKEN` (the agent's shell has no auth — its environment was fixed when `claude.exe` spawned under an explorer-launched Cursor). Raw JSON evidence: `C:\Users\dustin.thomason\pf-check\`. All stages reverted; `nova-orbital-back-end` remains clean at `main` `5326247`.
+
+**Pathfinder has no newer release.** Published versions are `0.2.1 … 0.2.13`; **`0.2.13` is latest**, and its published manifest matches the default branch. So no consumer can fix the OTel chain by bumping the dependency — **an override is the only option available today, in every app that consumes Pathfinder.** Larry's "stop overriding in the higher apps" strictly requires a new Pathfinder release. That makes the Pathfinder bump the epic's critical path.
+
+**Four-stage audit on nova-orbital:**
+
+| Stage | Change | Result |
+| --- | --- | --- |
+| 1 | baseline (first resolve with real auth) | **9 high**, 12 total |
+| 2 | `npm audit fix` only | **6 high**, 6 total |
+| 3 | Callisto-style scoped OTel override + `js-yaml ^5.2.3` | **2 high**, 4 total |
+| 4 | override **+** `npm audit fix` | **1 high**, 1 total |
+
+**Three claims confirmed, one prediction validated in both directions:**
+
+- **The 9-high baseline was accurate**, not an artifact of a stale lockfile — it reproduced on a genuine authenticated resolve.
+- **`npm audit fix` cannot reach the OTel chain.** Stage 2 cleared the 3 routine transitives (`brace-expansion`, `fast-uri`, `js-yaml`) plus every moderate and low, and left all 6 OTel/`@planetdepos` findings standing. Previously inferred from `fixAvailable: false` flags; now measured.
+- **Callisto's scoped pathfinder override does port to nova-orbital** — stage 3 eliminated all 6 OTel/`@planetdepos` findings. This is the *opposite* of the Europa result, and it is what the tree-shape explanation predicted: nova-orbital declares the identical `@planetdepos/pathfinder-observability-pkg@^0.2.13` parent, so the scoped entry matches; Europa's parents differ, so it missed. The corrected rule is **"a scoped override ports only where the parent chain matches,"** not "scoped overrides never port."
+
+**Unresolved — one residual, and a non-additive interaction.** Stage 4 leaves a single `brace-expansion` high (`fixAvailable: true`). Note that stage 2's `audit fix` *did* clear `brace-expansion`, but stage 4's did not — pinning the OTel subtree evidently re-parents `brace-expansion` under something `audit fix` will not bump. The likely completion is adding `brace-expansion: ^5.0.9` to the override set (`5.0.9` is the patched release, verified published; Callisto pins exactly it). **Not verified** — it needs one more authenticated run.
+
+**Corrected per-repo direction for the epic:**
+
+| Repo | Remedy | Verified |
+| --- | --- | --- |
+| `callisto-back-end` | none — 0 high; delete 5 dead override entries | ✅ |
+| `nova-back-end` | plain `npm audit fix` | ✅ → 0 |
+| `europa-back-end` | plain `npm audit fix`; do **not** port the block | ✅ → 0 |
+| `nova-orbital-back-end` | scoped OTel override (ports from Callisto) + `audit fix` | ✅ 9 → 1; final entry unverified |
+| `pathfinder-observability-pkg` | new release: `auto-instrumentations-node ^0.79.0`, `sdk-node ^0.221.0`, `exporter-trace-otlp-http ^0.221.0`, own `js-yaml` floor | ❌ not started |
+
+**Tooling gates** — not applicable: `dustin-thomason` has no root `package.json` (docs-only change). The npm audits recorded here are ticket measurements, not commit gates; no app repo is being committed.
