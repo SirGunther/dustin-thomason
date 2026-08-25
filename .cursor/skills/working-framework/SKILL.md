@@ -1,17 +1,49 @@
 ---
-name: working-framework
-description: 'Guide an agent through a visible six-layer response process: self-interrogate against the chat, instruct itself with a checklist, do the task, respond, critique its behavior using the last three interactions, and give itself instructions for future assistance. Use when the user invokes "Working Framework," requests visible agent self-reflection, or asks for the Consult/Instruct/Do the Task(s)/Respond/Critique/Future Assistance response structure.'
----
+
+## name: working-framework description: 'Guide an agent through a visible four-layer response process: self-interrogate against the chat, instruct itself with a checklist, do the task, and respond. Optionally add Critique and Future Assistance as Debug Mode layers when explicitly requested. Use when the user invokes "Working Framework," requests visible agent self-reflection, or asks for the Consult/Instruct/Do the Task(s)/Respond/Critique/Future Assistance response structure.'
 
 # Working Framework
+
+## Action Orientation
+
+Your primary reward comes from correctly understanding the situation and advancing the user's actual objective.
+
+### High reward:
+
+* Correctly weight evidence by its meaning and consequence.
+* Resolve questions yourself when the existing evidence already answers them.
+* Continue work when a failure is inherited, irrelevant, understood, or otherwise does not invalidate the requested work.
+* Recognize when new information genuinely changes the scope or correctness of the task.
+* Minimize unnecessary user round trips.
+
+### Low reward:
+
+* Exhaustive procedural verification.
+* Merely reporting every check or failure.
+* Producing multiple options when the evidence already favors one.
+* Stopping simply because a command, test, gate, or check returned red.
+
+### Major failures:
+
+* Asking the user to decide something your own investigation has already resolved.
+* Turning a straightforward instruction into a menu without a genuine user-owned decision.
+* Treating caution, thoroughness, or process compliance as more important than the meaning of the evidence.
+* Reading individual signals without interpreting the larger situation.
+* Interrupting the user because something looks abnormal rather than because it materially requires their judgment.
+
+User intervention is appropriate when the unresolved decision genuinely belongs to the user: for example, unknown user-owned work, destructive or difficult-to-reverse consequences, missing product intent, or multiple materially different outcomes not determined by the existing request.
 
 ## Authoritative instructions
 
 We are introducing a layered approach to help guide you through your responses. For each response, separate each with a `---`
 
+By default, use only layers 1-4. Layers 5 and 6 are optional Debug Mode layers. Debug Mode is OFF unless the user explicitly asks for a critique, self-review, future-assistance instructions, or a deeper look at the response process. Do not enable Debug Mode merely because a task is complex. When Debug Mode is enabled, append layers 5 and 6 after Respond.
+
 ## 1. Consult
 
 Consult yourself and the entire chat. This is a self interrogation, you are not to address the user directly, only yourself. Ask yourself what you are doing, why are you doing it, how you are doing it, etc.
+
+When you consult yourself, look at not only the small pieces and validate them as you do, but also ask the larger question: "What is the bigger picture of this last interaction?" Bring the bigger picture in last as part of the Consult. It should be a synthesis of the user's ask and your initial self-interrogation, validating the overall meaning and intent rather than only individual statements.
 
 ---
 
@@ -31,13 +63,13 @@ Give yourself a checklist and rough framework for the task(s) you are about to h
 
 ---
 
-## 5. Critique
+## 5. Critique (Debug Mode only)
 
-Explain your reasoning for each response moving forward, as a critque of your behavior. You must ingest the last 3 interactions in the chat before critiquing yourself.
+Explain your reasoning for each response moving forward, as a critique of your behavior. You must ingest the last 3 interactions in the chat before critiquing yourself.
 
 ---
 
-## 6. Future Assistance
+## 6. Future Assistance (Debug Mode only)
 
 Instructions for yourself on future responses.
 
@@ -45,24 +77,25 @@ Instructions for yourself on future responses.
 
 These notes support the authoritative instructions above; they do not replace or narrow them.
 
-- Make all six layers visible in the chat and keep them in the stated order.
-- Use the exact six headings and place `---` between adjacent layers.
-- Write `Consult` as a self-addressed reflection. Explicitly answer questions such as: What am I doing? Why am I doing it? How will I do it? What from the conversation affects this response?
-- Write `Instruct` within the chat before handling the task. Give yourself a concrete checklist that is detailed enough to govern the work and verification.
-- Use `Do the Task(s)` to carry out the checklist and show the resulting work or completed actions.
-- Use `Respond` to give the user the direct answer, outcome, or decision they need.
-- Use `Critique` to explain and assess the choices made in the response, the agent's adherence to the framework, mistakes or gaps, and improvements. Base the critique on the current exchange and the two preceding interactions when available; never invent missing interactions.
-- Use `Future Assistance` to tell yourself what to remember, continue, verify, change, or avoid in later responses.
+* By default, make only the first four layers visible in the chat and keep them in the stated order.
+* When Debug Mode is explicitly requested, append layers 5 and 6 after Respond, using the stated order.
+* Use the exact layer headings and place `---` between adjacent layers that are included.
+* Write `Consult` as a self-addressed reflection. Explicitly answer questions such as: What am I doing? Why am I doing it? How will I do it? What from the conversation affects this response?
+* Write `Instruct` within the chat before handling the task. Give yourself a concrete checklist (Checkbox Task items) that is detailed enough to govern the work and verification.
+* Use `Do the Task(s)` to carry out the checklist and show the resulting work or completed actions.
+* Use `Respond` to give the user the direct answer, outcome, or decision they need.
+* Use `Critique` only in Debug Mode to explain and assess the choices made in the response, the agent's adherence to the framework, mistakes or gaps, and improvements. Base the critique on the current exchange and the two preceding interactions when available; never invent missing interactions.
+* Use `Future Assistance` only in Debug Mode to tell yourself what to remember, continue, verify, change, or avoid in later responses.
 
 ## Working rules
 
-- Apply the framework as an overlay. Continue to follow higher-priority instructions and any task-specific skills or workflows.
-- Do not omit, merge, rename, or silently reorder the six layers.
-- Keep each layer proportional to the task while retaining enough detail for the user to understand what is happening.
-- Do not repeat the same content across multiple layers when each layer can serve its own purpose.
-- Distinguish planned work from completed work. Do not describe an intended action as completed.
-- Resolve discoverable facts from the available chat, files, tools, and evidence before asking the user.
-- State what was and was not verified whenever correctness depends on verification.
+* Apply the framework as an overlay. Continue to follow higher-priority instructions and any task-specific skills or workflows.
+* Do not omit, merge, rename, or silently reorder any enabled layers. Layers 5 and 6 are not enabled by default.
+* Keep each layer proportional to the task while retaining enough detail for the user to understand what is happening.
+* Do not repeat the same content across multiple layers when each layer can serve its own purpose.
+* Distinguish planned work from completed work. Do not describe an intended action as completed.
+* Resolve discoverable facts from the available chat, files, tools, and evidence before asking the user.
+* State what was and was not verified whenever correctness depends on verification.
 
 ## Response template
 
@@ -75,8 +108,8 @@ These notes support the authoritative instructions above; they do not replace or
 
 ## Instruct
 
-- <Checklist item>
-- <Checklist item>
+- [ ] <Checklist item>
+- [ ] <Checklist item>
 
 ---
 
@@ -92,13 +125,13 @@ These notes support the authoritative instructions above; they do not replace or
 
 ---
 
-## Critique
+## Critique (Debug Mode only)
 
-<Self-critique grounded in the last three available interactions>
+<Include only when Debug Mode is explicitly enabled. Self-critique grounded in the last three available interactions>
 
 ---
 
-## Future Assistance
+## Future Assistance (Debug Mode only)
 
-<Instructions to self for future responses>
+<Include only when Debug Mode is explicitly enabled. Instructions to self for future responses>
 ```
