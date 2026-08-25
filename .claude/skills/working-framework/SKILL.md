@@ -1,6 +1,7 @@
 ---
-
-## name: working-framework description: 'Guide an agent through a visible four-layer response process: self-interrogate against the chat, instruct itself with a checklist, do the task, and respond. Optionally add Critique and Future Assistance as Debug Mode layers when explicitly requested. Use when the user invokes "Working Framework," requests visible agent self-reflection, or asks for the Consult/Instruct/Do the Task(s)/Respond/Critique/Future Assistance response structure.'
+name: working-framework
+description: 'Guide an agent through a visible response process: self-interrogate against the chat, instruct itself with a checklist, do the task, reconcile every checklist item, and respond. Optionally add Critique and Future Assistance as Debug Mode layers when explicitly requested. Use when the user invokes "Working Framework," requests visible agent self-reflection, or asks for the Consult/Instruct/Do the Task(s)/Reconcile/Respond/Critique/Future Assistance response structure.'
+---
 
 # Working Framework
 
@@ -37,7 +38,7 @@ User intervention is appropriate when the unresolved decision genuinely belongs 
 
 We are introducing a layered approach to help guide you through your responses. For each response, separate each with a `---`
 
-By default, use only layers 1-4. Layers 5 and 6 are optional Debug Mode layers. Debug Mode is OFF unless the user explicitly asks for a critique, self-review, future-assistance instructions, or a deeper look at the response process. Do not enable Debug Mode merely because a task is complex. When Debug Mode is enabled, append layers 5 and 6 after Respond.
+By default, use stages 1-4 in the stated order, with a mandatory Reconcile checkpoint after Do the Task(s) and before Respond. Layers 5 and 6 are optional Debug Mode layers. Debug Mode is OFF unless the user explicitly asks for a critique, self-review, future-assistance instructions, or a deeper look at the response process. Do not enable Debug Mode merely because a task is complex. When Debug Mode is enabled, append layers 5 and 6 after Respond.
 
 ## 1. Consult
 
@@ -59,6 +60,29 @@ Give yourself a checklist and rough framework for the task(s) you are about to h
 
 ---
 
+## Reconcile
+
+Reconcile every checklist item declared in `Instruct` before responding to the user.
+
+The Source Truth Stop Rule is defined in `<AGENTS_ROOT>/rules/source-truth.md`, where `<AGENTS_ROOT>` is the local `agents` directory containing this skill. Treat that file as canonical and do not duplicate or reconstruct its instructions here.
+
+For each checklist item:
+
+1. State its status: completed, revised, superseded, blocked, or unresolved.
+2. Validate the status against source truth. Apply the Source Truth Stop Rule whenever the claim depends on an exact artifact, output, mapping, label, wording, or evidence.
+3. State what the source truth actually established.
+4. State the implication when the result changes the understanding, action, risk, or remaining work.
+
+Every material checklist item must be accounted for. Do not silently omit an item because later work changed the plan; mark it revised or superseded and explain why.
+
+Do not replay the execution transcript. Give only enough evidence to establish closure. Prefer the artifact or result produced by the work over memory, summaries, or recollection.
+
+If the Source Truth Stop Rule requires an artifact that is unavailable, stop according to that rule rather than marking the checklist item complete.
+
+Keep reconciliation proportional: default to one concise entry per checklist item, expanding only when the evidence or implication materially changes the result.
+
+---
+
 ## 4. Respond
 
 ---
@@ -77,12 +101,13 @@ Instructions for yourself on future responses.
 
 These notes support the authoritative instructions above; they do not replace or narrow them.
 
-* By default, make only the first four layers visible in the chat and keep them in the stated order.
+* By default, make the four stages visible in the chat and include the mandatory Reconcile checkpoint between Do the Task(s) and Respond.
 * When Debug Mode is explicitly requested, append layers 5 and 6 after Respond, using the stated order.
 * Use the exact layer headings and place `---` between adjacent layers that are included.
 * Write `Consult` as a self-addressed reflection. Explicitly answer questions such as: What am I doing? Why am I doing it? How will I do it? What from the conversation affects this response?
 * Write `Instruct` within the chat before handling the task. Give yourself a concrete checklist (Checkbox Task items) that is detailed enough to govern the work and verification.
 * Use `Do the Task(s)` to carry out the checklist and show the resulting work or completed actions.
+* Use `Reconcile` after `Do the Task(s)` and before `Respond` to account for every material checklist item.
 * Use `Respond` to give the user the direct answer, outcome, or decision they need.
 * Use `Critique` only in Debug Mode to explain and assess the choices made in the response, the agent's adherence to the framework, mistakes or gaps, and improvements. Base the critique on the current exchange and the two preceding interactions when available; never invent missing interactions.
 * Use `Future Assistance` only in Debug Mode to tell yourself what to remember, continue, verify, change, or avoid in later responses.
@@ -90,7 +115,7 @@ These notes support the authoritative instructions above; they do not replace or
 ## Working rules
 
 * Apply the framework as an overlay. Continue to follow higher-priority instructions and any task-specific skills or workflows.
-* Do not omit, merge, rename, or silently reorder any enabled layers. Layers 5 and 6 are not enabled by default.
+* Do not omit, merge, rename, or silently reorder any enabled stages or checkpoints. Layers 5 and 6 are not enabled by default.
 * Keep each layer proportional to the task while retaining enough detail for the user to understand what is happening.
 * Do not repeat the same content across multiple layers when each layer can serve its own purpose.
 * Distinguish planned work from completed work. Do not describe an intended action as completed.
@@ -116,6 +141,12 @@ These notes support the authoritative instructions above; they do not replace or
 ## Do the Task(s)
 
 <Work performed and resulting work product>
+
+---
+
+## Reconcile
+
+<One concise reconciliation entry for each material checklist item>
 
 ---
 
