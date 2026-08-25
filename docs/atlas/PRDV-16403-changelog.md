@@ -86,6 +86,36 @@ _No Plans rows are maintained for this ticket._ It runs under the `orchestrate` 
 
 _Newest first. Add one block before each commit (agents) or end of work session (you)._
 
+### 2026-08-24T22:05:00Z - atlas-front-end + callisto-back-end (branch `PRDV-16403`) - MAIN SYNC
+
+- **Summary:** Brought both branches up to date with `origin/main` at Dustin's request, so a reviewer sees the branch against current main. Atlas merged clean and is pushed. Callisto's merge surfaced **a real break that would have shipped silently** - see below. Both branches were 2 ahead of main; Atlas was 28 behind, Callisto 54.
+- **The break the merge caught.** `origin/main` landed **PRDV-16632: Rename contact account_id to firm_id** (migration `1787235580394-alter__rename_account_id__contacts_table.ts`), and main's `Contact` entity now declares `@Column({ name: 'firm_id' }) firmId`. This ticket's repository joined `firm.id = contact.account_id` - a column that no longer exists on main. Because it is a LEFT join, the Firm warnings section would have returned `null` in any environment running current migrations, with no error. Unmerged, this branch ships a broken firm warning. The ticket's own acceptance-criteria line, "Firm resolves via `firm.id = contact.account_id`", is now stale.
+- **Consequence for earlier verification in this ticket.** The browser pass recorded earlier today ran against a local database built from this branch's migrations - 54 behind main - where the column is still `account_id`. The firm warning rendered correctly there and was correct **against the old schema only**. It was never exercised against main's schema.
+- **Callisto conflict resolution (2 conflicts, both in files this ticket touched):**
+  - `registries/transaction-script.registry.ts` - additive. Kept this ticket's `FetchAccessManagerWarningsTS` registration plus main's expanded comment covering the three PlanetSuite transactional proxies, which supersedes the narrower one on this branch.
+  - `test-utils/integration-test-helpers/seeds/contact.test-seeder.ts` - took main's version wholesale (`firmId`, and main already inserts a `warning` column hardcoded to `''`), then re-added the `warning` **override** this ticket's specs need to vary it. Param slot verified against the 29-placeholder insert.
+- **Column rename applied:** `access-manager-warnings.repository.ts` now joins `firm.id = contact.firm_id`; 3 `accountId` call sites in `access-manager-warnings.repository.integration.spec.ts` renamed to `firmId`; two stale `account_id` comments corrected. **Zero `account_id` references remain in `src/granting-client-access`.**
+- **Working tree handling.** Callisto's tree carried 75 uncommitted modifications of unknown provenance, blocking the merge (`Merge with strategy ort failed`). Verified before touching them: **70 were byte-identical to `origin/main`** and 5 differed (4 spec docs with small deltas, plus `package-lock.json` at +1355/-746 against main). Nothing was discarded - `git checkout -- .` was blocked by a permission classifier, so they were **stashed** instead and remain recoverable at `stash@{0}` ("PRDV-16403: pre-merge working tree"). They are other developers' spec work already committed on main.
+- **Files touched:** `granting-client-access/contacts/infrastructure/repositories/access-manager-warnings.repository.ts`, `.../__specs__/access-manager-warnings.repository.integration.spec.ts`, `granting-client-access/contacts/test-utils/integration-test-helpers/seeds/contact.test-seeder.ts`, `granting-client-access/registries/transaction-script.registry.ts`, `granting-client-access/contacts/domain/transaction-scripts/fetch-access-manager-warnings-ts/__specs__/fetch-access-manager-warnings.transaction.script.spec.ts`.
+
+#### Verification gates
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | atlas-front-end | **fail - waived** (exit 1: 12 high, 0 critical) | Pre-existing and inherited: the branch touches neither `package.json` nor `package-lock.json`, and the lockfile is **byte-identical to `origin/main`**, so main fails this same gate. Same waiver Dustin gave explicitly on the 21:05:00Z entry |
+| lint | `npm run lint` | atlas-front-end | pass (exit 0) | - |
+| tests | `npx vitest run --maxWorkers 1` | atlas-front-end, full suite | pass - 137 files, 1195 tests, 4 skipped | Run post-merge |
+| lint | `npm run lint` | callisto-back-end | pass (exit 0) | Runs `eslint --fix`; rewrote nothing outside the 5 resolved files |
+| tests | `npm test -- --runInBand` | callisto-back-end, full unit suite | pass - 414 suites, 2186 tests | Run post-merge against the resolved tree |
+
+#### Shipping checklist
+
+- **Tests run** - see table. Both full suites green post-merge.
+- **Tests added/updated** - no new tests. The integration spec's 3 call sites were renamed to match main's seeder contract; the seeder gained back a `warning` override that main's version does not expose. No new behaviour to cover - the column rename is a rename.
+- **Regression impact** - the production change is one join column. Boundary checked: `findContactAndFirmWarnings` is the only method referencing the renamed column, its callers (`FetchAccessManagerWarningsTS`, `ContactsService.fetchAccessManagerWarnings`) are unchanged in signature, and the full 2186-test suite is green. **Not covered by that suite:** `npm test` excludes `*.integration.spec.ts`, so the renamed integration call sites were not exercised. They cannot be locally - the local database is still on this branch's old schema (`account_id`), so that suite would now fail against it until main's migrations are applied. **Residual risk: the `firm_id` join is verified by compilation and unit tests, not by a query against main's schema.**
+- **API docs** - not relevant: no HTTP surface changed. Route path, method, `ApiParam` entries, response DTO shape and the 200/400/500 statuses were checked and are unchanged; the rename is internal to the repository's query.
+- **Conflicts / exceptions** - Atlas audit waived, as above. `git checkout -- .` denied by a permission classifier; used `git stash` instead, which preserves the work rather than discarding it.
+
 ### 2026-08-24T21:24:00Z - callisto-back-end (branch `PRDV-16403`)
 
 - **Summary:** Same self-review pass as the 21:05:00Z entry, run against the **Callisto** branch this time - checked the shipped endpoint against `dustin-thomason/docs/reviewers/pr-review-patterns.md` and fixed what it flagged. **Three violations, all minor, all Class D/G.** No correctness defect found - unlike the Atlas pass. Classes A, B, C, E, F, H verified clean. Committed on top of the shipped `2ab33cd4`; PR [#431](https://github.com/planetdepos/callisto-back-end/pull/431) is open.
