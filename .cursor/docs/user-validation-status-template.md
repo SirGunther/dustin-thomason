@@ -90,11 +90,25 @@ Required layout:
 
 ## Validation Detail Rules
 
+Every `#### Validation Details` section must begin with a **Validation Objective** of five to seven words. A Validation Objective is subordinate to the enclosing `D<number>` objective and names the specific outcome tested by the following checks.
+
+Do not copy or lightly rephrase the enclosing objective header. The Validation Objective must narrow that objective into a concrete validation focus without restating an individual `Prove` item.
+
+Follow the Validation Objective with a one- or two-sentence summary explaining how this validation focus supports the enclosing D-objective and what the checks establish together.
+
 Every validation checkbox must begin with a clear objective that states what the reviewer is trying to prove. The exact word `Prove` is required so the purpose of the check remains explicit. Nest the action and expected result beneath that objective so the reviewer can quickly understand the goal, perform the check, and determine whether it passed.
 
 Required layout:
 
 ```markdown
+#### Validation Details
+
+**Validation Objective:** <five-to-seven-word specific validation focus>
+
+<One or two sentences explaining how this validation focus supports the enclosing D-objective and what the checks establish together. Do not restate an individual Prove item.>
+
+Validation setup: <exact prerequisite when required>.
+
 - [ ] **Prove:** <specific behavior or outcome the reviewer must establish>.
   - **Action:** <specific user action, command, request, input, or selection>.
   - **Expected:** <specific visible, returned, or persisted result>.
@@ -146,7 +160,7 @@ API-only example:
 12. Place a **Return to User Validation Status** navigation control at the end of every objective section.
 13. Update the table link whenever an objective heading changes because its generated slug changes with it.
 14. Include the required concise Markdown-linked `Files:` line beneath every objective heading.
-15. Format every Validation Details checkbox as an explicit **Prove** objective with indented **Action** and **Expected** sub-points, with exact setup when required.
+15. Begin every Validation Details section with a five-to-seven-word **Validation Objective** and a one- or two-sentence summary, then format every checkbox as an explicit **Prove** objective with indented **Action** and **Expected** sub-points, with exact setup when required.
 
 ---
 
@@ -180,7 +194,7 @@ Choose the overall review status using the complete version outcome:
 - **Blocked:** The review could not proceed because a required dependency failed.
 - **Pending:** Validation remains incomplete and no release-level failure has been established.
 - **Mixed:** Material objectives have different outcomes and no single release-level result is accurate.
-- **N/A:** The review is retained for reference but has no applicable validation objectives.
+- **N/A:** The review is retained for reference but has no applicable Objectives.
 
 ## User Validation Status
 
@@ -214,6 +228,12 @@ Files: [Application file](../../path/to/file), [Focused validation](../../tests/
 
 #### Validation Details
 
+**Validation Objective:** <five-to-seven-word specific validation focus>
+
+<One or two sentences explaining how this validation focus supports the
+enclosing D-objective and what the checks establish together. Do not restate an
+individual Prove item.>
+
 Validation setup: Start the project with `<exact command>`, open `<exact URL>`, and load `<named test state or fixture>`.
 
 - [ ] **Prove:** `<specific user-visible behavior or outcome>` is available to the reviewer.
@@ -245,6 +265,12 @@ Files: [Affected component](../../path/to/another-file), [Validation fixture](..
 - State the implemented solution.
 
 #### Validation Details
+
+**Validation Objective:** <five-to-seven-word specific validation focus>
+
+<One or two sentences explaining how that validation focus supports the
+enclosing D-objective and what the checks establish together. Do not restate an
+individual Prove item.>
 
 Validation setup: Load [Named validation fixture](../../tests/fixtures/example.json) and start `<service>` with `<exact command>`.
 
