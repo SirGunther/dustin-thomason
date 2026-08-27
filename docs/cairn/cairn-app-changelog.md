@@ -252,10 +252,10 @@ _Newest first. Add one entry per working session or merge-worthy update._
 - **API docs:** No Cairn HTTP API changed. The WorkLists board contract was read live from
   `localhost:3010/openapi.json`; the exact supplied card was read directly by id, never searched.
 - **Tooling gates:** `format:check` clean; `audit` clean; complete `verify` exit 0.
-- **Conflicts / exceptions:** WorkLists card `todo-1787318488373` contains no ticket identifier,
-  and the caller has not explicitly identified the expected ticket id. The board-sync rule requires
-  both values for its mismatch guard, so no card write was made. The card remains unchanged rather
-  than guessing from its title or prior conversation.
+- **Conflicts / exceptions:** The caller supplied expected ticket id `595` and WorkLists card
+  `todo-1787318488373`; the card title is `# Carin` and does not carry `595`. The board-sync
+  ticket-id mismatch guard therefore stopped the board phase before any write. The card remains
+  unchanged rather than weakening its identity check.
 
 ### 2026-08-24T00:00:00Z — The caret jumped to the top on every edit: reconciliation was never running
 
