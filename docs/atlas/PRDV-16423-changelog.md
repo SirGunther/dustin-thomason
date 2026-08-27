@@ -146,3 +146,49 @@ _None yet — no implementation attempted._
 | `pathfinder-observability-pkg` | new release: `auto-instrumentations-node ^0.79.0`, `sdk-node ^0.221.0`, `exporter-trace-otlp-http ^0.221.0`, own `js-yaml` floor | ❌ not started |
 
 **Tooling gates** — not applicable: `dustin-thomason` has no root `package.json` (docs-only change). The npm audits recorded here are ticket measurements, not commit gates; no app repo is being committed.
+
+---
+
+### 2026-08-25T19:05:00Z — Nova and Europa remediated and gated; Pathfinder bump verified
+
+**Summary.** Applied the fixes that had been measured earlier in the session but never executed. All four repos in the epic now have their remediation in hand, and the upstream Pathfinder fix is built and verified.
+
+**Nova and Europa — `npm audit fix`, lockfile only.** Both moved onto branch `PRDV-16423-audit-fix` so `main` stays clean. `package.json` untouched in both.
+
+| Repo | Before | After | audit | lint | tests |
+| --- | --- | --- | --- | --- | --- |
+| `nova-back-end` | 2 high | **0** | exit 0 | exit 0 | exit 0 — 17 suites, 87 tests |
+| `europa-back-end` | 7 high, 5 mod, 2 low | **0 at every severity** | exit 0 | exit 0 | exit 0 — 32 suites, 112 tests |
+
+**Europa is fully verified.** It has no `@planetdepos` dependencies, so a real `npm install` completed and every gate ran against the correct post-change tree.
+
+**Nova carries a caveat.** It has five `@planetdepos` dependencies, so `npm install` cannot complete without GitHub Packages auth in the agent's shell. Its lockfile change was made with `--package-lock-only`, and while audit, lint and all 87 tests exit `0`, the tests exercised a `node_modules` not synced to the new lockfile. The change is confined to `brace-expansion` and `js-yaml` in the dev tree, so the residual risk is small — but the tests are not a true post-change verification. Re-run with auth to close it properly.
+
+**Pathfinder — the upstream fix, built and green.** Cloned `planetdepos/pathfinder-observability-pkg`, branch `PRDV-16595-otel-bump`, 4-line `package.json` change:
+
+```
+@opentelemetry/auto-instrumentations-node  ^0.77.0  ->  ^0.79.0
+@opentelemetry/sdk-node                   ^0.219.0 ->  ^0.221.0
+@opentelemetry/exporter-trace-otlp-http   ^0.219.0 ->  ^0.221.0
+overrides.js-yaml                         ^4.2.0   ->  ^5.2.3
+```
+
+Gates after a plain `npm audit fix`: audit **0** (zero at any severity), build **0**, lint **0**, tests **0**. Resolved `propagator-jaeger` to **2.10.0**, clearing GHSA-45rx-2jwx-cxfr — the advisory this entire epic traces back to.
+
+**The build passing is the substantive result.** The one real risk was that `0.219 → 0.221` inside a `0.x` line would break Pathfinder's own code. It does not. `npm audit fix` touched the lockfile only; `package.json` remains the original 4-line bump, byte-verified, and all four gates were re-run against the post-fix tree.
+
+**Pathfinder had the same disease as its consumers.** Its own `overrides` block carries only `js-yaml` — no `brace-expansion` entry — which is why the first gate run left a single `brace-expansion` high. Stale hand-maintained floors are the epic's actual root pattern, upstream and downstream alike.
+
+**Epic status after this session:**
+
+| Repo | High/Critical | State |
+| --- | --- | --- |
+| `callisto-back-end` | 0 | Override cleanup on branch `PRDV-16595` (`7d9a6926`); 5 inert entries removed |
+| `nova-back-end` | 0 | On branch `PRDV-16423-audit-fix`; tests need an authenticated re-run |
+| `europa-back-end` | 0 | On branch `PRDV-16423-audit-fix`; fully gated |
+| `nova-orbital-back-end` | 9 → 1 measured | Untouched. Resolves once Pathfinder publishes — no override needed then |
+| `pathfinder-observability-pkg` | 0 | Branch `PRDV-16595-otel-bump`, verified green, awaiting publish |
+
+**Remaining, epic-wide:** publish Pathfinder (tag → `pkg-publish-npm.yml` dry-run → publish), then delete the pathfinder-scoped override in Callisto and nova-orbital. Plus the `sqlite3` critical disposition — see the D5 section of the PRDV-16595 validation review, which now decomposes it into production-exposure and CI-gate as separate questions.
+
+**Tooling gates** — not applicable to this changelog entry: `dustin-thomason` has no root `package.json`. All gate results above are from the app repos and are recorded with their exact commands and scopes.

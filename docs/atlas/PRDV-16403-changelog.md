@@ -86,6 +86,33 @@ _No Plans rows are maintained for this ticket._ It runs under the `orchestrate` 
 
 _Newest first. Add one block before each commit (agents) or end of work session (you)._
 
+### 2026-08-25T14:05:00Z - atlas-front-end (branch `PRDV-16403`) - CONFLICT RESOLUTION
+
+- **Summary:** PR [#563](https://github.com/planetdepos/atlas-front-end/pull/563) went `CONFLICTING / DIRTY` within the hour after the 22:05:00Z main sync. `origin/main` had gained **12 commits - PRDV-15743, Add permissions to Access Manager** - which touches the same overlay files this story does. Merged and resolved locally rather than in GitHub's web conflict editor, so lint and the suite could gate the result; the web editor cannot run either.
+- **One file conflicted: `AccessManagerOverlay.spec.ts`, three hunks.** `AccessManagerOverlay.vue`, `AccessManagerOverlay.module.scss` and `src/i18n/en-US/common.json` all auto-merged despite PRDV-15743 rewriting 16 lines of that SCSS file and 46 of the `.vue`.
+- **Hunks 1 and 2 - additive, both sides kept.** PRDV-15743 added `isTypeSelectedRef` / `isCollectionFullySelectedRef`; this story added the warnings source refs and the `useAccessManagerWarnings` mock. Independent concerns. Same for the `beforeEach` resets - keeping only one side would leak state from one test into the next. `canGrantRef` / `canRevokeRef` were declared outside the conflict region and were verified to survive.
+- **Hunk 3 - not additive; HEAD kept deliberately.** Both sides open the same `it(...)` and share its entire body, differing only in the title. Main's reads *"renders the RB warnings placeholder panel"* - but **this story deleted that placeholder**, so main's title names behaviour that no longer exists. Kept *"renders the RB warnings panel in the right column"*. Taking main's side would have left a green test misdescribing the feature.
+- **Earlier work verified intact after the auto-merges** (checked, not assumed, because PRDV-15743 rewrote the same SCSS file): `.rightColumn` padding still `1.5rem 0 0 1.5rem`, `.rightHeader` `padding-right: 1.5rem`, `RbWarningsPanel.module.scss` `.panelBody` right and bottom gutters both present, and `RbWarningsPanel` still wired at `AccessManagerOverlay.vue:372`.
+- **Worth reading before the open Shaye question:** PRDV-15743 is *"Add CLIENT_ACCESS_MANAGER permissions, view/grant/revoke gates for Client Access tab"* and is now on main. The permission model for this surface exists; the question of which permission this endpoint should check may be answerable from that work rather than from Shaye.
+- **Files touched:** `components/AccessManagerOverlay/__specs__/AccessManagerOverlay.spec.ts` (conflict resolution only - no production file was edited in this pass).
+
+#### Verification gates
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | atlas-front-end | **fail - waived** (exit 1) | Inherited, verified again this pass: the branch touches neither `package.json` nor `package-lock.json` (`git diff origin/main...HEAD` returns 0 files) and the lockfile is **byte-identical to `origin/main`**, so main fails the same gate. Same waiver Dustin gave explicitly on the 21:05:00Z entry |
+| lint | `npm run lint` | atlas-front-end | pass (exit 0) | - |
+| tests | `npx vitest run --maxWorkers 1 .../AccessManagerOverlay` | overlay tree, 10 files | pass - 102 tests | Ran first, being where the conflict was. **Up from 85** - the increase is main's new permission tests plus this story's, which is the additive resolution proving itself rather than one side being silently dropped |
+| tests | `npx vitest run --maxWorkers 1` | atlas-front-end, full suite | pass - 138 files, 1221 tests, 4 skipped | Up from 137 / 1195 at the 22:05:00Z sync |
+
+#### Shipping checklist
+
+- **Tests run** - see table. Scoped suite first, then the full suite, both post-merge.
+- **Tests added/updated** - none added. Three conflict hunks resolved in one spec file; two preserved both sides' tests, one preserved this story's test title over a stale one. Net test count rose only because main's tests arrived with the merge.
+- **Regression impact** - no production file was edited in this pass, so the regression surface is the merge itself. Boundary checked against a concrete surface rather than asserted: the three auto-merged files that PRDV-15743 also modified were each re-read and the four specific declarations this story owns in them confirmed present (listed above). The 102-test overlay suite covers the component where both stories overlap.
+- **API docs** - not relevant: no HTTP surface touched this pass. `FETCH_ACCESS_MANAGER_WARNINGS_URL`, the request signature and `AccessManagerWarningsResponse` were checked and are unchanged; Swagger lives in Callisto, untouched here.
+- **Conflicts / exceptions** - audit waived as above. Resolution done locally rather than in GitHub's conflict editor specifically so lint and tests could gate it.
+
 ### 2026-08-24T22:05:00Z - atlas-front-end + callisto-back-end (branch `PRDV-16403`) - MAIN SYNC
 
 - **Summary:** Brought both branches up to date with `origin/main` at Dustin's request, so a reviewer sees the branch against current main. Atlas merged clean and is pushed. Callisto's merge surfaced **a real break that would have shipped silently** - see below. Both branches were 2 ahead of main; Atlas was 28 behind, Callisto 54.
