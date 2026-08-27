@@ -216,10 +216,14 @@ _Newest first. Add one entry per working session or merge-worthy update._
 - **Correction:** The user clarified that the standalone chat message `595` was accidental typing,
   not a Cairn ticket identifier. It must be ignored.
 - **Impact:** The ticket-id mismatch reported in the architecture-reconciliation entry below is
-  invalid and superseded by this correction. No WorkLists card write occurred, so no board data
-  needs to be reverted. Card `todo-1787318488373` remains unchanged.
-- **Remaining board input:** The card-sync rule still requires the actual ticket id the card should
-  carry before an update can be attempted.
+  invalid and superseded by this correction. The user further clarified that Cairn uses a project
+  card with no ticket id in this instance and explicitly identified `todo-1787318488373` as the
+  card to update.
+- **Board sync:** Re-read the live OpenAPI contract and exact card, then updated only `Current Step`,
+  `Waiting On`, and `Next Up` with the card's `2026-08-24T00:02:40.637Z` `lastModified`
+  precondition. The API returned success and a direct re-read confirmed the architecture result,
+  16/16 verification summary, no waiting dependency, and `TST-001` next. New `lastModified`:
+  `2026-08-27T13:53:50.080Z`. Title, project identity, status, tag, and column were unchanged.
 
 ### 2026-08-27T00:00:00Z — Architecture philosophy reconciled after filesystem CRUD and protected close
 
