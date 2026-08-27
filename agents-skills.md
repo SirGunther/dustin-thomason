@@ -2,6 +2,15 @@
 
 Source: `agents/skills/**`. Regenerate with `.\agents\scripts\sync-rules.ps1`.
 
+## checklist-in-chat/SKILL.md
+
+---
+name: checklist-in-chat
+description: Use when completing work that should be tracked with a visible checklist.
+---
+
+Please include a checklist in this chat. This will help ensure that you are aware of all the tasks and allow you to verify that each one has been addressed or completed before you notify me that the work is finished.
+
 ## grill-me/SKILL.md
 
 ---
@@ -2553,6 +2562,8 @@ Keep reconciliation proportional: default to one concise entry per checklist ite
 ---
 
 ## 4. Respond
+
+If the user has next steps, end `Respond` with a simple task list (`- [ ] ...`) in execution order. Convert the work into direct instructions: start each item with an imperative verb and state what the user should do, not a summary of the task or workstream. Group related actions only when needed.
 
 ---
 

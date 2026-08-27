@@ -85,6 +85,8 @@ Keep reconciliation proportional: default to one concise entry per checklist ite
 
 ## 4. Respond
 
+If the user has next steps, end `Respond` with a simple task list (`- [ ] ...`) in execution order. Convert the work into direct instructions: start each item with an imperative verb and state what the user should do, not a summary of the task or workstream. Group related actions only when needed.
+
 ---
 
 ## 5. Critique (Debug Mode only)
