@@ -6,13 +6,17 @@ do, what was decided and why, and what was verified in each development session.
 Cairn is a markdown vault UI — a folder of notes that reads like OneNote and behaves like
 VS Code — intended for eventual integration into WorkLists.
 
-Phase 0 closed 2026-08-22 with the manual directory-picker result; Phases 1 through 6 —
-contract governance, supervision, identity/ordering/revisions, the vault read boundary,
-document state ownership, and the write path — landed the same day. **No file anyone chose has
-been written**; two gesture-driven probes are pending a manual run. The original UI POC remains a direct-open, zero-build artifact;
-the worker graph and its browser probes require a served origin. The graph has **seven**
-independently valuable DOM-free components plus the privileged DOM owner, with evidence in the
-`PDProjects/Cairn/Architecture/Phase*Evidence.md` series.
+The nine-phase architecture run completed on 2026-08-22, and both picked-folder probes ran and
+passed on 2026-08-23. The original UI POC remains an immutable direct-open, zero-build artifact;
+the live application requires its governed served origin. Its graph now has **nine components and
+135 explicit wires**: one filesystem reader, one filesystem writer, one open-document owner, one
+history owner, and six components with no authority of any kind.
+
+The live application now supports persisted multi-root workspaces, rich markdown editing,
+filesystem create/rename/copy/move/delete, cut/paste and drag-to-move, explicit explorer refresh,
+preview-versus-checked-out tabs, and protected unsaved close. Catalog `1.12.0` governs 41 message
+types. Filesystem changes remain requests to `vault-writer`; authoritative enumeration remains
+owned by `vault-source`; draft release remains owned by `document-owner`.
 
 ## Start here
 

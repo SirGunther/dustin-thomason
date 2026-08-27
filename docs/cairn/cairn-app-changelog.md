@@ -31,6 +31,36 @@ Running changelog for Cairn, a markdown-vault UI intended for integration into t
 
 ## Current state
 
+**Phase:** The nine-phase architecture run is complete and the live application is a governed,
+multi-root, read/write markdown workspace. The current catalog is `1.12.0` with 41 message types;
+the accepted graph is nine components and 135 explicit wires. Six components hold no authority.
+
+Recent workspace work remains inside the original Argus-aligned boundaries:
+
+- `vault-source` is the only filesystem reader and authoritative enumerator.
+- `vault-writer` is the only filesystem mutator for save, create, rename, copy, move, and delete.
+- `document-owner` is the only owner of open text and decides when a draft is saved or released.
+- The interface sends governed requests and owns only interaction state: selection, preview,
+  clipboard intent, dialog state, and in-flight indicators.
+- Mutation success is followed by source-owned re-enumeration; the interface never invents a
+  filesystem result.
+
+The explorer now supports inline New File / New Folder, `.md` default with optional `.txt`,
+locked extensions during rename, context Favorite / Rename / Copy / Cut / Paste / Delete,
+drag-to-move, all-root refresh, confirmed deletion, VS Code-style preview checkout, `U` / `C`
+state, folder unsaved counts, and delayed full-path tooltips. Dirty tabs use an in-app Save /
+Discard / Cancel dialog; Save closes only after `vault.write-succeeded`, while failure retains
+the draft. The picked-folder save path uses browser-staged `createWritable()` because Chromium
+refuses `FileSystemFileHandle.move()` on ordinary local directory handles.
+
+**Next:** resolve the portable Playwright dependency (`TST-001`), then Trusted Types (`TT-001`).
+Automatic filesystem watching remains unavailable in the browser; explicit Refresh Explorer and
+conditional-save conflict checks are the current boundary.
+
+---
+
+## Superseded current-state snapshot (through 2026-08-24)
+
 **Phase:** **The nine-phase architecture run is complete and the application is usable.** The app saves to a picked folder end to end. The first field test on a real vault, 2026-08-23, returned **ten open items** — four bugs, four unbuilt features, two tasks — tracked in `ROADMAP.md` under **Field-test defects (2026-08-23)**. `FEAT-001` (inline editing in preview) is the one blocking ordinary use, and `EDN-001` is reopened to decide it. Underneath that, `ADP-001` and `ADP-002` are proven against a real picked folder rather than an OPFS stand-in. Phases 0 through 9 all landed on
 2026-08-22. Phase 9 added observability and acceptance: a route-level trace assembled from what
 components report about themselves, correlation chains walked causally, a generated graph
@@ -158,10 +188,11 @@ gesture-driven probe and is **PENDING MANUAL RUN**.
 
 | Date       | Plan                                                              | Status        | Approach                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------- | ----------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-27 | Filesystem workspace management and protected document close      | `implemented` | Restored root-aware multi-root ownership; added governed filesystem CRUD and refresh; added inline explorer creation, context cut/copy/paste, drag-to-move, locked extensions, confirmation dialogs, preview checkout state, full-path tooltips, and unsaved indicators; then added governed close/closed contracts so Save / Discard / Cancel cannot release a draft outside `document-owner`. |
 | 2026-08-22 | Phase 9 — observability and acceptance                            | `implemented` | A route log assembled from what components report — the kernel cannot observe document traffic and was not given a way to — that refuses to carry a payload; correlation chains walked by causation rather than sorted by time; a Mermaid graph diagram from the resolved plan; deterministic replay for the renderer and the checkbox splice against bytes from an earlier session; five kinds of injected fault; and eight acceptance budgets whose declared shape is checked against their own source. Two findings recorded, both about tests that would have passed while measuring nothing. `TST-001` narrowed to one item and deliberately not closed; `TT-001` opened. Evidence in `Architecture/Phase9Evidence.md`. |
 | 2026-08-22 | Phase 8 — permissions and packaging                               | `implemented` | Authority declared per kind in the manifest and denied by default, with denial classified by what enforces it; a bare-worker probe that reports what the platform actually withholds rather than what it should; a Content Security Policy delivered as a header and proven in force with a same-origin control beside every blocked case; and the resolved graph shipped as generated, drift-gated artifacts. Two findings fixed, three recorded. `WASM-001` resolved out of scope, `EMB-001` narrowed. Evidence in `Architecture/Phase8Evidence.md`.                                                                                                                                                                       |
 | 2026-08-22 | Phase 7 — the DOM retrofit                                        | `implemented` | The shipped page rebuilt on the graph: `app.js` consumes only projections, every edit is a request against a revision, `capability-monitor` assembles capability state outside the interface, clipboard and picker sit behind adapters that keep nothing, and a new browser suite drives the real `index.html`. Three regressions recorded rather than smoothed over, and a latent kernel fan-out defect found and fixed. Evidence in `Architecture/Phase7Evidence.md`.                                                                                                                                                                                                                                                      |
-| 2026-08-22 | Phase 6 — write path                                              | `implemented` | One component with write authority, separate from the reader; a `lastModified` precondition that also refuses a write with no baseline; atomic temporary-file-and-move with no fallback; a dry-run mode; and a failure gate proven three ways. Two findings recorded about the platform. Evidence in `Architecture/Phase6Evidence.md`.                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-08-22 | Phase 6 — write path                                              | `implemented` | One component with write authority, separate from the reader; a `lastModified` precondition that also refuses a write with no baseline; a dry-run mode; and a failure gate proven three ways. The original temporary-file move was later retired when Chromium refused it on ordinary picked-folder handles; browser-staged `createWritable()` preserves the commit boundary. Evidence in `Architecture/Phase6Evidence.md`.                                                                                                                                                                                                                                                     |
 | 2026-08-22 | Phase 5 — document state ownership                                | `implemented` | One owner for the open set with the read path re-routed through it, the checkbox splice as a governed message carrying the vendored implementation, a read that cannot overwrite an unsaved edit, no door for a rendered projection to come back through, and an append-only history with its own owner. Evidence in `Architecture/Phase5Evidence.md`.                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-08-22 | Phase 4 — vault read boundary                                     | `implemented` | Filesystem authority granted against a manifest declaration to exactly one component, a real `FileSystemDirectoryHandle` transferred and read in a worker on every run via the Origin Private File System, root persistence in IndexedDB proven across a separate graph, a closed read failure vocabulary, and permission re-grant as a governed control exchange. Resolved `ADP-001` and `ADP-002`. Evidence in `Architecture/Phase4Evidence.md`.                                                                                                                                                                                                                                                                           |
 | 2026-08-22 | Phase 3 — identity, ordering, and revisions                       | `implemented` | At-least-once made explicit, content-fingerprint idempotency with a bounded window, `integrity.violation` for a reused key, per-document ordering declared on the wire with a separate concurrency cap, and optimistic revision checks proven through a document-owner fixture's real ports. Evidence in `Architecture/Phase3Evidence.md`.                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -169,7 +200,7 @@ gesture-driven probe and is **PENDING MANUAL RUN**.
 | 2026-08-22 | Phase 1 — contract governance                                     | `implemented` | Versioning and compatibility policy in a pure module, ownership and per-contract history enforced by the registry, sixteen replay fixtures driven through both the boundary and a live worker, generated `contracts/CONTRACTS.md` with a drift gate, and stated `catalog_version` semantics. Evidence in `Architecture/Phase1Evidence.md`.                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-08-21 | Phase 0D — boundary proofs and granularity gate                   | `implemented` | Added `vault-index`, standalone port-driven proofs, the manual directory-handle transfer page, worker-count measurements, and the Phase 0 evidence record.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-08-20 | Feedback round 01 checklist — `PDProjects/Cairn/FEEDBACK-01.md`   | `superseded`  | 28 tracked items from the first review plus the SaySlate investigation. Split into `ROADMAP.md` (scope, status, Decisions resolved) and `DECISIONS-PENDING.md` (open choices with triggers); the file was then removed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| 2026-08-21 | Atomic architecture build order — `PDProjects/Cairn/TODO.md`      | `active`      | Ten phases, riskiest claims first. Isolation unit is a Web Worker; a wire is a transferred `MessagePort`. Feasibility verdict and evidence in `Architecture/FeasibilityReview.md`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-08-21 | Atomic architecture build order — `PDProjects/Cairn/TODO.md`      | `implemented` | Ten phases, riskiest claims first. Isolation unit is a Web Worker; a wire is a transferred `MessagePort`. The architecture run completed on 2026-08-22; later capabilities continue through the same governed graph.                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-08-20 | Documentation spine + lightweight POC pass + reusable scaffolding | `implemented` | Adopt the SaySlate roadmap/changelog/decisions structure over the Argus canonical-record split; land the agreed design items in the POC; generalise the pattern into templates and two scripts; freeze the POC as an immutable baseline.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-08-20 | V1 scope agreed in-session (chat)                                 | `active`      | Adapter seam + tree + preview/source toggle + save + checkbox write-back + favorites + quick open. Explicitly defers full-text search, live/hybrid preview, wikilinks, and graph view.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-08-20 | POC 1 — look and feel (this session)                              | `implemented` | Zero-build HTML/CSS/JS prototype mirroring the shape of `Argus-POC-v1-2026-08-12`; embedded sample vault, no disk writes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
@@ -179,6 +210,52 @@ gesture-driven probe and is **PENDING MANUAL RUN**.
 ## Session log
 
 _Newest first. Add one entry per working session or merge-worthy update._
+
+### 2026-08-27T00:00:00Z — Architecture philosophy reconciled after filesystem CRUD and protected close
+
+- **Summary:** Validated the current Cairn implementation against the canonical Argus architecture
+  record, reconciled the live repository documentation, and refreshed the canonical Cairn project
+  memory. Verdict: the recent workspace, save, and close work remains in line with the architecture.
+- **Requirement:** Recent product work must not quietly transfer filesystem authority, document
+  ownership, orchestration logic, or failure decisions into the interface. Current documentation
+  must distinguish the immutable POC and historical phase evidence from the live application.
+- **Architecture result:** `vault-writer` remains the sole filesystem mutator;
+  `vault-source` remains the sole filesystem reader and authoritative enumerator;
+  `document-owner` remains the sole owner of open text; and the DOM owner sends only governed
+  requests. Create, rename, copy, move, delete, refresh, save, and close use explicit cataloged
+  messages. Failures are closed, visible outcomes; mutation refresh follows writer confirmation;
+  the kernel still holds no document-plane ports.
+- **Save-path correction recorded:** the application-managed temporary-file move was retired
+  because Chromium refuses `FileSystemFileHandle.move()` on ordinary picked-folder handles.
+  Browser-staged `createWritable()` is the portable commit boundary. The `lastModified`
+  precondition and failure gate remain unchanged, so a conflict or failed close-save retains the
+  unsaved draft.
+- **Current capability record:** multi-root persistence at catalog `1.10.0`; filesystem CRUD and
+  explicit refresh at `1.11.0`; governed `document.close` / `document.closed` at `1.12.0`.
+  Explorer behavior now includes inline creation, `.md` default and optional `.txt`, locked rename
+  extensions, context Favorite / Rename / Copy / Cut / Paste / Delete, drag-to-move, confirmed
+  deletion, preview checkout, `U` / `C` state, folder unsaved counts, and delayed full-path tooltips.
+- **Files/areas:** live repository `README.md`, `ROADMAP.md`,
+  `Architecture/{KernelAuthority,ComponentAuthoring,Phase6Evidence}.md`; canonical
+  `docs/cairn/{README,capabilities,cairn-app-changelog}.md`.
+- **User-visible impact:** Documentation now describes the application that is actually running;
+  no application behavior changed in this reconciliation batch.
+- **Tests run:** `npm.cmd run verify` from `PDProjects/Cairn` — **16/16 gates, exit 0 in
+  47.1s**: 208 node checks; 41 messages at catalog `1.12.0`; generated contract and architecture
+  artifacts current; graph accepted at 9 components / 135 wires; vendor parity 4/4; kernel 77/77;
+  standalone 33/33; shell 46/46; file operations 27/27; rich editor 7/7; authority 27/27 with one
+  recorded finding; five acceptance measurements against declared budgets; three worker-count
+  measurements; formatting clean; audit 0 vulnerabilities.
+- **Regression impact:** The generated graph and authority records did not drift. Six of nine
+  components still hold no authority; exactly one reader and one writer remain; all 135 wires carry
+  an explicit reason; every recent operation is represented in the governed catalog.
+- **API docs:** No Cairn HTTP API changed. The WorkLists board contract was read live from
+  `localhost:3010/openapi.json`; the exact supplied card was read directly by id, never searched.
+- **Tooling gates:** `format:check` clean; `audit` clean; complete `verify` exit 0.
+- **Conflicts / exceptions:** WorkLists card `todo-1787318488373` contains no ticket identifier,
+  and the caller has not explicitly identified the expected ticket id. The board-sync rule requires
+  both values for its mismatch guard, so no card write was made. The card remains unchanged rather
+  than guessing from its title or prior conversation.
 
 ### 2026-08-24T00:00:00Z — The caret jumped to the top on every edit: reconciliation was never running
 
