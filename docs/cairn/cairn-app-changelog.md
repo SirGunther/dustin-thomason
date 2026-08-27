@@ -211,6 +211,16 @@ gesture-driven probe and is **PENDING MANUAL RUN**.
 
 _Newest first. Add one entry per working session or merge-worthy update._
 
+### 2026-08-27T00:00:00Z — Erroneous ticket `595` attribution withdrawn
+
+- **Correction:** The user clarified that the standalone chat message `595` was accidental typing,
+  not a Cairn ticket identifier. It must be ignored.
+- **Impact:** The ticket-id mismatch reported in the architecture-reconciliation entry below is
+  invalid and superseded by this correction. No WorkLists card write occurred, so no board data
+  needs to be reverted. Card `todo-1787318488373` remains unchanged.
+- **Remaining board input:** The card-sync rule still requires the actual ticket id the card should
+  carry before an update can be attempted.
+
 ### 2026-08-27T00:00:00Z — Architecture philosophy reconciled after filesystem CRUD and protected close
 
 - **Summary:** Validated the current Cairn implementation against the canonical Argus architecture
