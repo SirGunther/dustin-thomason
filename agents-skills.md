@@ -2563,7 +2563,7 @@ By default, use stages 1-4 in the stated order, with a mandatory Reconcile check
 
 Consult yourself and the entire chat. This is a self interrogation, you are not to address the user directly, only yourself. Ask yourself what you are doing, why are you doing it, how you are doing it, etc.
 
-When you consult yourself, look at not only the small pieces and validate them as you do, but also ask the larger question: "What is the bigger picture of this last interaction?" Bring the bigger picture in last as part of the Consult. It should be a synthesis of the user's ask and your initial self-interrogation, validating the overall meaning and intent rather than only individual statements.
+When you consult yourself, look at not only the small pieces and validate them as you do, but also ask the larger question: "What is the bigger picture of this last interaction?" Bring the bigger picture in last as part of the Consult. It should be a synthesis of the user's ask and your initial self-interrogation, validating the overall meaning and intent rather than only individual statements. This must be explicitly declared at the end of this section as "The Bigger Picture".
 
 ---
 
@@ -2608,6 +2608,16 @@ If the user has next steps, end `Respond` with a simple task list (`- [ ] ...`) 
 
 ---
 
+## 4a. Review Actionable Items
+This step is intended to reconcile the directives that you have provided in step 4. Your job is to find evidence about anything, especially if it is a decision or feedback that you are waiting on from the user. You must find evidence to show that this decision has not already been made or decided upon in some way. The intent here is to justify the actionable item.
+
+---
+
+## 4b. Revised Actional Items
+With the evidence that you found in Step 4a, synthesize that and rectify any missteps or actionable items and remove them. For this specific section, we want to ensure that you have cleaned up the content and only provided things that truly warrant the user's action. We do not want to waste their time or lead them on unnecessary investigations or decision-making efforts. At that point, and only then, provide that list of revised actionable items. No editorializing necessary to discuss items that were unjustified, that is noise dressed up as rigor.
+
+---
+
 ## 5. Critique (Debug Mode only)
 
 Explain your reasoning for each response moving forward, as a critique of your behavior. You must ingest the last 3 interactions in the chat before critiquing yourself.
@@ -2635,7 +2645,6 @@ These notes support the authoritative instructions above; they do not replace or
 
 ## Working rules
 
-* Apply the framework as an overlay. Continue to follow higher-priority instructions and any task-specific skills or workflows.
 * Do not omit, merge, rename, or silently reorder any enabled stages or checkpoints. Layers 5 and 6 are not enabled by default.
 * Keep each layer proportional to the task while retaining enough detail for the user to understand what is happening.
 * Do not repeat the same content across multiple layers when each layer can serve its own purpose.
@@ -2674,6 +2683,7 @@ These notes support the authoritative instructions above; they do not replace or
 ## Respond
 
 <Direct response to the user>
+<Actionable items and revisions>
 
 ---
 
@@ -2687,13 +2697,6 @@ These notes support the authoritative instructions above; they do not replace or
 
 <Include only when Debug Mode is explicitly enabled. Instructions to self for future responses>
 ```
-
-## working-framework/agents/openai.yaml
-
-interface:
-  display_name: "Working Framework"
-  short_description: "Guide visible self-reflection and task execution"
-  default_prompt: "Use $working-framework to complete this task with visible self-reflection, execution, critique, and future guidance."
 
 ## write-spec/SKILL.md
 
