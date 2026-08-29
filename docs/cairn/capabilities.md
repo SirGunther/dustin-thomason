@@ -61,18 +61,30 @@ is multi-root; read and write handles remain divided between their declared file
 
 ## Document
 
+The document region is now a reusable `@cairn/dantalion` package in the sibling
+`PDProjects/Dantalion` repository. The host supplies an opaque document key and mount; the
+package owns projection drawing, preview / split / source modes, the formatting ribbon, gutter,
+and rich-editor lifecycle. It emits declared intents and never reads the filesystem or writes DOM
+outside its mount. Cairn consumes the package through its local `file:../Dantalion` dependency and
+`components/dom-owner/`; WorkLists consumption remains phase 2.
+
+The surface and rich-editor interfaces are documented in Dantalion under
+`components/document-surface/INTERFACE.md` and `components/rich-editor/INTERFACE.md`. The Q1
+style probe passed under Dantalion's served CSP: constructed stylesheets apply, while the shipped
+surface carries its own `surface.css` stylesheet link so the styles travel with the package.
+
 | Surface or control                  | Status    | Current behavior                                                                                                                                                                                                                                | Implementation reference           |
 | ----------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| Markdown rendering                  | Working   | Delegated to `vendor/markdown-renderer.js`, a byte-identical copy of `WorkLists/public/markdownRenderer.js`. Headings, lists, nested lists, task lists, tables with alignment, fenced code, blockquotes, rules, inline formatting, autolinking. | `renderDoc()`                      |
-| **Checkbox → source rewrite**       | Working   | Clicking a rendered checkbox splices **exactly one** source line via `updateTaskCheckboxMarkdown()`. Verified: line count unchanged, one line differs. Reverts the box and warns if the source disagrees.                                       | `handleCheckbox()`                 |
-| Preview mode                        | Working   | Default state. Centered reading column capped near 68ch.                                                                                                                                                                                        | `setMode()`                        |
+| Markdown rendering                  | Working   | Delegated to `vendor/markdown-renderer.js`, a byte-identical copy of `WorkLists/public/markdownRenderer.js`; the reusable document surface draws the result. Headings, lists, nested lists, task lists, tables with alignment, fenced code, blockquotes, rules, inline formatting, autolinking. | `@cairn/dantalion`; `vendor/markdown-renderer.js` |
+| **Checkbox → source rewrite**       | Working   | The surface emits a task intent; `dom-owner` asks `document-owner` to splice **exactly one** source line. The surface reverts the rendered checkbox until the authoritative projection confirms the change. | `@cairn/dantalion`; `components/document-owner/` |
+| Preview mode                        | Working   | Default state. Centered reading column capped near 68ch.                                                                                                                                                                                        | `@cairn/dantalion`                 |
 | Split mode                          | Working   | Preview and source side by side on one grid row, each half the width.                                                                                                                                                                           | `.doc-body[data-mode="split"]`     |
-| Source mode                         | UI POC    | A styled `<textarea>`, `wrap="off"`, with a line-number gutter locked to scroll. No syntax highlighting, folding, or bracket matching.                                                                                                          | `#source`, `renderGutter()`        |
+| Source mode                         | UI POC    | A styled `<textarea>`, `wrap="off"`, with a line-number gutter locked to scroll. No syntax highlighting, folding, or bracket matching.                                                                                                          | `@cairn/dantalion`                 |
 | Mode cycling                        | Working   | `Ctrl` `E` cycles preview → split → source.                                                                                                                                                                                                     | `onGlobalKeydown()`                |
-| Inline editing in the rendered view | Working   | The ProseMirror editor provides markdown authoring without whole-document HTML round-tripping. Changes return to `document-owner` through revision-checked messages.                                                                            | `rich-editor/`; `tests/rich-editor-browser.mjs` |
+| Inline editing in the rendered view | Working   | The ProseMirror editor provides markdown authoring without whole-document HTML round-tripping. Changes return to `document-owner` through revision-checked messages.                                                                            | `@cairn/dantalion`; `tests/rich-editor-browser.mjs` |
 | Tab strip                           | Working   | Single click reuses an italic preview; double click fully checks out and pins it. Dirty close cannot silently release text: Save / Discard / Cancel is an in-app dialog, and a failed Save retains the tab and draft.                           | `renderTabs()`, `#unsavedConfirmLayer`       |
 | Breadcrumb                          | Working   | Full vault-relative path above the document.                                                                                                                                                                                                    | `renderBreadcrumb()`               |
-| Status bar                          | Working   | Path, word count, `done/total` task count, view mode, save state.                                                                                                                                                                               | `renderDoc()`                      |
+| Status bar                          | Working   | Path, word count, `done/total` task count, view mode, save state.                                                                                                                                                                               | `renderDocumentSurface()`          |
 | Code-block copy                     | UI POC    | Copies to clipboard and shows a confirmation. Falls back to a warning toast when the clipboard is blocked, which happens on `file://`.                                                                                                          | `copyCodeBlock()`                  |
 | Single newline handling             | Specified | Renders as a hard `<br>`, inherited from the WorkLists renderer. Correct for card notes; an open question for full documents because it changes how every soft-wrapped note reads.                                                              | `DECISIONS-PENDING.md` → `BRK-001` |
 | Scroll sync between split panes     | Deferred  | Not implemented.                                                                                                                                                                                                                                | —                                  |
@@ -93,14 +105,14 @@ is multi-root; read and write handles remain divided between their declared file
 | Theme switching          | Working   | A topbar control cycles Argus → light → WorkLists, persisted. The theme is stamped on `<html>` **before first paint** by a separate early script, verified by reading `data-theme` at the first `readystatechange`.                                                                                     | `theme.js`, `applyTheme()`                |
 | Light theme fidelity     | Specified | Switches correctly and is legible, but code blocks, task checkboxes, and table headers were tuned against dark first, and the accent hue changes between themes rather than carrying across.                                                                                                            | `DECISIONS-PENDING.md` → `PAL-003`        |
 | Reduced motion           | Working   | Shortens transitions to 80ms rather than deleting them, matching the conclusion SaySlate 1.10.1 reached.                                                                                                                                                                                                | `@media (prefers-reduced-motion: reduce)` |
-| Surface tokens           | Working   | One `--text-surface` token is the single source for editable and monospace surfaces.                                                                                                                                                                                                                    | `styles.css`                              |
+| Surface tokens           | Working   | One `--text-surface` token is the single source for editable and monospace surfaces.                                                                                                                                                                                                                    | `PDProjects/Dantalion/components/document-surface/surface.css` |
 | Tooltips                 | Working   | Controls use themed CSS tooltips. Explorer rows use a compact cursor-anchored tooltip after a 500ms delay, fade in over 160ms, never wrap, show the full path, and append `Unsaved` or `Checked Out` when applicable.                                                                          | `.path-tooltip`; `tooltipTextFor()`        |
 | Laptop-height adaptation | Working   | Chrome and padding step down at 820px and 680px viewport heights through `--topbar-h` and `--doc-pad-y`; the shell uses `100dvh` so browser chrome cannot hide the status bar. Action groups wrap rather than clip. Verified: zero overflow and a visible status bar at 768, 680, and 620px tall.       | `@media (max-height: …)`                  |
 | Icon-only topbar         | Working   | Quick open, add folder, and theme are icon buttons at the same subdued weight as the rest of the chrome — no raised primary-action treatment at idle. Preview/Split/Source stay text, deliberately: three icons meaning "view mode" are not distinguishable.                                            | `.topbar-actions`                         |
 | Horizontal overflow      | Working   | Zero page-level horizontal scroll, verified at 1520px and 960px. Wide content scrolls inside its own container.                                                                                                                                                                                         | `.markdown-table-wrapper`, `.doc-pane`    |
 | Toasts                   | Working   | Top-centered, kind-coded by left border, auto-dismissed.                                                                                                                                                                                                                                                | `toast()`                                 |
 | Empty state              | Working   | Shown when no document is open.                                                                                                                                                                                                                                                                         | `#emptyState`                             |
-| Font stack               | Working   | `"Segoe UI"` for prose, `"Cascadia Mono"` for monospace, matching WorkLists.                                                                                                                                                                                                                            | `styles.css`                              |
+| Font stack               | Working   | `"Segoe UI"` for prose, `"Cascadia Mono"` for monospace, matching WorkLists.                                                                                                                                                                                                                            | `PDProjects/Dantalion/components/document-surface/surface.css` |
 | Icon set                 | Working   | Inline stroked SVG, no icon font, so the POC runs offline. WorkLists' Font Awesome copy icon falls back to its text label.                                                                                                                                                                              | `index.html`                              |
 
 ## Contract governance
@@ -306,7 +318,7 @@ Phase 9. Detail in `PDProjects/Cairn/Architecture/Phase9Evidence.md`, and the ge
 
 | Aspect | Status | Detail |
 | -------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Automated regression suite | Working | `npm run verify` chains 16 gates: 208 node checks; contract, generated-doc, artifact, graph, and vendor checks; 77 kernel, 33 standalone, 46 shell, 27 filesystem-operation, 7 rich-editor, and 27 authority browser checks; five acceptance measurements; three worker-count measurements; formatting; and audit. The 2026-08-27 run passed 16/16. `TST-001` remains open only because Playwright is resolved by an absolute path from another workspace. | `tools/verify.mjs`; `DECISIONS-PENDING.md` → `TST-001` |
+| Automated regression suite | Working | Cairn's `npm run verify` chains 17 gates: 206 node checks; contract, generated-doc, artifact, graph, and vendor checks; 77 kernel, 33 standalone, 46 shell, 27 filesystem-operation, 7 rich-editor, 6 document-surface, and 27 authority browser checks; five acceptance measurements; three worker-count measurements; formatting; and audit. The 2026-08-27 post-extraction run passed 17/17. Dantalion independently passes its editor build, 2 unit tests, 6/6 browser checks, and formatting. `TST-001` is resolved because Dantalion declares Playwright locally. | `tools/verify.mjs`; `PDProjects/Dantalion/package.json`; `DECISIONS-PENDING.md` → `TST-001` |
 | Gesture-driven verification | Working | Directory-handle transfer, picked-folder read/re-grant, and picked-folder write probes all ran manually and passed. Their result records name the selected folders and observations. | `Architecture/probes/`; `Architecture/Phase0DEvidence.md`; `Architecture/Phase4Evidence.md`; `Architecture/Phase6Evidence.md` |
 | Formatting gate | Working | `npm run format:check` runs the locally installed `prettier --check .` and is chained into `npm run verify`. `esbuild` and `prettier` are declared development dependencies; bundled ProseMirror packages and `markdown-it` are application dependencies. |
 | Lint / audit gates | Working | `npm audit --audit-level=high` is part of `npm run verify`. No lint script; formatting and the architecture-specific static gates are the source checks. |
@@ -314,13 +326,14 @@ Phase 9. Detail in `PDProjects/Cairn/Architecture/Phase9Evidence.md`, and the ge
 The current command surface: `npm run test:kernel` runs 77 kernel checks;
 `npm run test:standalone` runs 33 focused component checks; `npm run test:shell` runs 46 checks
 against the shipped application; `npm run test:file-operations` runs 27 explorer, filesystem,
-tooltip, and dialog checks; `npm run test:rich-editor` runs seven editor checks; and
+tooltip, and dialog checks; `npm run test:rich-editor` runs seven editor checks; `npm run test:document-surface` runs six
+surface checks; and
 `npm run test:authority` runs 27 checks of what a bare worker and the served policy permit.
 `npm run test:acceptance` traces a real session, injects five kinds of fault, and measures every
 declared budget;
 `npm run contracts:docs:check` and `npm run artifacts:check` fail when generated documentation
 drifts; and `npm run measure:workers` runs the three worker-count measurements. `npm run verify`
-is the complete pass, chaining **sixteen** gates: those suites plus the 208 fast node checks, the
+is the complete pass, chaining **seventeen** gates: those suites plus the 208 fast node checks, the
 contract, contract-docs, artifacts, and graph checks, and `prettier --check .`. `npm test` remains only the fast node
 gate. Every timing-sensitive supervision proof waits on the fact it asserts rather than on a
 duration, after one such proof produced a 38/39 flake.
@@ -329,14 +342,12 @@ The shell suite asserts geometry as **relationships** — both panes have area, 
 do not overlap, and together fill the body they were given — never as pixel counts, which would
 be a measurement of one machine's window wearing the costume of a claim about the layout.
 
-`TST-001` narrows to **one item** and is deliberately not closed. What the decision
-asks — what harness, and where do specs live — is answered: sixteen gates chained by
-`npm run verify`, specs in `tests/`, and the POC checkbox splice and split-pane geometry the
-decision specifically parked outside the harness now guarded inside it. **What keeps it open is
-that Playwright is resolved by absolute path from the WorkLists workspace, making every browser
-gate unrunnable on any other machine** — the part of this decision that has not moved since Phase
-0D, and the first thing to fix. The manual probes and clipboard path have since been exercised.
-Visual regression coverage remains a separate gap. `TT-001` tracks Trusted Types.
+`TST-001` is **resolved**. The decision's harness and spec locations remain explicit: Cairn chains
+seventeen gates through `npm run verify`, Dantalion chains its own editor build, unit, browser,
+and formatting gates, and specs live in each repository's `tests/` directory. Dantalion declares
+Playwright as a local development dependency, so its standalone browser suite runs without the
+WorkLists workspace. The manual probes and clipboard path have since been exercised. Visual
+regression coverage remains a separate gap. `TT-001` tracks Trusted Types.
 
 ## Known limitations
 
@@ -369,4 +380,5 @@ Visual regression coverage remains a separate gap. `TT-001` tracks Trusted Types
   single-tabstop-plus-arrow model rather than a full ARIA treegrid.
 - No visual regression testing of any kind. A stylesheet change that kept the geometry and
   ruined the look would pass every gate. With the checkbox splice and split-pane geometry now
-  guarded by `npm run test:shell`, this is the largest remaining `TST-001` gap.
+  guarded by the Cairn shell suite and the standalone Dantalion harness, this remains a separate
+  coverage gap rather than part of `TST-001`.

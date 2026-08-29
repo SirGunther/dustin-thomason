@@ -11,10 +11,11 @@ Running changelog for Cairn, a markdown-vault UI intended for integration into t
 - Every entry below was written in the session it describes; none is reconstructed after the fact.
 - Verification claims name the command that produced them. Where a check could not be run, the
   entry says so and names the residual risk rather than recording `N/A`.
-- Cairn now has a zero-dependency architecture harness. The POC's checkbox-splice and
-  split-pane invariants remain outside it under `TST-001`.
-- No Git history exists for `PDProjects` — `git status` reports it is not a repository — so this
-  changelog and the capability catalog are the only durable record of what changed when.
+- Cairn retains the architecture harness, while the extracted Dantalion package owns its own
+  browser harness and local Playwright dependency.
+- Cairn and Dantalion now each have a local Git repository, initialized on 2026-08-27. No commit
+  has been made, so this changelog and the capability catalog remain the durable record of what
+  changed when.
 - The 2026-08-20 entries all fall on the same day. Finer ordering is given by the sequence of
   headings, newest first, rather than by distinct timestamps.
 
@@ -24,6 +25,7 @@ Running changelog for Cairn, a markdown-vault UI intended for integration into t
 
 - **App:** `Cairn`
 - **Primary workspace:** `C:\Users\dktho\OneDrive\PDProjects\Cairn`
+- **Extracted package:** `@cairn/dantalion` at `C:\Users\dktho\OneDrive\PDProjects\Dantalion`
 - **Log location:** `C:\dustin-thomason\docs\cairn\cairn-app-changelog.md`
 - **Integration target:** `WorkLists` (`C:\Users\dktho\OneDrive\SCRIPTS ALL SYSTEMS\To Do List\WorkLists`)
 
@@ -53,7 +55,12 @@ Discard / Cancel dialog; Save closes only after `vault.write-succeeded`, while f
 the draft. The picked-folder save path uses browser-staged `createWritable()` because Chromium
 refuses `FileSystemFileHandle.move()` on ordinary local directory handles.
 
-**Next:** resolve the portable Playwright dependency (`TST-001`), then Trusted Types (`TT-001`).
+The reusable document surface now lives in `@cairn/dantalion`, which owns the surface, rich editor,
+editor build, surface styles, standalone browser harness, and local Playwright dependency. Cairn
+keeps the markdown renderer, governed graph, shell, and consumer integration tests, and consumes
+Dantalion through a local `file:../Dantalion` dependency during this phase.
+
+**Next:** Trusted Types (`TT-001`).
 Automatic filesystem watching remains unavailable in the browser; explicit Refresh Explorer and
 conditional-save conflict checks are the current boundary.
 
@@ -188,6 +195,9 @@ gesture-driven probe and is **PENDING MANUAL RUN**.
 
 | Date       | Plan                                                              | Status        | Approach                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------- | ----------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-29 | In-document anchor links in the document surface                  | `implemented` | Named headings with GitHub's slug rule from one shared definition; the rich editor carries the id as a ProseMirror node decoration, because an attribute written onto its DOM from outside is reverted on the next observer flush; the surface names only projection headings that arrived without an id, and resolves fragment clicks itself through `goToHeading` rather than letting the browser move the host page's URL and window. |
+| 2026-08-27 | Document surface extraction to `PDProjects/Dantalion`             | `implemented` | Phase 2 of 2. Moved `components/document-surface/`, `components/rich-editor/`, the editor build step and generated bundle, surface tests, harness, and style probe into the `@cairn/dantalion` package. Cairn now consumes the local package; the renderer, graph, shell, and consumer integration coverage remain in Cairn. Dantalion declares ProseMirror, markdown-it, esbuild, Playwright, and Prettier, and owns its editor build. |
+| 2026-08-27 | Document surface as a reusable component: `docs/cairn/tickets/document-surface-component/document-surface-component-spec.md` | `implemented` | Phase 1 of 2, Cairn only. Extracted the document surface (markup, drawing, ribbon, modes, rich editor, styles) into `components/document-surface/` as a declared-interface module consumed by `dom-owner`, rather than as a second graph component: `graph-prepare.mjs` permits at most one main-thread component and the surface must touch the DOM. `markdown-renderer` is untouched, the catalog and graph are unchanged, the document key is host-supplied, Q1 style delivery is resolved by the served-CSP probe, and WorkLists consumption is deferred to phase 2. |
 | 2026-08-27 | Filesystem workspace management and protected document close      | `implemented` | Restored root-aware multi-root ownership; added governed filesystem CRUD and refresh; added inline explorer creation, context cut/copy/paste, drag-to-move, locked extensions, confirmation dialogs, preview checkout state, full-path tooltips, and unsaved indicators; then added governed close/closed contracts so Save / Discard / Cancel cannot release a draft outside `document-owner`. |
 | 2026-08-22 | Phase 9 — observability and acceptance                            | `implemented` | A route log assembled from what components report — the kernel cannot observe document traffic and was not given a way to — that refuses to carry a payload; correlation chains walked by causation rather than sorted by time; a Mermaid graph diagram from the resolved plan; deterministic replay for the renderer and the checkbox splice against bytes from an earlier session; five kinds of injected fault; and eight acceptance budgets whose declared shape is checked against their own source. Two findings recorded, both about tests that would have passed while measuring nothing. `TST-001` narrowed to one item and deliberately not closed; `TT-001` opened. Evidence in `Architecture/Phase9Evidence.md`. |
 | 2026-08-22 | Phase 8 — permissions and packaging                               | `implemented` | Authority declared per kind in the manifest and denied by default, with denial classified by what enforces it; a bare-worker probe that reports what the platform actually withholds rather than what it should; a Content Security Policy delivered as a header and proven in force with a same-origin control beside every blocked case; and the resolved graph shipped as generated, drift-gated artifacts. Two findings fixed, three recorded. `WASM-001` resolved out of scope, `EMB-001` narrowed. Evidence in `Architecture/Phase8Evidence.md`.                                                                                                                                                                       |
@@ -210,6 +220,230 @@ gesture-driven probe and is **PENDING MANUAL RUN**.
 ## Session log
 
 _Newest first. Add one entry per working session or merge-worthy update._
+
+### 2026-08-29T06:41:00Z — A link now looks clickable before it is clicked (Dantalion)
+
+- **Summary:** Hovering an in-document link in the editing view showed the text I-beam, so nothing
+  said the link was live until you clicked it. It now shows the pointer, while the document body
+  keeps its I-beam so editing still reads as editing.
+- **Cause:** Not the surface's own `\.md-body[contenteditable="true"] { cursor: text }` -- that rule
+  is correct for the body and inheritance was never the mechanism. Chromium's UA sheet withdraws
+  the pointer from links inside editable content: `a:any-link:read-write { cursor: auto }` matches
+  the `<a>` itself, so the link had a real declaration of its own and never inherited anything.
+- **Solution:** One declaration on the element that UA rule is about -- `cursor: pointer` folded
+  into the existing `.md-body a, .md-body .linkified` block, with no `!important` and no heavier
+  selector. A single narrower rule keeps the I-beam on links the surface will *not* follow:
+  `\.md-body[contenteditable="true"] a:not([href^="#"])`. Scoped to `contenteditable="true"` rather
+  than to `.ProseMirror`, because measurement showed the editor mounted read-only *does* activate
+  an external link -- the lie is specific to the editable state, so the exception is too. The rule
+  carries the instruction to delete it when external links are handled.
+- **Files/areas:** `PDProjects/Dantalion/components/document-surface/surface.css`,
+  `tests/document-surface-browser.mjs`.
+- **Tests added:** one browser check asserting computed cursor across all three states the surface
+  can be in -- editable, editor-mounted-read-only, and read-only projection -- rather than only
+  the one being fixed.
+- **Measured before and after** (computed style, plus whether a click actually does anything):
+
+  | State | body | fragment link | external link |
+  | ----- | ---- | ------------- | ------------- |
+  | editing (`contenteditable="true"`) | `text` | `pointer` | `text` — inert, not activated |
+  | editor mounted, not editable | `auto` | `pointer` | `pointer` — navigates |
+  | read-only projection | `auto` | `pointer` | `pointer` — opens a tab |
+
+- **Incidental finding:** in the editor-mounted-but-not-editable state, an external link navigates
+  the **host page in the same tab**, because ProseMirror renders `<a href>` with no `target`. It
+  cost this session a probe, which died when the harness page navigated away. Cairn does not reach
+  that state in normal use -- it calls `setEditable(Boolean(projection))` -- but it is a real
+  same-tab escape from the app and belongs with the external-link decision still outstanding.
+- **Verified end to end:** the shipped Cairn page, same document as the previous entry --
+  `#preview` body `cursor: text`, the anchor `cursor: pointer`, navigation still landing, no page
+  or console errors.
+- **Regression impact:** presentation only; no behavior changed. The document body's own cursor is
+  unchanged in every state (`text` while editable, `auto` otherwise), checked as computed style
+  rather than assumed.
+- **Tooling gates:**
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | Dantalion, via Cairn `verify` | pass, 0 vulnerabilities | — |
+  | verify | `npm run verify` | Dantalion: build + 8 node tests + 17/17 browser checks + prettier | pass | — |
+  | verify | `npm run verify` | Cairn, as consumer | 16/17 gates | `test:shell` 46/47 — the same pre-existing failure recorded in the entry below, unrelated to CSS |
+
+### 2026-08-29T06:08:20Z — In-document anchor links land again (Dantalion)
+
+- **Summary:** A header link written the ordinary way -- `[D1](#d1-bound-file-access-to-one-folder)`
+  -- did nothing when clicked in the document surface. It now renders as a link, resolves to the
+  matching heading, and lands it at the top of the preview pane exactly where an outline click
+  lands, in both the editing view and the read-only projection.
+- **Problem:** Clicking an in-document anchor produced no navigation.
+- **Requirement:** A fragment link must resolve to the heading it names, in whichever drawing of
+  the document is on screen, and must move only the surface's own scroll -- not the host page's
+  URL or window.
+- **Cause (four defects on one path, all confirmed at runtime before any edit):**
+  1. **No heading target in the editing view.** `refreshHeadings()` wrote `id="cairn-h-N"` onto
+     the rendered headings. ProseMirror treats an attribute written onto its own DOM from outside
+     as a stray mutation and reverts it on its next observer flush, so the ids were present for
+     the rest of the current task and gone by the next tick. Measured: ids read synchronously
+     `["cairn-h-0","cairn-h-1"]`, read after `setTimeout(0)` `["(none)","(none)"]`. The pass had
+     been dead code since inline editing landed.
+  2. **Index ids, not slug ids.** Even while present, `cairn-h-0` could never match
+     `#d1-bound-file-access-to-one-folder`.
+  3. **The projection's own ids were overwritten.** The same pass replaced host-supplied heading
+     ids in read-only projection HTML with `cairn-h-N`, so a renderer that did name its anchors
+     had them destroyed.
+  4. **No click handling at all.** The surface never handled anchor clicks. In the editing view a
+     contenteditable does not activate links, so nothing happened; in the read-only view the
+     browser default set `location.hash` on the host page and scrolled the window, while the
+     document scrolls inside `#previewPane` -- so it landed nowhere and polluted the URL.
+- **Solution:** `components/heading-anchors.js` is the one definition of the slug rule (GitHub's,
+  including its `a--b` double hyphen where dropped punctuation leaves two spaces) and of what
+  counts as an in-document href. The rich editor names its headings with a **node decoration**
+  rather than a written attribute, which is the supported way to say it and is reapplied every
+  time ProseMirror draws. The surface names only projection headings, and only those that arrived
+  without an id. Anchor clicks are resolved by the surface and routed through the existing
+  `goToHeading`, so link clicks and outline clicks share one landing rule -- which also moves the
+  source caret in split mode.
+- **Files/areas:** `PDProjects/Dantalion/components/heading-anchors.js` (new),
+  `components/rich-editor/index.js`, `components/document-surface/index.js`, both `INTERFACE.md`
+  files, `tests/heading-anchors.test.mjs` (new), `tests/document-surface-browser.mjs`,
+  `assets/rich-editor.js` (rebuilt). No Cairn file changed.
+- **Tests added:** `tests/heading-anchors.test.mjs` -- slug table (including the incident's own
+  heading), duplicate-heading suffixes, seeding from ids already in the document, and which hrefs
+  count as in-document. Four browser checks in `tests/document-surface-browser.mjs`: an editing
+  heading keeps an id **read after a task boundary**, which is the assertion the old code would
+  have failed; a click in the editing view lands the heading without moving the page; a projection
+  keeps the ids its own links use and is given the ones it left out; an anchor naming nothing does
+  not navigate the host page.
+- **Verified end to end:** the shipped Cairn page, real graph, real document, the incident's exact
+  link. Pane scrolled 0 to 1797, target heading 23.75px below the pane top (its own
+  `scroll-margin-top: 24px`), outline pointer moved to that heading, `location.hash` empty, window
+  scroll 0, no page or console errors.
+- **Regression impact:** `cairn-h-N` ids no longer exist. Nothing read them -- grepped across
+  Dantalion, Cairn, and WorkLists, and the only two hits were the two assignments removed. The
+  outline path never used ids; it holds element references.
+- **Known gap, deliberately not fixed here:** the read-only projection path never renders a
+  fragment link at all. `@worklists/markdown-kit`'s `markdownLinkPattern` and `normalizeLinkHref`
+  accept only `http(s)`, `ftp`, `mailto`, and `www.`, so `[D1](#d1-...)` survives as literal text
+  in projection HTML. This is only visible in the moment before the source lend arrives, because
+  ProseMirror owns the preview from then on. It is left alone because markdown-kit is
+  WorkLists-owned and `tests/markdown-kit-package.test.js` pins its files to md5/sha256 baselines
+  recording that they moved out of `public/` unchanged; widening the pattern is a WorkLists
+  decision with a WorkLists gate, not a Dantalion fix.
+- **Adjacent finding, not fixed:** external links are also inert in the editing view. Measured: the
+  click reaches the `<a>` with `defaultPrevented === false` and no tab opens, because a
+  contenteditable does not activate links. Restoring them needs a policy choice this ticket did
+  not make -- plain click opens a tab, or a modifier does -- since plain-click-opens costs the
+  ability to click into a link's text to edit it.
+- **Tooling gates:**
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | Dantalion, via Cairn `verify` | pass, 0 vulnerabilities | — |
+  | verify | `npm run verify` | Dantalion: build + 8 node tests + 16/16 browser checks + prettier | pass | — |
+  | verify | `npm run verify` | Cairn, as consumer | 16/17 gates | `test:shell` 46/47 — pre-existing, see below |
+
+- **Pre-existing failure, not caused by this change:** Cairn `test:shell` check "the outline read
+  the normalized editor draft's real heading lines" reads `[0,60,120]` against a hardcoded
+  `[0,4,8]`. It reads `view.projections.get(path).outline`, which Cairn's `markdown-renderer`
+  builds by scanning source text — a value Dantalion cannot influence. Confirmed by reverting this
+  change in full, rebuilding, and rerunning `test:shell`: identical failure, same numbers. The
+  expectation assumes ProseMirror collapses soft-wrapped paragraph lines; the editor now
+  serializes an authored newline as a visible break, so the draft keeps its 124 lines. The stale
+  side is the expectation, not the code — worth a separate correction.
+
+### 2026-08-27 — Do not open a document on first boot
+
+- **Summary:** Removed the shell's `Notes/hello.md` fallback. A fresh Cairn session now shows the
+  empty document state with no active path and no tab; a remembered session still restores its
+  active document, and selecting a file still opens it normally.
+- **Cause:** The post-graph boot sequence was treating the test fixture path as a product default,
+  adding it to `openOrder` and requesting its source before the user had chosen a document.
+- **Files/areas:** `PDProjects/Cairn/app.js`, `PDProjects/Cairn/tests/shell-browser.mjs`.
+- **Tests run:** `npm.cmd run test:shell` — **47/47**, including the new fresh-boot assertion.
+
+### 2026-08-27 — Markdown Kit dependency extraction
+
+- **Summary:** Cairn now consumes WorkLists' `@worklists/markdown-kit` package through a declared
+  local `file:` dependency. The four former `vendor/` copies and `check-vendor-parity.mjs` are
+  gone; Cairn's renderer and document-owner workers load the unchanged package artifact from the
+  `/markdown-kit/` browser mount.
+- **Boundary:** WorkLists owns the four UMD files, their package exports, static mount, hash and
+  duplicate guard. Cairn retains its graph component, block scanner, document-owner splice path,
+  and consumer integration tests. Historical Phase evidence and briefs still name the old vendor
+  state exactly as required.
+- **Verification:** Cairn `npm.cmd run verify` passed **17/17 gates**: 206 node checks, 41
+  contracts, 9 components / 135 wires, package resolution with no vendor directory, 77 kernel,
+  33 standalone, 46 shell, 27 file operations, 7 rich-editor, 6 document-surface, 27 authority,
+  five acceptance measurements, three worker measurements, formatting, and audit. WorkLists
+  focused Markdown tests passed 51/51 and browser notes smoke passed 10/10.
+- **Documentation:** Updated Cairn's README, active roadmap/TODO/probe notes, and this changelog;
+  the WorkLists canonical changelog records ownership, hashes, and the cross-repository move.
+  No contracts or WorkLists API routes changed.
+
+### 2026-08-27 — Document surface moved to Dantalion
+
+- **Summary:** Completed phase 2 of `document-surface-component` by moving the reusable surface
+  into `C:\Users\dktho\OneDrive\PDProjects\Dantalion` under the code name Dantalion and package
+  name `@cairn/dantalion`. The package owns the document surface, rich editor, generated editor
+  bundle, build step, surface stylesheet, standalone browser harness, and style probe.
+- **Boundary:** Cairn retains the markdown renderer, governed graph, shell, and consumer rich-editor
+  integration suite. Its `file:../Dantalion` dependency supplies the surface to `app.js` and
+  `dom-owner`; no duplicate surface/editor implementation remains in Cairn.
+- **Tooling:** Dantalion declares ProseMirror, markdown-it, esbuild, Playwright, and Prettier in
+  its own `package.json`. The browser test imports Playwright from the package's local dependency,
+  not the WorkLists absolute path. `TST-001` is resolved.
+- **Tests run:** Dantalion `npm.cmd run verify` — editor bundle built; 2/2 unit tests passed;
+  document surface 6/6; formatting clean. Its style probe reported
+  `constructed stylesheet applied under the served CSP`. Cairn `npm.cmd run verify` — **17/17
+  gates passed**: 206 node checks; 41 contracts; 9 components / 135 wires; 77 kernel; 33
+  standalone; 46 shell; 27 file operations; 7 rich-editor; 6 document-surface; 27 authority;
+  five acceptance measurements; three worker measurements; formatting clean; audit 0
+  vulnerabilities.
+- **History:** Initialized local Git repositories in both Cairn and Dantalion. No commit was made.
+- **Documentation:** Updated `DECISIONS-PENDING.md` (`TST-001` resolved), the capability catalog,
+  and this changelog. No WorkLists files or contracts changed.
+
+### 2026-08-27T17:51:50Z — Document surface extracted as a reusable Cairn module
+
+- **Summary:** Implemented phase 1 of `document-surface-component` in Cairn only. The document
+  frame, projection drawing, preview / split / source modes, ribbon, gutter, rich-editor
+  lifecycle, and appearance now live under `components/document-surface/`, with a documented
+  interface and an opaque host-supplied document key. `dom-owner` remains the sole graph
+  main-thread component and delegates to the surface; WorkLists consumption remains phase 2.
+- **Problem:** Cairn's document surface was spread across `index.html`, `app.js`,
+  `components/dom-owner/`, `components/rich-editor/`, and `styles.css`, so another host could not
+  consume it without copying implementation and styling details.
+- **Solution:** Added `components/document-surface/{index.js,markup.js,modes.js,ribbon.js,surface.css,INTERFACE.md}`;
+  moved the document frame and surface selectors out of the host; made rich-editor sessions use
+  opaque keys; and kept governed message types, the nine-component graph, and markdown-renderer
+  unchanged. Added `components/rich-editor/INTERFACE.md` and a focused browser harness that
+  proves mount containment, mode behavior, task intent, draft readback, and lifetime cleanup.
+- **Style decision:** Q1 was closed by `Architecture/probes/surface-style-adoption.html`: a
+  constructed stylesheet applied under Cairn's served CSP. The surface uses a same-origin link to
+  `surface.css`, so its appearance travels with the module without requiring host CSS selectors.
+- **Files/areas:** `app.js`, `index.html`, `styles.css`, `package.json`, `tools/verify.mjs`,
+  `components/dom-owner/`, `components/rich-editor/`, new document-surface interfaces and
+  modules, `tests/document-surface-browser.mjs`, its harness, the style probe, and the canonical
+  capability catalog.
+- **Tests run:** `npm.cmd run verify` — **17/17 gates passed**: 208 node checks; catalog
+  1.12.0 with 41 governed messages; unchanged 9-component / 135-wire graph; vendor parity 4/4;
+  kernel 77/77; standalone 33/33; shell 46/46; file operations 27/27; rich editor 7/7;
+  document surface 6/6; authority 27/27; five acceptance measurements; three worker-count
+  measurements; formatting clean; audit 0 vulnerabilities. The style probe also reported
+  `constructed stylesheet applied under the served CSP`.
+- **Regression impact:** No observable Cairn behavior changed in the focused browser suites.
+  The surface owns only its supplied mount; it holds no filesystem, network, graph, or host-chrome
+  authority, and it never treats rendered HTML as authoritative text. No WorkLists files or
+  contracts were changed.
+- **API docs:** Not applicable — this phase adds a local module interface, not an HTTP API. The
+  module boundary is documented in `components/document-surface/INTERFACE.md` and the rich-editor
+  library boundary in `components/rich-editor/INTERFACE.md`.
+- **Tooling gates:** Added `test:document-surface` to `package.json` and `tools/verify.mjs`.
+  `format:check`, `contracts:check`, `contracts:docs:check`, `artifacts:check`, `graph:check`,
+  `vendor:check`, and `audit` all passed in the final run.
+- **Conflicts / exceptions:** None. `TST-001` remains open because browser dependencies are
+  resolved from the WorkLists workspace; WorkLists adoption and all phase 2 integration work are
+  deliberately deferred.
 
 ### 2026-08-27T00:00:00Z — Erroneous ticket `595` attribution withdrawn
 

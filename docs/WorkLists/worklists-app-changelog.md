@@ -36,6 +36,522 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-08-29T06:09:26Z - Batch and folder selection, with Cairn's folder tree
+
+- Summary: The document picker became a folder tree with multi-select. One document, several, or
+  the documents sitting directly in a folder can now be attached together; the count is shown and
+  the selection can be trimmed before anything is added.
+- Why this reopened settled work: the owner, reviewing the built feature, raised that picking
+  should cover a batch and a folder rather than one document at a time. Checked against the
+  verbatim request before acting - its three uses of "folder" are all about the permissioned root,
+  so **folder-selection is new scope**; but *"attach files"* and *"pull items ... to attach files"*
+  are plural, so **multi-select was a fair reading of the original text that the first
+  implementation missed**. Recorded that way rather than back-read as though it had always been in
+  scope.
+- Decisions LD-023 to LD-027: a folder ticks its direct children and never becomes a note; depth
+  stops at direct children; warn above ten and refuse above twenty-five; one request and one write
+  per batch; Cairn's explorer ported with pointers back to it.
+- Why a folder does not become a note: the document surface renders one Markdown document, so a
+  folder node would need a different rendering, which breaks story 02's accepted criterion that a
+  pulled-in document looks and behaves like anything else in that spot. It would also collide with
+  LD-011 (no watcher), since a folder node implies current contents and without a watcher would
+  silently mean contents as of attach time.
+- Why one request rather than a loop: `data/event-notes.json` is a single ~900 KB file in the
+  OneDrive-synced tree where `atomicWrite` already retries EBUSY/EPERM. Twenty-five sequential
+  attaches would rewrite it twenty-five times, which is the contention the per-record spike
+  measured. `POST /api/files/attach` validates and reads each path individually, so one bad path is
+  reported against itself while the rest still attach, and the toast names both halves.
+- Deliberate asymmetry kept visible: a folder row shows the **recursive** count while its checkbox
+  selects **direct children only**. At the chosen root, `docs` holds roughly 300 documents in its
+  subtree, so a recursive checkbox would let one click select all of them. A test asserts both
+  numbers together so a later change cannot quietly make one follow the other.
+- Provenance: every ported piece names its Cairn origin in the code (`app.js:941` buildTree,
+  `app.js:964` countFiles, `app.js:1147` renderTree, `index.html:345/359` row templates,
+  `styles.css:761-952` .tree-\* rules), and a test asserts those pointers are still present so the
+  port stays auditable. Not ported: Cairn's dirty and checked-out status, inline create and rename,
+  drag, and workspace-root removal.
+- Files/areas: `public/fileAttachments.js` (tree, picker, batch client), `public/todolist2.js`
+  (batch result reporting), `public/todoliststyles2.css` (ported .tree-\* rules), `server.js`
+  (`POST /api/files/attach`), `fileRepository.js` (batch limits, and the limits served with the
+  listing), `openapi.js`. New suite `tests/file-picker-tree.test.js`; extended
+  `tests/file-attachments.test.js` and the end-to-end browser scenario.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists | pass | - |
+  | lint | `npm run lint` | WorkLists, whole tree | pass | - |
+  | tests | `npm test` | WorkLists, 141 suites | **804 tests: 801 pass / 3 fail** | The same three pre-existing card-action/Gemma failures |
+  | browser | `npm run test:browser` | notes-pane smoke, real Chromium | **14 pass / 0 fail** | - |
+
+  Baseline before this ticket was 708 / 705 / 3. **Ninety-six tests added across the branch, zero
+  new failures.**
+
+- Tests added/updated: 14 new assertions on the ported tree (shape, natural-order names, recursive
+  count versus direct reach, visible rows, provenance pointers, CSS port) and 10 on the batch route
+  (partial success, duplicate collapse within one request, already-attached skip, the hard cap, and
+  the limits served with the listing). The browser scenario now ticks a folder, unticks one file,
+  and asserts the trimmed set is what attaches. One earlier assertion of mine was updated where the
+  picker row moved from a flat list into the tree; it still asserts the row is disabled **and** says
+  why, rather than being removed.
+- Regression impact: not isolated. `public/todolist2.js`, `public/todoliststyles2.css`, `server.js`,
+  `fileRepository.js` and `openapi.js` were all touched. The eight neighbour checks (PN-1..PN-8)
+  still pass, and `tests/note-checklist-patch.test.js` still passes with no edits to it.
+- API docs: `openapi.js` gained `POST /api/files/attach` and the `FileRepositoryAttachResult`
+  schema; `FileRepositoryListing` gained `attachMaxBatch` and `attachWarnAbove`.
+- Conflicts / exceptions:
+  - **Version moved from 2026.08.28 to 2026.08.29**, and `package.json` with it. Under calendar
+    versioning the number names the day the change was completed, and no validation outcome had
+    been recorded against the earlier number, so nothing was preserved by keeping it. The review
+    was renamed rather than duplicated, and its Document Control records the supersession.
+  - The validation review's D2 objective was rewritten rather than appended to, because the
+    objective itself grew. It remains `Pending`; no check had been executed.
+  - **Not pushed** - local branch only, per the user's instruction.
+
+### 2026-08-28T21:10:30Z - Attach repository files as note nodes (Phase 5 implementation)
+
+- Summary: Implemented `attach-repository-files-as-notes` on branch
+  `attach-repository-files-as-notes`. A note's content can now come from a Markdown file in one
+  declared folder instead of only from its own record: attach from the card ellipsis, edit in
+  place, and the edit lands in the real file. Detach removes the reference and never the file.
+- Problem: a Markdown document that already exists on disk could not be shown or edited in a card
+  without pasting a copy, and the copy diverged the moment either was edited.
+- Requirement: a note's content must be able to come from a file; that file must be editable in
+  place; and the program must be bounded to one folder the user names.
+- Solution: a server-resolved repository root with a single containment chokepoint
+  (`fileRepository.resolveInRoot`), an optional `source` on the note record, and a loopback bind
+  shipped ahead of the first file route. Cairn's path rules and both failure vocabularies were
+  ported; `realpath` containment was **added**, because a Node path can be walked out of through
+  a symlink and a `FileSystemDirectoryHandle` cannot.
+- Files/areas: new `fileRepository.js`, `public/fileAttachments.js`; modified `server.js`,
+  `dal.js`, `openapi.js`, `public/todolist2.js`, `public/cardActions.js`, `public/apiService.js`,
+  `public/index.html`, `public/todoliststyles2.css`. New suites `tests/file-repository.test.js`,
+  `tests/file-attachments.test.js`, `tests/settings-file-repository.test.js`, plus an end-to-end
+  scenario in `tests/browser-notes-smoke.js`.
+- Two defects found by testing rather than review, both caught only by the end-to-end browser run:
+  - The **Files settings panel was registered but never mounted**. `panels.set("files", …)` is
+    what tab switching reads; `body.appendChild` is what puts it on screen. Every source-contract
+    assertion passed while the tab opened onto nothing. Fixed, and guarded - but the reusable
+    lesson is that source-contract coverage of a UI surface needs one real render behind it.
+  - The **document picker closed the notes pane it was opened from**. The attach returned `201`
+    and the toast said it worked while the list went empty. The picker is a body-level overlay,
+    so the pane's outside-click dismissal read it as an outside click. `isNotesPaneOpenTarget`
+    already carried a comment describing this exact failure for the card-action menu; the picker
+    was a second instance of a known problem, and the fix was one selector.
+  - A third worth recording: the first browser fixture put its repository root inside the
+    server's `DATA_DIR` and was **correctly refused** by the overlap validation. A guard written
+    for a hypothetical caught a real mistake within an hour of existing.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists | pass (exit 0; 1 low + 1 moderate below threshold) | - |
+  | lint | `npm run lint` | WorkLists, whole tree | pass | - |
+  | tests | `npm test` (`node --test tests/*.test.js`) | WorkLists, 137 suites | **781 tests: 778 pass / 3 fail** | The three pre-existing card-action/Gemma failures, byte-identical to the pre-branch baseline |
+  | browser | `npm run test:browser` | notes-pane smoke, real Chromium | **14 pass / 0 fail** | - |
+
+  Baseline before the branch was 708 tests / 705 pass / 3 fail. **73 tests added, zero new
+  failures.**
+- Tests added/updated: three new suites (33 + 24 + 16 assertions) and one end-to-end browser
+  scenario covering choose-folder -> attach -> render -> edit -> autosave-to-disk -> detach.
+  Two red->green pairs landed: the content-source indirection, and the derived
+  `TEMP_FILE_PATTERN`. Three **existing** assertions were updated where this change legitimately
+  altered a source shape - a ninth settings tab, a conditional delete label, and the attach item
+  joining `extraActions`. None was weakened: each still asserts what it was protecting (the whole
+  ordered tab list; both label branches; the collapse actions still spread into `extraActions`).
+- Regression impact: **not claimed as isolated.** Shared infrastructure was touched - `dal.js`
+  `SECTIONS`, the note record shape, the notes render and save paths, and `cardActions.js`. Eight
+  named neighbour checks (PN-1..PN-8) cover ordinary-note autosave, both per-note menu items, the
+  collapse-all item, editor geometry, and the markdown-kit fallback renderer.
+  `tests/note-checklist-patch.test.js` passes **with no edits to it**. No `source` field is
+  written to any of the 562 existing note records.
+- API docs: `openapi.js` gained five routes (`/api/settings/file-repository` GET/PUT,
+  `/api/files` GET, `/api/files/content` GET/PUT), a `File repository` tag, and five schemas
+  (`NoteSource`, `FileRepositorySetting`, `FileRepositoryListing`, `FileRepositoryDocument`,
+  `FileRepositoryError`). `tests/openapi.test.js` passes.
+- Conflicts / exceptions:
+  - **Two changes ship alongside the feature, both decided in the spec before any code.**
+    `server.js` now binds `127.0.0.1` (it bound `0.0.0.0` with no authentication and unrestricted
+    CORS, and these routes widen what that reaches from "the board" to "any file under the
+    root"); and `dal.js` derives `TEMP_FILE_PATTERN` from `SECTIONS` rather than duplicating the
+    section list, because this is the first ticket to add a section since that duplication
+    existed. Neither is scope creep: the first is the security precondition for shipping a
+    filesystem route at all, the second is forced by the setting needing a section.
+  - **Two accepted risks**, both recorded as concerns: autosave writes a real file on focus exit
+    (FDC-04, tolerable only because the chosen root is a git repo), and a rename outside the app
+    breaks every reference to that file at once (FDC-05).
+  - `WORKLISTS_HOST` was added as an escape hatch so a deliberate cross-device setup has a
+    supported way in rather than requiring a code edit.
+  - **Not pushed** - local branch only, per the user's instruction.
+- Validation review: [`review/v2026.08.29-attach-repository-files-as-notes-validation-review.md`](./review/v2026.08.29-attach-repository-files-as-notes-validation-review.md)
+  - nine objectives (D1-D9), hands-on `Prove` checkboxes, overall status `Pending`. The version
+  `2026.08.28` was chosen by the project owner and written into WorkLists' `package.json`, which
+  previously carried no version at all, so the filename, document, and manifest agree as the
+  template requires.
+- **Correction (2026-08-29).** The review was first written into the WorkLists repository at
+  `docs/review/`, on the reasoning that the template's relative `Files:` links only resolve
+  alongside the code. That was wrong: **dustin-thomason is where all canonical files for a
+  project live**, and the template's placement guidance does not override that. The review was
+  moved to `docs/WorkLists/review/` here and removed from the app repository (WorkLists commits
+  `dd3bf7d` added it, `a6fe914` removed it). All thirty-four `Files:` links were rewritten as
+  cross-repository relative paths and each was verified to resolve on disk. The `package.json`
+  version stays in the app repository, where it belongs as project metadata.
+
+### 2026-08-28T20:30:55Z - Snapshot commit of the markdown-kit and Dantalion working tree
+
+- Summary: Committed the uncommitted markdown-kit extraction and Dantalion notes-surface work to
+  `main` **locally, not pushed**, at the user's request, so the `attach-repository-files-as-notes`
+  implementation has a clean revert point and a separable diff.
+- Why: the working tree carried 25 modified files across exactly the files that ticket must edit
+  (`dal.js`, `server.js`, `openapi.js`, `public/todolist2.js`). Building on top would have produced
+  one diff holding two unrelated changesets with no way to revert either independently.
+- Changes made by this session before committing: **Prettier normalization only**, on the five
+  tracked files that failed `npm run lint` - `dal.js`, `openapi.js`, `server.js`,
+  `public/todolist2.js`, `tests/browser-notes-smoke.js`. No logic touched; the test count is
+  unchanged either side of the reformat.
+- Files/areas: 37 files staged - 3,716 insertions / 310 deletions. Includes the four
+  `public/markdown*.js` -> `packages/markdown-kit/src/*` moves (recorded by git as renames), the
+  new `packages/markdown-kit` package, `public/theme.js`, `public/statusFilter.js`,
+  `public/worklists-dantalion.{js,css}`, and four new test suites.
+- Deliberately left out of the commit: `argus-phase4e-stage/`, `.ottercopy-edit/`, seven debug
+  PNGs, and `debug.log` - build/debug artifacts, not source.
+- Tests run:
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists | pass (exit 0; 1 low + 1 moderate below threshold) | - |
+  | lint | `npx prettier --check dal.js openapi.js server.js public/todolist2.js tests/browser-notes-smoke.js packages/ public/ tests/` | the committed scope | pass | **Substituted for `npm run lint`** - see below |
+  | tests | `npm test` (`node --test tests/*.test.js`) | WorkLists, all 46 suites | 708 tests: **705 pass / 3 fail** | The three known pre-existing failures, named below |
+
+- Gate exception - lint command substituted, with the reason: `npm run lint` is
+  `prettier --check .` and fails on **133** files, of which **128** are the untracked
+  `argus-phase4e-stage/` (124) and `.ottercopy-edit/` (4) staging directories that are not part of
+  this commit and not source. The five real offenders were all tracked files in the commit; they
+  were formatted and the scoped check passes. **What remains unverified:** the repo-wide gate still
+  exits 1 while those untracked directories sit in the tree. Smallest follow-up that fixes it -
+  add both to `.prettierignore`, or delete them if the staging work has landed.
+- Tests added/updated: **none by this session.** The four new suites in the commit
+  (`markdown-kit-package`, `pinned-board-scroll`, `status-filter`, `theme`) were authored by the
+  prior sessions this snapshot preserves, and their entries below cover them.
+- Regression impact: **none introduced.** The only change this session made was Prettier
+  formatting; the test result is identical before and after it (705/3 both times), and the three
+  failures are the same three named in the 2026-08-28 entries - `keeps all card actions in one
+  menu definition`, `keeps AI note reveal targets across reload and missing server job results`,
+  and `wires Ctrl+Shift+Backslash as a context-aware global voice shortcut`.
+- API docs: **not relevant** - no route, DTO, status, or auth change. `openapi.js` was reformatted
+  by Prettier only; its route definitions are byte-identical in content.
+- Conflicts / exceptions:
+  - **One commit carries several narratives**, against the usual one-narrative-per-commit rule.
+    Done on the user's explicit instruction - the commit's purpose is a revert point for the work
+    that follows, not a self-contained change. Recorded rather than silently deviated from.
+  - Committed to `main` rather than a branch: this is the continuation of main-line work that was
+    already in the tree, and this repo's history is direct-to-`main`. The ticket work that follows
+    goes on its own branch.
+  - **Not pushed**, per the user's instruction.
+
+### 2026-08-28T20:20:31Z - Attach repository files as notes: decisions and spec (Phase 3)
+
+- Summary: Ran the Phase 3 probe-and-spec pass on `attach-repository-files-as-notes`. Twenty-two
+  decisions locked, five job stories accepted, a sixth drafted and held out of scope, the spec
+  written, and the test plan refined. **Still no WorkLists product code created, edited, or run**
+  - the only writes outside `C:\dustin-thomason\docs\` were checklist-row updates on the ticket's
+  own WorkLists card.
+- Decisions that shape the build: the repository root is **server-resolved**, not a browser File
+  System Access grant (LD-001 - the owner accepted the investigation's reframe against the
+  original request's own instruction); root is **`C:\dustin-thomason`** (LD-003); the server
+  **binds `127.0.0.1`** before any file route ships (LD-002); a file-backed note **inherits
+  focus-exit autosave** (LD-006); the app **never deletes a file** - detach only (LD-007).
+- Two agent recommendations were overturned by the owner, and both improved the design:
+  - **LD-005.** The agent proposed including dot-folders in the browse list, having measured 113
+    `.md` and 15 `.mdc` under `.claude/`, `.cursor/`, `.agents/`, `.github/`. The owner supplied
+    the missing fact - those are **generated** copies; the authored sources live at
+    `agents/rules/*.md` on a non-dot path. Keeping Cairn's dot-skip therefore makes the
+    never-edit-generated-output rule unbreakable by construction rather than by discipline.
+  - **LD-006.** The agent proposed explicit-save-only for file-backed notes. The owner chose
+    parity with ordinary notes. That **invalidated a story-03 criterion** ("nothing is written
+    until the person saves"), which was replaced on the record rather than reinterpreted, and
+    forced a compensating decision (LD-021 - a file-backed note shows its path where an ordinary
+    note shows its timestamp, so a person can tell which notes write to disk).
+- Scope moved once, deliberately: story 05's "find out where else this is attached **before**
+  changing it" was rejected by the owner - a pointer's consumer list is not a precondition of
+  updating what it points at. The useful requirement underneath became **story 06** (attachment
+  inventory), drafted and explicitly **not** in this slice.
+- Measured, not assumed: `C:\dustin-thomason` is a git repo holding 450 files after the skip
+  rules (363 `.md`, 6 `.mdc`), max depth 7, largest Markdown 600 KB, zero symlinks - comfortably
+  inside Cairn's ported bounds, which are kept anyway as a guard. The root being version
+  controlled is what makes LD-006's accepted risk and LD-009's path-based identity tolerable.
+- Files/areas: documentation only - `specs/…-locked-decisions.md` (new, LD-001..LD-022),
+  `specs/…-spec.md` (new), `stories/` (01-05 accepted, 06 created, index updated),
+  `testing/…-test-plan.md` (refined), `…-future-development-concerns.md` (FDC-01 decided;
+  FDC-04, FDC-05 added). WorkLists card `todo-1782484871383-6b5676db` checklist rows updated.
+- Tests run: **not relevant** - no product code touched, so no WorkLists gate applies. The test
+  plan now carries 12 happy paths, 9 negative paths, 8 edge cases, 5 decision-specific scenarios
+  and 8 protect-the-neighbours rows, each mapped to an accepted criterion, pending execution at
+  Phase 5 against the known 705/3 baseline.
+- Tests added/updated: **not relevant** - no behavior changed. Two red->green pairs are specified
+  for Phase 5: the content-source indirection (HP-9) and the derived `TEMP_FILE_PATTERN` (DS-2).
+- Regression impact: **none, boundary nameable** - documentation plus checklist-row writes on one
+  card. WorkLists' working tree is unchanged.
+- API docs: **not relevant this session** - nothing shipped. The spec commits five new routes to
+  `openapi.js`, which `tests/openapi.test.js` will gate at Phase 5.
+- Conflicts / exceptions:
+  - `currentStep` and `nextUp` **could not be written** to the card: it carries no workflow
+    section headings, so `PATCH /todos/{id}` answers `400 - Card has no workflow sections.
+    Refusing to restructure it`. Attempted once, recorded; the agent may not add sections.
+    Checklist rows wrote successfully both times.
+  - Card **ticket-id guard not applicable**: the card title carries no ticket id and personal
+    projects have none. The guard exists to stop a text match reaching the wrong card;
+    identification here was a user-supplied id, which is the case it was written to make
+    unnecessary.
+  - The card predates the request and frames the work as **upload with backend storage**, which
+    the investigation rejected (report §6, alternative 2). The 2026-08-28 request is the
+    authority; the card's title will mislead a future reader and the agent may not rename it.
+  - **FDC-02 pulled into scope.** `dal.js` duplicates the section list between `SECTIONS` and
+    `TEMP_FILE_PATTERN`. This ticket adds the first new section since that duplication existed,
+    so deferring the fix would mean shipping the exact bug the concern predicts.
+  - Spec reviewer: **not applicable** - personal project, owner and reviewer are the same person,
+    no wiki and no spec PR. Recorded rather than omitted.
+
+### 2026-08-28T18:51:13Z - Attach repository files as notes: capture and investigation (Phases 0-2)
+
+- Summary: Orchestrated ticket `attach-repository-files-as-notes` through Phase 0 (capture) and
+  Phases 1-2 (recon and investigation report). **No WorkLists product code was created, edited, or
+  run.** All output is documentation under
+  `docs/WorkLists/tickets/attach-repository-files-as-notes/`.
+- Problem: A Markdown document that already exists on disk cannot be shown or edited inside a
+  WorkLists card without pasting a copy, and the copy diverges from the file immediately.
+- Requirement: A note's content must be able to come from a file, that file must be editable in
+  place, and the program must be bounded to one folder the user names.
+- Finding (the load-bearing one): **the problem class was reframed.** The request asks to
+  translate Cairn's folder-permission process into WorkLists. Tracing it showed that process is
+  machinery for holding an OS grant inside a browser tab, and every part of it exists because
+  Cairn has no server - its own source comments justify the IndexedDB handle store by
+  `localStorage` not existing in a worker. WorkLists has a server on the same machine already
+  reading and writing real files. The confirmed class is **content-source indirection bounded by
+  a declared authority scope**, not a missing permission mechanism. Porting the mechanism was
+  measured to cost three things: automated coverage (a native picker is an OS dialog Playwright
+  cannot drive, and `tests/browser-notes-smoke.js` drives real Chromium), cross-machine content
+  consistency, and browser portability. **The decision is the user's and was not taken** - the
+  reframe contradicts an explicit instruction in the request, so it is recorded as open variable
+  1 with the evidence on both sides.
+- Also found: the capability is smaller than it looks. The Dantalion surface is already mounted
+  per note and needs no change; the card ellipsis menu already has an `extraActions` seam
+  (`getNotesPaneCollapseMenuActions`, `public/todolist2.js:4700`); a tabbed Settings dialog
+  already exists (`public/todolist2.js:16828`); and `PATCH /api/notes/:noteId` already implements
+  the `expectedLastModified` -> 409 concurrency shape a safe file write should mirror. Content
+  enters at one unbranched point (`createNoteItem`) and leaves at one (`saveNoteInlineEditor`).
+- Files/areas: documentation only - `original-ticket.md`, `orchestration.md`, five job stories +
+  index, `investigations/` (recon-and-plan, investigation report, coverage ledger, diagrams),
+  `testing/` (test-plan seed), `attach-repository-files-as-notes-why-these-changes.md`,
+  `attach-repository-files-as-notes-future-development-concerns.md`, PR draft shell.
+- Tests run: **not relevant** - no product code was touched, so no WorkLists gate applies to this
+  session. The `06b78be` baseline was read, not modified. The plan's gate table records the known
+  baseline of 705 passed / 3 failed for comparison at Phase 5.
+- Tests added/updated: **not relevant** - no behavior changed. A seeded test plan with 12 happy
+  paths, 8 negative paths, 7 edge cases and 7 protect-the-neighbours rows exists at
+  `testing/attach-repository-files-as-notes-test-plan.md`, pending refinement at Phase 3.
+- Regression impact: **none, and the boundary is nameable** - nothing outside
+  `C:\dustin-thomason\docs\` was written. WorkLists' working tree is unchanged by this session.
+- API docs: **not relevant** - no route, no DTO, no status or auth behavior changed. `openapi.js`
+  was read only to enumerate existing endpoints; it is recorded as a gate the future
+  implementation must satisfy (`tests/openapi.test.js` guards it).
+- Conflicts / exceptions:
+  - The plan-mode handoff stop at 0->1 was **waived by the user in the original request** ("We do
+    not need to wait for plan mode"). Recorded in the ledger; handoff blocks are still emitted.
+  - `P0.board-id` is **blocked, not skipped**: creating the ticket card requires a `columnId`, and
+    the `worklists-card-sync` rule forbids the agent choosing a card's column. The server is up and
+    the designated template resolves (`card-template-ticket-workflow`); only the column is missing.
+    `P2.board` is consequently skipped for the same reason.
+  - Two pre-existing concerns were recorded rather than fixed: the server binds `0.0.0.0` with no
+    authentication and open CORS (`server.js:3615`, `:39`), which this feature would widen from
+    "the board" to "any file under the documents root"; and `dal.js:59` duplicates the section
+    list between `SECTIONS` and `TEMP_FILE_PATTERN`.
+  - This changelog's **Current state** still says the markdown-kit extraction is "Not yet
+    implemented" while the 2026-08-27 session log and `packages/markdown-kit/` say otherwise.
+    Flagged for the Phase 6 cruft check; not corrected here, since Current state is not this
+    ticket's to rewrite mid-run.
+
+### 2026-08-28T00:00:00Z - Left-edge glyph clipping guard
+
+- Summary: Lowercase glyphs with a left overhang, especially `j`, no longer lose pixels when
+  they begin at column zero in a saved or visually edited note. Markdown Source intentionally
+  retains its monospace font for manual tables and source alignment.
+- Solution: Added a 2px horizontal safety inset to the shared Dantalion note body rather than
+  changing fonts. The inset is identical before and after save and protects glyph ink from the
+  preview pane's clipping edge without introducing a visible document margin.
+- Files/areas: `public/worklists-dantalion.css` and the note-surface assertions in
+  `tests/browser-notes-smoke.js`.
+- Tests run: WorkLists notes-pane Playwright passed **12/12**. The regression authors a lowercase
+  `j` at column zero, saves it, verifies the same inset after reparse, and confirms Source still
+  resolves to a monospace stack.
+- Live verification: Playwright opened pinned board `testing`, column `test column`, card `Agent
+  card testing` without saving. At **500%** editor zoom, the first `j` had a **10 rendered-pixel**
+  inset (2 CSS px) and its left stroke was visibly intact.
+
+### 2026-08-28T00:00:00Z - Deletable blank lines and notes-list-owned scrolling
+
+- Summary: Saved blank lines can now be removed normally with Backspace/Delete or as part of a
+  highlighted range. Long note documents remain fully expanded; the notes list is the vertical
+  scrolling container instead of the Dantalion preview/source box.
+- Solution: Dantalion now parses retained Markdown spacing as ordinary empty ProseMirror
+  paragraphs rather than non-editable atoms and adds boundary-aware Backspace/Delete handling.
+  WorkLists removed the 640px editor cap and internal vertical overflow, expands the surface by
+  any residual clipped pixels, and keeps the note action row sticky within the scrolling notes
+  list.
+- Files/areas: Dantalion `components/rich-editor/index.js`, generated `assets/rich-editor.js`,
+  and its unit/browser tests; WorkLists `public/todolist2.js`, `public/todoliststyles2.css`,
+  `public/worklists-dantalion.css`, and `tests/browser-notes-smoke.js`.
+- Tests run: Dantalion verification passed with unit tests **4/4** and standalone Playwright
+  checks **11/11**. WorkLists focused tests passed **42/42** and notes-pane Playwright passed
+  **11/11**, including saved blank-line deletion and an 80-line note with no internal document
+  scrollbar.
+- Live verification: Playwright opened pinned board `testing`, column `test column`, card `Agent
+  card testing` without saving. Backspace reduced the real note's empty paragraphs from **5 to
+  4**. An 80-break draft expanded the document pane to **2178px** with matching client/scroll
+  heights, while the **660px** notes list owned the **2234px** scroll range.
+
+### 2026-08-28T00:00:00Z - Markdown line-break and live checklist fidelity
+
+- Summary: Authored Markdown spacing now survives the Visual / Markdown round trip, and task
+  markers become real checkboxes while the user is still typing. Ordinary line breaks remain
+  visible; repeated blank lines retain their additional spacing instead of being collapsed on
+  exit.
+- Solution: Removed the Markdown Kit visual converter's newline compression, taught it to count
+  the renderer's blank-line markers, and preserved checklist markers when reading the visual
+  list. Dantalion now treats a soft Markdown break as a visible hard break, models additional
+  blank lines as document atoms with a visible line box, preserves untouched source text in its
+  editor session, and promotes typed `[ ]` / `[x]` list items during transaction normalization.
+  The serializer emits readable Markdown newlines and now retains empty top-level paragraphs
+  created by pressing Enter in the visual editor. Saved blank lines use the same paragraph-shaped
+  DOM and host typography as newly authored empty paragraphs, eliminating the save-time height
+  shift; no HTML `<br>` is persisted in Markdown.
+- Files/areas: WorkLists `packages/markdown-kit/src/markdown-editor.js`, its package hash guard,
+  `tests/browser-notes-smoke.js`; Dantalion `components/rich-editor/index.js`,
+  `components/document-surface/surface.css`, generated `assets/rich-editor.js`, and the
+  standalone rich-editor/document-surface tests.
+- Tests run: WorkLists focused markdown/package/clipboard tests **55/55 passed**; WorkLists
+  Playwright notes smoke **11/11 passed**, including the saved-note Dantalion Visual / Markdown
+  fidelity round trip and a sub-pixel blank-line geometry assertion;
+  Dantalion unit tests **4/4 passed**; Dantalion standalone surface browser checks **9/9
+  passed**, including a real `Enter`, `Enter` sequence between sections; touched-file Prettier
+  checks passed. Full WorkLists regression remains **705 passed /
+  3 failed**, the three known unrelated card-action/Gemma assertion failures.
+- Live verification: Playwright opened pinned board `testing`, column `test column`, card `Agent
+  card testing`, and measured its note without saving. The authored-to-reparsed blank-line delta
+  changed from **-6.046875px** to **0px** (both states **84.53125px** for the probe document).
+- Regression impact: no API or data-schema changes. Existing headings, bullets, numbered lists,
+  and saved checkbox syntax remain supported. The existing note viewport and stripped-down edit
+  controls remain unchanged; this only makes their document content faithful.
+
+### 2026-08-28T00:00:00Z - Dantalion note editing controls and viewport fit
+
+- Summary: Saved notes keep the persistent Dantalion view/edit surface, but entering edit mode
+  now starts in a stripped-down state. The note ellipsis menu exposes `Show editing controls`,
+  which reveals the mode tabs, markdown ribbon, and Voice / Cancel / Save actions; the same menu
+  action becomes `Hide editing controls` while editing.
+- Solution: Added a per-note action menu, kept the editing surface mounted across view/edit
+  transitions, removed the large trailing document padding and artificial note minimum height,
+  and fitted the active surface to the visible notes-list viewport. The editor grows with short
+  content and scrolls internally for long content so the action row remains reachable. Source
+  drafts refit immediately while Dantalion's normal debounced commit remains intact. Focus-exit
+  autosave now treats the note's own menu and action row as part of the editing boundary,
+  preventing a menu click from rerendering and detaching the menu; content growth re-aligns the
+  active note when the list begins to overflow.
+- Files/areas: `public/todolist2.js`, `public/worklists-dantalion.css`,
+  `tests/browser-notes-smoke.js`, `tests/context-windows.test.js`, `tests/notes-collapse.test.js`,
+  and `Cairn`-owned Dantalion remains the consumed package.
+- Tests run: focused note/editor/context/clipboard tests **52/52 passed**; browser notes smoke
+  **11/11 passed**, including an 80-line source-draft viewport check; syntax and focused diff
+  checks passed. Full WorkLists tests report **705 passed / 3 failed**, the three known
+  pre-existing card-action/Gemma assertion failures.
+- Regression impact: the card text section remains on Markdown Kit, the add-note composer is
+  unchanged, and no notes API or data schema changed. The new controls are opt-in after edit
+  begins, while view-mode notes remain free of editing chrome.
+
+### 2026-08-27T00:00:00Z - Markdown Kit package extraction
+
+- Summary: Implemented `markdown-kit-package-extraction` as the WorkLists-owned package
+  `@worklists/markdown-kit` under `packages/markdown-kit/`. The four UMD markdown files moved from
+  `public/` into `src/` without content changes, and WorkLists now serves them from
+  `/markdown-kit/` in their existing dependency order.
+- Problem: Cairn had to carry four byte-identical copies because WorkLists had no package boundary.
+  The copies required a hard-coded absolute parity check and allowed the same artifact to be
+  authored in two repositories.
+- Solution: Added the package manifest, exports map, CommonJS/UMD-compatible entry point, README,
+  local package dependency, Express static mount, and `markdown-kit-package.test.js`. The package
+  test verifies the recorded MD5 and SHA-256 baselines, rejects old public filenames, and scans the
+  WorkLists tree for duplicate content outside the package. Cairn now resolves the package through
+  `file:../../SCRIPTS ALL SYSTEMS/To Do List/WorkLists/packages/markdown-kit`, loads its browser
+  artifact at `/markdown-kit/`, and replaces `vendor:check` with `package:check`.
+- Files/areas: `packages/markdown-kit/`, `public/index.html`, `server.js`, `package.json`,
+  `package-lock.json`, the four markdown unit tests, `tests/markdown-kit-package.test.js`, and
+  Cairn's package, server, component, probe, test, README, TODO, and ROADMAP files. Cairn's
+  historical Phase evidence and briefs remain unchanged as required by the extraction spec.
+- Hash evidence: `markdown-renderer.js` `md5 3ef87f42c004b2f50e01dc67acb53fab`, `sha256
+  374f065ec2ed124634fe831ffc347785215bfcdd9241bab5b11d6832dd0fe97b`; `markdown-editor.js`
+  `md5 55fbc26a666e0d3ad01a9c8b3e7247d3`, `sha256 c17fb1be485b6d0262720938a7f908076675e95a8595c49b0f1c6f24cbdf65ee`;
+  `markdown-authoring.js` `md5 2aa710a6ed2a6ce0f8e748f9b5d2312e`, `sha256
+  b2606d7618e1b0d7475795fc8f30dabd6725c9791d2a4a9b8ba631d09730f8c8`; `edit-session.js`
+  `md5 82ac6782d99562c6d612ba76df0d565e`, `sha256 bae3ca532f2a21bdd1cf9126953f049e250cff4d2dd3658e1049f9d5a8e5b9d3`.
+- Tests run: focused markdown package and helper tests **51/51 passed**; browser notes smoke
+  **10/10 passed**; Cairn `npm.cmd run verify` **17/17 gates passed** with 206 node checks,
+  package resolution, 41 contracts, 9 components / 135 wires, 77 kernel, 33 standalone, 46
+  shell, 27 file operations, 7 rich-editor, 6 document-surface, 27 authority, five acceptance
+  measurements, three worker measurements, formatting, and audit. WorkLists `npm.cmd test`
+  reports **704 passed / 4 failed**, the same four pre-existing Gemma/card-action assertion
+  failures recorded in the previous changelog entry. WorkLists audit passes the high-severity
+  threshold with the existing 1 low and 1 moderate advisory.
+- Regression impact: no intended behavior change. The browser smoke passed against the new static
+  mount; Cairn's standalone, kernel, worker-cost, shell, and rich-editor suites all passed against
+  the shared artifact. No API route or database surface changed.
+- Decisions: the package name and WorkLists ownership defaults were adopted. No per-module
+  `INTERFACE.md` files were added; the exports map and README are the package interface. Cairn's
+  `TST-001` is resolved by the package-local Playwright dependency and standalone harness.
+- Exception: the repository-wide WorkLists `npm run lint` still sees unrelated pre-existing
+  formatting failures in workspace staging artifacts and existing files; all extraction files
+  pass focused formatting, and no unrelated files were reformatted.
+
+### 2026-08-27T00:00:00Z - Dantalion notes-pane surface integration
+
+- Summary: Corrected the WorkLists integration so the standalone `@cairn/dantalion` document
+  surface belongs to each saved note in the Notes pane, not the card-text section. Every saved note
+  now has a persistent Dantalion view surface; entering note edit mode makes that same surface
+  editable and reveals its ribbon, view modes, and save/cancel/voice actions.
+- Solution: Added the local `@cairn/dantalion` dependency, exposed its browser package through
+  the `/dantalion/` static mount, added the WorkLists token adapter stylesheet, and created the
+  browser module bridge. The card-text editor was restored to Markdown Kit. Note rendering now
+  owns a Dantalion controller per note with an opaque key, read-only projection state, and teardown
+  on note rerender.
+- Files/areas: `package.json`, `package-lock.json`, `server.js`, `public/index.html`,
+  `public/todolist2.js`, `public/worklists-dantalion.js`, `public/worklists-dantalion.css`,
+  `tests/browser-notes-smoke.js`, `tests/markdown-editor.test.js`, and
+  `tests/context-windows.test.js`.
+- Tests run: focused Markdown/package boundary and WorkLists integration tests **10/10 passed**;
+  browser notes smoke **10/10 passed**; full WorkLists suite **704 passed / 4 failed**, matching
+  the known pre-existing static card-action and Gemma assertion failures. Syntax and diff checks
+  for the changed JavaScript and integration files passed.
+- Regression impact: the card-text editor has no Dantalion surface in this slice. Saved notes use
+  the Dantalion view/edit lifecycle without changing the notes API or data schema. The add-note
+  form remains on Markdown Kit because it is a draft composer rather than a saved note surface.
+
+### 2026-08-27T00:00:00Z - WorkLists
+
+- Summary: Spec-only session. Identified the package that exists in two places and wrote an implementation spec for extracting it into a real, singly-owned package. **No WorkLists code was written or changed.**
+- Problem: WorkLists has no package boundary. Four markdown files — `public/markdownRenderer.js`, `public/markdownEditor.js`, `public/markdownAuthoring.js`, `public/editSession.js` — sit loose in `public/` beside twenty-four unrelated app scripts, wired by `<script>` order and `window` globals. Cairn (`C:\Users\dktho\OneDrive\PDProjects\Cairn`) vendors byte-identical copies of all four into `vendor/` because there was nothing to depend on. Cairn's `tools/check-vendor-parity.mjs` holds the copies true through a hard-coded absolute machine path and runs as gate 6 of `tools/verify.mjs`. That gate is well built, but it manages a defect that lives in WorkLists.
+- Requirement: One authored copy across all repositories; a declared public interface; second consumers resolve rather than reproduce; WorkLists loads through the same interface an external consumer uses; no behavior change; recurrence fails a gate.
+- Solution specified: extract to `@worklists/markdown-kit` at `WorkLists/packages/markdown-kit/`, served to the browser from an Express static mount at `/markdown-kit/`, consumed by Cairn as a `file:` dependency — the same arrangement Cairn already uses for `@cairn/dantalion` (`file:../Dantalion`). npm links a `file:` directory rather than copying it, so Cairn's `vendor/` and its parity gate are deleted rather than retargeted. **File contents move byte-for-byte**; the UMD wrapper is the compatibility contract that lets one file serve browser `<script>`, Node `require`, ESM side-effect `import`, and worker `importScripts`. Acceptance asserts recorded hashes, converting "we only moved it" into a check.
+- Measured evidence recorded: all four vendor/original pairs verified byte-identical on 2026-08-27 by md5 — `markdownRenderer.js` `3ef87f42c004b2f50e01dc67acb53fab`, `markdownEditor.js` `55fbc26a666e0d3ad01a9c8b3e7247d3`, `markdownAuthoring.js` `2aa710a6ed2a6ce0f8e748f9b5d2312e`, `editSession.js` `82ac6782d99562c6d612ba76df0d565e`. There is no drift to reconcile. Only `markdown-renderer.js` has importers in Cairn source (`components/markdown-renderer/index.js`, `components/document-owner/index.js:24`, `Architecture/probes/worker-render.js:2`); the other three are held under parity enforcement as staged material with no in-repo consumer.
+- Dependency shape confirmed by reading source: `markdownRenderer.js`, `markdownAuthoring.js`, and `editSession.js` have zero dependencies; `markdownEditor.js` resolves `MarkdownRenderer` through ambient global lookup at `markdownEditor.js:27-30` with a silent `null` fallback. That coupling is carried forward unchanged and flagged as a separate ticket — fixing it here would change file bytes and forfeit the hash-parity proof.
+- Files/areas: `dustin-thomason/docs/WorkLists/tickets/markdown-kit-package-extraction/specs/markdown-kit-package-extraction-spec.md` (new). No file in the WorkLists or Cairn repositories was touched.
+- User-visible impact: None. Spec only.
+- Tests run: **none — no code changed.** Not applicable rather than skipped.
+- Tests added/updated: none. The spec defines the test obligations for implementation, including a new `tests/markdown-kit-package.test.js` covering hash parity, load order, and an anti-recurrence guard.
+- Regression impact: none — no code file in either repository was modified. Checked surface: the spec was written to a new path under `dustin-thomason/docs/`; WorkLists `public/`, `server.js`, `package.json`, and `tests/` are untouched, and Cairn's `vendor/`, `tools/`, and `components/` are untouched.
+- API docs: not relevant — no HTTP surface changed. `openapi.js` untouched. The spec records that the planned change is static-asset routing only and requires no `openapi.js` edit.
+- Tooling gates: not applicable — the session changed only markdown in `dustin-thomason`, which has no npm workspace.
+- Open decisions: three, none blocking. Package name (`@worklists/markdown-kit` proposed), whether the package should instead live at `PDProjects/` beside Dantalion as a peer dependency of both apps (defaulted to no on the user's "within the app" instruction), and whether to add Dantalion-style per-module `INTERFACE.md` files.
+- Known residual risk recorded in the spec: Cairn's `file:` specifier crosses two OneDrive subtrees and contains spaces. It is relative and declared — better than today's hard-coded absolute string — but still assumes a shared parent. Failure mode is a loud `npm install` resolution error, not a silent stale copy.
+
 ### 2026-08-13T03:05:00Z - WorkLists
 
 - Summary: Completed the remaining two bodies of work — the **Card Templates settings tab** and **W6, the agent wiring** in `dustin-thomason` — plus one small fix to the repo's test gate. All seven specified bodies of work are now implemented.
@@ -3761,6 +4277,8 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - N/A - no HTTP API contract change in this session.
 
 ## Current state
+
+- The markdown authoring surface (`public/markdownRenderer.js`, `markdownEditor.js`, `markdownAuthoring.js`, `editSession.js`) exists in two places: authored in WorkLists `public/` and vendored byte-identically into Cairn `vendor/`, held true by Cairn’s `tools/check-vendor-parity.mjs`. WorkLists has no package boundary, which is why the copies exist. A spec to extract them into `@worklists/markdown-kit` is written and ready for implementation planning: `docs/WorkLists/tickets/markdown-kit-package-extraction/specs/markdown-kit-package-extraction-spec.md`. Not yet implemented.
 
 - Full regression and formatting checks are passing.
 
