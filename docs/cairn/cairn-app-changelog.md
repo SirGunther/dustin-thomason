@@ -221,6 +221,62 @@ gesture-driven probe and is **PENDING MANUAL RUN**.
 
 _Newest first. Add one entry per working session or merge-worthy update._
 
+### 2026-08-29T18:49:20Z — A heading link worked once and then never again (Dantalion)
+
+- **Summary:** Clicking a header link landed the first time and did nothing on every click after
+  that, per heading. The same defect had been sitting under outline-row clicks, which behaved
+  identically once a heading had been visited. Both now land every time.
+- **Cause:** `applyHeadingPointer()` wrote `classList.add("heading-current")` onto the drawn
+  heading. In the editing view that DOM belongs to ProseMirror, which reads the class as a foreign
+  mutation and redraws the heading from its own model. The redraw discards the class **and
+  replaces the node**, while `headings[].element` still held the node from before it. Every later
+  landing called `scrollIntoView()` on a detached element, which does nothing and reports nothing.
+  Measured on the first click: `sameNode false`, `cachedStillConnected false`,
+  `cachedHasCurrentClass true`, `liveHasCurrentClass false` — so the marker was inert as well,
+  and had been. The read-only projection repeated correctly throughout (3954, 3954, 3954), which
+  located the fault in the editing view rather than in the landing arithmetic.
+- **Same family as the anchor-id defect fixed earlier today.** That one removed the `id` write
+  onto editor DOM; this was the second such write, left in place, and it failed more quietly:
+  losing a class only looks like a missing highlight, while losing the node breaks navigation.
+- **Solution, two parts:**
+  1. **The cause.** The surface no longer writes the pointer class where ProseMirror owns the DOM.
+     Nothing visible is lost, because the class never survived there; the pointer a reader
+     actually sees while editing is the host's outline highlight, driven by the existing `heading`
+     state message, which is unchanged.
+  2. **The fragility that hid it.** `headings` no longer carries DOM nodes at all. It keeps what
+     the surface knows — level, text, source line — and the drawn element is read at the moment
+     it is used, by `headingElementAt(index)`. Holding a reference into DOM another component
+     owns and redraws is what turned a cosmetic write into silent dead navigation.
+- **Files/areas:** `PDProjects/Dantalion/components/document-surface/index.js`,
+  `tests/document-surface-browser.mjs`.
+- **Tests added:** one browser check — the same anchor clicked twice more after its first landing,
+  asserting the pane scrolled, the heading landed at its 24px `scroll-margin-top`, and the heading
+  node is still the one stamped **before the first click**. The node-identity assertion is
+  load-bearing, not decorative: confirmed by running the check against the pre-fix file, where it
+  reports `scrolled false` and `sameNodeAsBefore false`, and against the fixed file, where both
+  hold for both rounds.
+- **Verified end to end** in the shipped Cairn page, three rounds each: anchor click
+  `[1797, 1797, 1797]` at offset 24, outline row click `[1797, 1797, 1797]` at offset 24, outline
+  pointer correct throughout, no page or console errors. Against the pre-fix file the same probe
+  gives `[1797, 0, 0]` for the anchor and `[1797, 0, 0]` for the outline row, which is how the
+  outline defect was established rather than assumed.
+- **Regression impact:** `headings[].element` is gone from the surface's internal shape. It was
+  never on the host boundary — `outline()` returns level, text, and line only, and always did.
+  The four places that used it (pointer, landing, scroll tracking, anchor resolution) all read the
+  drawn heading by index instead, and the index alignment they rely on is the same one
+  `refreshHeadings` already built.
+- **Still open, unchanged by this:** the in-document `heading-current` accent bar does not appear
+  in the editing view, and now does not attempt to. Making it appear means carrying it as a
+  ProseMirror decoration the way heading ids are, plus a small editor method to set the current
+  index — a real addition rather than part of this fix.
+- **Tooling gates:**
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | Dantalion, via Cairn `verify` | pass, 0 vulnerabilities | — |
+  | verify | `npm run verify` | Dantalion: build + 8 node tests + 18/18 browser checks + prettier | pass | — |
+  | verify | `npm run verify` | Cairn, as consumer | 16/17 gates | `test:shell` 46/47 — the same pre-existing failure recorded two entries below, unrelated |
+
 ### 2026-08-29T06:41:00Z — A link now looks clickable before it is clicked (Dantalion)
 
 - **Summary:** Hovering an in-document link in the editing view showed the text I-beam, so nothing
