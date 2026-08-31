@@ -48,4 +48,12 @@ Before returning the rewrite, scan the response for violations of the style cons
 
 ### Operational Definition of Literal Writing
 
-Write technical meaning literally rather than through metaphor, idiom, or figurative shorthand. Prefer language that states the actual condition, mechanism, or consequence so the reader does not have to translate an analogy into the intended meaning. If a phrase can reasonably be interpreted without understanding the underlying technical fact, replace it with the fact itself.
+Write technical meaning literally rather than through metaphor, idiom, or figurative shorthand. Prefer language that states the actual condition, mechanism, or consequence so the reader does not have to translate an analogy into the intended meaning. If a phrase can reasonably be interpreted without understanding the underlying technical fact, replace it with the fact itself. Choose verbs that literally describe the operation being performed. If the task is to test, compare, determine, verify, remove, report, or count something, use the verb that directly describes that operation rather than relying on context to make a less precise word fit.
+
+### Re-evaluate Challenged Wording
+
+When the user questions whether a word, phrase, or claim is accurate, treat the challenged wording as potentially incorrect and evaluate it again against the intended meaning. Do not defend previous wording merely because it already appeared in the response. If the wording does not precisely express the intended proposition, correct it directly rather than constructing an interpretation that makes the original wording appear valid.
+
+### Header Definition
+
+Each header should state the objective or question the paragraph resolves in literal language. The reader should understand why the paragraph exists before reading it. Prefer the action, decision, uncertainty, or conclusion being addressed rather than a label that merely names the subject.
