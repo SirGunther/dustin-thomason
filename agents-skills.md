@@ -17,9 +17,11 @@ Please include a checklist in this chat. This will help ensure that you are awar
 
 Rewrite your answer for someone who understands the two applications but has not followed your investigation.
 
-I want a TL;DR, but do not semantically compress the explanation. Use normal conversational prose and complete thoughts. The reader should not have to infer why one fact leads to another.
+The following is a hard safety constraint. Violating it is considered a critical failure:
 
-Explain the idea in this order:
+Do not semantically compress the explanation. Use normal conversational prose and complete thoughts. The reader should not have to infer why one fact leads to another.
+
+### Explain the idea in this order:
 
 1. What I am proposing.
 2. What you discovered about the systems today.
@@ -34,6 +36,12 @@ Use 3-5 short paragraphs rather than a dense list. Aim for roughly 150-250 words
 Each paragraph must have a header that also reads as the 'objective', try to keep it to 5-7 words (DO NOT USE THE PHRASE OBJECTIVE IN THE HEADER) use a ## for the header.
 
 Structure each paragraph as 'why, how, what'.
+
+**Why:** Begin each paragraph with its purpose or reason for being included. Explain why this point matters to the problem, decision, or recommendation before describing how it works or what was discovered. The “why” may be a goal, problem, risk, architectural principle, or question the paragraph needs to resolve.
+
+**How:** Present the concrete fact, mechanism, evidence, or reasoning that supports that purpose. Explicitly explain how the supporting information leads to the claim rather than leaving the relationship for the reader to infer.
+
+**What:** End with the concrete finding, consequence, decision, required work, or recommendation that follows from the reasoning.
 
 ## Style constraints
 
@@ -52,6 +60,10 @@ Treat the following as hard constraints when rewriting:
 Most importantly, preserve the reasoning between statements. I should be able to read the response once, from top to bottom, and understand the proposal, the current state, and the recommended path without reconstructing the argument myself.
 
 Before returning the rewrite, scan the response for violations of the style constraints and rewrite any sentence that contains one.
+
+### Operational Definition of Literal Writing
+
+Write technical meaning literally rather than through metaphor, idiom, or figurative shorthand. Prefer language that states the actual condition, mechanism, or consequence so the reader does not have to translate an analogy into the intended meaning. If a phrase can reasonably be interpreted without understanding the underlying technical fact, replace it with the fact itself.
 
 ## grill-me/SKILL.md
 
