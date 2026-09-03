@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRDV-16461 — Default Collection Options</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #eef0f4;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    color: #1c1b1b;
+  }
+  .page {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+  h1 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+  }
+  p.instructions {
+    margin: 0 0 1.5rem;
+    color: #47464f;
+    font-size: 0.9375rem;
+  }
+
+  /* ---- Controls ---- */
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    background: #fff;
+    border: 1px solid #d9dce2;
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+  .control-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .control-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #7a7a83;
+    width: 4.75rem;
+    flex: none;
+  }
+  button.seg {
+    font-family: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1c1b1b;
+    background: #f3f4f7;
+    border: 1px solid #d9dce2;
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+  }
+  button.seg:hover { background: #e7e9ee; }
+  button.seg.active {
+    background: #0042ff;
+    border-color: #0042ff;
+    color: #fff;
+  }
+  button.reopen-btn {
+    align-self: flex-start;
+    font-family: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #0042ff;
+    background: #fff;
+    border: 1px solid #0042ff;
+    border-radius: 7px;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+    margin-top: 0.2rem;
+  }
+  button.reopen-btn:hover { background: rgba(0, 66, 255, 0.08); }
+
+  /* ---- App frame (the actual modal replica) ---- */
+  .app-frame {
+    background: #fafafa;
+    border: 1px solid #e2e2e2;
+    border-radius: 10px;
+    overflow: visible;
+    box-shadow: 0 1px 2px rgba(20,22,26,0.05), 0 10px 28px -14px rgba(20,22,26,0.28);
+  }
+  .app-frame .bar {
+    background: #fff;
+    border-bottom: 1px solid #ececec;
+    border-radius: 10px 10px 0 0;
+    padding: 0.7rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+  .app-frame .body { padding: 1.1rem 1rem 1.2rem; }
+  .context-row {
+    display: flex;
+    gap: 1.1rem;
+    font-size: 0.75rem;
+    color: #47464f;
+    margin-bottom: 1rem;
+  }
+  .context-row b { color: #1c1b1b; font-weight: 600; }
+
+  .track-controls-row { display: flex; gap: 0.6rem; align-items: flex-start; }
+
+  .field-wrap { position: relative; flex: 1 1 16rem; }
+  .field-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+
+  .mock-select {
+    position: relative;
+    background: #fff;
+    border: 1.5px solid #c9c9cf;
+    border-radius: 5px;
+    padding: 0.6rem 0.75rem 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .mock-select:hover { border-color: #9a9aa3; }
+  .mock-select.open { border-color: #0042ff; box-shadow: 0 0 0 3px rgba(0,66,255,0.12); }
+
+  .value-line {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    min-width: 0;
+    font-size: 0.9375rem;
+    font-weight: 500;
+  }
+  .value-line .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .caret {
+    color: #7a7a83;
+    font-size: 0.7rem;
+    flex: none;
+    transition: transform 0.12s ease;
+  }
+  .mock-select.open .caret { transform: rotate(180deg); }
+
+  .marker-asterisk { color: #a85f10; font-weight: 700; }
+  .marker-text {
+    font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #a85f10;
+    background: rgba(168,95,16,0.1);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    letter-spacing: 0.02em;
+  }
+  .marker-chip {
+    font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #0042ff;
+    background: rgba(0,66,255,0.09);
+    border: 1px solid rgba(0,66,255,0.25);
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    flex: none;
+  }
+
+  .helper-caption {
+    font-size: 0.75rem;
+    color: #6b6b73;
+    margin-top: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .helper-caption .dot { width: 4px; height: 4px; border-radius: 50%; background: #a85f10; flex: none; }
+
+  .option-list {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #d9dce2;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px -8px rgba(20,22,26,0.35);
+    z-index: 20;
+    overflow: hidden;
+  }
+  .option-list .group-header {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #7a7a83;
+    padding: 0.55rem 0.85rem 0.3rem;
+  }
+  .option-row {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .option-row:hover { background: #f0f4ff; }
+  .option-row.selected { background: #e8edff; }
+  .option-row .opt-marker {
+    font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: #a85f10;
+  }
+
+  .excerpt-select {
+    flex: 0 1 11rem;
+    min-width: 7rem;
+    background: #fff;
+    border: 1.5px solid #e2e2e2;
+    border-radius: 5px;
+    padding: 0.6rem 0.75rem 0.5rem;
+    font-size: 0.9375rem;
+    color: #b5b5ba;
+  }
+
+  .footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    margin-top: 1.25rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid #ececec;
+  }
+  .btn {
+    font-family: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    border: none;
+    cursor: default;
+  }
+  .btn.cancel { background: transparent; color: #0042ff; }
+  .btn.submit { background: #0042ff; color: #fff; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>PRDV-16461 — Default Collection Options</h1>
+  <p class="instructions">Click the Track / Collection field below like you would in Atlas — it opens, lists the real collections, and updates when you pick one. Use the buttons above it to try each option.</p>
+
+  <div class="controls">
+    <div class="control-group">
+      <span class="control-label">Track</span>
+      <button class="seg active" data-group="track" data-value="transcript">Transcript</button>
+      <button class="seg" data-group="track" data-value="video">Video</button>
+    </div>
+    <div class="control-group">
+      <span class="control-label">How it's marked</span>
+      <button class="seg" data-group="signal" data-value="none">No marking (today)</button>
+      <button class="seg" data-group="signal" data-value="asterisk">Asterisk</button>
+      <button class="seg active" data-group="signal" data-value="text">"default" label</button>
+      <button class="seg" data-group="signal" data-value="caption">Note below the field</button>
+      <button class="seg" data-group="signal" data-value="chip">Badge</button>
+    </div>
+    <div class="control-group">
+      <span class="control-label">How long it stays</span>
+      <button class="seg" data-group="timing" data-value="session">Only until changed</button>
+      <button class="seg active" data-group="timing" data-value="always">Always, for that collection</button>
+    </div>
+    <button class="reopen-btn" id="reopenBtn">&#8635; Reset</button>
+  </div>
+
+  <div class="app-frame">
+    <div class="bar">Approve File — Track &amp; Collection</div>
+    <div class="body">
+      <div class="context-row"><span><b>Job</b> 24-00456</span><span><b>Proceeding</b> Smith v. Acme Corp</span></div>
+      <div class="track-controls-row">
+        <div class="field-wrap">
+          <div class="field-label">Track / Collection</div>
+          <div class="mock-select" id="mockSelect">
+            <div class="value-line">
+              <span class="truncate" id="valueText"></span>
+              <span id="inlineMarker"></span>
+            </div>
+            <span class="caret">&#9662;</span>
+          </div>
+          <div class="helper-caption" id="helperCaption" hidden>
+            <span class="dot"></span><span id="helperText"></span>
+          </div>
+          <div class="option-list" id="optionList" hidden></div>
+        </div>
+        <div class="excerpt-select">Excerpt / Trial Edit</div>
+      </div>
+      <div class="footer">
+        <button class="btn cancel">Cancel</button>
+        <button class="btn submit">Submit</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var TRACKS = {
+    transcript: {
+      label: 'Transcript',
+      defaultId: 'full',
+      collections: [
+        { id: 'full', label: 'Full Transcript' },
+        { id: 'redacted', label: 'Redacted' },
+        { id: 'excerpt', label: 'Excerpt' },
+        { id: 'trial', label: 'Trial Edit' }
+      ]
+    },
+    video: {
+      label: 'Video',
+      defaultId: 'mp4',
+      collections: [
+        { id: 'mp4', label: 'MP4 Video' },
+        { id: 'excerpt-v', label: 'Excerpt' },
+        { id: 'trial-v', label: 'Trial Edit' }
+      ]
+    }
+  };
+
+  var state = {
+    track: 'transcript',
+    selectedId: TRACKS.transcript.defaultId,
+    hasActed: false,
+    signal: 'text',
+    timing: 'always',
+    open: false
+  };
+
+  var mockSelect = document.getElementById('mockSelect');
+  var valueText = document.getElementById('valueText');
+  var inlineMarker = document.getElementById('inlineMarker');
+  var helperCaption = document.getElementById('helperCaption');
+  var helperText = document.getElementById('helperText');
+  var optionList = document.getElementById('optionList');
+
+  function currentTrack() { return TRACKS[state.track]; }
+  function currentCollection() {
+    var list = currentTrack().collections;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === state.selectedId) return list[i];
+    }
+    return list[0];
+  }
+  // Same rule drives both the closed field and each list row, evaluated
+  // against whichever option id is asked about — that's what keeps the
+  // list and the field from disagreeing about which options carry the signal.
+  function wouldShowMarker(optionId) {
+    if (state.signal === 'none') return false;
+    if (optionId !== currentTrack().defaultId) return false;
+    return state.timing === 'always' ? true : !state.hasActed;
+  }
+  function markerShouldShow() { return wouldShowMarker(state.selectedId); }
+
+  function render() {
+    var col = currentCollection();
+    valueText.textContent = col.label;
+
+    inlineMarker.innerHTML = '';
+    helperCaption.hidden = true;
+    var show = markerShouldShow();
+
+    if (show && state.signal === 'asterisk') {
+      inlineMarker.innerHTML = '<span class="marker-asterisk">*</span>';
+      helperCaption.hidden = false;
+      helperText.textContent = '*Default for this track — click to change';
+    } else if (show && state.signal === 'text') {
+      inlineMarker.innerHTML = '<span class="marker-text">default</span>';
+    } else if (show && state.signal === 'caption') {
+      helperCaption.hidden = false;
+      helperText.textContent = 'Auto-filled based on the ' + currentTrack().label + ' track';
+    } else if (show && state.signal === 'chip') {
+      inlineMarker.innerHTML = '<span class="marker-chip">Default</span>';
+    }
+
+    renderOptionList();
+  }
+
+  function renderOptionList() {
+    var track = currentTrack();
+    var html = '<div class="group-header">' + track.label + '</div>';
+    track.collections.forEach(function (c) {
+      var isSel = c.id === state.selectedId;
+      var tagHtml = wouldShowMarker(c.id) ? '<span class="opt-marker">default</span>' : '';
+      html += '<div class="option-row' + (isSel ? ' selected' : '') + '" data-id="' + c.id + '">' +
+        '<span>' + c.label + '</span>' + tagHtml + '</div>';
+    });
+    optionList.innerHTML = html;
+    Array.prototype.forEach.call(optionList.querySelectorAll('.option-row'), function (row) {
+      row.addEventListener('click', function (e) {
+        e.stopPropagation();
+        state.selectedId = row.getAttribute('data-id');
+        state.hasActed = true;
+        closeDropdown();
+        render();
+      });
+    });
+  }
+
+  function openDropdown() {
+    state.open = true;
+    mockSelect.classList.add('open');
+    optionList.hidden = false;
+  }
+  function closeDropdown() {
+    state.open = false;
+    mockSelect.classList.remove('open');
+    optionList.hidden = true;
+  }
+
+  mockSelect.addEventListener('click', function () {
+    if (state.open) { closeDropdown(); } else { openDropdown(); }
+  });
+  document.addEventListener('click', function (e) {
+    if (!mockSelect.contains(e.target) && !optionList.contains(e.target)) closeDropdown();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('button.seg'), function (btn) {
+    btn.addEventListener('click', function () {
+      var group = btn.getAttribute('data-group');
+      var value = btn.getAttribute('data-value');
+      Array.prototype.forEach.call(document.querySelectorAll('button.seg[data-group="' + group + '"]'), function (b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+
+      if (group === 'track') {
+        state.track = value;
+        state.selectedId = TRACKS[value].defaultId;
+        state.hasActed = false;
+        closeDropdown();
+      } else if (group === 'signal') {
+        state.signal = value;
+      } else if (group === 'timing') {
+        state.timing = value;
+      }
+      render();
+    });
+  });
+
+  document.getElementById('reopenBtn').addEventListener('click', function () {
+    state.selectedId = currentTrack().defaultId;
+    state.hasActed = false;
+    closeDropdown();
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

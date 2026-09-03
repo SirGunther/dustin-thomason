@@ -6,7 +6,7 @@
 - **Parent epic:** PRDV-16423 — sequenced **3rd of 3** (`1-Callisto`, `2-Nova`, `3-Europa`)
 - **Repo:** `europa-back-end`
 - **Branch:** `PRDV-16597`
-- **PR:** [#70](https://github.com/planetdepos/europa-back-end/pull/70) — no reviewers assigned
+- **PR:** [#70](https://github.com/planetdepos/europa-back-end/pull/70) (merged) — first fix; [#71](https://github.com/planetdepos/europa-back-end/pull/71) — browserslist follow-up, no reviewers assigned
 - **WorkLists card:** `todo-1788192471082-1b249a03`
 
 ---
@@ -110,5 +110,32 @@ _None — the `npm audit fix` approach was measured once (2026-08-25, PRDV-16595
 **Committed and pushed.** Commit `e34e64c84e6006a970f79acbc7ea38d4c51bb49b` on branch `PRDV-16597`, pushed to `origin`. The repo's own `pre-push` hook independently re-ran the full test suite (32/32 suites, 112/112 tests) before allowing the push — a second, hook-driven confirmation beyond the manual run above.
 
 **PR opened per user go-ahead (2026-08-31).** [#70](https://github.com/planetdepos/europa-back-end/pull/70), base `main`, no reviewers assigned per explicit instruction. Kept deliberately minimal per the user's request — repo's actual `.github/pull_request_template.md` filled in plainly (Clickup link, one-paragraph description, the three verification commands and their results, checklist), no commit-hash section, no elaboration beyond what the template asks for.
+
+### 2026-09-02T13:45:00Z — europa-back-end — new advisory landed, re-fixed
+
+**Summary.** Two days after PR #70 shipped clean, a recurring CI scan (`Building 6958771f7f503015e84eb5b3a1828edd850d3b74`, run `33636909883`, triggered 2026-09-02T13:37:59Z) re-audited the **same, unchanged commit** `e34e64c` and failed: a brand-new high-severity advisory pair for `browserslist` (GHSA-c83g-rgw3-j3cx, GHSA-73wf-gq98-2v4g, range `<=4.28.6`) had been published in the interim. This is the exact "advisory DB moves" risk flagged generically in PRDV-16595's remaining-work runbook, now observed directly on this ticket — nothing in our diff caused it; the vulnerable version was already in the tree, unflagged, when we shipped.
+
+**Confirmed, not assumed.** Ran `npm audit --audit-level=high` locally on the current branch before touching anything — output matched the user-pasted CI failure verbatim (same advisory ids, same `1 high severity vulnerability`). `browserslist@4.28.1` is a transitive dev/build dependency only — via `@nestjs/cli` → `webpack` and via `jest` → `@babel/core`, never a runtime dependency, never shipped in the running service.
+
+**Fix applied the same way.** `npm audit fix` → 0 vulnerabilities, `package.json` unchanged (only `package-lock.json`), `browserslist` resolved `4.28.1 → 4.28.8` — a patch bump inside the same minor line, no major crossing. Lint clean, full suite 32/32 suites and 112/112 tests passing. Committed `73e94fc810fa5da55dab02c53a9f16f44a5a3806`, pushed to `PRDV-16597` — the repo's own pre-push hook independently re-ran the full suite again (112/112) before allowing the push.
+
+**Correction — this was a post-merge build failure, not a stale re-scan.** User confirmed: PR #70 was already merged to `main` (merge commit `6958771`, `mergedAt` 2026-09-02T13:37:55Z); the `Building ...` run (`33636909883`, created 13:37:59Z — 4 seconds later) is `main`'s post-merge build pipeline, and that is what caught the new advisory. The earlier framing in this entry ("recurring scan against the branch tip") was wrong — corrected here rather than edited away, per the addendum convention.
+
+**PR #70 cannot be reopened** — confirmed via `gh pr reopen 70`: *"can't be reopened because it was already merged"* (GitHub's merged state is terminal). Opened a **new** PR, [#71](https://github.com/planetdepos/europa-back-end/pull/71), from the same `PRDV-16597` branch. Diff verified clean before opening: `git diff origin/main origin/PRDV-16597 --stat` shows exactly the one browserslist commit (`package-lock.json`, 39 insertions/27 deletions) — none of the already-merged work reappears, since the branch's history (minus its own merge commit, which it doesn't need) is equivalent to `main` plus this one new commit.
+
+#### Shipping checklist
+
+- **Tests run** — audit, lint, full test suite all green against the post-fix tree (table below).
+- **Tests added/updated** — not relevant: same rationale as the first fix — no application logic changed, existing 112 tests are the regression surface and all pass.
+- **Regression impact** — isolated, boundary named: `git diff --stat` shows only `package-lock.json` changed; `browserslist` is transitive build/test tooling (webpack, babel), never executed in the running service; version delta is a patch bump with no major crossing.
+- **API docs** — not relevant: no HTTP surface touched.
+- **Tooling gates** — audit, lint, tests all run and green; the repo's own pre-push hook independently reconfirmed tests before the push was allowed.
+- **Conflicts / exceptions** — none. Two uncommitted, content-identical `.prettierrc`/`.swcrc` line-ending normalizations (LF→CRLF, a Windows/git `autocrlf` artifact from the husky pre-commit hook's `prettier --write .` pass) remain in the working tree; `git diff` confirms no actual content change, left as-is, unrelated to this fix.
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | europa-back-end | pass — 0 vulnerabilities | — |
+| lint | `npm run lint` | europa-back-end | pass (exit 0) | — |
+| tests | `npx jest --config jest-e2e.json --runInBand` | europa-back-end | pass — 32 suites, 112 tests | — |
 
 **WorkLists card updated** (`todo-1788192471082-1b249a03`). Card arrived as a bare template (`# Ticket Template\n\nEuropa`, no ticket id, no workflow headings) — same situation PRDV-16595's card hit. Wrote the title (now carries `PRDV-16597`) and the workflow scaffold first, on a fresh precondition, then set `currentStep` / `nextUp` on a second precondition once the headings existed. Marked 8 rows with evidence: Preliminary → ticket generated; Development → branch created, implementation begun; Testing & Validation → tested locally (with real start/finish times from the test run logs), artifact referenced (this changelog); Deploy & PR → `npm audit` run, branch already based on current main, pushed to GitHub. Left unmarked: `copy spec` / feature-flag check (not applicable, no spec on this ticket), all of Investigation and Project Spec (no formal Investigation Report or spec was produced — this changelog is analysis, not that artifact), `Plan implementation` (ambiguous fit, left conservative), `Alt Ai Review` (not performed), `Open PR` onward (not yet done).
