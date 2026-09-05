@@ -1,9 +1,12 @@
 ---
-name: working-framework
-description: 'Guide an agent through a visible response process: self-interrogate against the chat, instruct itself with a checklist, do the task, reconcile every checklist item, and respond. Optionally add Critique and Future Assistance as Debug Mode layers when explicitly requested. Use when the user invokes "Working Framework," requests visible agent self-reflection, or asks for the Consult/Instruct/Do the Task(s)/Reconcile/Respond/Critique/Future Assistance response structure.'
----
 
 # Working Framework
+
+## Communication style
+
+### Operational Definition of Literal Writing
+
+Write technical meaning literally rather than through metaphor, idiom, or figurative shorthand. Prefer language that states the actual condition, mechanism, or consequence so the reader does not have to translate an analogy into the intended meaning. If a phrase can reasonably be interpreted without understanding the underlying technical fact, replace it with the fact itself. Choose verbs that literally describe the operation being performed. If the task is to test, compare, determine, verify, remove, report, or count something, use the verb that directly describes that operation rather than relying on context to make a less precise word fit.
 
 ## Action Orientation
 
@@ -90,11 +93,13 @@ If the user has next steps, end `Respond` with a simple task list (`- [ ] ...`) 
 ---
 
 ## 4a. Review Actionable Items
+
 This step is intended to reconcile the directives that you have provided in step 4. Your job is to find evidence about anything, especially if it is a decision or feedback that you are waiting on from the user. You must find evidence to show that this decision has not already been made or decided upon in some way. The intent here is to justify the actionable item.
 
 ---
 
 ## 4b. Revised Actional Items
+
 With the evidence that you found in Step 4a, synthesize that and rectify any missteps or actionable items and remove them. For this specific section, we want to ensure that you have cleaned up the content and only provided things that truly warrant the user's action. We do not want to waste their time or lead them on unnecessary investigations or decision-making efforts. At that point, and only then, provide that list of revised actionable items. No editorializing necessary to discuss items that were unjustified, that is noise dressed up as rigor.
 
 ---
