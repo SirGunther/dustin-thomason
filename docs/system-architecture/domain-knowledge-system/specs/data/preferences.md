@@ -1,5 +1,6 @@
 # Preferences
 
+ID: DATA-PREFERENCES
 Status: Not written
 
 Scope: per-user state: scope, location, and defaults.

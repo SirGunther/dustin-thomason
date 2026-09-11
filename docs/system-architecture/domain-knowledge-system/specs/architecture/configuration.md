@@ -1,5 +1,6 @@
 # Configuration
 
+ID: ARCH-CONFIGURATION
 Status: Not written
 
 Scope: where settings live and how they are validated.

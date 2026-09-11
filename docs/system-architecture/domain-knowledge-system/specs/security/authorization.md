@@ -1,5 +1,6 @@
 # Authorization
 
+ID: SEC-AUTHORIZATION
 Status: Not written
 
 Scope: how grants are checked.

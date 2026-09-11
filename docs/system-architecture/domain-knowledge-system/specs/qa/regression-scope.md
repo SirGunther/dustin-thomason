@@ -1,5 +1,6 @@
 # Regression scope
 
+ID: QA-REGRESSION-SCOPE
 Status: Not written
 
 Scope: what must be re-verified when shared infrastructure changes.

@@ -1,0 +1,25 @@
+# features.yaml
+#
+# Question to the node that owns the answer. Used to choose between sibling node
+# files inside an area a task has already selected by folder or file name (see
+# ../domains/README.md, "The answers field is a discriminator, not the selection
+# key"). Domains are found in the first place by file and folder name, the same
+# way specs are; this index is a secondary aid once a task is already inside one
+# area, not the primary selection mechanism.
+#
+# Derived, never authored. Every entry comes from the `answers` list in a node's
+# frontmatter.
+#
+# Regenerate: read the frontmatter of every file under domains/. For each string in
+# each node's `answers` list, map that question to the node id. Replace `entries`
+# wholesale.
+#
+# A question with no owning node is not treated as a gap the way a missing
+# specification subject is, because a domain area is already reachable by its file
+# name regardless of whether any node has phrased a matching question. Record an
+# unresolved question in the context artifact's open questions instead of adding a
+# blank entry here.
+
+generated_at: null
+source: domains/**/*.md frontmatter -> answers[]
+entries: {}

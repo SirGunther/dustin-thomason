@@ -1,0 +1,19 @@
+# traceability.yaml
+#
+# The section 16 graph as recorded links: task, to the rules it selected, to the
+# decisions it produced, to the tests that prove them, to the review that checked it.
+#
+# Derived, never authored. Comes from the frontmatter of every artifact under
+# artifacts/context/ and artifacts/qa/, joined to node decisions and invariants by id.
+#
+# Regenerate: for each context artifact, emit the task id, the rule ids selected, the
+# node ids visited, the decision ids recorded during the task, the invariant ids whose
+# proven_by tests ran, and the qa review id. Replace wholesale.
+#
+# This file answers "what did QA verify when this ticket completed" and "which
+# implementation changes have no documented decision". Both require decision and
+# invariant ids, so this index stays empty until the identifier convention lands.
+
+generated_at: null
+source: artifacts/context/*.md and artifacts/qa/*.md frontmatter
+entries: []

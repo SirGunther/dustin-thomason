@@ -1,5 +1,6 @@
 # Labels and terminology
 
+ID: UX-LABELS-AND-TERMINOLOGY
 Status: Not written
 
 Scope: the words the product uses for its own concepts.

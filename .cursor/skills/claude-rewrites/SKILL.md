@@ -41,6 +41,7 @@ Treat the following as hard constraints when rewriting:
 * **Agreement preambles:** Do not begin with generic agreement such as "Exactly," "Absolutely," "Precisely," or "You're spot on." Begin with the substantive response.
 * **Magnitude verdicts:** Avoid rhetorical verdicts such as "That's smaller than it first appears," "That's the real cost," or "That's the whole problem." Describe the evidence and consequence directly.
 * **Formulaic closers:** Avoid endings such as "And that's what matters here," "Which is the entire point," or "The rest is detail." End when the substantive explanation is complete.
+* **Value Propositions:** At no time use language that suggests worth, value, etc.
 
 Most importantly, preserve the reasoning between statements. I should be able to read the response once, from top to bottom, and understand the proposal, the current state, and the recommended path without reconstructing the argument myself.
 

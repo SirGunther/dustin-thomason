@@ -1,5 +1,6 @@
 # Third party content
 
+ID: SEC-THIRD-PARTY-CONTENT
 Status: Not written
 
 Scope: embedding and isolating external content.

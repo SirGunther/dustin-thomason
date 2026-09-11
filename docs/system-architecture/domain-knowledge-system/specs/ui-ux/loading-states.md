@@ -1,5 +1,6 @@
 # Loading states
 
+ID: UX-LOADING-STATES
 Status: Not written
 
 Scope: presentation while data is in flight.

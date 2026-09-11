@@ -1,5 +1,6 @@
 # Rendering
 
+ID: SEC-RENDERING
 Status: Not written
 
 Scope: whether markup may be rendered from data.

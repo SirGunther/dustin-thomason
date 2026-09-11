@@ -1,5 +1,6 @@
 # First run surfaces
 
+ID: QA-FIRST-RUN-SURFACES
 Status: Not written
 
 Scope: testing something that appears once per installation, including how stored state is reset between runs.

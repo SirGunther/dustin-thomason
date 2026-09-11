@@ -1,5 +1,6 @@
 # Empty states
 
+ID: UX-EMPTY-STATES
 Status: Not written
 
 Scope: presentation when a collection has no items.

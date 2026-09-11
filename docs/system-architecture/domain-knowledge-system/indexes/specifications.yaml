@@ -1,0 +1,33 @@
+# specifications.yaml
+#
+# Rule to the nodes that cite it. Answers: what requires review if this rule changes.
+#
+# Derived, never authored. Every entry comes from the `governs` list in a node's
+# frontmatter. A hand-maintained reverse index drifts the moment someone adds a
+# consumer without updating the rule.
+#
+# Regenerate:
+# 1. Read the frontmatter of every file under domains/.
+# 2. For each id in each node's `governs` list, look up that id under specs/ using
+#    the transform in ../identifiers.md.
+# 3. If the id resolves to a file whose Status is Active, add the citing node's id
+#    under that rule in `entries`.
+# 4. If the id resolves to a file whose Status is Not written, add the citing
+#    node's id under that rule in `entries_unwritten` instead.
+# 5. If the id resolves to no file at all, add the citing node's id under that id
+#    in `orphaned`. This is the case where a rule file was renamed or deleted
+#    after a node cited it; see ../identifiers.md, "Renaming a rule file".
+# 6. Replace `entries`, `entries_unwritten`, and `orphaned` wholesale. Never merge,
+#    because a merge preserves a link the source no longer has.
+#
+# Not the same as Known Consumers in a spec file. That list is curated and names the
+# one example worth copying. This list is complete and unranked.
+#
+# entries_unwritten, sorted by count of citing nodes, is the order specs/README.md
+# says unwritten rules should be written in.
+
+generated_at: null
+source: domains/**/*.md frontmatter -> governs[].id
+entries: {}
+entries_unwritten: {}
+orphaned: {}

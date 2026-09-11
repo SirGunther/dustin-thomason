@@ -6,14 +6,14 @@
 
 ## Self-review checklist (run before requesting review)
 
-- [ ] **No hardcoded user-facing strings.** Any string shown to a user (toast/notify message, error message, label) is pulled from the i18n JSON locale files, not written inline in a `.ts`/`.vue` file. *(Class A)*
-- [ ] **No magic string literals for status/state comparisons.** Values compared or switched on (e.g. `Promise.allSettled` statuses, API status codes, enum-like strings) are named constants, not bare string literals repeated at each comparison site. *(Class B)*
-- [ ] **No hand-rolled type casts in test mocks.** Use the repo's typed mock-factory helpers (`createApplyMock<T>()`, `createComposableMock`, or add a sibling `createMockXProjection()`) instead of `as jest.Mocked<...>` or `as never` — those silently stop protecting you when the underlying type changes shape. *(Class C)*
-- [ ] **Mirror/parallel implementations have symmetric test coverage.** If two validators, guards, or adapters mirror each other (same shape, different lane), and one has a 3-case spec (not-found / wrong-lane / right-lane), its sibling gets the same shape — not "we'll get to it." *(Class D)*
-- [ ] **Dense inline handler logic is extracted into named helpers.** If a handler mixes 3+ concerns (capture state → await → compute a message → notify), pull the compute steps into small named functions so the handler reads as the orchestration. *(Class E)*
-- [ ] **Intentional removal of a safety net (try/catch, a guard branch) carries a one-line comment explaining why.** Otherwise a reviewer has to stop and ask whether it was a mistake. *(Class F)*
-- [ ] **No stray/unnecessary comments left in before requesting review.** Grep your own diff for debug comments, TODOs you already resolved, or commented-out code before opening the PR. *(Class G)*
-- [ ] **Ad hoc mechanisms are not shipped as a stand-in for a shared architectural capability without flagging it first.** (e.g., polling as a stand-in for push/websockets) — if the "fast" path bypasses an architecture decision that affects more than this one feature, say so explicitly and let someone with that scope weigh in before it ships. *(Class H)*
+* [ ] **No hardcoded user-facing strings.** Any string shown to a user (toast/notify message, error message, label) is pulled from the i18n JSON locale files, not written inline in a `.ts`/`.vue` file. *(Class A)*
+* [ ] **No magic string literals for status/state comparisons.** Values compared or switched on (e.g. `Promise.allSettled` statuses, API status codes, enum-like strings) are named constants, not bare string literals repeated at each comparison site. *(Class B)*
+* [ ] **No hand-rolled type casts in test mocks.** Use the repo's typed mock-factory helpers (`createApplyMock<T>()`, `createComposableMock`, or add a sibling `createMockXProjection()`) instead of `as jest.Mocked<...>` or `as never` — those silently stop protecting you when the underlying type changes shape. *(Class C)*
+* [ ] **Mirror/parallel implementations have symmetric test coverage.** If two validators, guards, or adapters mirror each other (same shape, different lane), and one has a 3-case spec (not-found / wrong-lane / right-lane), its sibling gets the same shape — not "we'll get to it." *(Class D)*
+* [ ] **Dense inline handler logic is extracted into named helpers.** If a handler mixes 3+ concerns (capture state → await → compute a message → notify), pull the compute steps into small named functions so the handler reads as the orchestration. *(Class E)*
+* [ ] **Intentional removal of a safety net (try/catch, a guard branch) carries a one-line comment explaining why.** Otherwise a reviewer has to stop and ask whether it was a mistake. *(Class F)*
+* [ ] **No stray/unnecessary comments left in before requesting review.** Grep your own diff for debug comments, TODOs you already resolved, or commented-out code before opening the PR. *(Class G)*
+* [ ] **Ad hoc mechanisms are not shipped as a stand-in for a shared architectural capability without flagging it first.** (e.g., polling as a stand-in for push/websockets) — if the "fast" path bypasses an architecture decision that affects more than this one feature, say so explicitly and let someone with that scope weigh in before it ships. *(Class H)*
 
 ---
 
@@ -144,6 +144,12 @@
 
 **What it means:** self-review pass should catch and remove comments that were useful while drafting (explaining a decision to yourself, a scratch note) but add no value to the reviewer or the next reader — before the PR goes up, not after a reviewer flags it.
 
+### Rules
+
+1. Keep a comment only where its removal lets someone break something silently.
+
+2. Keep scaffolding — structural markers like AAA follow the repo's convention, not rule 1.
+
 **Instances:**
 
 | Date | PR | Reviewer | File:line | What was flagged | Fix direction |
@@ -188,6 +194,6 @@ Every open item plus the five `docs/atlas/PRDV-*` ticket folders were checked ag
 
 ## Notes for next time
 
-- All patterns are **cheap to self-check before opening a PR** — that's the point of the checklist above. Grep for quoted strings passed to `notify(`/`Error(`/thrown messages, for bare string literals in `===`/`switch` comparisons, for `as never`/`as jest.Mocked<` in spec files, and diff the two sides of any mirrored implementation, before requesting review.
-- If a new distinct pattern shows up in a future PR, add a new `## Pattern N` section (and a matching row in the **Classes of changes** index — reuse an existing class if it fits, or add a new one) rather than folding it into an existing pattern that doesn't quite match.
-- When pulling new instances from GitHub, use `gh api repos/{owner}/{repo}/pulls/{n}/comments`, `/reviews`, and `/issues/{n}/comments` directly — don't reconstruct comment wording from the changelog or from memory; the changelog records the *response*, not always the reviewer's literal words.
+* All patterns are **cheap to self-check before opening a PR** — that's the point of the checklist above. Grep for quoted strings passed to `notify(`/`Error(`/thrown messages, for bare string literals in `===`/`switch` comparisons, for `as never`/`as jest.Mocked<` in spec files, and diff the two sides of any mirrored implementation, before requesting review.
+* If a new distinct pattern shows up in a future PR, add a new `## Pattern N` section (and a matching row in the **Classes of changes** index — reuse an existing class if it fits, or add a new one) rather than folding it into an existing pattern that doesn't quite match.
+* When pulling new instances from GitHub, use `gh api repos/{owner}/{repo}/pulls/{n}/comments`, `/reviews`, and `/issues/{n}/comments` directly — don't reconstruct comment wording from the changelog or from memory; the changelog records the *response*, not always the reviewer's literal words.

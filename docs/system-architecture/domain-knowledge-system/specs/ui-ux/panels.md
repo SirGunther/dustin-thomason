@@ -1,5 +1,6 @@
 # Panels
 
+ID: UX-PANELS
 Status: Not written
 
 Scope: persistent docked regions.

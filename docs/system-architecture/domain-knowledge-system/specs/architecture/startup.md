@@ -1,5 +1,6 @@
 # Startup
 
+ID: ARCH-STARTUP
 Status: Not written
 
 Scope: what may run before first paint, and the ordering of start work.

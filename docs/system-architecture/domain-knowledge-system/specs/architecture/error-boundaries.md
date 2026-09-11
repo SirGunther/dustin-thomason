@@ -1,5 +1,6 @@
 # Error boundaries
 
+ID: ARCH-ERROR-BOUNDARIES
 Status: Not written
 
 Scope: where failures are contained.

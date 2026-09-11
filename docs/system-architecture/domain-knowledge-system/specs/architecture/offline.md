@@ -1,5 +1,6 @@
 # Offline
 
+ID: ARCH-OFFLINE
 Status: Not written
 
 Scope: behavior without a network, and whether one is permitted.

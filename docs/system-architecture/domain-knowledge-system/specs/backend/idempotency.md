@@ -1,5 +1,6 @@
 # Idempotency
 
+ID: BE-IDEMPOTENCY
 Status: Not written
 
 Scope: retry safety for mutating operations.

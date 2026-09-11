@@ -1,5 +1,6 @@
 # Logging
 
+ID: SEC-LOGGING
 Status: Not written
 
 Scope: the field allowlist and what must never be recorded.

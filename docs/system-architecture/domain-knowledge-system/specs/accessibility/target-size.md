@@ -1,5 +1,6 @@
 # Target size
 
+ID: A11Y-TARGET-SIZE
 Status: Not written
 
 Scope: minimum interactive dimensions.

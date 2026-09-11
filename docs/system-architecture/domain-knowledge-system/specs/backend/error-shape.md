@@ -1,5 +1,6 @@
 # Error shape
 
+ID: BE-ERROR-SHAPE
 Status: Not written
 
 Scope: the error envelope and code taxonomy.

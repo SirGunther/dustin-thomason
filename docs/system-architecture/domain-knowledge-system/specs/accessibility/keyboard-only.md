@@ -1,5 +1,6 @@
 # Keyboard only
 
+ID: A11Y-KEYBOARD-ONLY
 Status: Not written
 
 Scope: full operation without a pointer.

@@ -1,5 +1,6 @@
 # Validation display
 
+ID: UX-VALIDATION-DISPLAY
 Status: Not written
 
 Scope: where and when validation messages appear.

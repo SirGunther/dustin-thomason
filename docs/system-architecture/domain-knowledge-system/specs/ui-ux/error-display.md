@@ -1,5 +1,6 @@
 # Error display
 
+ID: UX-ERROR-DISPLAY
 Status: Not written
 
 Scope: how failures are surfaced to the user.

@@ -1,5 +1,6 @@
 # Secrets
 
+ID: SEC-SECRETS
 Status: Not written
 
 Scope: storage, rotation, and what may never be printed.

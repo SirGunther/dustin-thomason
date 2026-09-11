@@ -1,5 +1,6 @@
 # Keyboard coverage
 
+ID: QA-KEYBOARD-COVERAGE
 Status: Not written
 
 Scope: which keyboard interactions require automated tests.

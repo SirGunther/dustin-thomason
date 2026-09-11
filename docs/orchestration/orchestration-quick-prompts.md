@@ -10,6 +10,7 @@ Card Id:
 ### Original Ticket
 Ticket name:
 
+
 ### Repository Scope
 
 
@@ -20,6 +21,7 @@ C:\dustin-thomason\agents\skills\orchestrate\SKILL.md
 ### Ensure all related repositories are
 - loaded
 - on main (if not otherwise specified)
+Stash any work on the branches if there is any
 ```
 
 ---
@@ -80,4 +82,16 @@ This step may seem counterintuitive, but helps us work towards two separate goal
 2. We validate that the spec was written accurately
 
 This is not validation that the spec is correct in the terms of the orchestration layer, rather, we are testing the specs correctness. The benefit may be that we are one step ahead of a reviewers approval, ultimately saving us time.
+```
+
+---
+
+## Review Implementation
+
+The purpose is to ensure that the implementation was done correctly and adheres to common incorrect imlpementations.
+
+### Prompt
+
+```
+### Validate integration for PR reviews
 ```

@@ -1,5 +1,6 @@
 # Drag and drop
 
+ID: UX-DRAG-AND-DROP
 Status: Not written
 
 Scope: grab affordance, drop targets, cancellation.

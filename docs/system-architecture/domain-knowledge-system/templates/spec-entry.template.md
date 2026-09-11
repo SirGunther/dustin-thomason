@@ -1,11 +1,15 @@
 # {{ID}}: {{Subject}}
 
 One rule per entry. The file name states the subject, because the file name is what
-acceptance criteria are matched against.
+acceptance criteria are matched against. `{{ID}}` is derived from the file's path;
+see [identifiers.md](../identifiers.md). Do not assign an ID by hand.
 
 ## Status
 
-Draft | Active | Superseded by {{ID}}
+Draft | Active | Withdrawn | Superseded by {{ID}}
+
+A withdrawn rule stays in the directory listing rather than being deleted, which
+records that the subject was considered and rejected.
 
 ## Scope
 

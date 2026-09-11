@@ -1,0 +1,18 @@
+# dependencies.yaml
+#
+# Node to the nodes whose invariants its behavior can move, and to the node that
+# owns what it deliberately does not. The depends-on edge from section 16.
+#
+# Derived, never authored. Comes from `affects` and `not_owned` in node frontmatter.
+#
+# Regenerate: read the frontmatter of every file under domains/. Emit one entry per
+# node carrying both lists. Replace wholesale.
+#
+# Use before a change to find what is downstream. Use after a change to detect a
+# retrieval miss: a node touched in the diff but absent from both this file and the
+# context artifact was never routed to, and the fix is a new `affects` entry on the
+# node that should have pointed there.
+
+generated_at: null
+source: domains/**/*.md frontmatter -> affects[], not_owned[]
+entries: {}

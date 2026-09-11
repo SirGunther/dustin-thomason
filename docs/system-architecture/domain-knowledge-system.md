@@ -687,15 +687,15 @@ One primary Feature Expert owns the implementation lifecycle for the ticket.
 
 The Feature Expert is responsible for:
 
-1. understanding the ticket,
-2. initiating context discovery,
-3. requesting necessary fan-out,
-4. consuming the Context Artifact,
-5. investigating relevant implementation,
-6. making implementation decisions,
-7. implementing the change,
-8. updating tests,
-9. updating feature knowledge,
+ 1. understanding the ticket,
+ 2. initiating context discovery,
+ 3. requesting necessary fan-out,
+ 4. consuming the Context Artifact,
+ 5. investigating relevant implementation,
+ 6. making implementation decisions,
+ 7. implementing the change,
+ 8. updating tests,
+ 9. updating feature knowledge,
 10. updating domain knowledge when appropriate,
 11. proposing specification changes when knowledge generalizes,
 12. recording traceability,
@@ -1162,6 +1162,11 @@ my-application-knowledge/
 ├── README.md
 ├── PHILOSOPHY.md
 ├── ROADMAP.md
+├── TODO.md
+├── DECISIONS.md
+├── PENDING-DECISIONS.md
+├── PRODUCT-AND-LAYOUT-DECISIONS.md
+├── DOCS.md
 ├── CHANGELOG.md
 │
 ├── specs/
@@ -1764,15 +1769,15 @@ The first version does not need to implement the full graph or extensive automat
 
 A useful V1 would support:
 
-1. a separate knowledge repository,
-2. a small set of specifications,
-3. domain folders,
-4. feature folders,
-5. explicit decisions,
-6. specification references,
-7. ticket-specific Context Artifacts,
-8. fan-out context retrieval,
-9. one primary Feature Expert,
+ 1. a separate knowledge repository,
+ 2. a small set of specifications,
+ 3. domain folders,
+ 4. feature folders,
+ 5. explicit decisions,
+ 6. specification references,
+ 7. ticket-specific Context Artifacts,
+ 8. fan-out context retrieval,
+ 9. one primary Feature Expert,
 10. independent QA review,
 11. changelog/history updates,
 12. application and knowledge revision tracking.

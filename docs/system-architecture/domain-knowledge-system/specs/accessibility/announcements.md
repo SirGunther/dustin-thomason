@@ -1,5 +1,6 @@
 # Announcements
 
+ID: A11Y-ANNOUNCEMENTS
 Status: Not written
 
 Scope: live region politeness for content appearing without user action.

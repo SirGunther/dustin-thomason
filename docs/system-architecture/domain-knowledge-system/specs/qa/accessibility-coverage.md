@@ -1,5 +1,6 @@
 # Accessibility coverage
 
+ID: QA-ACCESSIBILITY-COVERAGE
 Status: Not written
 
 Scope: which accessibility behavior requires automated tests.

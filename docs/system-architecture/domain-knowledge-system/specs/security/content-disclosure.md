@@ -1,5 +1,6 @@
 # Content disclosure
 
+ID: SEC-CONTENT-DISCLOSURE
 Status: Not written
 
 Scope: whether displayed content must be filtered against grants.

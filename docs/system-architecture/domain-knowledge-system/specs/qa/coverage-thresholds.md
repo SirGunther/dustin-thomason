@@ -1,5 +1,6 @@
 # Coverage thresholds
 
+ID: QA-COVERAGE-THRESHOLDS
 Status: Not written
 
 Scope: the gates and their exceptions.

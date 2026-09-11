@@ -1,5 +1,6 @@
 # Authentication
 
+ID: SEC-AUTHENTICATION
 Status: Not written
 
 Scope: how a caller proves identity.

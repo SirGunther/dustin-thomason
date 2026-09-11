@@ -1,5 +1,6 @@
 # Feature flags
 
+ID: ARCH-FEATURE-FLAGS
 Status: Not written
 
 Scope: gating and default state.

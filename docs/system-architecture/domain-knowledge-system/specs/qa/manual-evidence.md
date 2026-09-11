@@ -1,5 +1,6 @@
 # Manual evidence
 
+ID: QA-MANUAL-EVIDENCE
 Status: Not written
 
 Scope: when a manual check is acceptable and what it must record.

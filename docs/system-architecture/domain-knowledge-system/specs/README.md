@@ -13,6 +13,25 @@ it will never be found.
     specs/ui-ux/overlays.md    a criterion about an unrequested surface finds this
     specs/ui-ux/misc.md        nothing will ever find this
 
+## Identifiers
+
+Every rule file has an ID derived from its path: strip `.md`, uppercase the stem,
+keep every hyphenated word, and prefix it with the discipline code below. Full
+derivation rule and examples are in [identifiers.md](../identifiers.md).
+
+| Folder | Prefix |
+| --- | --- |
+| `ui-ux` | `UX` |
+| `accessibility` | `A11Y` |
+| `architecture` | `ARCH` |
+| `backend` | `BE` |
+| `data` | `DATA` |
+| `security` | `SEC` |
+| `qa` | `QA` |
+
+No sequence number is added to a rule ID. One file holds exactly one rule. A second
+rule about a related subject is a second file, with its own name and its own ID.
+
 ## Stubs
 
 Every candidate subject ships as a file carrying `Status: Not written` and a one
@@ -23,12 +42,24 @@ neighbors such as overlays, toasts, and tooltips.
 Selecting a stub is not a failure of the pull. It is the pull working: the report
 names it, and that is how a missing rule becomes visible instead of being an absence
 nobody noticed. Sorting selected stubs by how many criteria depend on them gives the
-order to write rules in.
+order to write rules in, and `indexes/specifications.yaml`'s `entries_unwritten`
+list is what produces that ranking.
+
+A stub's ID exists from the moment its file exists, since the ID is derived from the
+path and needs no written content. A node may cite a stub's ID before the rule is
+written.
+
+## Withdrawal, not deletion
+
+A rule that no longer applies is marked `Status: Withdrawn`, not deleted. The file
+stays in the listing, which records that the subject was considered and rejected
+rather than never considered. Deleting a rule file is permitted only during
+instantiation, before any node can have cited it.
 
 ## Entry shape
 
 A written rule follows [spec-entry.template.md](../templates/spec-entry.template.md):
-Status, Scope, Rule, Applicability, Rationale, Verification Expectations, Known
+ID, Status, Scope, Rule, Applicability, Rationale, Verification Expectations, Known
 Consumers, History.
 
 Two of those sections do the work during an integration. **Applicability** states

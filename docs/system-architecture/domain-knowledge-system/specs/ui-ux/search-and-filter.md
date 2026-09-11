@@ -1,5 +1,6 @@
 # Search and filter
 
+ID: UX-SEARCH-AND-FILTER
 Status: Not written
 
 Scope: query entry and result presentation.
