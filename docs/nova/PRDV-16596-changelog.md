@@ -46,6 +46,32 @@ _From `PRDV-16596/PRDV-16596-original-ticket.md` (ClickUp capture 2026-08-30)._
 
 ## Session log
 
+### 2026-09-04T00:00:00Z — post-merge build failure: new browserslist advisory in both repos
+
+- **Cause:** both PRs merged clean, then the build failed within a day. A `browserslist` advisory published after the merge (`<=4.28.6`, two findings: unbounded memory growth via distinct query results, and an uncaught crash / prototype write via untrusted `browserslist-stats.json`). Nothing regressed in the merged work; the advisory database moved. This is the recurrence risk already noted on the epic.
+- **Merged baselines:** `nova-orbital-back-end` `main` @ `e403be4`, `nova-back-end` `main` @ `e4597df`.
+- **`browserslist` is transitive only** in both repos, never a direct dependency. Every requester uses a range (`@babel/helper-compilation-targets ^4.24.0`, `webpack ^4.28.1`, `update-browserslist-db >= 4.21.0`), so no exact pin blocked the fix — unlike the `multer` case. `npm update browserslist --package-lock-only` moved both to `4.28.9`, `package.json` untouched in both.
+- **Result:**
+
+  | Repo | Before | After | Diff |
+  | --- | --- | --- | --- |
+  | `nova-back-end` | 1 high | **0 total** | `package-lock.json` only, 23/23 |
+  | `nova-orbital-back-end` | 1 high, 2 moderate | **0 high, 0 critical** (2 moderate remain) | `package-lock.json` only, 37/33 |
+
+- **Two moderates deliberately left in `nova-orbital-back-end`,** `body-parser` (`1.20.5 - 1.20.6`) and `qs` (`2.2.5 - 6.15.3`). Both report `fixAvailable: true`, but that is misleading here: `qs 6.16.0` is patched while `body-parser` requires `~6.15.1`, capping it at `6.15.x`. Clearing them requires `body-parser 2.x`, a major bump on a direct dependency in the Express request path, with real behavioural risk. Out of scope for a build-gate fix; the gate needs zero high/critical, which is met. Recorded as accepted risk rather than silently skipped.
+- **Verification, both repos**, run after `npm ci --prefer-offline` with each changed package's installed version compared against its `package-lock.json` entry:
+
+  | Gate | `nova-orbital-back-end` | `nova-back-end` |
+  | --- | --- | --- |
+  | `npm audit --audit-level=high` | 0 high/critical, exit 0 | 0 vulnerabilities, exit 0 |
+  | `npm run lint` | exit 0 | exit 0 |
+  | `npx prettier --check --end-of-line auto "src/**/*.ts"` | clean, exit 0 | n/a (no prettier script gate) |
+  | `npm test -- --runInBand` | 5 suites / 25 tests, exit 0 | 19 suites / 116 tests, exit 0 |
+
+- **`prettier` confirmed held at `3.8.3`** in both, so the CI `linting` job is unaffected — the failure mode from the earlier `nova-orbital` CI run.
+
+---
+
 ### 2026-09-01T03:10:00Z — PR #17 reopened; nova-back-end override removal verified safe
 
 - **Reopened PR #17.** Closing it was wrong. It was closed on the reasoning that `nova-back-end` already measured 0 vulnerabilities, so the PR "fixed nothing" — but the branch also carried the Pathfinder floor bump and the override cleanup, both real, already-verified changes, independent of the vulnerability count.

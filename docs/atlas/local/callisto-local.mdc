@@ -246,6 +246,77 @@ npx nest start --watch
 | API up but Atlas cannot reach Callisto | Confirm `# CALLISTO_API_URL` is commented for local; align Callisto `APP_PORT` with Quasar proxy default (`3003`) or set an explicit localhost URL |
 | S3/SQS errors on file ops | Refresh AWS credentials from Planet Portal |
 
+### Dev-dataset seed fails NOT NULL on `proceedings` (`created_user_identity` / `modified_user_identity`)
+
+**Cause:** migration `1788140255036-update__backfill_null_user_identity__proceedings_table.ts` made these two audit columns required on `proceedings`. The dev seed script (`src/typeorm/dev-dataset-reset/1_seed__cases_jobs_proceedings_tables.sql`) inserts `proceedings` rows without them, so a fresh-DB reseed fails the constraint.
+
+**Fix (DB-side, no file edits):** relax the constraint, run the seed unmodified, backfill, then restore the constraint:
+
+```bash
+docker exec callisto-postgres psql -U postgres -d callisto -c '
+ALTER TABLE "callisto"."proceedings" ALTER COLUMN "created_user_identity" DROP NOT NULL;
+ALTER TABLE "callisto"."proceedings" ALTER COLUMN "modified_user_identity" DROP NOT NULL;
+'
+
+for f in /c/Users/dustin.thomason/callisto-back-end/src/typeorm/dev-dataset-reset/*.sql; do
+  docker exec -i callisto-postgres psql -U postgres -d callisto -v ON_ERROR_STOP=1 < "$f"
+done
+
+docker exec callisto-postgres psql -U postgres -d callisto -c '
+UPDATE "callisto"."proceedings" SET "created_user_identity"='"'"'system'"'"', "modified_user_identity"='"'"'system'"'"' WHERE "created_user_identity" IS NULL OR "modified_user_identity" IS NULL;
+ALTER TABLE "callisto"."proceedings" ALTER COLUMN "created_user_identity" SET NOT NULL;
+ALTER TABLE "callisto"."proceedings" ALTER COLUMN "modified_user_identity" SET NOT NULL;
+'
+```
+
+### App hangs after "Registered handler..." log lines, never binds the port
+
+**Cause:** Callisto passively checks for exchanges/queues (`createExchangeIfNotExists` / `createQueueIfNotExists = false`) — it does **not** create missing RabbitMQ topology itself. If a vhost, exchange, or queue it expects is missing, it silently retries the broker connection forever and the log just stops printing, with no error and no port bind.
+
+**Diagnose — check the RabbitMQ container log for the real cause** (the app log alone won't show it):
+
+```bash
+docker logs callisto-rabbitmq --since 5m 2>&1 | grep -iE "error|not_found|closed|refused"
+```
+
+**Case A — missing vhost** (e.g. `vhost mercury not found`). This repo's original bootstrap only declares `nova` and `callisto` vhosts; a `mercury` vhost (used for `mercury.proceeding.file.transcript-summary-*` events) may also be required and is not covered by `npm run setup:local-rabbitmq`:
+
+```bash
+docker exec callisto-rabbitmq rabbitmqctl add_vhost mercury
+docker exec callisto-rabbitmq rabbitmqctl set_permissions -p mercury guest ".*" ".*" ".*"
+docker exec callisto-rabbitmq rabbitmqadmin -u guest -p guest -V mercury declare exchange name=mercury.events type=topic durable=true
+docker exec callisto-rabbitmq rabbitmqadmin -u guest -p guest -V mercury declare exchange name=mercury.events.dlx type=topic durable=true
+```
+
+**Case B — vhost exists but queue name/prefix is wrong.** Once the app connects, a mismatched queue name surfaces as an explicit crash (not a hang) naming the exact missing queue, e.g.:
+
+```
+Error: Operation failed: QueueDeclare; 404 (NOT-FOUND) with message
+"NOT_FOUND - no queue 'callisto.proceeding.file.transcript-summary-completed.v1' in vhost 'mercury'"
+```
+
+Note the queue lives in the `mercury` vhost but is prefixed `callisto.`, not `mercury.`. Declare it (and its failed-event counterpart) with that exact name, bound to the vhost's own exchange:
+
+```bash
+for q in callisto.proceeding.file.transcript-summary-completed.v1 callisto.proceeding.file.transcript-summary-failed.v1; do
+  docker exec callisto-rabbitmq rabbitmqadmin -u guest -p guest -V mercury declare queue name="$q" durable=true
+  docker exec callisto-rabbitmq rabbitmqadmin -u guest -p guest -V mercury declare binding source=mercury.events destination="$q" routing_key="$q"
+done
+```
+
+Restart the API after any topology change — it does not retry-and-recover mid-run.
+
+### `EADDRINUSE: address already in use 0.0.0.0:3004` right after a crash
+
+**Cause:** a previous run that crashed (e.g. from the RabbitMQ 404 above) can leave its Node process still holding the port even though the terminal looks dead.
+
+```bash
+netstat -ano | grep ":3004"
+taskkill //PID <pid-from-above> //F
+```
+
+Then start the API again.
+
 ## Related runbooks
 
 - [triton-local.mdc](./triton-local.mdc) — reuses `callisto-postgres`, separate `triton` database
