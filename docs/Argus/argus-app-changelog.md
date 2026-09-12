@@ -10,6 +10,52 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### 2026-09-12T18:45:00Z — SCRIBE-06 real-runtime acceptance: pipeline proven against LM Studio, and a session-start defect that makes it unreachable
+
+- **Ticket:** SCRIBE-06 (regression, documentation, and real-runtime acceptance gate) from `C:\Argus\docs\plans\SCRIBE-PIPELINE-INTEGRATION-TODO.md`, on isolated worktree `C:\Argus-worktrees\scribe-acceptance`, branch `agent/scribe-acceptance`, from `origin/main` `5dbeae3`. All three model-tiered stages run in one session on one model at the user's explicit direction ("do all the stages, 1-3, you don't need to stop"), so the Stage 1 and Stage 2 pause points were not taken; the notification duty was discharged at defect confirmation and at completion instead.
+- **Problem:** every Scribe behavior in the repository was proven against a deterministic endpoint whose reply and latency the test chose. That shape cannot answer the question this ticket exists for — the SCRIBE-05A defect was invisible to every fast endpoint in the suite and only appeared against real LM Studio. Acceptance had to use a real model at production deadlines, and had to be able to distinguish a product defect from an environment limitation or a model-quality result.
+- **Requirement:** drive the real production graph against a real provider with nothing simulated except the microphone; record what the model actually received; and classify every failure rather than tuning around it.
+
+#### The defect — the product does not work on `origin/main`
+
+- **Found:** every session in the shipped desktop host produces **zero Logged Items**. Reproduced through `DesktopApplication` itself — default configuration, nobody had ever set guidance, one plain `session.record`.
+- **Mechanism, pinned rather than inferred:** `DesktopApplication.handleCommand` calls `configureScribeGuidance()` unconditionally before dispatching `session.record`/`session.resume` (`desktop-application.mjs:600`; `newSessionCommand` at `:717` does the same), which publishes the session policy once. `session.recorded` then publishes it again. The coordinator emits a `scribe.recovery-request` per publication, and its identity key (`scribe-coordinator/index.mjs:101`) covers only boot id, session, policy id and policy version — so both carry **one key**. `fingerprintMessage` (`message-identity.mjs:53`) folds `causation_id` into the semantic fingerprint, and the two causations differ. Result: `IDEMPOTENCY_KEY_CONFLICT`, the coordinator's output is rejected, recovery never completes, and it refuses every finalized row for the life of the session. `record_status` is still `accepted`, so the UI reports a healthy session.
+- **Bisected:** `9973a47` (pre-SCRIBE-05B) emits one recovery-request and no failure; `eebc74f` (SCRIBE-05B guidance) introduces the second publication. Same host reproduction at both commits.
+- **Permanent, not transient:** across 30 s, then 6 more rows and 20 s, then Stop → Resume — 0 admitted, 0 evaluated, 0 provider calls, durable checkpoint never created. All 12 transcript rows finalized normally throughout, which independently confirms Scribe cannot block or mutate the transcript, and is also why the failure is silent.
+- **Why every gate missed it:** `scribe-user-guidance.test.mjs` has 38 passing tests, all exercising the guidance surface **in isolation** — policy source alone, extraction boundary alone, storage alone, instruction text alone. No suite composes `scribe.guidance-configure` + `session.record` against the production graph. The composition is where the defect lives, so a green suite and a broken product were consistent.
+- **Not fixed, deliberately.** SCRIBE-06's ownership is "no production files unless acceptance exposes a defect **and the coordinator approves an ownership revision**". Documented instead in `docs/incidents/2026-09-12-scribe-session-start-recovery-conflict.md` with three candidate revisions and their trade-offs, and notification sent. Zero production files changed this session — confirmed by the `argus-electron-production` package digest `a648678204a65ea4` being identical to baseline.
+
+#### What was proven against real LM Studio (`google/gemma-4-e4b`, loopback)
+
+- **The load-bearing claim.** Two consecutive batches at the **unmodified** production admission deadline of 5,000 ms, with real inferences of **38,825 ms and 38,976 ms** (7.8×; an earlier run recorded 50,511 ms, 10.1×). Zero wire failures, `[0,1,2]` then `[3,4,5]` with no row skipped or re-sent, durable cursor reached 5, no batch left in flight. The existing automated reproduction of this scales the deadline to 400 ms against a 900 ms reply — the ratio, not the quantity. This is the quantity.
+- **Transcript independence:** finalization took 79, 62, 57, 68, 62, 62 ms while the model held for 39 seconds.
+- **Request shape on the wire:** 5,997 bytes; governed `limits` of 6,535 context tokens + 512 output tokens (a real reserve, not the whole allowance); instruction `1.1.0`; background context as a field separate from new evidence; two messages per call with no conversation/thread/previous-response handle; no authorization header for a local provider. Batch 2 grew to 7,068 bytes as rolling background accumulated.
+- **Multiple output with provenance:** 2 discrete items per batch, 4 total. Both cited `segment-0` and `segment-1` — segments admitted as **new** evidence. Neither cited background context.
+- **Idle remainder:** waited 15,107 ms against the real 15,000 ms threshold, zero premature admissions, reason `idle-timeout`.
+- **Provider genuinely gone** (closed loopback port, not an endpoint told to error): `MODEL_ENDPOINT_UNAVAILABLE`, identical batch identity retained, cursor stayed at -1, zero items stored.
+- **Guidance immutability:** identical replay accepted, different value refused with `SCRIBE_GUIDANCE_CONFLICT`.
+
+#### A second real-world failure point, found by tracing rather than by a scenario
+
+- The extraction boundary reads `ARGUS_MODEL_NAME` from its own process environment, fixed at spawn; the model lane is reconfigured by a live `ai.provider-configure`. **Saving new provider settings mid-session moves one and not the other.** Verified the divergence fails closed: `MODEL_CONFIGURATION_CONFLICT`, **0** requests reaching the provider, 0 items stored, cursor unmoved. No request is ever sent under a model name the governed request does not claim, so no request fingerprint can attest to work that did not happen. Correct behavior, previously unexercised; now covered.
+
+#### Two environment limitations, distinguished from defects
+
+- **`contracts:docs:check` fails on any fresh Windows checkout.** Not contract drift. `core.autocrlf=true` checks the file out at 54,232 bytes / 1,297 CRLF; the generator writes 52,935 bytes / 0 CRLF; `generate-contract-docs.mjs:12` compares raw strings with no EOL normalization. Content is byte-identical after normalization and `git status` stays clean, so the gate says "stale" while git says nothing changed, and the remedy it prints produces no commit. Production file, not owned by this ticket — recorded, not fixed.
+- **One skipped test** — `Scribe checkpoint read rejects a symlinked storage file`, `EPERM`: Windows needs Developer Mode or elevation to create symlinks. The guard is real code; only the hostile-symlink rehearsal cannot run unelevated.
+- **Also recorded:** `ELECTRON_RUN_AS_NODE=1` was set in this environment and made `electron .` run `main.cjs` as plain Node (`app` undefined). Cleared it; the real host then started cleanly with all 12 services healthy and `host.started` reached.
+
+#### Decisions
+
+- **`MOD-003` stays Open, trigger narrowed.** Construction, token accounting, the background/new-evidence split, and boundedness are now observed on the wire. What remains is cross-batch context persistence and deterministic reconstruction after restart against a real provider — which cannot run while the defect blocks admission.
+- **`MOD-004` stays Open, trigger narrowed.** Schema and instruction are versioned, a prompt-management surface exists, and real zero-item and multiple-item outcomes are now recorded. What remains is that evidence through the shipped host's session-start path, plus human judgement of item quality over a real conversation. The guidance half cannot be exercised at all, because `scribe.guidance-configure` is the message that triggers the defect.
+- **The integration is NOT marked complete.** SCRIBE-06 is the only ticket authorized to mark it, and it declines to.
+
+- **New files:** `tests/scribe-real-acceptance.test.mjs` (7 tests; 6 skip without a provider, the 7th — the defect — needs none and is marked `todo` so the expectation stays executable without falsifying the gate), `tests/helpers/real-scribe-harness.mjs` (production graph, real provider, production deadlines, Whisper the only substitution), `tests/helpers/recording-model-proxy.mjs` (verbatim pass-through recorder, so evidence can state what the model received), `docs/validation/SCRIBE-ACCEPTANCE-VALIDATION.md` (20 scenarios with action/expected/observed and four evidence classes), `docs/incidents/2026-09-12-scribe-session-start-recovery-conflict.md`.
+- **Modified:** `Architecture/DesignDecisions.md` (ADR-021 acceptance status), `Architecture/OperationalAgentRoles.md` (Scribe implementation status), `PENDING-DECISIONS.md` (MOD-003/MOD-004 narrowed), `TODO.md` (§5C — eight items checked as implemented-and-covered, two new items for the defect and the user acceptance), `README.md`, `docs/plans/SCRIBE-PIPELINE-INTEGRATION-TODO.md` (SCRIBE-06 checklist and exit gate filled in truthfully, gate verdict recorded, next dispatch rewritten to a SCRIBE-07 repair ticket).
+- **Boundaries held:** zero production files changed; no accepted behavior redefined to make a check pass; no installer rebuilt; `main` not merged.
+- **Pending user acceptance:** physical microphone, Logged Item quality judgement, custom-guidance effect, background-context non-recreation, and item click-navigation — all gated behind the defect repair, with exact steps in the validation artifact.
+
 ### 2026-09-11T04:45:00Z — SCRIBE-05 third review correction: recovery versioning, contiguity, corrected retry claim
 
 - **Ticket:** SCRIBE-05 third correction on `agent/scribe-production-integration`, after review of `87524d2` returned **do not merge**. Three narrowly scoped findings, all correct. Commit `dc31d90`.
@@ -459,6 +505,8 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 - **Tooling gates:** `package.json` defines only the test and two demo scripts; no repository lint, typecheck, audit, or documentation-generator gates exist. The dependency-free test command above is the applicable regression gate. No HTTP API exists, so Swagger/OpenAPI drift verification is not applicable.
 
 ## Current state
+
+**Scribe status as of 2026-09-12 (SCRIBE-06 acceptance).** The Scribe pipeline is implemented end to end and proven against a real LM Studio model for three-row admission, the real 15-second idle remainder, stateless bounded requests carrying the protected instruction, zero-item and multiple-item outcomes with intact provenance, failure retention, and consecutive batches surviving inferences roughly eight times longer than the wire's admission deadline with zero wire failures. **It is not reachable in the shipped desktop host:** every session produces zero Logged Items because the session-start sequence publishes the session policy twice and the coordinator's recovery handshake then fails with `IDEMPOTENCY_KEY_CONFLICT`. Regression bisected to `eebc74f` (SCRIBE-05B). The repair is the next ticket; mechanism and three candidate ownership revisions are in `docs/incidents/2026-09-12-scribe-session-start-recovery-conflict.md`, and acceptance evidence plus the remaining user validation steps are in `docs/validation/SCRIBE-ACCEPTANCE-VALIDATION.md`. `MOD-003` and `MOD-004` remain Open with narrowed triggers.
 
 Argus has two complementary POC layers:
 
