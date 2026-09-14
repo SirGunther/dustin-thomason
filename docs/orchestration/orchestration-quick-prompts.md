@@ -63,7 +63,19 @@ The purpose here is to review the spec and the associated artifacts. Only the sp
 ### Please Review
 
 
-Determine if the spec is written accurately based on the original ticket, codebase, and associated artifacts.
+### Original Ticket
+
+
+Determine if the spec is written accurately based on the original ticket, codebase, and associated artifacts. Importantly, ensure that the spec stays within scope.
+```
+
+---
+
+### Follow up
+
+```
+Review of your Spec and Artifacts, please update accordingly
+
 ```
 
 ---
