@@ -1,0 +1,68 @@
+# Locked decisions — atlas/focus-proceeding-name-on-create (PRDV-14184)
+
+> Produced at orchestrate Phase 3 under [qa-to-spec-traceability](../../../../agents/docs/qa-to-spec-traceability.md). The spec's `Locked Decisions From Q and A` section summarizes this table and links here for the full record.
+>
+> **How these closed.** Four questions were drafted for a grill-me pass. Under the workflow's rule 3 ("reconcile before asking") and rule 4 ("do not ask preference questions when the implementation path is implied by the requirement and existing system behavior"), each was gated against the artifacts first. **All four closed on evidence; none required escalation to Product or the principal dev.** The question gates below record what was checked. The one user exchange in this phase was a challenge to *whether* escalation was warranted — the answer was no, and the reasoning is preserved in LD-001's gate.
+
+## Ledger
+
+| ID | Locked decision | Source | Supersedes or rejects | Spec destination |
+| --- | --- | --- | --- | --- |
+| LD-001 | ~~Both create surfaces are in scope~~ — reopened at review round 2, **re-closed by LD-012**. The original *reasoning* (that screen-neutral criteria logically mandate every surface) stays withdrawn; the *conclusion* holds on different grounds. | — | Superseded by LD-012 | — |
+| LD-002 | **Inline the focus logic in both components; no shared composable.** Risk-accepted — see [concerns → Concern 3 addendum](../PRDV-14184-future-development-concerns.md). | `atlas-front-end/.cursor/rules/atlas-front-end-patterns.mdc:766`; repo focus-idiom survey; the two components' differing triggers | **Rejects** extracting `useRowFocus`/`useProceedingNameFocus` for this ticket. Explicitly **reversible** at spec review. | Spec §Solution; §New classes (N/A — no new files) |
+| LD-003 | **Assert focus with `document.activeElement` and plain Vitest `expect`.** Do not register `@testing-library/jest-dom`. | `atlas-front-end-patterns.mdc:542-572`; `test/vitest/setup-file.ts` (empty); `docs/MIGRATION_PLAN.md:149` | **Rejects** editing the shared Vitest setup file to add global matchers. | Spec §Spec tests; test plan §Test map |
+| LD-004 | **(revised 2026-09-13)** The S2 spec covers **the seams focus influences** - AC-1/AC-2, ref lifecycle across close/reopen, permission gating - **not** a full characterization of the component. | `build-implementation-guardrails` §1 (comprehensive across **the seams you influence**); spec review round 3 | **Supersedes** the original LD-004, which read the same rule as requiring validation/cap/save/cancel coverage. **Rejects** both a focus-only spec and a full characterization suite. | Spec §Spec tests; test plan §Test map |
+| LD-005 | **Drop the `q-input` stub in the S1 spec and mount real Quasar**; keep the `Overlay` and `q-btn` stubs, and add `v-show="modelValue"` to the `Overlay` stub. | `NewProceedingsOverlay.spec.ts:73-86`; Quasar source `QInput.js:389-392`, `use-field.js:203-204` | **Rejects** giving the stub a hand-written `focus()` — that test would pass without proving focus. | Spec §Spec tests; §Risks |
+| LD-006 | **Defer focus with `nextTick()`. No timers, no magic delays.** | `Overlay.module.scss:18-36`; Vue `runtime-dom.cjs.js:407-421`, `runtime-core.cjs.js:415-424` | **Supersedes** investigation §8 assumption **A5**, which left `nextTick`-vs-`setTimeout` open pending browser observation. Closed by source evidence instead. | Spec §Solution; §Risks (fallback ladder) |
+| LD-007 | **Focus fires on exactly two triggers per surface**; not after save, cancel, reset, or row removal. | `NewProceedingsOverlay.vue:112-127`; `AddNewProceeding.vue:36-40`; `AddProceedingForm.vue:98-112` | **Rejects** focusing after `resetProceedings()` — it would strand focus on a closing container. | Spec §Solution |
+| LD-008 | **Quasar's `autofocus` prop is not used on either surface.** | Investigation §6; Quasar `QInput.js:117`; `QDialog.js:265-267` | **Rejects** the declarative approach on both surfaces, including S2 where it would otherwise work. | Spec §Risks; §Alternatives |
+| LD-009 | **S2's AC-1 trigger is a `watch` on `props.editing && showAddForm.value`**, not the button click. | Spec review on PR #572 (2026-09-13) | **Supersedes** the LD-007 formulation that put S2's AC-1 on an `openAddForm()` click handler — that missed the editing re-entry path entirely. | Spec §Design → Triggers |
+| LD-010 | **The S1 restriction gate is documented as a pre-existing defect, not fixed here.** | Spec review on PR #572 (2026-09-13); `AddNewProceeding.vue:33-35,46,48` | **Rejects** correcting the gate inside this ticket. **Supersedes** the spec's earlier claim that focus runs only after a permitted open. | Spec §Cross-cutting → Authorization; concerns Concern 4 |
+| LD-011 | **AC-1 fires on the user action that requests an empty field** (opening the create surface, appending a row) — **not** on a visibility condition. | Spec review round 2; `PendingJobSubmissionPage.vue:209`, `SubmittedJobSubmissionPage.vue:83`, `AddProceedingForm.vue:116,127` | **Supersedes LD-009.** Watching `editing && showAddForm` still misses step navigation; the ancestor-gate set is unbounded and differs by route. Returning to an already-open form is not a request for a new field, and focusing there steals focus during navigation. | Spec §Design → Triggers |
+| LD-012 | **Both surfaces are in scope.** No Product gate. | Dev decision, 2026-09-13 | **Supersedes** the earlier framing that treated this as blocked on Product. | Spec §Acceptance criteria → Scope |
+
+## Question gates
+
+### LD-001 — surface scope
+
+- **Proposed question:** "Do both create surfaces ship, or only the Job Detail overlay?"
+- **Existing answer check:** **Found.** The ticket's AC reads *"When **users** create a new Proceeding the proceeding name field is highlighted by default"* — universally quantified over the user action, naming no surface. The phrase "Ops Atlas user" appears only in the motivation clause ("As an Ops Atlas user, I want…"), and the AC itself drops it in favor of "users". The job story's criteria are likewise surface-agnostic.
+- **Current behavior evidence:** Exactly two surfaces render an empty proceeding-name input (investigation §2, A2 — completeness established by i18n-key grep). Neither is client-facing; all roles are internal `Neptune_*` AD groups. Seeded permissions differ — `Neptune_Operations_Managers` holds `PROCEEDINGS:create` but **not** `AJSF_PROCEEDINGS:create`. The ticket's own words map to no control on either screen: it says clicking *"add new"* (the labels are "New proceeding" and "Add Proceeding"/"Add New Proceeding(s)") and focus *"after Create"* (both save buttons read "Save").
+- **Recommendation:** Both. A criterion of the form *"creating a new Proceeding leaves the user able to type immediately"* is **falsified by any surface where it doesn't hold**. Shipping one surface does not satisfy the criterion as written — it requires amending it to name a surface, which is a story revision logged in the Story log, not a silent scope call.
+- **Ask only if still unresolved:** **Resolved — not asked.** The permission split was initially misread as a scope boundary; it is not. It explains why the requester would not have *noticed* the second surface — an argument that the gap is real and unreported, not that it is out of scope. Criteria describe system behavior, not one role's reachable subset. A second party would have been required only if the two surfaces demanded contradictory behavior, if fixing one regressed something another team owns, or if the criterion were ambiguous about the observable outcome. None hold.
+
+### LD-002 — extract vs inline
+
+- **Proposed question:** "Extract a shared focus helper, or inline in both?"
+- **Existing answer check:** Partially found. `atlas-front-end-patterns.mdc:766` — "Extract **complex** logic into composables" (no definition of complex); `vue.mdc:12` — "Prefer iteration and modularization over code duplication" (no threshold). Nothing in the repo sets a duplication threshold or warns against premature abstraction.
+- **Current behavior evidence:** The two AC-1 triggers are **not the same code** — S1 gates on a `modelValue` **prop** (needs a `watch`); S2 has no prop and toggles a local ref inline in its template (`AddProceedingForm.vue:120`). Only ref-collection plus deferred focus is shared, ~4 lines. The repo has 4 one-off `.focus()` sites and 0 extracted helpers, including two byte-identical `Delete*Dialog` copies it declined to extract.
+- **Recommendation:** Inline. 4 lines of `nextTick` + `.focus()` is not "complex logic", and the differing triggers mean extraction would share little while adding indirection.
+- **Ask only if still unresolved:** **Resolved — not asked.** Recorded as reversible: if review prefers extraction, the repo's documented conventions already fix the *where* and *how* (owning application's `composables/`, `useX` camelCase, return an object, one export per file).
+
+### LD-003 — assertion mechanism
+
+- **Proposed question:** "Assert focus via `document.activeElement`, or register `@testing-library/jest-dom`?"
+- **Existing answer check:** **Found.** Zero repo rules sanction jest-dom matchers. The canonical spec skeleton (`atlas-front-end-patterns.mdc:542-572`) shows plain Vitest `expect` only. The single repo-wide `jest-dom` mention is `docs/MIGRATION_PLAN.md:149`, which describes the **React** migration target, not this stack.
+- **Current behavior evidence:** `@testing-library/jest-dom@^6.9.1` is installed but never imported; `test/vitest/setup-file.ts` contains only a comment and is named in **no** rule or doc. happy-dom supports `document.activeElement` today with no config change.
+- **Recommendation:** `document.activeElement` + plain `expect`.
+- **Ask only if still unresolved:** **Resolved — not asked.** Registering a global matcher would change shared config every spec inherits, to gain an assertion style nothing in the repo sanctions.
+
+### LD-004 — coverage depth for the new S2 spec
+
+- **Proposed question:** "Does `AddProceedingForm` get a full spec, or only focus assertions?"
+- **Existing answer check:** **Found — already mandated, and should never have been drafted as a question.** `build-implementation-guardrails` §1: if executable tests do not exist for the unit you touch, "create them immediately… Leaving production logic uncovered — when sibling files already carry specs and no repo waiver applies — is **unacceptable**", requiring happy path, failure paths, and edge cases. `planetdepos.mdc:29-30` independently requires a test for all production code at ≥80% coverage.
+- **Current behavior evidence:** `AddProceedingForm.vue` has no spec file. Its sibling `NewProceedingsOverlay.spec.ts` **does** carry one, so the "sibling files already carry specs" condition is met and no waiver applies. Test-plan scenario NP-5 (protect-the-neighbors) additionally cannot be satisfied on S2 without neighbor assertions.
+- **Recommendation:** Comprehensive.
+- **Ask only if still unresolved:** **Resolved — not asked.** This was governed by a standing rule before the question was drafted.
+- **Correction (2026-09-13, review round 3):** the gate was right that a standing rule governed this, and **wrong about what the rule says.** `build-implementation-guardrails` §1 asks for coverage "comprehensive across **the seams you influence**" — I read it as "comprehensive," dropping the qualifier that bounds it. Focus influences the open and append actions, ref lifecycle, and permission gating; it does not influence validation rules or length limits. LD-004 is revised accordingly and the component's missing characterization suite is spun out to `agents/docs/cleanup-candidates.md`. The lesson is narrow and worth keeping: **a standing rule closing a question does not excuse reading the rule imprecisely.**
+
+## Open variables after this phase
+
+**None blocking.** Surface scope closed 2026-09-13 (LD-012) without Product input, because it was never a question about system behavior: the same affordance gap exists in two components, the fix is identical, and nothing depends on either field staying unfocused. Knowing which screen the reporter used would not change a line of code. What had been tracked as a requirements gate was an unknown with no effect on the output.
+
+> **Correction to this ledger's own framing (2026-09-13).** The header above says all four grill-me questions closed on evidence with none requiring escalation. **That is no longer true of LD-001.** Its question gate concluded that a second party was needed only if the surfaces demanded contradictory behavior, regressed a neighbor, or left the criterion ambiguous — and judged none applied. The gate missed a fourth condition: **the criteria may be under-determined by the text because the ticket carries context that was never read.** It does — an unretrieved attachment. The other three closures stand.
+
+~~None blocking.~~ Every question raised by investigation §10 is now closed. **Spec review (PR #572, 2026-09-13) added LD-009 and LD-010** and corrected four factual errors in the spec — see the why-log. Two items are deliberately deferred to Phase 5 as *proof obligations*, not decisions:
+
+1. **Browser smoke-test of AC-1 on S1.** happy-dom's `focus()` checks only `isConnected`/`disabled`/`inert` — never `display` or `visibility` — so no unit test in this repo can catch a `display:none` no-op. LD-006 is sound by construction; the browser is the only witness. Fallback ladder is in the spec.
+2. **Confirm the S1 spec is green on `main` before touching production code.** The design was derived by reading installed sources, not by executing the suite.

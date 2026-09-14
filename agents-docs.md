@@ -166,6 +166,12 @@ A running record of outdated references, superseded files, and structural warts 
 | `agents/scripts/sync-agents-md.ps1` | Backwards-compatible shim to `sync-rules.ps1` | Delete once nothing invokes it | Validator's expected-scripts list includes it |
 | `agents/docs/workflow-index.md` hand-written Skills table | Now complete (all 5 skills) but duplicates the generated inventory below it | Decide: slim the hand-written table to a pointer at the generated inventory, or keep maintaining both | — |
 
+## AddProceedingForm has no characterization suite (surfaced by PRDV-14184, 2026-09-13)
+
+`src/callisto/pages/JobSubmissionPages/sections/FileUploadSection/AddProceedingForm/AddProceedingForm.vue` has **no spec file at all**, while its near-twin `NewProceedingsOverlay.vue` carries 14 tests. PRDV-14184 adds a spec covering only the seams focus influences (open/append actions, ref lifecycle, permission gating) — deliberately **not** the component's validation rules, length limits, duplicate detection, hint text, 20-row cap, or save/cancel semantics, since a focus ticket asserting all of that would be a characterization suite riding along with a bug fix.
+
+That leaves the gap real and now explicitly known. Worth a small follow-up ticket, and it pairs naturally with the duplicate-check divergence already recorded in PRDV-14184's concerns doc (this component's duplicate check is case-insensitive while the DB constraint is case-sensitive) — writing the characterization suite is exactly when that divergence would need a decision.
+
 ## current-vs-target-diagram.md
 
 # Current vs Target diagram — a single-diagram delta convention
