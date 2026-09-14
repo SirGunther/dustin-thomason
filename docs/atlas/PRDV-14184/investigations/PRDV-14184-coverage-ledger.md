@@ -1,11 +1,11 @@
-# Coverage ledger — atlas/focus-proceeding-name-on-create (PRDV-14184)
+# Coverage ledger — atlas/PRDV-14184 (PRDV-14184)
 
 Investigation question: Where can an empty Proceeding Name input appear, and what makes it (not) take keyboard focus when it does?
 Repo(s): `atlas-front-end`, `callisto-back-end` · Baseline commits: `atlas-front-end@420c395a`, `callisto-back-end@d84a4628` · Started: 2026-09-11
 
 ## Consulted
 
-- `docs/*/tickets/*/investigations/*-coverage-ledger.md` for "proceeding" — **found 13 prior ledgers; none reusable.** Every atlas ledger touching proceedings covers proceeding *files* / deliverables / audit events (PRDV-16461 deliverable collections, PRDV-16313 file rename + outbox, PRDV-16403 client-access read guards, PRDV-16192 audit converters, PRDV-16402 upload actions). **No prior ledger inspected the proceeding *create* surface, the `q-input` name fields, or `Overlay.vue`.** No reuse available; no reopen condition triggered (this is a **different behavior** than any recorded inspection).
+- `docs/*/*/investigations/*-coverage-ledger.md` for "proceeding" — **found 13 prior ledgers; none reusable.** Every atlas ledger touching proceedings covers proceeding *files* / deliverables / audit events (PRDV-16461 deliverable collections, PRDV-16313 file rename + outbox, PRDV-16403 client-access read guards, PRDV-16192 audit converters, PRDV-16402 upload actions). **No prior ledger inspected the proceeding *create* surface, the `q-input` name fields, or `Overlay.vue`.** No reuse available; no reopen condition triggered (this is a **different behavior** than any recorded inspection).
 - Same glob for "focus" / "autofocus" — **none found.** No prior investigation in any project has examined focus behavior.
 - `larry-adams` for "14184" / proceeding-name focus — **none found.** No coworker spec exists; this ticket's spec will be the artifact under review.
 - `atlas-front-end/docs/specs/**` for `*proceeding*` — **none found.**

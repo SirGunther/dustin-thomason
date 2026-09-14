@@ -6,7 +6,7 @@
 
 **What this plan is.** This is orchestrate **Phase 1 (Recon and plan)** — the looking is already done. Approving this approves a set of *findings* plus the plan to write them down. It is **not** the implementation design; the spec and the locked decisions are Phase 3, and the implementation plan is Phase 4. This document is saved verbatim as `investigations/PRDV-14184-recon-and-plan.md` at Phase 2's first action and frozen thereafter.
 
-**Ticket artifacts:** `C:\dustin-thomason\docs\atlas\tickets\focus-proceeding-name-on-create\`
+**Ticket artifacts:** `docs/atlas/PRDV-14184/` *(path corrected 2026-09-14 — artifacts were briefly written under a `tickets/<slug>/` folder that does not match this repo’s convention and were moved back. Only this path is edited; the frozen plan’s approved content is unchanged.)*
 **Repos:** `atlas-front-end` (the change) · `callisto-back-end` (named in ticket scope; recon says **not touched** — see F5)
 
 ---
@@ -81,7 +81,7 @@ Deferred-but-provable at implementation: whether `nextTick` is sufficient for S1
 
 **Coverage ledger** — `investigations/PRDV-14184-coverage-ledger.md`, baseline `atlas-front-end@420c395a` / `callisto-back-end@main`:
 
-- `Consulted: docs/*/tickets/*/investigations/*-coverage-ledger.md for "proceeding" — found PRDV-16461/16313/16403/16192 ledgers, all covering proceeding *files*/deliverables/audit; none covers the proceeding **create** surface. No reuse available; no reopen needed.`
+- `Consulted: docs/*/*/investigations/*-coverage-ledger.md for "proceeding" — found PRDV-16461/16313/16403/16192 ledgers, all covering proceeding *files*/deliverables/audit; none covers the proceeding **create** surface. No reuse available; no reopen needed.`
 - Areas: S1 `NewProceedingsOverlay` + `Overlay`/`AddNewProceeding` mount chain (`contributing`) · S2 `AddProceedingForm` + `FileUploadSectionCore` mounts (`contributing`) · repo-wide focus-idiom sweep (`fully-inspected`) · Quasar `QInput` API (`fully-inspected`) · callisto create-proceeding path (`ruled-out`) · existing specs + test harness (`fully-inspected`).
 - Frontier: `Overlay.vue` transition timing vs. focus; whether `FormField.vue`'s `$attrs` fallthrough is a third latent surface (checked — display-only, excluded).
 

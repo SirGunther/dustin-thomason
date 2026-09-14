@@ -8,7 +8,7 @@
 - **Disposition:** proceed with conditions
 - **Date:** 2026-09-11
 - **Owner:** Dustin Thomason
-- **Location:** `docs/atlas/tickets/focus-proceeding-name-on-create/investigations/PRDV-14184-investigation.md`
+- **Location:** `docs/atlas/PRDV-14184/investigations/PRDV-14184-investigation.md`
 - **Ticket:** [PRDV-14184](https://app.clickup.com/t/43227262/PRDV-14184)
 - **Domain:** software (frontend)
 - **References / evidence:** `atlas-front-end@420c395a`, `callisto-back-end@d84a4628`; [recon-and-plan](./PRDV-14184-recon-and-plan.md); [coverage ledger](./PRDV-14184-coverage-ledger.md); [diagrams](./PRDV-14184-diagrams.md); [job story 01](../stories/PRDV-14184-job-story-01-focus-name-field.md)

@@ -19,7 +19,7 @@ _Paste from ClickUp, spec, or the user's first description. Do not paraphrase on
 > - When users create a new Proceeding the proceeding name field is highlighted by default so users don't have to first click into the field to begin typing.
 > - When uses add an additional proceeding, the following proceeding name field is also highlighted by default so users don't have to first click into the field to begin typing.
 
-Full capture: [docs/atlas/tickets/focus-proceeding-name-on-create/PRDV-14184-original-ticket.md](./tickets/focus-proceeding-name-on-create/PRDV-14184-original-ticket.md)
+Full capture: [docs/atlas/PRDV-14184/PRDV-14184-original-ticket.md](./PRDV-14184/PRDV-14184-original-ticket.md)
 
 ---
 
@@ -27,7 +27,7 @@ Full capture: [docs/atlas/tickets/focus-proceeding-name-on-create/PRDV-14184-ori
 
 _Optional: related tickets, environment, files to avoid, spec paths, team decisions._
 
-- Orchestrated via the `orchestrate` skill — ledger at [docs/atlas/tickets/focus-proceeding-name-on-create/orchestration.md](./tickets/focus-proceeding-name-on-create/orchestration.md).
+- Orchestrated via the `orchestrate` skill — ledger at [docs/atlas/PRDV-14184/orchestration.md](./PRDV-14184/orchestration.md).
 - Repository scope per the WorkLists item: `atlas-front-end` (UI change) and `callisto-back-end` (scope named, not yet confirmed as touched — Phase 1 recon will confirm whether any backend change is actually needed for a client-side focus behavior).
 - WorkLists card: `todo-1789145480003-4fc6a07d`.
 
@@ -107,15 +107,15 @@ _Newest first. Add one block before each commit (agents) or end of work session 
 
 - **Summary:** Phase 1 recon (approved) and Phase 2 report emitted. **Key finding: this is not the one-line change it looks like.** Exactly two surfaces render an empty proceeding-name input — `NewProceedingsOverlay.vue` (Job Detail) and `AddProceedingForm.vue` (Job Submission, on both the Pending and Submitted routes) — and each carries both acceptance-criteria moments (initial `ref([''])` row, `push('')` append). The naive fix (Quasar's `autofocus`, as used in 7 places incl. the proceeding *rename* dialog) **cannot work on the overlay surface**: `Overlay.vue` hides with `v-show` and `AddNewProceeding.vue` mounts the overlay unconditionally, so its input mounts once at Job Detail page load *while hidden* and never remounts on open. Recommended fix is event-driven imperative focus (`ref` + `QInput.focus()`) from the two lifecycle moments, uniform across both surfaces. Callisto ruled **out of scope** on evidence: proceeding `value` is client-supplied on both create DTOs with no server-side default, so no contract, DTO, guard or Swagger surface changes. **Incidental defect found and recorded (not fixed):** the `proceedings` uniqueness constraint is named `..._case_insensitive` but implemented as a plain case-**sensitive** `UNIQUE ("value","job_id")`, while the sibling `records` table implements real case-insensitivity correctly — and the two Atlas create surfaces' duplicate checks disagree with each other as a result. Raised in the concerns doc; deliberately kept out of this ticket.
 - **Plan used:** `investigations/PRDV-14184-recon-and-plan.md` (approved Phase 1, saved verbatim, frozen)
-- **Files:** `docs/atlas/tickets/focus-proceeding-name-on-create/` — `investigations/PRDV-14184-recon-and-plan.md`, `investigations/PRDV-14184-investigation.md`, `investigations/PRDV-14184-coverage-ledger.md`, `investigations/PRDV-14184-diagrams.md`, `PRDV-14184-why-these-changes.md`, `PRDV-14184-future-development-concerns.md`, `testing/PRDV-14184-test-plan.md`, `PRDV-14184-pr-draft.md` (shell), `stories/` (reconciled), `orchestration.md`
+- **Files:** `docs/atlas/PRDV-14184/` — `investigations/PRDV-14184-recon-and-plan.md`, `investigations/PRDV-14184-investigation.md`, `investigations/PRDV-14184-coverage-ledger.md`, `investigations/PRDV-14184-diagrams.md`, `PRDV-14184-why-these-changes.md`, `PRDV-14184-future-development-concerns.md`, `testing/PRDV-14184-test-plan.md`, `PRDV-14184-pr-draft.md` (shell), `stories/` (reconciled), `orchestration.md`
 - **Commits:** none — docs-only; **no product code touched in either repo**
 - **Notes:** A claim I made mid-phase (that the DB constraint was case-insensitive, inferred from its name) was **refuted** by reading the migration; corrected in report §7 and coverage-ledger area 9, and logged as a Phase 2 course change in the why doc. Four decisions remain open for Phase 3 grill-me: in-scope surfaces, extract-vs-inline, the focus assertion mechanism, and whether `AddProceedingForm` gets a full spec. Next: Phase 3 (Probe & spec).
 
 ### 2026-09-11T00:00:00Z — atlas-front-end (Phase 0 — Capture)
 
-- **Summary:** Orchestration Phase 0 completed. Found `original-ticket.md` already captured (verbatim request + ClickUp AC) at a non-canonical path from a prior session; relocated to the canonical `docs/atlas/tickets/focus-proceeding-name-on-create/` layout with no content change. Drafted job story 01 (Focus proceeding name field) through the full job-story sequence, with two open questions carried to investigation (focus-vs-select semantics; scope of "additional proceeding" entry points). Scaffolded this changelog and the orchestration ledger. Aligned repos: `atlas-front-end` switched from `PRDV-16461-implementation` to `main` and fast-forwarded; `callisto-back-end` confirmed already on `main` (has pre-existing unrelated local modifications — left untouched).
+- **Summary:** Orchestration Phase 0 completed. Found `original-ticket.md` already captured (verbatim request + ClickUp AC) at a non-canonical path from a prior session; relocated to the canonical `docs/atlas/PRDV-14184/` layout with no content change. Drafted job story 01 (Focus proceeding name field) through the full job-story sequence, with two open questions carried to investigation (focus-vs-select semantics; scope of "additional proceeding" entry points). Scaffolded this changelog and the orchestration ledger. Aligned repos: `atlas-front-end` switched from `PRDV-16461-implementation` to `main` and fast-forwarded; `callisto-back-end` confirmed already on `main` (has pre-existing unrelated local modifications — left untouched).
 - **Plan used:** none / ad-hoc (Phase 0 capture, no implementation plan yet)
-- **Files:** `docs/atlas/tickets/focus-proceeding-name-on-create/PRDV-14184-original-ticket.md` (moved), `.../orchestration.md` (new), `.../stories/PRDV-14184-job-story-01-focus-name-field.md` (new), `.../stories/PRDV-14184-job-stories-index.md` (new), `docs/atlas/PRDV-14184-changelog.md` (new, this file)
+- **Files:** `docs/atlas/PRDV-14184/PRDV-14184-original-ticket.md` (moved), `.../orchestration.md` (new), `.../stories/PRDV-14184-job-story-01-focus-name-field.md` (new), `.../stories/PRDV-14184-job-stories-index.md` (new), `docs/atlas/PRDV-14184-changelog.md` (new, this file)
 - **Commits:** none yet — docs-only, no commit made this session
 - **Notes:** Next is Phase 1 (Recon and plan, Plan mode) per the orchestrate skill.
 
@@ -149,7 +149,7 @@ _Optional — one subsection per failed or partial approach._
 
 _What is merged / on branch / reverted / still pending._
 
-Phases 0–2 done (capture, recon, investigation report). **No code changed in either repo**; everything so far is documentation under `docs/atlas/tickets/focus-proceeding-name-on-create/`. `atlas-front-end` is on `main` (up to date at `420c395a`); `callisto-back-end` is on `main` at `d84a4628` with pre-existing unrelated local changes not touched by this ticket. No branch created yet for PRDV-14184 — that happens in Phase 4/5 per `new-branch-get-started`.
+Phases 0–2 done (capture, recon, investigation report). **No code changed in either repo**; everything so far is documentation under `docs/atlas/PRDV-14184/`. `atlas-front-end` is on `main` (up to date at `420c395a`); `callisto-back-end` is on `main` at `d84a4628` with pre-existing unrelated local changes not touched by this ticket. No branch created yet for PRDV-14184 — that happens in Phase 4/5 per `new-branch-get-started`.
 
 Investigation verdict: **proceed with conditions.** The fix is imperative focus on collected per-row refs across two surfaces; callisto is out of scope. Three conditions must close before merge — the in-scope-surfaces decision, whether `nextTick` suffices through the overlay's `v-show` + `<Transition>` (browser-verified, not tuned), and the spec assertion mechanism (no focus test exists anywhere in the repo today). Next: Phase 3 (Probe & spec, Working mode).
 

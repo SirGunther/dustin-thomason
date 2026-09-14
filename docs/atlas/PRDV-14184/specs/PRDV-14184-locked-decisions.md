@@ -1,4 +1,4 @@
-# Locked decisions — atlas/focus-proceeding-name-on-create (PRDV-14184)
+# Locked decisions — atlas/PRDV-14184 (PRDV-14184)
 
 > Produced at orchestrate Phase 3 under [qa-to-spec-traceability](../../../../agents/docs/qa-to-spec-traceability.md). The spec's `Locked Decisions From Q and A` section summarizes this table and links here for the full record.
 >

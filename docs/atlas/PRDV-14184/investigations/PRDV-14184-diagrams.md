@@ -1,4 +1,4 @@
-# Diagrams — atlas/focus-proceeding-name-on-create (PRDV-14184)
+# Diagrams — atlas/PRDV-14184 (PRDV-14184)
 
 > Companion to [PRDV-14184-investigation.md](./PRDV-14184-investigation.md). Each diagram states what question it answers.
 

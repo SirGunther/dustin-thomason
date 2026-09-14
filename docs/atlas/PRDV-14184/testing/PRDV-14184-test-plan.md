@@ -1,6 +1,6 @@
-# Test plan — atlas/focus-proceeding-name-on-create (PRDV-14184)
+# Test plan — atlas/PRDV-14184 (PRDV-14184)
 
-> Seeded from [PRDV-14184-investigation.md](../investigations/PRDV-14184-investigation.md) §9 on 2026-09-11. Refined 2026-09-11 (Phase 3) against [the spec](../../../../../Users/dustin.thomason/atlas-front-end/docs/specs/atlas-maintenance/proceedings/PRDV-14184-focus-proceeding-name-on-create.md) and [the locked decisions](../specs/PRDV-14184-locked-decisions.md).
+> Seeded from [PRDV-14184-investigation.md](../investigations/PRDV-14184-investigation.md) §9 on 2026-09-11. Refined 2026-09-11 (Phase 3) against the spec (`atlas-front-end/docs/specs/atlas-maintenance/proceedings/PRDV-14184-focus-proceeding-name-on-create.md`) and [the locked decisions](../specs/PRDV-14184-locked-decisions.md).
 
 Status: **refined**
 

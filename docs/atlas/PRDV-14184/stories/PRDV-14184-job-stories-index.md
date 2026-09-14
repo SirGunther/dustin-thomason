@@ -1,4 +1,4 @@
-# Job stories — atlas/focus-proceeding-name-on-create
+# Job stories — atlas/PRDV-14184
 
 Source: [original-ticket.md](../PRDV-14184-original-ticket.md)
 
