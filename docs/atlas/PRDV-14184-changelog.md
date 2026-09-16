@@ -56,6 +56,39 @@ When a Cursor/agent **plan** is generated for this ticket, add a row the same da
 
 _Newest first. Add one block before each commit (agents) or end of work session (you)._
 
+### 2026-09-14T01:00:00Z — atlas-front-end (Phase 6 — reviewer-checklist sanity pass on PR #574)
+
+- **Summary:** Ran the 12-item `agent-self-review-checklist.md` (patterns from `docs/reviewers/pr-review-patterns.md`) against the PR #574 diff, item by item, with evidence per item posted in chat. 11 of 12 items were clean on inspection (i18n externalization, no magic-string comparisons, typed composable mock already fixed, no 3+-concern handlers, no unexplained safety-net removal, no comments naming a person/ticket, no org-wide pattern shipped quietly, no shared test-utils scaffolding touched, no new dependency, the one new file is a spec reachable by vitest's own glob not an import, and the only failing gate — audit — proven pre-existing via an empty `package.json`/`package-lock.json` diff). **Item 4 (mirror-implementation test symmetry) found a real gap:** `NewProceedingsOverlay.spec.ts`'s `focus` block tested reopen-after-**save** but not reopen-after-**cancel**; `AddProceedingForm.spec.ts` had the exact opposite — reopen-after-**cancel** but no reopen-after-**save** test, despite `handleSaveProceedings` closing the form itself on that surface (no parent action needed, unlike the Overlay). Added the missing test to each side so both surfaces now assert reopen-after-save **and** reopen-after-cancel symmetrically.
+- **Files:** `NewProceedingsOverlay.spec.ts`, `AddProceedingForm.spec.ts` (test-only; no production code changed)
+- **Verification gates:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| lint | `npx eslint --max-warnings 0 <both spec files>` | the two touched spec files | pass (exit 0) | — |
+| type-check | `npx vue-tsc --noEmit` | atlas-front-end, repo-wide | pass (exit 0) | — |
+| tests (scoped) | `npx vitest run --maxWorkers 1 <both dirs>` | the two touched suites | pass — 34/34 (up from 32) | — |
+| tests (full) | `npx vitest run --maxWorkers 1` | atlas-front-end, repo-wide | pass — 148 files / 1341 passed, 4 skipped (up from 1339) | — |
+
+- **Commits:** `0fec80dc` — "Add symmetric save/cancel reopen focus tests", pushed to `PRDV-14184-implementation`.
+- **Notes:** This is an additive test-coverage fix only; no production `.vue` file changed, so the reviewer's verdict and the Phase 6 review-resolution entry below stand unchanged. Regression — isolated: two new `it()` blocks added to existing spec files, no existing test modified, no shared test-utils touched.
+
+### 2026-09-14T00:00:00Z — atlas-front-end (Phase 6 — implementation review resolution)
+
+- **Summary:** Resolved the four review findings against `PRDV-14184-implementation` (working tree only, no branch commit yet at review time). **P1 — nothing was committed to the named branch** (`main...HEAD` was `0 0`); fixed by this commit. **P3 — `AddProceedingForm.spec.ts` hand-built the `usePermissions()` return object** instead of using the repository's mandatory `createComposableMock<ReturnType<typeof useComposable>>()` pattern ([planetdepos-vue.mdc](../../../atlas-front-end/.cursor/rules/planetdepos-vue.mdc) §Testing Utilities); replaced with `vi.mock('@/src/auth/composables/usePermissions')` + `vi.mocked(usePermissions).mockReturnValue(createComposableMock<ReturnType<typeof usePermissions>>({ canUploadJobSubmissionProceedings }))` in `beforeEach`, matching the pattern already used in the sibling `FileUploadSectionCore.spec.ts`. **P3 — the "re-open after save re-focuses row 0" test actually clicked Cancel** (`.actions button:last-child`) instead of Save (`.actions button:first-child`), so it proved Cancel→reopen, not Save→reopen; the spec's own "Explicitly not done" section requires proving the *reset-after-save* path since `handleSave()` does not itself close the overlay (the parent must react to the `save` emit and toggle `modelValue`). Rewrote the test to fill a valid value, click Save, then `setProps({ modelValue: false })` to simulate the parent closing, before asserting the reopen refocuses a reset, empty row 0. **P3 — two new named functions in each `.vue` file lacked explicit return types**, violating the always-applied `planetdepos.mdc` rule ("Define return types for all functions explicitly"); added `: void` to `setProceedingInputRef` and `focusProceeding` in `NewProceedingsOverlay.vue`, and to `setProceedingInputRef`, `focusProceeding`, `openAddForm`, and `closeAddForm` in `AddProceedingForm.vue`.
+- **Files:** `NewProceedingsOverlay.vue`, `NewProceedingsOverlay.spec.ts`, `AddProceedingForm.vue`, `AddProceedingForm.spec.ts` (all under their respective `atlas-front-end` component paths)
+- **Verification gates:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | atlas-front-end | **FAIL (exit 1)** — 11 high, 12 moderate, 1 low | **Pre-existing, inherited from `main`** (same findings recorded in the 2026-09-11 spec-commit session log: axios, tar, undici, postcss, js-yaml, nanoid, browserslist, brace-expansion, immutable, ip-address, npm). `git diff --stat -- package.json package-lock.json` confirms neither dependency file changed in this session. Residual risk unchanged from prior entries; a dedicated `npm audit fix` ticket remains the right owner. |
+| lint | `npm run lint` | atlas-front-end (`eslint . --max-warnings 0`) | pass (exit 0) | — |
+| tests (scoped) | `npx vitest run --maxWorkers 1 src/callisto/pages/JobProceedingPages/JobDetailPage/components/NewProceedingsOverlay src/callisto/pages/JobSubmissionPages/sections/FileUploadSection/AddProceedingForm` | the two touched suites | pass — 32/32 | — |
+| tests (full) | `npx vitest run --maxWorkers 1` | atlas-front-end, repo-wide | pass — 148 files / 1339 passed, 4 skipped | — |
+| type-check | `npx vue-tsc --noEmit` | atlas-front-end, repo-wide | pass (exit 0) | Caught by the `.husky/pre-push` hook on the **first** push attempt: the `createComposableMock` mock passed a plain `ref(true)` for `canUploadJobSubmissionProceedings`, but the real composable exposes it as a `computed()` (`ComputedRef`), which `vue-tsc` correctly rejected as a type mismatch. Fixed in a second commit (`893f2e96`) by wrapping the mutable test ref in `computed(() => …)` before handing it to `createComposableMock`. |
+
+- **Commits:** `32845a0e` (the four review-finding fixes) and `893f2e96` (type-check fix for the composable mock), both pushed to `PRDV-14184-implementation` on `origin`. First commits on this branch — it previously pointed exactly at `main` (0 commits ahead/behind), which was the P1 finding.
+- **Notes:** No production behavior changed beyond the four cleanup items above — the reviewer's verdict ("production behavior is accurate and within ticket scope, no acceptance-criteria defect") stands unchanged. This session only fixes review-level cleanup on the same diff. API docs — not relevant: no HTTP/contract surface touched, UI-only component and test changes. Regression — isolated: changes confined to the two focus-handling components and their own spec files; no shared infrastructure, other callers, or exported types touched. Branch pushed; implementation PR opened at [#574](https://github.com/planetdepos/atlas-front-end/pull/574), **no reviewer requested** per `git-commit-workflow`. PR body honestly flags that the S1 real-browser smoke test the spec's risk table calls for (`display:none` no-op that happy-dom cannot catch) was **not** performed in this session — automated coverage only.
+
 ### 2026-09-13T00:00:00Z — atlas-front-end (Phase 3 — spec review round 4)
 
 - **Summary:** Reviewer revised the assessment to **approve with one test-plan correction**; implementation design accepted as accurate and in scope. Two defects, both in the proposed tests, neither in production code. **(1)** The spec required a test proving focus "survives row removal" while LD-007 deliberately gives removal no focus behavior — the test asserted a requirement the spec does not make. Replaced with **remove-then-append asserting the active element is the newly appended input**, which covers the real risk (positional keys + `splice` → stale index) as an AC-2 assertion. NP-3 narrowed to what removal owns (no error, no stale-ref exception). **(2)** `document.activeElement.isConnected` was used as the proof of a live ref — but `document.body.isConnected` is `true` and focus falls back to `<body>` when the focused node is removed, so it passed in exactly the failure it was meant to catch. Identity against the expected element is now the assertion. **Notable:** that vacuous assertion sat inside the spec's own **anti-vacuity** section — the assertions written to stop focus tests passing without proving focus.
@@ -145,13 +178,13 @@ _Optional — one subsection per failed or partial approach._
 
 ---
 
-## Current state (as of 2026-09-11)
+## Current state (as of 2026-09-14)
 
 _What is merged / on branch / reverted / still pending._
 
-Phases 0–2 done (capture, recon, investigation report). **No code changed in either repo**; everything so far is documentation under `docs/atlas/PRDV-14184/`. `atlas-front-end` is on `main` (up to date at `420c395a`); `callisto-back-end` is on `main` at `d84a4628` with pre-existing unrelated local changes not touched by this ticket. No branch created yet for PRDV-14184 — that happens in Phase 4/5 per `new-branch-get-started`.
+Implementation committed and pushed to `PRDV-14184-implementation` (`893f2e96` on `origin`, previously identical to `main`). Both create surfaces (`NewProceedingsOverlay.vue`, `AddProceedingForm.vue`) now carry imperative `QInput.focus()` on open and on append, per AC-1/AC-2. Callisto remains untouched (out of scope, confirmed in Phase 2). A post-implementation review found the branch accurate and in-scope with no acceptance-criteria defect, plus four cleanup items (branch not committed; a hand-built composable mock instead of `createComposableMock`; a reopen-focus test that exercised Cancel instead of Save; four new functions missing explicit `void` return types) — all four resolved and logged in the 2026-09-14 session entry above. Not yet opened as a PR.
 
-Investigation verdict: **proceed with conditions.** The fix is imperative focus on collected per-row refs across two surfaces; callisto is out of scope. Three conditions must close before merge — the in-scope-surfaces decision, whether `nextTick` suffices through the overlay's `v-show` + `<Transition>` (browser-verified, not tuned), and the spec assertion mechanism (no focus test exists anywhere in the repo today). Next: Phase 3 (Probe & spec, Working mode).
+Investigation verdict (unchanged): **proceed with conditions**, all since closed — surface scope was confirmed as both surfaces (LD-009/LD-012), `nextTick` was confirmed sufficient through the overlay's `v-show` (LD-006), and the spec assertion mechanism (real Quasar `QInput`, not a stub) shipped as LD-005. Implementation PR opened: https://github.com/planetdepos/atlas-front-end/pull/574 (no reviewer requested). Next: reviewer pass on #574.
 
 ---
 
