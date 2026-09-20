@@ -10,6 +10,50 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### 2026-09-20T00:00:00Z — UX-012: source-range icon was invisible at rest, not just the text line
+
+- **Problem:** after UX-011 removed the redundant "Source" text line, you asked whether source context had been removed altogether — you couldn't see the icon at all. Traced it live via CDP: `.source-range` was `opacity: 0` at rest, only reaching `opacity: 1` on row hover/focus (a leftover from UX-008). A screenshot with no hover applied confirmed genuinely nothing visible at that position.
+- **Solution:** raised default opacity from `0` to `.55` (`styles.css`) — visible but subdued at rest, still brightening to full opacity + accent color on hover/focus. Disabled (`.35`) and touch-device (`opacity: 1`) states stay correctly ordered under the new resting value.
+- **Verification:** `node --test tests/*.test.mjs` — 394 pass, 0 fail, 7 skipped (unchanged). Re-verified live via CDP: computed opacity at rest reads `0.55`; a no-hover screenshot now shows a faint `→` under the timestamp.
+- **Files (Argus, branch `ui-ux-cleanup-fixes`, commit `718637d`, pushed):** `styles.css`. Kept as its own commit, separate from the UX-011 text-line removal and the UX-010 tooltip-wording fix — three distinct issues, three distinct commits.
+
+### 2026-09-20T00:00:00Z — UX-011: drop redundant Source text line from Logged Items rows
+
+- **Problem:** you pointed out that the "Source segment-0 → segment-1" text line under each logged item was still there and now purely redundant with the compact source-range icon (UX-008) and its tooltip (UX-010) — just taking up vertical space.
+- **Confirmed live via CDP:** every derived row's `.row-provenance` was rendering visible with that duplicate text; row height measured 87.6px.
+- **Solution:** stopped showing `.row-provenance` for derived rows in both `createRow` and `updateRow` (`app.js`); it stays reserved for its other, unrelated use — the transcript pane's "Live" provisional-row label. The degraded/unavailable-source explanation that used to live only in that text line now lives on the icon's own `title`/`aria-label`, so nothing is lost.
+- **Verification:** `node --test tests/*.test.mjs` — 394 pass, 0 fail, 7 skipped (unchanged). Re-verified live via CDP: `.row-provenance` renders `hidden: true` on every Logged Items row, row height dropped from 87.6px to 68px, icon tooltip still carries full segment detail, no console errors.
+- **Regression — isolated:** touched only the two derived-row branches in `app.js`; the transcript "Live" provenance path is untouched and was not exercised by this change.
+- **Files (Argus, branch `ui-ux-cleanup-fixes`, commit `2098219`, pushed):** `app.js`.
+
+### 2026-09-18T00:00:00Z — UX-009 traced against real session data; surfaced and fixed UX-010 (source-range tooltip wording)
+
+- **Problem:** you pointed at a specific real-session logged item (`session-76f20315-8e22-48de-9a61-132738027bb2`, `logged-item-ee584dedb9eb4631d5314c11`, "The true up filter change...") where the tooltip showed a range ending at `00:22:08.128`, and a transcript line at that same timestamp ("Wow, that's something here it is") appeared to be missing from the range — looking like the UX-009 "2 of 3 highlighted" defect, now with a real (non-demo) example.
+- **Investigation:** traced `active/logged-items.json` and `active/transcript.json` directly. The item's `source` is `segment-144 → segment-145` (2 segments) — the exact, complete pair whose text concatenates to the logged item's paraphrase. The apparent "third item" is segment-146, a separate, unrelated aside ("Wow, that's something here it is") that starts at the exact instant segment-145 ends, because Argus segments are contiguous with no gap. **Verdict: the range itself was correct — segment-146 was rightly excluded.**
+- **What was actually wrong:** the tooltip's own wording. Stating a cited range as "...through segment-145 (00:22:08.128)" is indistinguishable from "collection continued up to and touching whatever comes next," because that end_time is *always* identical to the next (possibly uncollected) segment's start_time when segments are contiguous. That ambiguity, not a highlighting defect, is what made this instance look like a bug.
+- **Solution:** added `describeSourceRange()` in `app.js` (used in both `createRow` and `updateRow`), which resolves the actual segment count via the existing `resolveSourceRangeIds` and states it explicitly — e.g. `"Exact source: 2 segments considered (segment-144 → segment-145), spoken 00:21:50.464–00:22:08.128"` — so the tooltip reads as a bounded, discrete set of segments rather than an open time window. Falls back to id/time-only phrasing (no fabricated count) when the cited segments aren't in the currently loaded transcript.
+- **Verification:** `node --test tests/*.test.mjs` — 394 pass, 0 fail, 7 skipped (unchanged). Re-verified live via CDP against the browser-bridge demo: a two-segment item now shows "2 segments considered," the known three-segment item shows "3 segments considered," no console errors.
+- **Regression — isolated:** touched only `app.js` (added one helper function, two call sites updated to use it); no other files, no contract/runtime changes.
+- **Files (Argus, branch `ui-ux-cleanup-fixes`, commit `ac3e9a3`, pushed):** `app.js`.
+- **Not done:** UX-009 as a general class remains open — this was one instance, confirmed not a defect. If a genuinely wrong range turns up, trace it the same way (compare the item's `source` against `active/transcript.json`) before assuming the highlighting code is at fault. Tracking doc: `docs/Argus/ui-ux-cleanup-fixes.md` (UX-009's instance write-up, UX-010).
+
+### 2026-09-17T00:00:00Z — UI/UX cleanup pass: column alignment fix, Logged Items badge/layout cleanup
+
+- **Problem:** the Logged Items pane's header and row columns didn't line up (headers sat left of their own data), the per-row source-range control pushed logged-item text far to the right, most Logged Items rows showed an alarming red "unavailable" badge despite the badge's own text saying "editing unaffected," and several smaller polish issues (hover-color token drift, indistinct destructive icon button, hover-only row action with no touch fallback, pane title losing a truncation fight to a transient status badge) were found by static review and live CDP inspection. Full findings collection: `docs/Argus/ui-ux-cleanup-fixes.md` (UX-001 through UX-009).
+- **Requirement:** column headers must align with their own row data; badge color must track actual severity, not contradict its own label text; reclaim horizontal space in Logged Items for the actual logged-item text; each smaller polish item resolved as scoped in its own entry.
+- **Solution:** on branch `ui-ux-cleanup-fixes` (Argus repo, commit `87029b4`):
+  - Root-caused the column misalignment to two separate CSS Grid mechanisms — `ch`-unit tracks resolving against each grid container's own font (header vs. row), compounded by default grid-item content blowout on 8-character timestamps — and fixed it by switching the time column to a fixed `64px` track with `min-width: 0` on the new wrapper, not a numbers-only tweak.
+  - Collapsed the per-row source-range control into a compact hover-reveal icon stacked under the timestamp (per your request), dropping the derived pane's separate "Source context" header column entirely — transcript and derived rows now share one 4-column template. Click-to-jump-and-highlight behavior preserved and re-verified.
+  - Recolored the classification "unavailable/degraded" badge to neutral (it's unconditionally non-blocking per `describeClassification`); left service-status chip red alone since that's a legitimate down-service signal, not a mislabeled non-issue.
+  - Replaced hardcoded hover hex + `!important` on three buttons with `--accent-hover`/`--red-hover` tokens, fixing the actual specificity gap instead of overriding it.
+  - Gave the destructive Close Session icon a resting red tint, made the row-copy (and new source-range) icons visible on no-hover devices via `@media (hover: none)`, and gave the pane title shrink-priority over the transient scribe-status badge.
+  - **Not resolved:** UX-009 (reported source-range highlight gap, "3 items but only 2 highlighted") — reproduced the exact scenario shape against the browser-bridge demo (a logged item citing a 3-segment span) and all 3 transcript rows highlighted correctly with matching computed styles. Could not reproduce the reported gap against the demo's synthetic, gapless segment data; needs a real-session repro (exact item + transcript sequence values) before the actual defect can be located.
+- **Verification:** `node --test tests/*.test.mjs` — 394 pass, 0 fail, 7 skipped (unchanged from the suite's existing baseline shape). `npm audit --audit-level=high` — 22 high/1 critical, confirmed pre-existing via `git stash` against `main` (unrelated to this change; no `package.json`/lockfile touched). No lint script defined in this repo. Column-alignment fix and row-restructure re-measured live via CDP (`getBoundingClientRect`) pre/post; source-range click-to-jump re-tested post-refactor on the same 3-segment case used to investigate UX-009.
+- **Regression — isolated:** touched only `app.js` (row creation/update DOM wiring + service-chip title), `index.html` (row template structure, derived column headers), and `styles.css`. No contracts, runtime, or backend files touched; confirmed via the full test suite passing unchanged and via `els` binding test (`tests/ui-dom-bindings.test.mjs`) which asserts every required element id still resolves against the HTML.
+- **API docs:** not relevant — no HTTP/API surface in this repo; this is a static browser UI over the existing local loopback bridge.
+- **Files (Argus, branch `ui-ux-cleanup-fixes`, commit `87029b4`, pushed to `origin/ui-ux-cleanup-fixes`):** `app.js`, `index.html`, `styles.css`.
+- **Not done, deliberately:** UX-009 left open (needs real-session data, not guessable). Branch pushed but not merged — created explicitly for review before merge, per your instruction.
+
 ### 2026-09-13T00:00:00Z — SCRIBE-06 correction: severity claim retracted, acceptance scope narrowed
 
 - **Why:** review of `b2fb62a` returned **do not merge**. The findings were correct. This entry corrects the record; the previous SCRIBE-06 entry below stands as written except where contradicted here.
@@ -194,7 +238,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 - **User validation:** Created a fresh [Phase 7 corrective revalidation review](../../../Argus/docs/review/v0.1.0-phase-7-corrective-revalidation-validation-review.md). Its four objectives are pending Dustin's hands-on confirmation, and the superseded review remains unchanged as historical evidence.
 - **Scope:** Focused Phase 7 presentation corrections only. No owner, command route, contract, transport, listener scope, framework, Phase 8 behavior, microphone, STT, or model integration changed.
 
-### 2026-08-21 — Argus
+### 2026-08-21 — Argus: Phase 7 corrective startup-path fixes
 
 - **Summary:** Corrected the shared Phase 7 browser startup path discovered during hands-on validation. Registered the missing `includeTimestamps` element, added a named required-element guard and permanent selector-drift regression, corrected logged-item copy command mapping, exposed explicit bridge connection state in the existing footer status treatment, and clarified session Stop versus terminal `Ctrl+C`.
 - **Browser evidence:** A transient Playwright 1.62.1 run against installed Google Chrome passed 1/1 in 11.7 seconds with zero page errors. It exercised bootstrap/SSE, Record and deterministic live projections, transcript/logged-item edits, exact provenance, selection, timestamp-aware copy through a fake capability, Stop preservation, Resume, Close, top-positioned toasts, and bridge disconnect feedback. Playwright was not added as a dependency.
@@ -202,13 +246,13 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 - **Validation status:** The corrective implementation checklist is complete except for user revalidation. D1–D5 and the user's notes remain unchanged; Phase 8 remains paused until that hands-on revalidation is recorded.
 - **Scope:** Focused Phase 7 correction only. No microphone/STT/model, desktop shell, Playwright dependency, Phase 8 permissions, or architecture redesign was added.
 
-### 2026-08-21 — Argus
+### 2026-08-21 — Argus: Phase 7 browser POC validation review (D2–D5 regressions found)
 
 - **Summary:** Created the version-specific Phase 7 browser POC [user validation review](../../../Argus/docs/review/v0.1.0-phase-7-browser-poc-validation-review.md) for Argus v0.1.0.
 - **Validation status:** Empty-state layout and visual clarity passed. Hands-on review then found no observable Record, transcript/logged-item, editing/copy, or session-command response, so D2–D5 failed and D1 remains pending clarification. The linked review now contains the corrective checklist; Phase 8 should wait for revalidation.
 - **Implementation impact:** Documentation only. No application behavior, contract, wiring, package, or test result changed.
 
-### 2026-08-19 — Argus
+### 2026-08-19 — Argus: Phase 7 UI Boundary implementation
 
 - **Summary:** Implemented Phase 7 UI Boundary as one cohesive batch. Added six governed browser-facing contracts, a loopback-only Node HTTP/SSE bridge, projection validation, closed UI command validation, owner-routed optimistic transcript/logged-item edits, deterministic clipboard/folder capability adapters, UI-owned selection/scroll state, exact source-range rendering, and independent degraded states.
 - **User-visible impact:** The existing HTML look and feel remains recognizable, but rows now arrive from explicit bridge projection events. Provisional transcript rows are read-only, finalized edits are owner-accepted before becoming authoritative, copy/open-folder controls report capability outcomes, and service/capability status is visible per boundary.
@@ -216,7 +260,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 - **Verification:** `node --test tests/ui-boundary.test.mjs` passed 6/6; `npm.cmd run demo:ui:smoke` passed with 24 validated bootstrap projections; `npm.cmd test` passed 113/113; `npm.cmd run contracts:check` passed for 53 governed messages; `npm.cmd run contracts:docs:check` reported current generated documentation.
 - **Intentional limits:** The bridge is local and deterministic. No Electron, Tauri, remote hosting, authentication, framework, database, real microphone/STT/model integration, broad permissions, or observability was added. `APP-001` and `UI-001` remain unresolved.
 
-### 2026-08-19 — Argus
+### 2026-08-19 — Argus: Phase 6 Sessions and Storage implementation
 
 - **Summary:** Implemented Phase 6 Sessions and Storage as one complete batch. Added governed versioned Record/Stop/Resume/Close and folder-locator contracts, a root-scoped replaceable filesystem storage boundary, durable active transcript/logged-item snapshots, append-only NDJSON histories, idempotent close evidence, bounded active revision caching, and deterministic crash recovery before and after every close-finalization phase.
 - **Plan used:** Preserve default-deny ownership, at-least-once replay, stable session/revision identities, ephemeral raw audio, and the existing Phase 4–5 message boundaries. Use Node built-ins only for the POC and keep JSON/NDJSON behind service/storage owners so an embedded database remains a later replacement option.
@@ -236,7 +280,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 - **Phase 4E closure:** Complete. The long-monologue proof now demonstrates bounded active revision cache, bounded graph queues, maximum-latency closure, durable transcript/history preservation, and valid revision behavior after eviction/reload.
 - **Conflicts / exceptions:** This is replaceable local POC storage, not production-grade/global durability. No database, storage SDK, backup, synchronization, encryption, migration, cloud storage, real microphone/STT, UI integration, Phase 7 work, or broad permission enforcement was added. The globally shared durable AI journal remains explicitly deferred.
 
-### 2026-08-19 — Argus
+### 2026-08-19 — Argus: Phase 5B.1 boundary hardening
 
 - **Summary:** Completed Phase 5B.1 boundary hardening without expanding product scope. The model request/result protocol is now governed by versioned `ai.work-request@1.4.0` and `ai.work-completed@1.4.0` shapes with valid/invalid fixtures; sibling-service implementation imports are removed; endpoints are loopback-only HTTP; classification receives explicit transcript context; pending state is bounded and cleaned; purpose is bound to workload; and model configuration is manifest-allowlisted.
 - **Plan used:** Correct only the Phase 5B boundaries identified in the focused review. Preserve deterministic fakes, the existing extraction/classification graph positions, concurrency-one priority behavior, and optional classification degradation. Defer the durable globally shared AI journal to integrated application/storage work coordinated with Phase 6.
@@ -252,6 +296,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 | generated-doc drift | `npm.cmd run contracts:docs:check` | Human-readable contract reference | pass — current | — |
 
 - **Conflicts / exceptions:** `MOD-001` remains evidence-needed for a production local server/model. The Phase 5B model lane is graph-local with an in-memory journal; no cross-process global scheduler or durable global journal claim is made. Existing demos and measurement matrices were not rerun in this corrective batch per scope.
+
 ### 2026-08-19T16:00:00Z — Argus
 
 - **Summary:** Completed Argus Phase 5B: a provider-neutral, environment-configured local HTTP model adapter now replaces the deterministic logged-item extractor through the existing `logged-item-extraction` scheduler workload. The adapter enforces exact finalized source/context, policy and instruction identity, bounded budgets, strict structured output, stable request identity, explicit retryable failures, and no guessed item on failure. Optional lowest-priority classification produces revision-bound suggestions without mutating active or permanent history.
@@ -272,6 +317,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 | Phase 5B demo | `npm.cmd run demo:logged-item-model` | Deterministic local HTTP extraction/classification graph | pass | Deterministic endpoint only; no production model selected. |
 
 - **Conflicts / exceptions:** `MOD-001` remains evidence-needed for the local server/model and safe production defaults. The model lane is one shared scheduler process for this graph; the older standalone transcription gate remains a separate Phase 4 adapter graph, so no cross-process global-scheduler claim is made. Phase 6, browser UI integration, provider selection, credentials, packages, durable storage, microphone, and real STT were not started.
+
 ### 2026-08-19T15:38:51Z — Argus
 
 - **Summary:** Verified the completed Phase 5A proof and authorized the bounded Phase 5B local-model-adapter/classification batch. The focused four-test suite and six-service logged-item graph reran successfully with zero rejections or dead letters.
@@ -338,6 +384,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 | context graph | `npm.cmd run demo:context` | Phase 4D nine-process finalized-context graph | pass | — |
 | scaling evidence | `npm.cmd run measure:runtime` | Existing 4/8/12 service-process measurement | pass — JSON metrics produced | POC evidence only; Phase 4F transport benchmark was not started. |
 | documentation links | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\dktho\OneDrive\SCRIPTS ALL SYSTEMS\To Do List\WorkLists\argus-phase4e-stage\validate-markdown-links.ps1' -Live` | Promoted Phase 4E evidence, TODO, README, DOCS, pending decisions, and four canonical records | pass — 9 documents, 8 local links | The default script policy blocked the first staged invocation, and the first live invocation used an incorrect relative script path; the final read-only live-tree command passed. No HTTP links were involved. |
+
 - **Tests added/updated:** Added three Phase 4E cases. They prove actual long-fixture closure by configured size and maximum latency, bounded graph queue depth, four contiguous/non-overlapping synthetic source ranges with bounded related context, exact PCM redelivery through the gate/STT/active/history chain, unique logical word/revision/history identity, terminal conflict reuse, and a paused/resumed same-process active owner with late/stale rejection. The Phase 4C fake-STT case now asserts domain-event interleaving, and the edit case asserts unchanged word provenance after revision 1.
 - **Regression impact:** All 78 Phase 4D tests remain green. The suite grows to 81. The service protocol now stores an output fingerprint separately from optional retained outputs, allowing `retainOutputs: false` operations to re-handle duplicates without retaining raw PCM. Catalog 1.6.0, all 32 contracts, fixtures, generated reference, packages, lockfile, browser UI, graphs, and immutable comparison baseline remain unchanged.
 - **API docs:** No HTTP/OpenAPI surface and no process-contract schema/catalog change; the generated contract reference remains current.
@@ -371,6 +418,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 | three executable graphs | existing concise and passthrough commands plus `npm.cmd run demo:transcript` | Both extractor replacements and five-process transcript working-document proof | pass | First transcript run exposed missing observer wires for finalized/active projections; explicit result-collector wires were added and the rerun passed. |
 | scaling evidence | `npm.cmd run measure:runtime` | Existing 4/8/12 service-process scaling proof | pass — JSON metrics produced | POC evidence only; Phase 4F will benchmark PCM transport separately. |
 | dependency audit | `npm.cmd audit --omit=dev` | Production dependency tree | pass — 0 vulnerabilities | No package or lockfile change. |
+
 - **Tests added/updated:** Added 11 Phase 4C cases and updated the future-version sentinel. Tests prove actual bounded PCM chunks; deterministic long/silence/correction fixtures; no emitted raw-audio bytes; corrupt/checksum, contradictory chunk-ID reuse, gap, late, and replay behavior; correction component isolation; 0.90 automatic acceptance versus focused review flags; optimistic edit/stale rejection; revision-complete append history; graph completion and no partial leakage; state restart fail-closed; health/drain conformance; and transcription → correction/formatting → extraction → classification scheduling.
 - **Regression impact:** All 61 Phase 4B tests remain green. Governed messages grow from 28 to 31; catalog advances to 1.5.0. AI work, stored/history segment projections, and finalized segments advance additively while retained fixtures replay. The runtime protocol can emit the catalog version required by additive outputs. Existing browser code, packages, existing graphs, and immutable baseline are unchanged.
 - **API docs:** No HTTP/OpenAPI surface. Generated process-contract reference is current.
@@ -393,6 +441,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 | concise and alternate graphs | `node runtime/orchestrator.mjs wiring/demo.concise.json`; `node runtime/orchestrator.mjs wiring/demo.passthrough.json` | Existing replaceable extractor graphs under the evolved catalog | pass | Phase 4C transcript component graph is not implemented yet. |
 | scaling evidence | `npm.cmd run measure:runtime` | Existing 4/8/12-process proof after catalog/registry evolution | pass — JSON metrics produced | Values remain POC evidence, not production thresholds. |
 | dependency audit | `npm.cmd audit --omit=dev` | Installed production dependency tree | pass — 0 vulnerabilities | Isolated staging lacked registry/cache-log access; the approved live-workspace rerun passed. |
+
 - **Tests added/updated:** Added seven Phase 4B tests. They validate all new compatibility fixtures; PCM format/base64/byte/sample/checksum bounds; absence of durable authority in partial projections; acoustic alternatives and versioned contextual-prompt provenance; original STT/word/formatting evidence through active and history payloads; backward-compatible 1.0 segment/context replay; and bounded versioned logged-item generation directives.
 - **Regression impact:** All 54 Phase 3 tests remain green. Governed messages grow from 20 to 28. `transcript.segment` advances additively from 1.2.0 to 1.3.0 and changes accountable owner from capture to active state; retained 1.0.0 fixtures continue to replay. Existing services, graphs, packages, browser code, and immutable POC baseline are unchanged.
 - **API docs:** No HTTP/OpenAPI surface. Generated process-contract reference is current.
@@ -410,6 +459,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 | Gate | Command | Scope | Result | Exception / risk |
 | --- | --- | --- | --- | --- |
 | Markdown reference/link audit | PowerShell resolver plus `rg` cross-reference checks over the staged repository and canonical artifacts | New pending-decision links, Phase 4 checklist references, ADR references, canonical index, current state, plan, features, and decision IDs | pass | Runtime tests not triggered: documentation/planning only; no runtime, schema, contract catalog, service, wiring, dependency, or UI file changed |
+
 - **Regression impact:** Documentation-only and isolated from executable behavior. Checked `runtime/`, `contracts/`, `services/`, `wiring/`, `tests/`, `package.json`, browser HTML/CSS/JS, and the immutable POC baseline; none are changed by this session.
 - **API docs:** No HTTP/OpenAPI surface and no process-contract schema/catalog change; generated contract reference is intentionally unchanged.
 - **Conflicts / exceptions:** No new package was installed because Phase 4 can begin with Node built-ins, Ajv, deterministic PCM fixtures, and fake components. Real microphone/STT/model/storage/transport choices remain explicitly deferred until their evidence trigger is reached.
@@ -431,6 +481,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 | concise and alternate graphs | `node runtime/orchestrator.mjs wiring/demo.concise.json`; `node runtime/orchestrator.mjs wiring/demo.passthrough.json` | Both replaceable extractors through identity-aware readiness, work, result, completion, drain, and exit | pass | — |
 | scaling evidence | `npm.cmd run measure:runtime` | 1/2/3 parallel pipelines: 4/8/12 service processes and per-instance producer namespaces | pass — JSON metrics produced | Values are POC evidence, not production thresholds |
 | dependency audit | `npm.cmd audit --omit=dev` | Installed production dependency tree | pass — 0 vulnerabilities | Initial sandbox registry/cache access was restricted; approved rerun passed |
+
 - **Tests added/updated:** Added or updated 12 Phase 3 cases, including the explicit rejection-wiring invariant. Proofs cover current envelope identity, exact replay, fatal ID/key conflicts, fingerprint tamper, independent session sequence, duplicate/gap/late selector behavior, optimistic update idempotency, stale classification rejection, single-lane priority/FIFO, non-preemption, bounded no-drop admission, slow-journal admission order, unfinished recovery, completed-result replay after restart, and same-implementation multi-instance producer isolation.
 - **Regression impact:** All 42 Phase 2 tests remain green. Catalog messages grow from 14 to 20 and current emitters move to envelope 1.2.0; retained 1.0.0 fixtures still replay. Demo control wires grow from 29 to 31 because rejection is explicit. The final measurement gate exposed a same-implementation producer collision, resolved by injecting the graph service-instance ID through the trusted provider and rejecting mismatched producer claims.
 - **API docs:** No HTTP/OpenAPI surface. Generated process-contract reference is current.
@@ -453,6 +504,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 | concise and alternate graphs | `npm.cmd run demo`; `npm.cmd run demo:alternate` | Both extractor replacements through readiness, work receipts, result, completion, drain, and exit paths | pass | — |
 | scaling evidence | `npm.cmd run measure:runtime` | 1/2/3 parallel pipelines: 4/8/12 service processes | pass — JSON metrics produced | Values are POC evidence, not production thresholds |
 | dependency audit | `npm.cmd audit --omit=dev` | Installed production dependency tree | pass — 0 vulnerabilities | Initial sandbox request could not reach registry; approved network rerun passed |
+
 - **Tests added/updated:** Added 13 Phase 2 supervision cases and fault fixtures. The suite proves fail-closed unsupported providers, readiness failure, operation timeout without implicit retry, exact-wire retry, dead-letter exhaustion, stateless restart with unfinished-input replay, restart exhaustion, explicitly optional degradation, stateful recovery-owner validation, bounded queue overflow, undeclared output failure, drain deadline, and resource evidence.
 - **Regression impact:** Both existing extractor implementations remain interchangeable and all 29 pre-Phase-2 assertions remain green after being updated to distinguish domain outputs from explicit operation receipts. The catalog grows from 7 to 14 governed messages. Manifests move from `runtime.command` to discriminated `runtime.kind`.
 - **API docs:** No HTTP/OpenAPI surface. Generated process-contract reference is current.
@@ -471,6 +523,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 | --- | --- | --- | --- | --- |
 | documentation links | PowerShell Markdown-link resolver over the staged root strategy, README, and component guide | New navigation and relative references | pass — all links resolve | Directional manifest examples are intentionally non-executable |
 | full regression | `npm.cmd test` | Existing contract governance, compatibility, isolated services, wiring, failure/completion, and replacement behavior | pass — 29 tests, 0 failures | No polyglot launcher behavior exists yet, so no cross-runtime test can honestly run |
+
 - **Tests added/updated:** None; this session documents and schedules architectural direction without changing executable behavior.
 - **Regression impact:** The current service-manifest schema remains Node-only and the orchestrator still launches `process.execPath`. Roadmap additions are unchecked deliberately. Existing contract governance and graph behavior are unchanged.
 - **API docs:** Not relevant — no HTTP/Swagger surface; the artifact governs process/runtime boundaries.
@@ -512,6 +565,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 | --- | --- | --- | --- | --- |
 | documentation links | PowerShell local Markdown-link resolver over `.argus-docs-stage\*.md` | Relative links across the four canonical documents | pass — all relative links resolve | Absolute artifact paths were separately confirmed to exist; future paths cannot be predicted |
 | architecture regression | `node --test tests/service-contract.test.mjs tests/wiring.test.mjs tests/integration.test.mjs` | Contracts, isolated services, two-plane wiring, failure/completion routing, and extractor replaceability | pass — 20 tests, 0 failures | Browser visuals were not changed; no additional visual regression pass was required |
+
 - **Tests added/updated:** None; this session changes documentation only.
 - **Regression impact:** No runtime, contract, schema, service, wiring, UI, or archived POC files were changed. The live repository receives only a documentation pointer.
 - **API docs:** Not applicable; Argus has no HTTP/OpenAPI surface in the current proof.
@@ -580,7 +634,8 @@ These date-level milestones reconstruct the work completed before this canonical
 | 2026-08-12 | Explicit control-plane resolution | Made lifecycle, supervision, result collection, and completion visible graph participants; documented the finite runtime kernel authority. |
 | 2026-08-12 | POC v1 preservation | Created an immutable comparison folder, ZIP, and SHA-256 sidecar without changing the live project. |
 | 2026-08-12 | Runtime supervision proof | Added runtime-neutral provider boundary, readiness, operation outcomes, drain, queue bounds, timeout, retry/dead-letter, restart/recovery, and scaling evidence. |
-# 2026-08-24 — Electron operational completion
+
+## 2026-08-24 — Electron operational completion
 
 Implemented and provisioned the remaining real Electron path. `npm.cmd run setup:real` now fails closed and idempotently provisions whisper.cpp v1.9.1, `ggml-base.en.bin`, Ollama 0.32.15, and `llama3.2:3b`, recording exact paths, model identity, and SHA-256 values only after real probes pass. The packaged app bundles the final Whisper executable, required DLLs, and model while excluding the source/build cache.
 

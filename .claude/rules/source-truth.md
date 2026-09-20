@@ -2,7 +2,7 @@
 
 ## Source Truth Stop Rule
 
-If the user asks for exact labels, exact mappings, exact wording, evidence selection, screenshot identification, PR text, commit text, ticket text, or anything that depends on a previously defined artifact, you MUST use the artifact itself as source truth.
+If the user asks for exact labels, exact mappings, exact wording, evidence selection, screenshot identification, PR text, commit text, ticket text, or anything that depends on a previously defined artifact, you MUST use the artifact/codebase/etc. itself as source truth.
 
 A source-dependent answer is any answer that depends on exact prior wording, exact labels, exact mappings, screenshot or evidence selection, PR body text, ticket text, acceptance criteria, commit text, test matrix rows, or any previously defined artifact.
 
@@ -37,11 +37,11 @@ This rule overrides any instruction to be proactive, avoid friction, keep moving
 
 When mapping screenshots, test evidence, validation rows, PR proof, QA scenarios, or matrix items:
 
-- Use exact scenario names from the matrix or test plan.
-- Use exact screenshot identifiers, filenames, or visible screenshot contents provided by the user.
-- If either the matrix/test plan or screenshot identifiers are missing, STOP.
-- Do not rename scenarios.
-- Do not renumber scenarios.
-- Do not collapse rows unless the user explicitly says to.
-- Do not select screenshots from memory.
-- Do not continue because asking the user might create friction.
+* Use exact scenario names from the matrix or test plan.
+* Use exact screenshot identifiers, filenames, or visible screenshot contents provided by the user.
+* If either the matrix/test plan or screenshot identifiers are missing, STOP.
+* Do not rename scenarios.
+* Do not renumber scenarios.
+* Do not collapse rows unless the user explicitly says to.
+* Do not select screenshots from memory.
+* Do not continue because asking the user might create friction.

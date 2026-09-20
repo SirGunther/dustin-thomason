@@ -14,7 +14,9 @@
        even ones that do not include dustin-thomason as a workspace folder.
     4. Set user env var CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 so path-scoped rules and
        CLAUDE.md also load natively when dustin-thomason IS an --add-dir workspace root.
-    5. (-MirrorSkills) Copy agents/skills/** into ~/.claude/skills so skills work even in
+    5. Copy agents/hooks/** into ~/.claude/hooks and register the phrase guard Stop hook in
+       ~/.claude/settings.json, so it applies in every project on this machine.
+    6. (-MirrorSkills) Copy agents/skills/** into ~/.claude/skills so skills work even in
        sessions that do not include dustin-thomason as a workspace root.
 
   Steps 1-2 write inside the repo; steps 3-5 modify your user profile (~/.claude, user env) and
@@ -46,6 +48,7 @@ $agentsDir = Split-Path -Parent $PSScriptRoot
 $repoRoot = Split-Path -Parent $agentsDir
 $syncScript = Join-Path $PSScriptRoot 'sync-rules.ps1'
 $repoManifest = Join-Path $repoRoot '.claude\CLAUDE.md'
+$hooksSource = Join-Path $agentsDir 'hooks'
 
 $beginMarker = '<!-- dustin-thomason:begin (managed by agents/scripts/bootstrap.ps1) -->'
 $endMarker = '<!-- dustin-thomason:end -->'
@@ -55,15 +58,80 @@ function Write-Utf8NoBom([string]$Path, [string]$Content) {
     [System.IO.File]::WriteAllText($Path, $normalized, [System.Text.UTF8Encoding]::new($false))
 }
 
+function Add-PhraseGuardHook([string]$UserClaudeDir, [string]$HooksSource, [bool]$DryRun) {
+    $guardSource = Join-Path $HooksSource 'phrase-guard.js'
+    $phraseSource = Join-Path $HooksSource 'banned-phrases.txt'
+    if (-not (Test-Path -LiteralPath $guardSource) -or -not (Test-Path -LiteralPath $phraseSource)) {
+        throw "Expected phrase-guard.js and banned-phrases.txt under $HooksSource."
+    }
+
+    $hooksDest = Join-Path $UserClaudeDir 'hooks'
+    $guardDest = Join-Path $hooksDest 'phrase-guard.js'
+    $phraseDest = Join-Path $hooksDest 'banned-phrases.txt'
+    $settingsPath = Join-Path $UserClaudeDir 'settings.json'
+
+    Write-Host "[5/6] Installing global phrase guard hook -> $guardDest"
+    if ($DryRun) {
+        Write-Host "  would copy $guardSource and $phraseSource"
+        Write-Host "  would register a Stop hook in $settingsPath"
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $hooksDest)) {
+        New-Item -ItemType Directory -Path $hooksDest -Force | Out-Null
+    }
+    Copy-Item -LiteralPath $guardSource -Destination $guardDest -Force
+    Copy-Item -LiteralPath $phraseSource -Destination $phraseDest -Force
+
+    $settings = if (Test-Path -LiteralPath $settingsPath) {
+        ConvertFrom-Json ([System.IO.File]::ReadAllText($settingsPath))
+    }
+    else {
+        [pscustomobject]@{}
+    }
+    if (-not $settings.PSObject.Properties['hooks']) {
+        $settings | Add-Member -NotePropertyName 'hooks' -NotePropertyValue ([pscustomobject]@{})
+    }
+    $hooks = $settings.hooks
+    $stopHooks = if ($hooks.PSObject.Properties['Stop']) { @($hooks.Stop) } else { @() }
+    $alreadyRegistered = $false
+    foreach ($group in $stopHooks) {
+        foreach ($handler in @($group.hooks)) {
+            if ($handler.type -eq 'command' -and $handler.command -eq 'node' -and @($handler.args) -contains $guardDest) {
+                $alreadyRegistered = $true
+            }
+        }
+    }
+    if (-not $alreadyRegistered) {
+        $phraseGuardHandler = [pscustomobject]@{
+            type = 'command'
+            command = 'node'
+            args = @($guardDest)
+        }
+        $phraseGuardGroup = [pscustomobject]@{
+            hooks = @($phraseGuardHandler)
+        }
+        $newStopHooks = @($stopHooks) + @($phraseGuardGroup)
+        if ($hooks.PSObject.Properties['Stop']) {
+            $hooks.Stop = $newStopHooks
+        }
+        else {
+            $hooks | Add-Member -NotePropertyName 'Stop' -NotePropertyValue $newStopHooks
+        }
+    }
+
+    Write-Utf8NoBom $settingsPath (ConvertTo-Json $settings -Depth 10)
+}
+
 # --- Step 1: enable the auto-regeneration pre-commit hook (in-repo git config) ---
-Write-Host '[1/5] Enabling pre-commit hook (git config core.hooksPath scripts/git-hooks)...'
+Write-Host '[1/6] Enabling pre-commit hook (git config core.hooksPath scripts/git-hooks)...'
 if (-not $DryRun) {
     Push-Location $repoRoot
     try { & git config core.hooksPath scripts/git-hooks } finally { Pop-Location }
 }
 
 # --- Step 2: regenerate every sync output ---
-Write-Host '[2/5] Regenerating sync outputs (sync-rules.ps1)...'
+Write-Host '[2/6] Regenerating sync outputs (sync-rules.ps1)...'
 if ($DryRun) { Write-Host '  (dry run - skipped)' } else { & $syncScript }
 if (-not $DryRun -and -not (Test-Path -LiteralPath $repoManifest)) {
     throw "Expected manifest not found at $repoManifest - did sync-rules.ps1 run?"
@@ -75,7 +143,7 @@ $userClaude = Join-Path $userClaudeDir 'CLAUDE.md'
 $importPath = ($repoManifest -replace '\\', '/')   # forward slashes are safe for the @import parser
 $block = "$beginMarker`n@$importPath`n$endMarker"
 
-Write-Host "[3/5] Wiring $userClaude -> @$importPath"
+Write-Host "[3/6] Wiring $userClaude -> @$importPath"
 $existing = ''
 if (Test-Path -LiteralPath $userClaude) {
     $existing = ([System.IO.File]::ReadAllText($userClaude) -replace "`r`n", "`n") -replace "`r", "`n"
@@ -94,18 +162,21 @@ else {
 
 # --- Step 4: env var so add-dir workspace roots contribute CLAUDE.md + path-scoped rules ---
 if ($SkipEnvVar) {
-    Write-Host '[4/5] Skipping env var (per -SkipEnvVar).'
+    Write-Host '[4/6] Skipping env var (per -SkipEnvVar).'
 }
 else {
-    Write-Host '[4/5] Setting user env var CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1'
+    Write-Host '[4/6] Setting user env var CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1'
     if (-not $DryRun) { [Environment]::SetEnvironmentVariable('CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD', '1', 'User') }
 }
 
-# --- Step 5: optional skills mirror for solo-repo sessions ---
+# --- Step 5: install and register the all-project phrase guard hook ---
+Add-PhraseGuardHook $userClaudeDir $hooksSource ([bool]$DryRun)
+
+# --- Step 6: optional skills mirror for solo-repo sessions ---
 if ($MirrorSkills) {
     $skillsSource = Join-Path $agentsDir 'skills'
     $skillsDest = Join-Path $userClaudeDir 'skills'
-    Write-Host "[5/5] Mirroring skills -> $skillsDest"
+    Write-Host "[6/6] Mirroring skills -> $skillsDest"
     if (-not $DryRun) {
         if (-not (Test-Path -LiteralPath $skillsDest)) { New-Item -ItemType Directory -Path $skillsDest -Force | Out-Null }
         foreach ($skill in (Get-ChildItem -LiteralPath $skillsSource -Directory -ErrorAction SilentlyContinue)) {
@@ -116,7 +187,7 @@ if ($MirrorSkills) {
     }
 }
 else {
-    Write-Host '[5/5] Skipping skills mirror (skills already load from --add-dir roots; use -MirrorSkills for solo sessions).'
+    Write-Host '[6/6] Skipping skills mirror (skills already load from --add-dir roots; use -MirrorSkills for solo sessions).'
 }
 
 Write-Host ''
