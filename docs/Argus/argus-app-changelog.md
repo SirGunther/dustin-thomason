@@ -10,6 +10,14 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### 2026-09-20T00:00:00Z — Merged ui-ux-cleanup-fixes into main; feature branch deleted
+
+- **Why:** review was declared done ("we've got all the issues worked out for the moment"); the branch existed explicitly for review-then-merge, so its purpose was fulfilled.
+- **Solution:** `git checkout main && git pull`, `git merge --no-ff ui-ux-cleanup-fixes` (clean merge, no conflicts), full test suite re-run twice on the merged `main` before pushing, `git push origin main`, then deleted the branch both locally (`git branch -d`) and on `origin` (`git push origin --delete`).
+- **Verification:** `node --test tests/*.test.mjs` — 394 pass, 0 fail, 7 skipped, run twice consecutively on the merged `main` before push. First run showed a mid-stream assertion trace from `scribe-production-integration.test.mjs` that did not affect the final tally; a clean second run confirmed it was not a regression from the merge (my changes this session never touched Scribe/coordinator code — UI-layer files only).
+- **Files (Argus, `main`, merge commit `eb95998`, pushed):** merges `app.js`, `index.html`, `styles.css` from `ui-ux-cleanup-fixes` (commits `87029b4`, `ac3e9a3`, `2098219`, `718637d`).
+- **Not done:** UX-009 as a general class remains open (see the 2026-09-18 and 2026-09-20 entries below); UX-008's redesign direction (click-to-copy vs. click-to-jump) was never explicitly confirmed, just implemented and shipped per your "resolve everything" instruction.
+
 ### 2026-09-20T00:00:00Z — UX-012: source-range icon was invisible at rest, not just the text line
 
 - **Problem:** after UX-011 removed the redundant "Source" text line, you asked whether source context had been removed altogether — you couldn't see the icon at all. Traced it live via CDP: `.source-range` was `opacity: 0` at rest, only reaching `opacity: 1` on row hover/focus (a leftover from UX-008). A screenshot with no hover applied confirmed genuinely nothing visible at that position.
