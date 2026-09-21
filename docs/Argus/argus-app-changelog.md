@@ -10,6 +10,17 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### 2026-09-21T00:00:00Z — Fix Logged Items sorting: logging order, not content time (branch, not yet merged)
+
+- **Problem:** relaunching the app and resuming a session already spoken into can log a new item whose `logged_at` sorts *earlier* than the last existing item's, so the Logged Items pane (sorted by `a.logged_at.localeCompare(b.logged_at)`) puts the genuinely newer item above older ones instead of appending it at the bottom.
+- **Root cause, traced end to end:** `logged_at`/`stored_at`/`created_at` on a logged item all derive from `source.end_time` (`services/log-extractor-local-http/scribe-batch-boundary.mjs:433`, `runtime/desktop-application.mjs:1628`) — a session-elapsed audio clock, not a wall-clock timestamp. That clock's sample counter (`ui/audio-capture.mjs`) only carries forward when `continuingSession` is true, and that flag is an in-memory renderer variable with no knowledge of a session active in a *previous app run* — exactly "start up an old session I've already been speaking into." Transcript segments are unaffected: their `sequence` is a backend-owned counter explicitly rehydrated from persisted state on session load (`services/active-transcript-owner/index.mjs:395`), immune to this class of bug.
+- **Requirement:** Logged Items must sort by the order they were actually logged, immune to the audio-elapsed clock resetting across an app-restart-then-resume.
+- **Solution:** added `ensureDerivedOrder`/`compareDerivedOrder` (`ui/ui-state.mjs`) — a client-side monotonic index assigned to each item the moment it's first seen (live arrival or bootstrap load, both already in true creation order). Assigned explicitly at push time in `app.js`'s `upsert()`, before sorting — not lazily inside the comparator, since `Array.prototype.sort` doesn't guarantee comparison argument order, and lazy assignment would just move the same bug one level down. (Caught by my own test before it shipped: see below.)
+- **Verification:** `node --test tests/*.test.mjs` — 398 pass (394 baseline + 4 new), 0 fail, 7 skipped. New `tests/logged-items-sort-order.test.mjs` covers the reported bug scenario directly, the correct push-then-sort usage pattern, and documents (with a failing-if-reverted case) why lazy in-comparator assignment is wrong — my first implementation attempt used lazy assignment, the test caught it failing, and the design was corrected before commit. Live-verified via CDP against the real bridge: injected a synthetic logged item through the actual `EventSource` with `logged_at: "00:00:05.000"` against existing items in the `16:2x:xx` range — it rendered at the bottom (true arrival position), confirmed by screenshot.
+- **Regression — isolated:** touched `app.js` (one new import, one explicit order-assignment call, one comparator swap) and `ui/ui-state.mjs` (two new pure functions, nothing existing changed). Transcript sort path untouched.
+- **Files (Argus, branch `fix-logged-items-sort-order`, commit `c25b61f`, pushed):** `app.js`, `ui/ui-state.mjs`, `tests/logged-items-sort-order.test.mjs`.
+- **Not done:** branch pushed, not merged — awaiting your review, same pattern as the prior UX branch.
+
 ### 2026-09-20T00:00:00Z — Merged ui-ux-cleanup-fixes into main; feature branch deleted
 
 - **Why:** review was declared done ("we've got all the issues worked out for the moment"); the branch existed explicitly for review-then-merge, so its purpose was fulfilled.
