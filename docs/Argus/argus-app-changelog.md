@@ -10,6 +10,14 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### 2026-09-21T00:00:00Z — Timestamp/text spacing fix; merged fix-logged-items-sort-order into main
+
+- **Problem found while reviewing the sort fix:** Logged Items rows had a 4px smaller timestamp-to-text inset than Raw Transcript rows — `.row-main`'s `margin-left: 4px` was scoped to `#transcriptList` only (predates the UX-008 row-time restructuring that gave both panes the same row layout), so derived rows sat at `margin-left: 0px`.
+- **Solution:** extended the selector to `#derivedList .data-row > .row-main` (`styles.css`) — derived rows never carry `.live-preview`, so no guard is needed there. Updated the matching regex in `tests/ui-responsive-layout.test.mjs`.
+- **Verification:** `node --test tests/*.test.mjs` — 398 pass, 0 fail, 7 skipped. Live-verified via CDP: both panes' `.row-main` now measure `margin-left: 4px` and an identical left-edge x-coordinate for the text column, confirmed by screenshot.
+- **Merged:** branch `fix-logged-items-sort-order` merged into `main` via `git merge --no-ff` (merge commit `ef2576d`, pushed to `origin/main`), full suite re-run twice on the merged `main` (398/0/7 both times) before push. Branch deleted both locally and on `origin`.
+- **Files (Argus, `main`, merge commit `ef2576d`):** merges `app.js`, `ui/ui-state.mjs`, `styles.css`, `tests/logged-items-sort-order.test.mjs`, `tests/ui-responsive-layout.test.mjs` from `fix-logged-items-sort-order` (commits `c25b61f`, `6493d59`).
+
 ### 2026-09-21T00:00:00Z — Fix Logged Items sorting: logging order, not content time (branch, not yet merged)
 
 - **Problem:** relaunching the app and resuming a session already spoken into can log a new item whose `logged_at` sorts *earlier* than the last existing item's, so the Logged Items pane (sorted by `a.logged_at.localeCompare(b.logged_at)`) puts the genuinely newer item above older ones instead of appending it at the bottom.
