@@ -8,7 +8,7 @@ Origin: [Original ticket](./sayslate-ai-provider-tailscale-original-ticket.md)
 | --- | --- | --- | --- |
 | REQ-001 | SaySlate's connection control supports OpenAI, Anthropic Claude, Gemini, and a custom provider. | [Original ticket](./sayslate-ai-provider-tailscale-original-ticket.md), “multiple types of apis” | Pending confirmed ticket order |
 | REQ-002 | Each provider configuration can hold the endpoint/base URL, model ID, and authentication value required by that provider. | [Original ticket](./sayslate-ai-provider-tailscale-original-ticket.md), rough MVP settings and “all the various keys, model ids” | Pending confirmed ticket order |
-| REQ-003 | Multiple provider configurations persist independently; saving or selecting one does not erase another provider's endpoint, model ID, or key. | Dustin Thomason, 2026-09-22 clarification: saving one provider must not wipe the others | Pending confirmed ticket order |
+| REQ-003 | Within one installed extension/browser profile, multiple provider configurations persist locally and independently; saving or selecting one does not erase another provider's endpoint, model ID, or key. Configuration is not synchronized between installations, and no native credential host is introduced. | Dustin Thomason, 2026-09-22 clarification; LD-014 | Pending confirmed ticket order |
 | REQ-004 | A user can test a configured provider connection and receive a useful outcome. | [Original ticket](./sayslate-ai-provider-tailscale-original-ticket.md), “be able to test the connection” | Pending confirmed ticket order |
 | REQ-005 | A custom provider can reach LM Studio through a private Tailscale network path. | [Original ticket](./sayslate-ai-provider-tailscale-original-ticket.md), paragraphs 1–2 | Pending confirmed ticket order |
 | REQ-006 | The Tailscale/LM Studio request path supports Bearer-token authentication when the endpoint requires it. | [Original ticket](./sayslate-ai-provider-tailscale-original-ticket.md), rough MVP authentication | Pending confirmed ticket order |
@@ -66,6 +66,8 @@ Origin: [Original ticket](./sayslate-ai-provider-tailscale-original-ticket.md)
 | Requirements and current-state evidence | Met for foundation; ticket coverage pending | REQ-001–REQ-015 and EV-001–EV-015 above |
 | Sourced decisions ledger | Partially met | [Decisions](./sayslate-ai-provider-tailscale-decisions.md); open decisions remain |
 | SaySlate Git base | Met | EV-016; `main` at `af9a2f3a8cbad88c22edc094767b5cdd31f1a24e` in `C:\SaySlate` and `origin/main` |
+| Provider persistence boundary | Met | LD-014; provider-scoped `chrome.storage.local`, no sync and no native credential host |
+| Gemini transport direction | Met | LD-015; retain the working native adapter unless a demonstrated incompatibility requires change |
 | Ticket branch and worktree convention | Ready to define after delivery-order confirmation | Canonical repository and base are now known; exact ticket slugs depend on the confirmed order |
 | Delivery order confirmation | Unmet | No exact ticket/wave order has been confirmed by the user |
 | Gate command | Met | EV-015; `node tests/verify.mjs` |

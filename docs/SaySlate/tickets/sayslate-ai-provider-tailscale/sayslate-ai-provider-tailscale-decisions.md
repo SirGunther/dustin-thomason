@@ -17,16 +17,54 @@ Requirements: [sayslate-ai-provider-tailscale-requirements.md](./sayslate-ai-pro
 | LD-011 | Objectives and findings use `State`, `Value`, `Evidence`, and `Depends on`. | The user identified the PRDV-16936 compact record as the correct reporting format. | REQ-014 | Dustin Thomason, 2026-09-22 clarification citing `PRDV-16936-CASE-DETAIL-PROTOTYPE-TODO.md` | Generic narrative evidence ledgers |
 | LD-012 | Production-path evidence is required; a passing test alone does not establish correctness. | Tests must represent the real work failure point, not substitute for it. | REQ-015 | Dustin Thomason, 2026-09-22 clarification | Test-only correctness claims |
 | LD-013 | `SirGunther/SaySlate` is the canonical implementation repository and `C:\SaySlate` is its local working location; the original PDProjects folder is preserved read-only. | The user explicitly selected the GitHub repository and requested a C-drive worktree beside Argus and WhisperService. | Process decision (`Serves: —`) | Dustin Thomason, 2026-09-22 clarification; commit `af9a2f3a8cbad88c22edc094767b5cdd31f1a24e` | Treating the original OneDrive folder as the writable implementation location |
+| LD-014 | Provider profiles, including endpoints, model IDs, and API keys, persist in `chrome.storage.local` within the installed browser profile; switching providers preserves every configured profile. The data is not synced between installations, and no native credential host is introduced. | The user wants configuration to survive provider switching in one extension installation without adding a separate credential system. | REQ-002, REQ-003 | Dustin Thomason, 2026-09-22 clarification | Session-only re-entry, synchronized credentials, a native credential host, and a single destructive active-provider record |
+| LD-015 | Gemini keeps the existing native Gemini adapter. It moves to an OpenAI-compatible transport only if a demonstrated incompatibility makes that necessary. | The current adapter works, so changing it without a real failure would add risk without user value. | REQ-001, REQ-007 | Dustin Thomason, 2026-09-22 clarification: “if it ain't broke, don't fix it” | Replacing the working Gemini adapter merely to unify transports |
 
-## Open Decisions Requiring User Confirmation
+## Numbered Open Decision Register
 
-These are not locked decisions and must not be delegated to a low-reasoning implementation agent.
+Numbers are permanent chat references. Resolved entries remain here for posterity, point to their
+locked decision, and are never removed, migrated, reused, reordered, or renumbered. New questions
+receive the next integer. Unresolved decisions must not be delegated to a low-reasoning
+implementation agent.
 
-| Question | Why it remains open | Blocks |
-| --- | --- | --- |
-| May persistent provider keys live in restricted `chrome.storage.local`, must they be session-only, or must a native/host credential store be introduced? | Chrome extensions do not have Argus's Electron `safeStorage`; the user has not selected the threat model. | Storage schema, migration, and security claims |
-| Should Gemini keep its native adapter or move to Gemini's OpenAI-compatible endpoint? | The existing product is native Gemini, while the rough MVP proposes an OpenAI-compatible transport. | Provider adapter boundaries |
-| How should a worker-owned request survive real LM Studio responses longer than Chrome's documented fetch-response lifetime? | EV-011 conflicts with observed slow local-model inference; no mechanism has been confirmed. | Inference boundary and live acceptance |
-| Should custom HTTPS origins be required at install time or requested individually as optional host permissions? | The current fixed allow-list cannot reach an arbitrary Tailscale hostname. | Manifest and provider-settings UX |
-| What exact connection test establishes reachability, authentication, model usability, and schema compatibility for each provider family? | A model-list check alone does not establish inference behavior. | Connection-test ticket and acceptance |
-| What ticket order and wave structure should the orchestrator enforce? | The previous file called its ticket list provisional; the user has not confirmed a replacement order. | Ticket files and handoff |
+### 1. Provider-profile persistence
+**State:** Resolved
+**Value:** Resolved as LD-014.
+**Evidence:** Dustin Thomason, 2026-09-22 clarification.
+**Depends on:** —
+
+### 2. Gemini transport
+**State:** Resolved
+**Value:** Resolved as LD-015.
+**Evidence:** Dustin Thomason, 2026-09-22 clarification; EV-005.
+**Depends on:** —
+
+### 3. Long-running inference ownership
+**State:** Unresolved
+**Value:** How should an inference request survive real LM Studio responses longer than Chrome's documented service-worker fetch-response lifetime?
+**Evidence:** EV-006 and EV-011 establish the current worker boundary and the documented lifetime risk; no production mechanism has been confirmed.
+**Depends on:** Inference boundary and live acceptance ticket.
+
+### 4. Custom-origin permissions
+**State:** Unresolved
+**Value:** Should custom HTTPS origins be granted at install time or requested individually as optional host permissions when a user configures a provider?
+**Evidence:** EV-001 and EV-012 establish the fixed current allow-list and Chrome's cross-origin permission requirement.
+**Depends on:** Manifest and provider-settings UX ticket.
+
+### 5. Connection-test semantics
+**State:** Unresolved
+**Value:** What exact checks establish reachability, authentication, model usability, and structured-output compatibility for each provider family?
+**Evidence:** REQ-004 requires a useful result; a model-list response alone does not prove inference behavior.
+**Depends on:** Connection-test ticket and acceptance criteria.
+
+### 6. Delivery order
+**State:** Unresolved
+**Value:** What ticket order and wave structure should the orchestrator enforce after the material architecture decisions are resolved?
+**Evidence:** The prior monolithic artifact called its ticket list provisional; no replacement order has been confirmed.
+**Depends on:** Ticket files and handoff.
+
+### 7. Canonical repository and local base
+**State:** Resolved
+**Value:** Resolved as LD-013.
+**Evidence:** EV-016; Dustin Thomason, 2026-09-22 clarification.
+**Depends on:** —

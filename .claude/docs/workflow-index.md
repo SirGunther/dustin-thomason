@@ -170,6 +170,7 @@ Skills are **not** `alwaysApply` â€” the user `@`â€™s the skill or ask
 | `workflow-housekeeping` | Audit rules/playbooks/index after you change workflow files |
 | `investigation` | Investigate a problem + proposed fix before committing to it (emits an Investigation Report) |
 | `orchestrate` | Run a ticket end-to-end through all seven phases with full-rigor artifacts, gates, and a per-ticket ledger |
+| `agentic-handoff` | Build an orchestrated multi-agent handoff — foundation docs, the handoff (delivery order, dispatch/merge, agent rules, evidence, audit), and one file per ticket — every section operationally defined |
 
 ## Scripts (`scripts/`)
 
@@ -245,6 +246,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 
 | Skill | Purpose |
 | ----- | ------- |
+| `agentic-handoff` |  |
 | `checklist-in-chat` | Use when completing work that should be tracked with a visible checklist. |
 | `claude-rewrites` |  |
 | `grill-me` | Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when user wants to stress-test a plan, get grilled on their design, or mentions "grill me". |
