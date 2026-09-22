@@ -105,5 +105,36 @@ The purpose is to ensure that the implementation was done correctly and adheres 
 ### Prompt
 
 ```
-### Validate integration for PR reviews
+### Please Review
+
+
+### Original Ticket
+
+
+Determine if the implementation is accurate based on the original ticket, codebase, and associated artifacts. Importantly, ensure that the review and implementation are within scope.
+
+To ground the review, after ingesting the docuementation, establish WHY the ticket was written, HOW it was addressed, and ultimately the subsequent review will determine if WHAT was done was sufficient and within scope to resolve.
+
+Additionally, compare against the `C:\..\<system updated>\.cursor\rules` to ensure best practices for the system were followed.
+
+Write out each finding here as a checklist in the chat, review the relevant context, and provide evidence in the chat demonstrating that finding.
+
+Assertions without that evidence, will be prompted to review the finding again.
+
+Ignore running test suites/linting/etc. these were already performed.
+
+You will also validate the PR, [pr-review-patterns.md](c:/dustin-thomason/docs/reviewers/pr-review-patterns.md) and if there are any violations that pertain to this ticket directly. <https://github.com/planetdepos/atlas-front-end/pull/566> is an example of a good PR.
+
+
+#### Note
+
+You don't need to call out decisions about implementation related to product or spec or smoke testing with live data, irrelevant for these purposes, we are only looking at what has been implemented thus far. If there are inconsistency between artifacts, a section to note this is acceptable, but should not be a blocker to determining if the implementation is correct.
 ```
+
+### Follow Up
+
+```
+To be clear, everything that you did in this review was to compare against actual AC and what the original was to maintain parity. No scope creep in your review. Can you confirm?
+```
+
+
