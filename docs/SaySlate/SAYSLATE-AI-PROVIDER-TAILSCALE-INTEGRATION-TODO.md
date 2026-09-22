@@ -80,8 +80,9 @@ The completed feature should provide:
   `C:\dustin-thomason\agents\rules\agent-completion-notification.md`.
 - [ ] Every implementation and review agent must display its assigned checklist in chat.
 - [ ] Chat must contain checklist state, blockers, branch/SHA pointers, and final disposition only.
-- [ ] WHY/HOW/WHAT reasoning, production-path evidence, changed-file evidence, test evidence, review
-  findings, and resolved/unresolved decisions must be written into this artifact.
+- [ ] Every implementation result, changed-file justification, verification result, review finding,
+  and resolved/unresolved decision must be written into this artifact using the compact resolution
+  object defined below.
 - [ ] A substantive completion or blocker must invoke the required completion notification.
 
 ### Evidence standard
@@ -89,17 +90,34 @@ The completed feature should provide:
 Agents must provide evidence that implementations are correct. A passing test proves only that the
 test passes. It does not prove that the test represents the real work failure point.
 
-For every change, this artifact must record:
+### Compact resolution output rule
 
-1. **WHY:** the real user path, failure, or capability gap that required the change.
-2. **HOW:** the production symbols and data path that own that behavior.
-3. **WHAT:** the smallest behavior change that resolves it and the behavior intentionally preserved.
-4. **REAL-WORK PROOF:** evidence that the same production path works in the extension, not only in a
-   synthetic module test.
-5. **FILE EVIDENCE:** every changed file, why it owned part of the behavior, and why the change was
-   necessary.
-6. **UNRESOLVED WORK:** anything not proved, including live provider acceptance that the agent could
-   not perform.
+Every acceptance object, implementation result, changed-file justification, verification result,
+review finding, and unresolved dependency must use this exact shape:
+
+```markdown
+### <Object or finding>
+**State:** Resolved | Unresolved
+**Value:** <one concise statement of what is established or still open>
+**Evidence:** <direct production symbol, changed file, commit, command result, or live observation>
+**Depends on:** <required dependency, or — when none remains>
+```
+
+Output rules:
+
+- `State` is only `Resolved` or `Unresolved`; workflow status belongs in the ticket header.
+- `Value` should normally be one sentence. It states the real result, not the work performed.
+- `Evidence` contains direct pointers rather than a second narrative. It must identify the relevant
+  production file/symbol and, when applicable, the commit or live observation.
+- `Depends on` is `—` when nothing remains. An unresolved object must name the exact dependency or
+  decision that prevents resolution.
+- WHY/HOW/WHAT must be evident across `Value` and `Evidence`: the user-facing reason, the owning
+  production seam, and the resulting behavior.
+- Each changed file receives its own object explaining why that file owned part of the behavior.
+- Tests are supporting evidence. At least one object must address the real production path and state
+  whether live acceptance occurred.
+- Anything not proved remains an `Unresolved` object, including provider acceptance the agent could
+  not perform.
 
 A review must reject a ticket when its primary evidence is merely a mocked test, when the test
 bypasses the production path named in WHY, when evidence is absent from this artifact, or when files
@@ -299,9 +317,18 @@ low-reasoning implementation agent.
 
 ### Stage 2 resolution record template
 
-| Decision | Resolved choice | Alternatives rejected | Production evidence | Consequence for tickets |
-| --- | --- | --- | --- | --- |
-| Pending | Pending | Pending | Pending | Pending |
+Each D-01 through D-10 decision receives one compact resolution object:
+
+```markdown
+### D-<ID> — <decision name>
+**State:** Resolved | Unresolved
+**Value:** <the selected boundary or the exact open question>
+**Evidence:** <official constraint and relevant SaySlate/Argus production pointers>
+**Depends on:** <dependency, or —>
+```
+
+Rejected alternatives belong in `Evidence` only when they materially explain or constrain the
+selected boundary. Do not add a second decision-summary table.
 
 ## Provisional ticket decomposition
 
@@ -381,71 +408,110 @@ Every finalized ticket must include this structure in its own section.
 #### Agent checklist
 
 - [ ] Restate the ticket checklist in chat.
-- [ ] Record WHY/HOW/WHAT and the real production path here before editing.
+- [ ] Add the ticket's required resolution objects here before editing and mark them `Unresolved`.
 - [ ] Make only the authorized change.
-- [ ] Record evidence for every changed file here.
+- [ ] Add one compact resolution object for every changed file.
 - [ ] Prove the regression exercises the production failure path.
-- [ ] Record tests as supporting evidence, not as the correctness claim.
-- [ ] Record unresolved live acceptance honestly.
+- [ ] Resolve each object only with direct production evidence; tests remain supporting evidence.
+- [ ] Keep unavailable live acceptance as an `Unresolved` object with its exact dependency.
 - [ ] Commit and push the isolated branch; do not merge `main`.
 - [ ] Notify completion or blocker.
 
-#### Implementation evidence
+#### Required implementation resolution report
 
-- **WHY — real behavior or failure:** Pending
-- **HOW — owning production symbols:** Pending
-- **WHAT — smallest resolution:** Pending
-- **Preserved behavior:** Pending
-- **Real-work acceptance:** Pending
-- **Unresolved evidence:** Pending
+Create one compact resolution object for every ticket acceptance criterion, changed production file,
+verification gate, and real-work acceptance requirement. Use this example shape:
 
-| Changed file | Why this file owned the behavior | Exact change | Resulting production behavior |
-| --- | --- | --- | --- |
-| Pending | Pending | Pending | Pending |
+### `<behavior or changed file>`
+**State:** Unresolved
+**Value:** The exact production behavior or file justification has not yet been established.
+**Evidence:** Pending implementation and direct production-path inspection.
+**Depends on:** This ticket's implementation.
 
-| Verification | Production path exercised | Result | Limitation |
-| --- | --- | --- | --- |
-| Pending | Pending | Pending | Pending |
+An implementation report is incomplete if it only lists commands or changed files. The objects must
+establish why the changed production seam owned the behavior and what is now true for the user.
 
 #### Independent review
 
 - **Reviewed full SHA:** Pending
-- **Ticket fidelity:** Pending
-- **Scope verdict:** Pending
-- **Security verdict:** Pending
-- **Production-path correctness verdict:** Pending
-- **Test-relevance verdict:** Pending
-
-| Finding | File/symbol evidence | Required disposition | Resolution |
-| --- | --- | --- | --- |
-| Pending | Pending | Pending | Pending |
-
-- **Merge verdict:** Pending
-- **Merged SHA:** Pending
+- The reviewer must create compact resolution objects for ticket fidelity, scope, security,
+  production-path correctness, test relevance, and every defect found.
+- A defect remains `Unresolved` until its corrective commit and direct evidence are recorded in the
+  same object.
+- The merge recommendation is its own compact resolution object and must identify the reviewed full
+  SHA. `Resolved` means the exact SHA is safe to merge; `Unresolved` means it is not.
 
 ## Resolved and unresolved request register
 
 This register is mandatory. A request is resolved only when its production behavior and evidence are
-recorded; a test or code commit alone does not resolve it.
+recorded in a compact resolution object; a test or code commit alone does not resolve it. Objects stay
+in this section when their state changes so the decision history is not erased.
 
-### Resolved
+### Stage 1 research and repository grounding
+**State:** Resolved
+**Value:** Current SaySlate and Argus production paths, platform constraints, provider differences,
+and the decisions still required before dispatch are identified.
+**Evidence:** `Stage 1 — Research and current-state grounding`; starting commit
+`8fc1ca1d8e2321264c7135171d67b6bf8916bce6`.
+**Depends on:** —
 
-| Request | Resolution | Evidence | Ticket/SHA |
-| --- | --- | --- | --- |
-| Stage 1 research and repository grounding | Current paths, platform limits, provider differences, and architecture decisions are identified | Stage 1 sections above | Planning only |
+### Credential-at-rest guarantee
+**State:** Unresolved
+**Value:** SaySlate cannot claim persistent credentials are OS-secure until the browser-extension
+credential threat model is selected.
+**Evidence:** `Stage 2` decision D-01; Chrome Storage API constraints recorded above.
+**Depends on:** Stage 2 D-01; blocks profile-store and UI security claims.
 
-### Unresolved
+### SaySlate branch and worktree workflow
+**State:** Unresolved
+**Value:** Implementation agents do not yet have a truthful isolated-branch workflow because the
+SaySlate implementation directory has no Git metadata.
+**Evidence:** Stage 1 repository inspection of
+`C:\Users\dktho\OneDrive\PDProjects\Browser Extensions\SaySlate`.
+**Depends on:** Stage 2 coordinator decision; blocks implementation dispatch.
 
-| Request or risk | Why unresolved | Required resolver | Blocks |
-| --- | --- | --- | --- |
-| Credential-at-rest guarantee | Browser-extension threat model not selected | Stage 2 D-01 | Profile store and UI claims |
-| SaySlate branch/worktree workflow | Implementation directory currently lacks Git metadata | Stage 2 coordinator | All implementation dispatch |
-| Slow LM Studio request survival | Chrome documents a 30-second fetch-response lifecycle limit; the final mechanism is unproved | Stage 2 D-06 plus live acceptance | Worker transport |
-| Custom-origin permission UX | Required versus optional origin access not selected | Stage 2 D-05 | Tailscale/custom endpoint |
-| Provider adapter boundaries | Gemini native/compatibility and Anthropic-native decisions remain | Stage 2 D-03/D-04 | Adapter tickets |
-| Structured-output fallback | Capability negotiation and failure policy not selected | Stage 2 D-08 | All provider adapters |
-| Tailscale deployment procedure | Actual host name, grants, Serve target, LM Studio auth, and live model remain environment-specific | Stage 2 D-09 and acceptance | Tailscale production claim |
-| Real provider acceptance | No implementation exists yet | PROVIDER-06 | Definition of done |
+### Slow LM Studio request survival
+**State:** Unresolved
+**Value:** A worker-owned LM Studio request is not proven to survive the duration of real slow-model
+inference under Manifest V3 lifecycle limits.
+**Evidence:** Chrome extension-service-worker lifecycle constraint; SaySlate `background.js` worker
+boundary; Argus real inference-duration history.
+**Depends on:** Stage 2 D-06 and live acceptance; blocks worker transport completion.
+
+### Custom-origin permission experience
+**State:** Unresolved
+**Value:** SaySlate has not selected whether custom HTTPS origins are required at install time or
+granted individually from a user gesture.
+**Evidence:** `manifest.json` current fixed host permissions; Chrome Permissions API constraints.
+**Depends on:** Stage 2 D-05; blocks Tailscale/custom-endpoint UI.
+
+### Provider adapter boundaries
+**State:** Unresolved
+**Value:** Gemini native versus OpenAI-compatible transport and the separate Anthropic-native seam
+remain undecided.
+**Evidence:** `aiClient.js`; official Gemini compatibility and Anthropic Messages API constraints.
+**Depends on:** Stage 2 D-03 and D-04; blocks provider adapter tickets.
+
+### Structured-output fallback
+**State:** Unresolved
+**Value:** Provider capability negotiation and failure behavior are not yet defined for models that
+reject or cannot honor JSON Schema output.
+**Evidence:** Official OpenAI, Gemini, and Anthropic structured-output constraints recorded above.
+**Depends on:** Stage 2 D-08; blocks all provider adapters.
+
+### Tailscale deployment procedure
+**State:** Unresolved
+**Value:** The actual tailnet hostname, grants, Serve target, LM Studio authentication, and live
+model remain environment-specific and unproved.
+**Evidence:** Official Tailscale and LM Studio constraints recorded above.
+**Depends on:** Stage 2 D-09 and live acceptance; blocks the Tailscale production claim.
+
+### Real provider acceptance
+**State:** Unresolved
+**Value:** No provider-profile implementation exists yet, so neither SaySlate surface has completed
+a live request through the proposed worker-owned boundary.
+**Evidence:** Current direct-call paths in `app.js`, `floating.js`, and `aiClient.js`.
+**Depends on:** PROVIDER-01 through PROVIDER-06.
 
 ## Final definition of done
 
