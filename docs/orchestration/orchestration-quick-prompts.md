@@ -94,21 +94,27 @@ This step may seem counterintuitive, but helps us work towards two separate goal
 2. We validate that the spec was written accurately
 
 This is not validation that the spec is correct in the terms of the orchestration layer, rather, we are testing the specs correctness. The benefit may be that we are one step ahead of a reviewers approval, ultimately saving us time.
+
+Ensure that we are up to date with main, stash the old, then open a new branch, this will be our implementation branch. 
+
+Begin planning with Phase 4.
 ```
 
 ---
 
 ## Review Implementation
 
-The purpose is to ensure that the implementation was done correctly and adheres to common incorrect imlpementations.
+The purpose is to ensure that the implementation was done correctly and adheres to common incorrect imlpementations. Typically done by a different agent (peer review), self review often misses mistakes.
 
 ### Prompt
 
 ```
+## Validate integration for PR reviews
+
 ### Please Review
 
 
-### Original Ticket
+### Original Ticket / Branch
 
 
 Determine if the implementation is accurate based on the original ticket, codebase, and associated artifacts. Importantly, ensure that the review and implementation are within scope.
@@ -122,9 +128,11 @@ Write out each finding here as a checklist in the chat, review the relevant cont
 Assertions without that evidence, will be prompted to review the finding again.
 
 Ignore running test suites/linting/etc. these were already performed.
+Decisions about implementation related to product or spec or smoke testing with live data are irrelevant for these purposes.
+
+We only care that the implementation was done correctly.
 
 You will also validate the PR, [pr-review-patterns.md](c:/dustin-thomason/docs/reviewers/pr-review-patterns.md) and if there are any violations that pertain to this ticket directly. <https://github.com/planetdepos/atlas-front-end/pull/566> is an example of a good PR.
-
 
 #### Note
 
