@@ -288,6 +288,7 @@ Output rules:
   3. A duplicate Gemini profile is possible if both surfaces first-load at the same instant (LD-038(1)); no key is lost.
 - **Merge verdict:** Merged — F1–F3 resolved
 - **Merged commit:** `0e22974fd7b8a7bb59a41ad358990ee7f571b728` (`--no-ff` into `main`, pushed to `origin/main`)
+- **Post-merge user validation:** On 2026-09-23 Dustin Thomason reported: "Loaded correct, keys worked, processed correctly." The unpacked extension was loaded from `C:\SaySlate` at merged `main`, and real keys and live processing succeeded, which addresses residual risk 1 for the providers used. The report does not name which providers were exercised
 
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
 | --- | --- | --- | --- |

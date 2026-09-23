@@ -246,7 +246,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 
 | Skill | Purpose |
 | ----- | ------- |
-| `agentic-handoff` |  |
+| `agentic-handoff` | Build the document set an orchestrated multi-agent handoff runs on — origin, requirements, decisions, the handoff (delivery order, dispatch and merge rules, resolved/unresolved routing, agent rules, required evidence, audit format, audit records), and one file per ticket whose checkboxes and objectives the implementation agent fills in. Every section carries an operational definition. Documents are identified by role, not filename. Use when the user says "handoff", "build the handoff", "set up the handoff docs", or asks to prepare work for an orchestrator and implementation agents. |
 | `checklist-in-chat` | Use when completing work that should be tracked with a visible checklist. |
 | `claude-rewrites` |  |
 | `grill-me` | Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when user wants to stress-test a plan, get grilled on their design, or mentions "grill me". |

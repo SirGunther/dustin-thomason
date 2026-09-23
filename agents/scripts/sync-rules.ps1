@@ -49,6 +49,7 @@ $repoRoot = Split-Path -Parent $agentsDir
 $sourceDir = Join-Path $agentsDir 'rules'
 $skillsSource = Join-Path $agentsDir 'skills'
 $docsSource = Join-Path $agentsDir 'docs'
+$hooksSource = Join-Path $agentsDir 'hooks'
 
 # workflow-index.md is a hybrid: hand-edited editorial + one generated "Complete inventory"
 # block (between the markers below) that this script rebuilds from the folder so nothing added
@@ -64,9 +65,13 @@ $cursorSkills = Join-Path $repoRoot '.cursor\skills'
 $claudeSkills = Join-Path $repoRoot '.claude\skills'
 $cursorDocs = Join-Path $repoRoot '.cursor\docs'
 $claudeDocs = Join-Path $repoRoot '.claude\docs'
+$claudeHooks = Join-Path $repoRoot '.claude\hooks'
 # Claude-global manifest: a portable CLAUDE.md (relative @imports of the scope:always rules)
 # that ~/.claude/CLAUDE.md imports so the always-on rules load in every session, every repo.
 $claudeManifestPath = Join-Path $repoRoot '.claude\CLAUDE.md'
+# Portable project settings, including the phrase guard registration for projects that receive
+# the generated .claude directory. This merges with, rather than replaces, user-level hooks.
+$claudeSettingsPath = Join-Path $repoRoot '.claude\settings.json'
 # Compiled single-file surfaces for Codex (which can't read folders): one per source type.
 $agentsRulesPath = Join-Path $repoRoot 'agents-rules.md'
 $agentsSkillsPath = Join-Path $repoRoot 'agents-skills.md'
@@ -329,6 +334,25 @@ if ($rules.Count -eq 0) { throw "No rules found in $sourceDir." }
 
 $agentsContent = (ConvertTo-Lf (Build-Agents $rules)).TrimEnd() + "`n"
 $claudeManifestContent = (ConvertTo-Lf (Build-ClaudeManifest $rules)).TrimEnd() + "`n"
+$claudeSettingsContent = @'
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/phrase-guard.js"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+'@.TrimEnd() + "`n"
 
 # workflow-index.md: strip any prior generated inventory block, append a freshly built one.
 # Idempotent - the block is replaced, never duplicated. Editorial content above is untouched.
@@ -370,6 +394,16 @@ if (Test-Path -LiteralPath $docsSource) {
     }
 }
 
+# Claude hooks: mirror hooks/** verbatim into .claude/hooks. These are source-controlled hook
+# assets only; the user-level bootstrap script separately registers the all-project Stop hook.
+$hookExpected = @{}
+if (Test-Path -LiteralPath $hooksSource) {
+    foreach ($f in (Get-ChildItem -LiteralPath $hooksSource -Recurse -File)) {
+        $rel = ($f.FullName.Substring($hooksSource.Length).TrimStart('\', '/')) -replace '\\', '/'
+        $hookExpected[$rel] = (ConvertTo-Lf (Read-Utf8 $f.FullName)).TrimEnd() + "`n"
+    }
+}
+
 # Compiled single-file Codex surfaces.
 $agentsSkillsContent = (ConvertTo-Lf (Build-Concat 'agents-skills' '`agents/skills/**`' $skillExpected)).TrimEnd() + "`n"
 $agentsDocsContent = (ConvertTo-Lf (Build-Concat 'agents-docs' '`agents/docs/**`' $docExpected)).TrimEnd() + "`n"
@@ -406,6 +440,9 @@ if ($Check) {
         Test-Artifact (Join-Path $cursorDocs ($rel -replace '/', '\')) $docExpected[$rel] $stale ".cursor/docs/$rel"
         Test-Artifact (Join-Path $claudeDocs ($rel -replace '/', '\')) $docExpected[$rel] $stale ".claude/docs/$rel"
     }
+    foreach ($rel in $hookExpected.Keys) {
+        Test-Artifact (Join-Path $claudeHooks ($rel -replace '/', '\')) $hookExpected[$rel] $stale ".claude/hooks/$rel"
+    }
     foreach ($t in @($cursorDocs, $claudeDocs)) {
         if (Test-Path -LiteralPath $t) {
             foreach ($e in (Get-ChildItem -LiteralPath $t -Recurse -File)) {
@@ -416,6 +453,7 @@ if ($Check) {
     }
     Test-Artifact $indexPath $expectedIndexContent $stale 'agents/docs/workflow-index.md (inventory block)'
     Test-Artifact $claudeManifestPath $claudeManifestContent $stale '.claude/CLAUDE.md'
+    Test-Artifact $claudeSettingsPath $claudeSettingsContent $stale '.claude/settings.json'
     Test-Artifact $agentsRulesPath $agentsContent $stale 'agents-rules.md'
     Test-Artifact $agentsSkillsPath $agentsSkillsContent $stale 'agents-skills.md'
     Test-Artifact $agentsDocsPath $agentsDocsContent $stale 'agents-docs.md'
@@ -425,6 +463,12 @@ if ($Check) {
                 $rel = ($e.FullName.Substring($t.Length).TrimStart('\', '/')) -replace '\\', '/'
                 if (-not $skillExpected.ContainsKey($rel)) { $stale.Add("$($t.Substring($repoRoot.Length + 1) -replace '\\','/')/$rel is orphaned (no source skill)") }
             }
+        }
+    }
+    if (Test-Path -LiteralPath $claudeHooks) {
+        foreach ($e in (Get-ChildItem -LiteralPath $claudeHooks -Recurse -File)) {
+            $rel = ($e.FullName.Substring($claudeHooks.Length).TrimStart('\', '/')) -replace '\\', '/'
+            if (-not $hookExpected.ContainsKey($rel)) { $stale.Add(".claude/hooks/$rel is orphaned (no source hook)") }
         }
     }
 
@@ -438,13 +482,14 @@ if ($Check) {
 }
 
 # --- Write mode ---
-foreach ($dir in @($cursorDir, $claudeDir, $cursorDocs, $claudeDocs)) {
+foreach ($dir in @($cursorDir, $claudeDir, $cursorDocs, $claudeDocs, $claudeHooks)) {
     if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 }
 
 # Write the injected index back to its source (hand-edited editorial + regenerated inventory block).
 Write-Utf8NoBom $indexPath $expectedIndexContent
 Write-Utf8NoBom $claudeManifestPath $claudeManifestContent
+Write-Utf8NoBom $claudeSettingsPath $claudeSettingsContent
 Write-Utf8NoBom $agentsRulesPath $agentsContent
 Write-Utf8NoBom $agentsSkillsPath $agentsSkillsContent
 Write-Utf8NoBom $agentsDocsPath $agentsDocsContent
@@ -499,9 +544,24 @@ foreach ($t in @($cursorDocs, $claudeDocs)) {
     }
 }
 
+# Mirror source-controlled Claude hook assets, then prune stale generated hooks.
+foreach ($rel in $hookExpected.Keys) {
+    $dest = Join-Path $claudeHooks ($rel -replace '/', '\')
+    $destDir = Split-Path -Parent $dest
+    if (-not (Test-Path -LiteralPath $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+    Write-Utf8NoBom $dest $hookExpected[$rel]
+}
+if (Test-Path -LiteralPath $claudeHooks) {
+    foreach ($e in (Get-ChildItem -LiteralPath $claudeHooks -Recurse -File)) {
+        $rel = ($e.FullName.Substring($claudeHooks.Length).TrimStart('\', '/')) -replace '\\', '/'
+        if (-not $hookExpected.ContainsKey($rel)) { Remove-Item -LiteralPath $e.FullName -Force }
+    }
+}
+
 $codexCount = @($rules | Where-Object { $_.Codex -eq 'include' }).Count
 $skillCount = @(Get-ChildItem -LiteralPath $skillsSource -Directory -ErrorAction SilentlyContinue).Count
-Write-Host "Mirrored to .cursor + .claude: rules ($($cursorExpected.Count)), skills ($skillCount), docs ($($docExpected.Count))."
+$hookCount = @($hookExpected.Keys).Count
+Write-Host "Mirrored to .cursor + .claude: rules ($($cursorExpected.Count)), skills ($skillCount), docs ($($docExpected.Count)), Claude hooks ($hookCount)."
 Write-Host "Compiled for Codex: agents-rules.md ($codexCount rules), agents-skills.md, agents-docs.md."
 $alwaysCount = @($rules | Where-Object { $_.Scope -eq 'always' }).Count
 Write-Host "Claude-global manifest: .claude/CLAUDE.md ($alwaysCount always-on rules + workflow index)."

@@ -51,6 +51,7 @@ Folder name = invocation name. Mirrored verbatim to `.cursor/skills/` and `.clau
 
 | Skill | What it represents / why we have it |
 | --- | --- |
+| `agentic-handoff` | Builds the document set an orchestrated multi-agent handoff runs on — origin (the why), requirements (the source of truth, evidence included), decisions (the how), the handoff (delivery order, dispatch and merge rules, resolved/unresolved routing, agent rules, required evidence, audit format, audit records), and one file per ticket (checklists plus empty objectives the implementation agent fills). Every section carries an operational definition. Exists so the handoff convention is enforced by a procedure instead of re-explained per ticket. |
 | `grill-me` | The interview method: one question at a time, current-behavior check, recommended answer — until a plan or design reaches shared understanding. The probe half of Phase 3. |
 | `investigation` | The investigation method: ground in instances, classify, lock the contract, trace origin, stress-test, emit the Investigation Report. The engine Phase 1 executes. |
 | `orchestrate` | The end-to-end ticket lifecycle conductor: seven phases, exit gates, mode handoffs, per-ticket ledger, full-rigor artifacts. The standard way to run a ticket when completeness matters. |
