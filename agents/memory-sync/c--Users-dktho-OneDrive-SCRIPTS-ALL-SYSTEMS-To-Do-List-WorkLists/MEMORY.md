@@ -1,0 +1,6 @@
+- [MWB + AutoHotkey constraints](mwb-ahk-constraints.md) — gestures stop relaying across Mouse Without Borders due to hook install order; fix = restart MWB on each system; corrects an earlier wrong "can't cross MWB" claim
+- [Don't edit working files on unconfirmed theory](dont-edit-working-files-on-unconfirmed-theory.md) — confirm the cause before touching working code; revert via version history, not hand-undo
+- [Eng evaluation framework](eng-evaluation-framework.md) — Dustin's rigor lens (class-not-instance, refutable claims, negative paths, root-why); apply by default when reviewing/proposing
+- [Agents mental model](agents-mental-model.md) — the dustin-thomason agents system is his externalized working method; orchestrate = opt-in full rigor, gates are deliberate, tracked assumptions over blocked certainty
+- [Verify question premise against own output](verify-question-premise-against-own-output.md) — before answering "why did you X", confirm X happened; correct a false premise first, never rationalize it
+- [Always consult first](always-consult-first.md) — open every response with the working-framework Consult section; overrides answer-first; "for now, unless otherwise directed"

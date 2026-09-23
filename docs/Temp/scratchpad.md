@@ -23,7 +23,6 @@ Implement JEV to ensure handoff is ready?
 * Hand something to Jim about JEV
 
 
-AIzaSyAL6Tn0HJGvO-Wk2WhdqSmJ0YkXB-3ACyI
 
 gemini-3.1-flash-lite
 
@@ -40,3 +39,15 @@ Improve the paragraph structure for readability. Keep closely related thoughts t
 Do not editorialize the content. Only present the edited version.
 
 NEVER use EM Dashes.
+
+
+
+Mutations
+
+Auditing Callisto on the service level, not transaction script
+
+Metadata is available at service level
+
+* Collection
+
+* Devliverable type
