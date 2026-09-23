@@ -266,17 +266,34 @@ Output rules:
 
 ### SAYAI-05 audit
 
-- **Status:** Pending
-- **Reviewed commit:** Pending
-- **Required evidence:** Pending
-- **Independent verification:** Pending
-- **Scope verdict:** Pending
-- **Correctness verdict:** Pending
-- **Merge verdict:** Held — pending implementation and review
-- **Merged commit:** Pending
+- **Status:** Merged
+- **Reviewed commit:** `d3e8fb62a1e48e20fce4a1c59058723e3c915f6b` (review 2); review 1 was `3cfb19f48a2faedaba4d36c9dc990b0ab1820786`
+- **Required evidence:** Complete in the review 2 report, including the loaded-extension check the agent ran with the orchestrator's scratch scripts. In review 1 the agent's own run produced no output, and its stated cause, no outbound network, was contradicted by the orchestrator's `probe04.mjs`
+- **Independent verification:** Review 1: `git merge-base --is-ancestor ab93728 3cfb19f` true; all 8 changed files are owned. Script order in `app.html` and `floating.html` loads every producer before its consumer. Neither renderer reads, defaults, or writes `apiKey`/`model`. The orchestrator ran the agent's own `check.mjs`, copied as scratch `check05.mjs` with two added probes, in headless Chromium with the worktree unpacked. It reached the end and recorded:
+  - All 13 LD-027 controls present, with a logical focus order.
+  - Gemini Save with `fake-probe-key` → "Configured".
+  - Test Connection made a real non-generative Google call → "The provider rejected the configured credential."
+  - A first pass through the real renderer → dispatcher → Gemini adapter → the `authentication_failed` notice, with the source text preserved.
+  - Custom Save pending the permission prompt, with the page still usable. Prompt acceptance is not automatable (the SAYAI-02 audit).
+  - After reload, the endpoint and model are retained and the credential input is blank.
+  - `floating.html` resolved the active profile.
+  - 0 credential occurrences in the DOM or console.
+  - F1 and F3 reproduced (see findings).
+  Scratch `race05.mjs` reproduced F2
+  Review 2: `d3e8fb6` fast-forwards `3cfb19f` and changes only `app.js`, `floating.js`, and two owned tests. Both surfaces claim the running state synchronously before any await and release it in `finally`; `app.js` startup awaits migration before `loadProcessingConfig`. Reran `node tests/ai-provider-ui.test.mjs`, `node tests/app-dictation-integration.test.mjs`, `node tests/floating-dictation-integration.test.mjs`, `node tests/verify.mjs` (24 files), `node --check` on the 6 changed JS files, and `git diff --check ab93728 HEAD`; all passed. The orchestrator reran `check05.mjs`: double trigger → 1 `:generateContent` request; Clear Credential → no error, stored `hasKey:false`, profile still active; every review 1 observation unchanged; 0 credential leaks. Reran `race05.mjs`: old and current prompt schema both → 1 profile carrying the migrated key, with the legacy record keeping only prompt fields. After the merge, `node tests/verify.mjs` on `main` passed
+- **Scope verdict:** Pass — only owned files changed
+- **Correctness verdict:** Pass. Residual risks, all owned by the deferred SAYAI-06 or the user's first real use:
+  1. A successful live generation, the exit gate's "return validated text", was proven only in the harness through the real modules. In the loaded extension, only routing and failure handling were observed, because success needs a real credential or endpoint.
+  2. Saving a custom or OpenAI/Claude profile in the loaded extension stops at Chrome's permission prompt, which automation cannot accept.
+  3. A duplicate Gemini profile is possible if both surfaces first-load at the same instant (LD-038(1)); no key is lost.
+- **Merge verdict:** Merged — F1–F3 resolved
+- **Merged commit:** `0e22974fd7b8a7bb59a41ad358990ee7f571b728` (`--no-ff` into `main`, pushed to `origin/main`)
 
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
 | --- | --- | --- | --- |
+| F1 — Clear Credential corrupts renderer state | `app.js:clearCredentialHandler` assigns `providerState = await clearCredential(id)`, but `SaySlateAIProviderSettings.clearCredential` returns the updated profile, not the state record. The loaded-extension check showed the inline error `Cannot read properties of undefined (reading 'find')` while storage was correctly cleared | Reload state from storage after clearing (or use the returned profile correctly); prove through the UI controller that Clear then Save/select/Test all work, and that the placeholder reflects no saved key | Resolved in `d3e8fb6` — `app.js:clearCredentialHandler` reloads state; `check05.mjs` "(no error)"; `tests/ai-provider-ui.test.mjs` Clear Credential scenario |
+| F2 — Startup race destroys the legacy key | `app.js` startup calls `void loadProcessingConfig()` before and concurrently with the migration IIFE; its prompt-schema upgrade write strips `apiKey`/`model` before `migrateLegacyConfig` reads them. `race05.mjs` with a seeded `promptSchemaVersion: 0` legacy record → 0 profiles, key lost; with the current version → 1 migrated profile | Per LD-038(1), complete migration before `loadProcessingConfig` runs; prove with a test seeding an old-schema legacy record that the key reaches exactly one Gemini profile and the prompt upgrade still applies | Resolved in `d3e8fb6` — `app.js` startup IIFE awaits migration, then `loadProcessingConfig`; `race05.mjs` old schema → 1 profile with the key; `tests/ai-provider-ui.test.mjs` old-schema scenario |
+| F3 — A double trigger issues two AI requests | `app.js:runFirstPass` and `runSecondPass`, and `floating.js:runFirstPass` and `runSecondPass`, `await resolveActiveProfile()` before setting their running flag, so a second trigger passes the guard. The loaded extension produced 2 `:generateContent` requests from one double click; the pre-change code set the flag synchronously | Claim the running state synchronously before any await, releasing it on every early return; prove on both surfaces that two back-to-back triggers make exactly one request | Resolved in `d3e8fb6` — synchronous claim in `app.js` and `floating.js` `runFirstPass`/`runSecondPass`; `check05.mjs` double trigger → 1 request; double-trigger scenarios in `tests/ai-provider-ui.test.mjs` and `tests/floating-dictation-integration.test.mjs` |
 
 ### SAYAI-06 audit
 
