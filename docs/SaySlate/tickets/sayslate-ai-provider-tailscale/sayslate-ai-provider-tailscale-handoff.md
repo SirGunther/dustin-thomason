@@ -236,17 +236,19 @@ Output rules:
 
 ### SAYAI-03 audit
 
-- **Status:** Pending
-- **Reviewed commit:** Pending
-- **Required evidence:** Pending
-- **Independent verification:** Pending
-- **Scope verdict:** Pending
-- **Correctness verdict:** Pending
-- **Merge verdict:** Held — pending implementation and review
-- **Merged commit:** Pending
+- **Status:** Merged
+- **Reviewed commit:** `b0b5f02a52990ca2502f30718cb361b35fd4c7f3` (review 2); review 1 was `aaed2e4d55b0677f682e1fdccfc6ce1aff065be6`
+- **Required evidence:** Complete in both implementation reports; starting commit `a394d8317082f94890884497b920c617be728c11`, branch `agent/sayai-03-provider-transports`, worktree `C:\SaySlate-worktrees\sayai-03-provider-transports`
+- **Independent verification:** Review 1: `git merge-base --is-ancestor a394d83 aaed2e4` true. All 8 changed files are owned. Reran all gates; all passed. Read every adapter against LD-022, LD-025, LD-031, LD-035, and EV-033. The Gemini probe (EV-034) disproved the Gemini request and error assumptions that the green tests encoded. Review 2: `b0b5f02` fast-forwards `aaed2e4` and changes only `aiClient.js` and `tests/ai-client.test.mjs`. `git diff --quiet aaed2e4 b0b5f02 -- aiProviderClient.js openAICompatibleClient.js anthropicClient.js` confirms those are unchanged. Reran the 4 focused tests, `node tests/verify.mjs` (22 files), `node --check` on the 2 changed files, and `git diff --check a394d83 HEAD`; all passed. After the merge, `node tests/verify.mjs` on `main` passed
+- **Scope verdict:** Pass — only owned files changed
+- **Correctness verdict:** Pass. Residual risk: EV-034 proves Gemini accepts `responseJsonSchema` at payload validation, but a live schema-constrained Gemini generation with a real key was not exercised; the first real proof is the user's own Gemini pass after SAYAI-05
+- **Merge verdict:** Merged — F1–F2 resolved
+- **Merged commit:** `17f64484de236613a1958aadf03e2fb21b0371c5` (`--no-ff` into `main`, pushed to `origin/main`)
 
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
 | --- | --- | --- | --- |
+| F1 — Gemini schema requests are always rejected | `aiClient.js:generateStructured` sends `generationConfig.responseSchema: schema`; the canonical schema carries `additionalProperties: false`; EV-034 shows that returns 400, so every Gemini request falls through LD-031 to free text | Send `responseJsonSchema` per LD-036(1); the test asserts the exact field and the canonical schema | Resolved in `b0b5f02` — `aiClient.js:generateStructured` `responseJsonSchema`; `tests/ai-client.test.mjs` native-schema scenario |
+| F2 — Invalid Gemini key is retried and misclassified | `aiClient.js:generateStructured` treats every 400 as a schema rejection; EV-034's real invalid-key envelope is 400 `API_KEY_INVALID`; `tests/ai-client.test.mjs:155` fakes auth failure as 401, a shape Gemini does not return for a bad key | Per LD-036(2), map `API_KEY_INVALID` to `authentication_failed` with no retry; test with EV-034's envelope and prove exactly one request | Resolved in `b0b5f02` — `aiClient.js:isApiKeyInvalid`; `tests/ai-client.test.mjs` `API_KEY_INVALID` scenario (`callCount === 1`) |
 
 ### SAYAI-04 audit
 
