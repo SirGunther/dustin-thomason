@@ -201,17 +201,22 @@ Output rules:
 
 ### SAYAI-01 audit
 
-- **Status:** Pending
-- **Reviewed commit:** Pending
-- **Required evidence:** Pending
-- **Independent verification:** Pending
-- **Scope verdict:** Pending
-- **Correctness verdict:** Pending
-- **Merge verdict:** Held — pending implementation and review
-- **Merged commit:** Pending
+- **Status:** Merged
+- **Reviewed commit:** `fdff8f09d3db90947d6c9d867c0272fd8158a746` (review 2); review 1 was `d9a7303e1fcd11e4e03538d37d11eb663c710631`
+- **Required evidence:** Complete in both implementation reports; starting commit `af9a2f3a8cbad88c22edc094767b5cdd31f1a24e`, branch `agent/sayai-01-provider-profiles`, worktree `C:\SaySlate-worktrees\sayai-01-provider-profiles`
+- **Independent verification:** Review 1: `git merge-base --is-ancestor af9a2f3 d9a7303` true; the orchestrator probe `probe01.mjs` reproduced F3 and F4. Review 2: `fdff8f0` fast-forwards `d9a7303`. Probe `probe01b.mjs` showed: no-action and blank-replace edits reject with 0 writes, key intact; interleaved writes from two instances keep `G,O,C` and the active selection; migration yields the preset endpoint, is active, and leaves only prompt keys in the legacy record; a malformed record is rejected with 0 writes; with no `chrome.storage` the module rejects. Reran `node tests/ai-provider-settings.test.mjs` (pass), `node tests/verify.mjs` (17 focused files, pass), `node --check` on both files, and `git diff --check af9a2f3 HEAD` (clean). After the merge, `node tests/verify.mjs` on `main` passed
+- **Scope verdict:** Pass — only `aiProviderSettings.js` and `tests/ai-provider-settings.test.mjs` changed
+- **Correctness verdict:** Pass. Residual risk: `chrome.storage.local` has no transactions, so a narrow window between read and write remains open across concurrent instances. SAYAI-05 must invoke `migrateLegacyConfig` from the full-page surface only (LD-027), so two surfaces never migrate at the same time
+- **Merge verdict:** Merged — F1–F5 resolved
+- **Merged commit:** `3d2ab41f17d6bcaaa14a80fe8a3b8fbe04e0d3e4` (`--no-ff` into `main`, pushed to `origin/main`)
 
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
 | --- | --- | --- | --- |
+| F1 — Migrated Gemini profile has no endpoint | `aiProviderSettings.js:migrateLegacyConfig` (`endpoint: ""`, line 233) | Set LD-033's Gemini preset endpoint and prove it | Resolved in `fdff8f0` — `migrateLegacyConfig` writes `GEMINI_PRESET_ENDPOINT`; test Scenario 4; probe01b |
+| F2 — Migration leaves no active profile | `aiProviderSettings.js:migrateLegacyConfig` (`activeProfileId: currentState.activeProfileId`, line 240) | Activate the migrated profile in the same write when none is active (LD-033), and prove it | Resolved in `fdff8f0` — `activeProfileId: state.activeProfileId || newProfile.id`; tests Scenario 4, 6; probe01b |
+| F3 — Missing credential action silently erases the key | `aiProviderSettings.js:upsertProfile` line 150 defaults to `replace`; line 157 accepts blank; probe: edit `{ id, modelId }` → credential `""` | Require an explicit LD-023 action; `replace` requires a non-empty credential; reject otherwise without writing (LD-023 rejects implicit blank-key deletion) | Resolved in `fdff8f0` — explicit-action and non-empty `replace` guards before any write; test Scenario 7; probe01b (0 writes, key intact) |
+| F4 — Stale in-memory cache overwrites other writers | `aiProviderSettings.js:currentState`, `persistState`, every mutator; `background.js:6-7` opens a new app tab per click; probe: tab B `activateProfile` erased tab A's profile | Each mutation reads and validates the stored record immediately before writing; prove two module instances cannot erase each other's profiles (exit gate 1) | Resolved in `fdff8f0` — `fetchValidatedState` before every mutation; test Scenario 8; probe01b (`G,O,C` retained) |
+| F5 — `localStorage` fallback is a second credential store | `aiProviderSettings.js:storageGet` lines 28-33, `storageSetEntries` lines 49-56 (write errors swallowed) | Remove the fallback; fail when `chrome.storage.local` is absent (exit gate 5) | Resolved in `fdff8f0` — fallback removed, rejects without `chrome.storage.local`; test Scenario 9; probe01b |
 
 ### SAYAI-02 audit
 
