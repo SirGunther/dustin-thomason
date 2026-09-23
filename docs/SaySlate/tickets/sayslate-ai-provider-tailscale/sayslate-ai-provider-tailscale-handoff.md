@@ -299,6 +299,7 @@ Output rules:
 ### SAYAI-06 audit
 
 - **Status:** Deferred by LD-032 — not dispatched this session
+- **Environment prerequisite:** Setup prompt for the private endpoint, whose Part A report is the readiness input for this ticket: [sayslate-ai-provider-tailscale-endpoint-setup-prompt.md](./sayslate-ai-provider-tailscale-endpoint-setup-prompt.md) (2026-09-23)
 - **Reviewed commit:** Pending
 - **Required evidence:** Pending
 - **Independent verification:** Pending
