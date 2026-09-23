@@ -213,24 +213,26 @@ Output rules:
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
 | --- | --- | --- | --- |
 | F1 — Migrated Gemini profile has no endpoint | `aiProviderSettings.js:migrateLegacyConfig` (`endpoint: ""`, line 233) | Set LD-033's Gemini preset endpoint and prove it | Resolved in `fdff8f0` — `migrateLegacyConfig` writes `GEMINI_PRESET_ENDPOINT`; test Scenario 4; probe01b |
-| F2 — Migration leaves no active profile | `aiProviderSettings.js:migrateLegacyConfig` (`activeProfileId: currentState.activeProfileId`, line 240) | Activate the migrated profile in the same write when none is active (LD-033), and prove it | Resolved in `fdff8f0` — `activeProfileId: state.activeProfileId || newProfile.id`; tests Scenario 4, 6; probe01b |
+| F2 — Migration leaves no active profile | `aiProviderSettings.js:migrateLegacyConfig` (`activeProfileId: currentState.activeProfileId`, line 240) | Activate the migrated profile in the same write when none is active (LD-033), and prove it | Resolved in `fdff8f0` — `activeProfileId: state.activeProfileId \|\| newProfile.id`; tests Scenario 4, 6; probe01b |
 | F3 — Missing credential action silently erases the key | `aiProviderSettings.js:upsertProfile` line 150 defaults to `replace`; line 157 accepts blank; probe: edit `{ id, modelId }` → credential `""` | Require an explicit LD-023 action; `replace` requires a non-empty credential; reject otherwise without writing (LD-023 rejects implicit blank-key deletion) | Resolved in `fdff8f0` — explicit-action and non-empty `replace` guards before any write; test Scenario 7; probe01b (0 writes, key intact) |
 | F4 — Stale in-memory cache overwrites other writers | `aiProviderSettings.js:currentState`, `persistState`, every mutator; `background.js:6-7` opens a new app tab per click; probe: tab B `activateProfile` erased tab A's profile | Each mutation reads and validates the stored record immediately before writing; prove two module instances cannot erase each other's profiles (exit gate 1) | Resolved in `fdff8f0` — `fetchValidatedState` before every mutation; test Scenario 8; probe01b (`G,O,C` retained) |
 | F5 — `localStorage` fallback is a second credential store | `aiProviderSettings.js:storageGet` lines 28-33, `storageSetEntries` lines 49-56 (write errors swallowed) | Remove the fallback; fail when `chrome.storage.local` is absent (exit gate 5) | Resolved in `fdff8f0` — fallback removed, rejects without `chrome.storage.local`; test Scenario 9; probe01b |
 
 ### SAYAI-02 audit
 
-- **Status:** Pending
-- **Reviewed commit:** Pending
-- **Required evidence:** Pending
-- **Independent verification:** Pending
-- **Scope verdict:** Pending
-- **Correctness verdict:** Pending
-- **Merge verdict:** Held — pending implementation and review
-- **Merged commit:** Pending
+- **Status:** Merged
+- **Reviewed commit:** `16e03fa4ed1c0fcb50900d8f7ea0d9a9f02db285` (review 2); review 1 was `31e671f2d52ca9f22c4fbbc8240d129f5acacf17`
+- **Required evidence:** Complete in both implementation reports. Starting commit `3d2ab41f17d6bcaaa14a80fe8a3b8fbe04e0d3e4`, branch `agent/sayai-02-provider-registry-permissions`, worktree `C:\SaySlate-worktrees\sayai-02-provider-registry-permissions`. The review 2 report gave the final SHA in short form; the orchestrator resolved it with `git rev-parse`
+- **Independent verification:** Review 1: `git merge-base --is-ancestor 3d2ab41 31e671f` true. Reran all gates; all passed. Loaded-extension gesture probe (scratch `gesture-probe.mjs`, EV-032 Playwright, headless Chromium with the worktree unpacked): a gesture-free timer request rejects `This function must be called during a user gesture`; production `ensureForEndpoint` called from a real click, which awaits `contains` and then requests, passes the gesture check and reaches the permission prompt. The suspected gesture-loss defect was refuted. Review 2: `16e03fa` fast-forwards `31e671f`, and `git diff --quiet 31e671f 16e03fa -- aiProviderRegistry.js aiProviderPermissions.js manifest.json` confirms they are unchanged. Adding an uncalled stray `chrome.permissions.request(` to a scratch `git archive` export makes `node tests/verify.mjs` exit 1 with `chrome.permissions.request must be called only from inside requestOrigin.` Reran both focused tests, `node tests/verify.mjs` (19 files), `node --check` on the changed tests, and `git diff --check 3d2ab41 HEAD`; all passed. After the merge, `node tests/verify.mjs` on `main` passed
+- **Scope verdict:** Pass — all changed files are owned; `host_permissions` unchanged; one `optional_host_permissions: ["https://*/*"]` entry added
+- **Correctness verdict:** Pass. Carry-forward constraint: transient user activation is time-limited, so SAYAI-05 must call `ensureForEndpoint` at the start of its Save/Test click handlers, before any storage or network await
+- **Merge verdict:** Merged — F1–F2 resolved
+- **Merged commit:** `a394d8317082f94890884497b920c617be728c11` (`--no-ff` into `main`, pushed to `origin/main`)
 
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
 | --- | --- | --- | --- |
+| F1 — Exit gate 2 checked without evidence | Ticket exit gate "Custom secure endpoints are editable and persist through the SAYAI-01 profile boundary" is `[x]`; no test loads `aiProviderSettings.js` with the registry | Add a focused test that normalizes a custom HTTPS endpoint through the real registry, persists it with `SaySlateAIProviderSettings.upsertProfile`, reloads from storage, and derives the identical exact origin pattern; edit it again and prove the other profile is unchanged | Resolved in `16e03fa` — `tests/ai-provider-registry.test.mjs` Scenario 5 |
+| F2 — Static assertion enforces nothing | `tests/verify.mjs` "Only ensureForEndpoint may call chrome.permissions.request" — condition `includes("chrome.permissions.request") && !includes("async function ensureForEndpoint")` is always false while `ensureForEndpoint` exists | Replace it with an assertion that fails when `chrome.permissions.request` is reachable from anything but `ensureForEndpoint`'s request helper, or remove it; misleading guards are not allowed | Resolved in `16e03fa` — `tests/verify.mjs` requestOrigin/ensureForEndpoint call-site guards; orchestrator violation probe exits 1 |
 
 ### SAYAI-03 audit
 
