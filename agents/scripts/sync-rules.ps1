@@ -334,7 +334,7 @@ if ($rules.Count -eq 0) { throw "No rules found in $sourceDir." }
 
 $agentsContent = (ConvertTo-Lf (Build-Agents $rules)).TrimEnd() + "`n"
 $claudeManifestContent = (ConvertTo-Lf (Build-ClaudeManifest $rules)).TrimEnd() + "`n"
-$claudeSettingsContent = @'
+$claudeSettingsContent = (ConvertTo-Lf @'
 {
   "hooks": {
     "Stop": [
@@ -352,7 +352,7 @@ $claudeSettingsContent = @'
     ]
   }
 }
-'@.TrimEnd() + "`n"
+'@).TrimEnd() + "`n"
 
 # workflow-index.md: strip any prior generated inventory block, append a freshly built one.
 # Idempotent - the block is replaced, never duplicated. Editorial content above is untouched.
