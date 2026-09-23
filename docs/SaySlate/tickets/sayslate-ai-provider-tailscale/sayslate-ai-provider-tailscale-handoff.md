@@ -252,14 +252,14 @@ Output rules:
 
 ### SAYAI-04 audit
 
-- **Status:** Pending
-- **Reviewed commit:** Pending
-- **Required evidence:** Pending
-- **Independent verification:** Pending
-- **Scope verdict:** Pending
-- **Correctness verdict:** Pending
-- **Merge verdict:** Held — pending implementation and review
-- **Merged commit:** Pending
+- **Status:** Merged
+- **Reviewed commit:** `67f557e05c7bce67b200c85da52c0b46e55142bd` (review 1)
+- **Required evidence:** Complete in the implementation report; starting commit `17f64484de236613a1958aadf03e2fb21b0371c5`, branch `agent/sayai-04-provider-connection-tests`, worktree `C:\SaySlate-worktrees\sayai-04-provider-connection-tests`
+- **Independent verification:** `git merge-base --is-ancestor 17f6448 67f557e` true; only `aiProviderConnectionTest.js` and its focused test were added, both owned. Read the module against LD-026, LD-034, and LD-037: check order, per-kind credential requirement, read-only `hasForEndpoint`, discovery URLs and headers, Anthropic `after_id` pagination with a 10-page cap, and the status → code mapping all match. Live-endpoint probe (scratch `probe04.mjs`: the real registry, permissions, and connection-test modules in `node:vm` with real `fetch`, placeholder key `fake-probe-key`, no real credentials): Gemini, OpenAI, and Anthropic bad keys → `authentication_failed`; an unresolvable custom tailnet host → `network_error`; all 4 requests were body-less `GET`s; no message contained the key. Reran `node tests/ai-provider-connection-test.test.mjs` (pass), `node tests/verify.mjs` (23 files), `node --check` on both files, and `git diff --check 17f6448 HEAD`; all passed. After the merge, `node tests/verify.mjs` on `main` passed
+- **Scope verdict:** Pass — two owned files added; `tests/verify.mjs` untouched (auto-discovery). The ticket's "Scope and architecture compliance" Value says "three owned files changed" while listing the two that did; the two-file fact is what the diff shows
+- **Correctness verdict:** Pass. The agent's unpinned choice, an exhausted 10-page Anthropic cap → `model_unavailable` and `has_more` without `last_id` → `malformed_response`, is consistent with LD-026 and LD-037's mapping of "a valid list without the ID"; accepted. Residual risk: a successful discovery with a real key was not exercised live
+- **Merge verdict:** Merged — no in-scope findings
+- **Merged commit:** `ab937280076977f82286797192d3df1e98780b74` (`--no-ff` into `main`, pushed to `origin/main`)
 
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
 | --- | --- | --- | --- |
