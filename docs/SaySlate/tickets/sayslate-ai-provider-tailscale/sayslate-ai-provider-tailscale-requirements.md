@@ -84,4 +84,4 @@ Origin: [Original ticket](./sayslate-ai-provider-tailscale-original-ticket.md)
 | Canonical SaySlate repository and remote access | Met | EV-016; `C:\SaySlate` and `origin/main` were aligned at `af9a2f3a8cbad88c22edc094767b5cdd31f1a24e` when the handoff was authored |
 | Node test runtime | Met | Node `v24.11.1` observed in `C:\SaySlate` on 2026-09-22; EV-015 and EV-026 define the gate |
 | Loaded-extension browser tooling | Met | EV-032; Chrome and Edge executables also found at their standard local installation paths on 2026-09-22 |
-| Live private Tailscale/LM Studio acceptance environment | Unmet until live acceptance execution | The user must supply the private endpoint, model, and token directly in the loaded extension; secrets are intentionally absent from planning artifacts |
+| Live private Tailscale/LM Studio acceptance environment | Unmet | The private endpoint does not exist yet (Dustin Thomason, 2026-09-22); when it does, the user supplies the endpoint, model, and token directly in the loaded extension, and secrets stay out of planning artifacts |

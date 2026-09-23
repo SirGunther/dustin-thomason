@@ -55,11 +55,12 @@ SAYAI-06
 | 3 | [SAYAI-03](./tickets/SAYAI-03.md) | No | Implement provider transports and canonical structured results. |
 | 4 | [SAYAI-04](./tickets/SAYAI-04.md) | No | Add non-generative provider connection diagnostics. |
 | 5 | [SAYAI-05](./tickets/SAYAI-05.md) | No | Integrate profiles, connection testing, and inference into both surfaces. |
-| 6 | [SAYAI-06](./tickets/SAYAI-06.md) | No | Prove the private Tailscale/LM Studio path and close the feature honestly. |
+| 6 | [SAYAI-06](./tickets/SAYAI-06.md) | No | **Deferred by LD-032 — do not dispatch this session.** Prove the private Tailscale/LM Studio path once the endpoint exists. |
 
 There are six tickets in six waves. They are sequential because adjacent tickets consume the
 provider contract established by the prior wave, and settings, manifest, transport, and UI routing
-must not be reconciled independently by low-reasoning agents.
+must not be reconciled independently by low-reasoning agents. SAYAI-06 is deferred by LD-032: this
+session is complete when SAYAI-05 is reviewed, merged, and pushed.
 
 **Confirmed:** Dustin Thomason delegated dependency-safe ticket ordering to the author on
 2026-09-22; the exact order is locked by LD-019.
@@ -100,8 +101,9 @@ must not be reconciled independently by low-reasoning agents.
    validates and commits those documentation updates separately.
 8. **Review and merge.** The orchestrating agent reviews the exact commit: confirms it descends from
    the wave base, inspects every changed file against exclusive ownership, traces the real production
-   path, reruns the gates, validates the exit gate, writes the audit record, and merges only when no
-   in-scope finding is unresolved. It then confirms the next wave's prerequisite.
+   path, reruns the gates, validates the exit gate, writes the audit record, and merges into `main`
+   only when no in-scope finding is unresolved. It then pushes `main` to `origin`, so the next
+   ticket's `origin/main` base includes the merge, and confirms the next wave's prerequisite.
 9. **No stacking.** Later waves start from updated `origin/main`. An implementation agent never
    builds on another ticket's unmerged branch.
 10. **Collisions.** A ticket that needs a file another ticket owns stops and records the file, symbol,
@@ -126,6 +128,16 @@ must not be reconciled independently by low-reasoning agents.
 - If a finding needs different ownership or appears after merge, the orchestrator creates the next
   lettered ticket after its cause, adds it to this order without renumbering anything, and records
   the dependency. Example: live failure from SAYAI-06 becomes SAYAI-06A.
+- **Before stopping on any question** — raised by an implementation agent or by itself — the
+  orchestrating agent runs this question-admission gate:
+  1. Write the exact question.
+  2. Search `C:\SaySlate`, the origin, requirements, decisions, and `C:\Argus` for the answer, and
+     record the files, symbols, or passages inspected.
+  3. If those sources answer it, the agent was only being cautious: resolve it, record the sourced
+     outcome as an `EV-###` or `LD-###` item, and continue without asking the user.
+  4. Only if an irreducible product, risk, or authority choice remains, add the next numbered entry
+     to the decisions document's register — investigation, why user input is required, and one
+     recommendation — send the completion notification, and ask the user by that number.
 - If user authority or an external environment is genuinely required, the objective stays
   **Unresolved**, states exactly what it depends on, sends the completion notification, and stops
   only that blocked path. No agent invents a product decision or claims completion.
@@ -259,13 +271,13 @@ Output rules:
 
 ### SAYAI-06 audit
 
-- **Status:** Pending
+- **Status:** Deferred by LD-032 — not dispatched this session
 - **Reviewed commit:** Pending
 - **Required evidence:** Pending
 - **Independent verification:** Pending
 - **Scope verdict:** Pending
 - **Correctness verdict:** Pending
-- **Merge verdict:** Held — pending implementation and review
+- **Merge verdict:** Held — deferred by LD-032 until the private endpoint exists
 - **Merged commit:** Pending
 
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
