@@ -286,6 +286,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `notify-agent-complete.ps1` | POST agent session completion to a Power Automate manual-trigger webhook. |
 | `start-apps.ps1` |  |
 | `sync-agents-md.ps1` | Backwards-compatible shim. The generator is now scripts/sync-rules.ps1, which produces |
+| `sync-memory.ps1` | Down-and-dirty two-way sync for Claude Code auto-memory (and anything else you point it at) |
 | `sync-rules.ps1` | Generate every tool-specific rule artifact from the single neutral source of truth (rules/*.md). |
 | `validate-workflows.ps1` | Audits dustin-thomason workflow wiring: rules, playbooks, skills, scripts, duplicates. |
 <!-- END generated:inventory -->
