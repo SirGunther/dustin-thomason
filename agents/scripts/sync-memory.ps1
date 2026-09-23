@@ -29,6 +29,18 @@
 
 .PARAMETER MemoryRoot
   Local auto-memory root. Default: $env:USERPROFILE\.claude\projects
+  Ignored when -TargetDir is used.
+
+.PARAMETER ProjectName
+  The staging-folder key to act on (matches a folder name under agents/memory-sync).
+  Required when -TargetDir is used, since a different username on the other machine means
+  the local folder name can't be auto-matched to a staged project name.
+
+.PARAMETER TargetDir
+  Explicit local folder to read from (Push) or write to (Pull), for a machine whose Windows
+  username/path doesn't match this one - so the automatic project-folder-name matching can't
+  work. Must already exist; this script will not create it, so a typo doesn't silently write
+  into (or read from) the wrong place.
 
 .PARAMETER DryRun
   Print what would be copied without writing anything.
@@ -40,14 +52,27 @@
 .EXAMPLE
   # On machine B: after `git pull`, drop the staged memory into place.
   .\agents\scripts\sync-memory.ps1 -Mode Pull
+
+.EXAMPLE
+  # On a machine with a different username: pull straight into a folder you already made.
+  .\agents\scripts\sync-memory.ps1 -Mode Pull -ProjectName c--Users-dktho-OneDrive-... -TargetDir "C:\Users\otheruser\.claude\projects\c--Users-otheruser-OneDrive-...\memory"
 #>
 param(
     [ValidateSet('Push', 'Pull')]
     [string]$Mode = 'Push',
     [string[]]$Only,
     [string]$MemoryRoot = (Join-Path $env:USERPROFILE '.claude\projects'),
+    [string]$ProjectName,
+    [string]$TargetDir,
     [switch]$DryRun
 )
+
+if ($TargetDir -and -not $ProjectName) {
+    throw "-TargetDir requires -ProjectName (which staged project's files to use)."
+}
+if ($TargetDir -and -not (Test-Path -LiteralPath $TargetDir)) {
+    throw "-TargetDir does not exist: $TargetDir`nCreate it first - this script will not create a destination for you, to avoid writing into (or reading from) the wrong place by typo."
+}
 
 $ErrorActionPreference = 'Stop'
 
@@ -69,48 +94,65 @@ function Copy-Tree([string]$From, [string]$To) {
     return $true
 }
 
-# Push discovers project folders from the local memory root (what this machine has).
-# Pull discovers them from the repo staging folder (what's available to bring down) - a
-# machine that has never opened a given project yet has no folder under $MemoryRoot at all.
-$scanRoot = if ($Mode -eq 'Push') { $MemoryRoot } else { $stagingRoot }
-
-if (-not (Test-Path -LiteralPath $scanRoot)) {
-    throw "Nothing to scan: $scanRoot does not exist."
-}
-
-$projectDirs = Get-ChildItem -LiteralPath $scanRoot -Directory
-if ($Only) {
-    $projectDirs = $projectDirs | Where-Object { $Only -contains $_.Name }
-}
-
-if ($projectDirs.Count -eq 0) {
-    Write-Host "No matching project memory folders under $scanRoot."
-    exit 0
-}
-
 Write-Host "Mode: $Mode"
-Write-Host "Memory root: $MemoryRoot"
 Write-Host "Staging root: $stagingRoot"
 Write-Host ''
 
 $touched = 0
-foreach ($proj in $projectDirs) {
-    # $proj.Name is the project-folder key either way; resolve both sides from it rather than
-    # from $proj.FullName, since $proj was enumerated from $scanRoot (local root for Push,
-    # staging root for Pull) and its FullName only makes sense on that one side.
-    $localMemory = Join-Path (Join-Path $MemoryRoot $proj.Name) 'memory'
-    $stagedMemory = Join-Path $stagingRoot $proj.Name
 
+if ($TargetDir) {
+    # Explicit single-project mode: skip auto-detection entirely, since a different username on
+    # this machine means the local folder name can't be matched to a staged project name.
+    $stagedMemory = Join-Path $stagingRoot $ProjectName
     if ($Mode -eq 'Push') {
-        if (Copy-Tree $localMemory $stagedMemory) {
-            Write-Host "Pushed: $($proj.Name)"
-            $touched++
-        }
+        if (Copy-Tree $TargetDir $stagedMemory) { Write-Host "Pushed: $ProjectName (from $TargetDir)"; $touched++ }
     }
     else {
-        if (Copy-Tree $stagedMemory $localMemory) {
-            Write-Host "Pulled: $($proj.Name)"
-            $touched++
+        if (Copy-Tree $stagedMemory $TargetDir) { Write-Host "Pulled: $ProjectName (into $TargetDir)"; $touched++ }
+    }
+}
+else {
+    # Auto-detect mode: works when both machines share the same username/path layout.
+    # Push discovers project folders from the local memory root (what this machine has).
+    # Pull discovers them from the repo staging folder (what's available to bring down) - a
+    # machine that has never opened a given project yet has no folder under $MemoryRoot at all.
+    $scanRoot = if ($Mode -eq 'Push') { $MemoryRoot } else { $stagingRoot }
+
+    if (-not (Test-Path -LiteralPath $scanRoot)) {
+        throw "Nothing to scan: $scanRoot does not exist."
+    }
+
+    $projectDirs = Get-ChildItem -LiteralPath $scanRoot -Directory
+    if ($Only) {
+        $projectDirs = $projectDirs | Where-Object { $Only -contains $_.Name }
+    }
+
+    if ($projectDirs.Count -eq 0) {
+        Write-Host "No matching project memory folders under $scanRoot."
+        exit 0
+    }
+
+    Write-Host "Memory root: $MemoryRoot"
+    Write-Host ''
+
+    foreach ($proj in $projectDirs) {
+        # $proj.Name is the project-folder key either way; resolve both sides from it rather than
+        # from $proj.FullName, since $proj was enumerated from $scanRoot (local root for Push,
+        # staging root for Pull) and its FullName only makes sense on that one side.
+        $localMemory = Join-Path (Join-Path $MemoryRoot $proj.Name) 'memory'
+        $stagedMemory = Join-Path $stagingRoot $proj.Name
+
+        if ($Mode -eq 'Push') {
+            if (Copy-Tree $localMemory $stagedMemory) {
+                Write-Host "Pushed: $($proj.Name)"
+                $touched++
+            }
+        }
+        else {
+            if (Copy-Tree $stagedMemory $localMemory) {
+                Write-Host "Pulled: $($proj.Name)"
+                $touched++
+            }
         }
     }
 }
