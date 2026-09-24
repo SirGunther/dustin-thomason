@@ -72,8 +72,8 @@ Complete every objective below in place, using the handoff's Compact Audit Trail
 
 ### Documentation describes both models
 **State:** Resolved
-**Value:** README describes the model as `base.en` or `small.en` with a "Change the model" subsection, and third-party notices carry a matching `small.en` section.
-**Evidence:** `README.md:3`, `:19-32` (Setup + Change the model), `:124` (exclusions); `THIRD_PARTY_NOTICES.md:26-32`
+**Value:** README describes the model as `base.en` or `small.en`, with a "Change the model" subsection at the end of `## Setup` (after the origin and token paragraphs, before `## Manual operation`), and third-party notices carry a matching `small.en` section.
+**Evidence:** `README.md:3`, `:17-63` (`## Setup`, incl. `:28` model flag), `:48-63` (`### Change the model`, correctly under Setup — F1), `:122` (exclusions heading), `:124` (exclusions text); `THIRD_PARTY_NOTICES.md:26-32`
 
 ### Scope and architecture compliance
 **State:** Resolved
@@ -82,11 +82,10 @@ Complete every objective below in place, using the handoff's Compact Audit Trail
 
 ### Implementation completeness
 **State:** Resolved
-**Value:** Every build-checklist and exit-gate item is checked with direct evidence; no departures from the requirements' evidence were needed.
-**Evidence:** Build checklist and exit gate above; final commit `2a763b80db9239b77d3e41e56794c0e85c1c037f` on `agent/wmodel-02-setup-model-choice`, pushed to `origin/agent/wmodel-02-setup-model-choice`
+**Value:** Every build-checklist and exit-gate item is checked with direct evidence, including F1's fix; no departures from the requirements' evidence were needed.
+**Evidence:** Build checklist and exit gate above; final commit `f9fe7dbc83b63ca59a2e37e039efae18a0ba4bc6` on `agent/wmodel-02-setup-model-choice`, pushed to `origin/agent/wmodel-02-setup-model-choice`
 
 ### F1 — "Change the model" subsection absorbs the origin and token setup
-**State:**
-**Value:**
-**Evidence:**
-**Depends on:**
+**State:** Resolved
+**Value:** The subsection was moved, content unchanged, to the end of `## Setup` (after the token paragraph, before `## Manual operation`), so the origin-registration and token paragraphs render directly under `## Setup` again.
+**Evidence:** `README.md:17-63` (`## Setup`), `:30-46` (origin/token paragraphs, now under Setup only), `:48-63` (`### Change the model`, moved); commit `f9fe7dbc83b63ca59a2e37e039efae18a0ba4bc6`; `git diff --stat bcc5049e..f9fe7db` still lists only the 5 owned files
