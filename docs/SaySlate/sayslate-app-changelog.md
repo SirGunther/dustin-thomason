@@ -14,6 +14,35 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
 
 ## Session log (newest first)
 
+### 2026-09-24T17:20:00Z — Status badge handoff: full page matches Floating Slate
+
+- **Direction:** keep Floating Slate's "Phase 1" / "Phase 2" wording and make the full page match
+  it (REQ-003, superseding REQ-002's "Pass" wording).
+- **Recorded:**
+  - LD-003: the full page uses "Phase 1" / "Phase 2".
+  - LD-004: Floating Slate is unchanged, and SAYSTAT-02 is withdrawn.
+  - LD-005: the full page follows Floating Slate's ready/failed/Ready states and colors.
+  - Open decisions 1–2 are resolved.
+- **Result:** SAYSTAT-01 is now the only ticket.
+- **Deliberate difference:** the full page sets "Phase N" only when the provider request starts, so
+  it never shows a stage that isn't running.
+- **Left as is:** Floating Slate's stuck label with no provider chosen (EV-011).
+
+### 2026-09-24T16:50:00Z — Status badge handoff drafted
+
+- **Scope:** the fourth of four proposed SaySlate features, a status badge that shows the running
+  stage ("Pass 1", "Pass 2") instead of only "Ready". The other three (Whisper model selection, a
+  reasoning option, a reconcile pass) were sized in chat only.
+- **Written:** the `agentic-handoff` set in
+  [`tickets/sayslate-status-badge/`](tickets/sayslate-status-badge/): original ticket,
+  requirements (REQ-001–002, EV-001–024), decisions (LD-001–002 and open decisions 1–2), handoff,
+  SAYSTAT-01 (full page) and SAYSTAT-02 (Floating Slate).
+- **Found:** Floating Slate sets its pass label before resolving the provider profile, so with no
+  provider chosen the badge keeps showing a pass that never started (EV-011). SAYSTAT-02 fixes it
+  if open decision 1 resolves yes.
+- **Not done:** open decisions 1–2 and the delivery order await confirmation; the set is not
+  committed; no ticket has been dispatched and no SaySlate code changed.
+
 ### 2026-09-24T01:10:00Z — Reasoning override confirmed on the LM Studio host
 
 - **Confirmed:** after the SaySlate update (`2bafd4e`), the LM Studio host's log for a SaySlate pass
@@ -67,6 +96,7 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
   Tailscale end to end.
 - **Confirmed:** no reasoning pass on the LM Studio host (`reasoning_tokens: 0`, 2026-09-23).
 - **Open:**
+  - Status badge handoff (`tickets/sayslate-status-badge/`): dispatch SAYSTAT-01.
   - Write the SAYAI-06 validation review; the README and ROADMAP updates wait for it (LD-029).
   - A successful Gemini generation on this build; OpenAI and Claude profiles run live.
 - **Someday:** self-host the Tailscale coordination server (Headscale) and a relay on spare
