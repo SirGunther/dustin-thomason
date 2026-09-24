@@ -26,6 +26,14 @@ So, I think maybe what I'm looking for is the ability, almost like a toggle, tha
 
 I think that's what I'm trying to say, and I think that simplifies it because it would only apply to the LM Studio and models that have reasoning capabilities, which is pretty much going to be anything that I choose to begin with. Then you just turn it on and off because if it doesn't apply, if you ever threw a model in there, you'd just be able to toggle it on and off. I think that simplifies it. Maybe make the artifacts. That sounds easy enough.
 
+### Message 3 (after SAYREASON-02 merged, 2026-09-24)
+
+Looks lik everything used reasoning, definitely took longer, what else do you need to complete this ticket?
+
+### Message 4 (2026-09-24)
+
+Actually, it timed out on the app, but the actual server processed the request, resolve that.
+
 ## Explicit Constraints In Original Request
 
 - "the same sort of ticket and everything for number two: the use of reasoning"
@@ -33,6 +41,7 @@ I think that's what I'm trying to say, and I think that simplifies it because it
 - "just throw it on all of them. Anything that goes through."
 - "a toggle for the first pass prompt to turn reasoning on and off, and then for the second pass prompt, you either turn it on and enabled, and then you can also turn on reasoning if you'd like"
 - "the writing behavior, that icon"
+- "it timed out on the app, but the actual server processed the request, resolve that" (message 4)
 
 ## Context Paths In Original Request
 

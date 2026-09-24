@@ -22,6 +22,9 @@ SAYREASON-02  Per-pass reasoning switches  <--  SAYSTAT-01 (status-badge handoff
      |
      v
 SAYREASON-02A  Remove the reasoning listener guards (SAYREASON-02 audit F3)
+     |
+     v
+SAYREASON-01A  Stream Custom passes and time out on silence (REQ-004, found after merge)
 ```
 
 | Wave | Tickets | Parallel? | Purpose |
@@ -29,8 +32,9 @@ SAYREASON-02A  Remove the reasoning listener guards (SAYREASON-02 audit F3)
 | 1 | [SAYREASON-01](./tickets/SAYREASON-01.md) | No | Give the dispatcher a `reasoning` input that only Custom (LM Studio) requests use. |
 | 2 | [SAYREASON-02](./tickets/SAYREASON-02.md) | No | Add the two switches, store them, and pass each pass's setting from both surfaces. |
 | 3 | [SAYREASON-02A](./tickets/SAYREASON-02A.md) | No | Give the app-dictation fixture the four reasoning ids and remove the listener guards they forced (SAYREASON-02 audit F3). Starts from `origin/main` after SAYREASON-02 merges. |
+| 4 | [SAYREASON-01A](./tickets/SAYREASON-01A.md) | No | Stream Custom passes and restart the timeout whenever data arrives, so a long reasoning pass is not reported as timed out (REQ-004, LD-007). Starts from `origin/main` at `753a5b1`. |
 
-3 tickets in 3 waves; SAYREASON-02A was added from the SAYREASON-02 audit (F3) and depends on SAYREASON-02 merging. SAYREASON-02 uses SAYREASON-01's `reasoning` input (LD-003). It also waits for the status-badge handoff's SAYSTAT-01 to merge, because both change `app.js` and `CHANGELOG.md`. SAYREASON-01 shares no file with SAYSTAT-01, so it can run while SAYSTAT-01 is in flight.
+4 tickets in 4 waves. SAYREASON-02A was added from the SAYREASON-02 audit (F3) and depends on SAYREASON-02 merging. SAYREASON-01A was added after the user's live check (REQ-004): a reasoning pass exceeded SAYREASON-01's inherited 90 s adapter timeout. SAYREASON-02 uses SAYREASON-01's `reasoning` input (LD-003). It also waits for the status-badge handoff's SAYSTAT-01 to merge, because both change `app.js` and `CHANGELOG.md`. SAYREASON-01 shares no file with SAYSTAT-01, so it can run while SAYSTAT-01 is in flight.
 
 **Confirmed:** Dustin Thomason, 2026-09-24. He directed the orchestrating agent to start this work in a separate worktree while SAYSTAT-01 is in flight, and to merge once SAYSTAT-01 completes.
 
@@ -58,6 +62,7 @@ SAYREASON-02A  Remove the reasoning listener guards (SAYREASON-02 audit F3)
      - Open the prompt panel and screenshot it in light and dark themes.
      - Turn a reasoning switch on, reload the page, confirm the switch is still on, and save the screenshots outside the repository.
      - No provider credential, endpoint, or token is entered, so the check involves no runtime secret.
+   - **SAYREASON-01A:** the implementation agent runs the ticket's live check against the Chrome machine's LM Studio (`http://127.0.0.1:1234/v1`, no credential) from an uncommitted scratch script kept outside the worktree.
    - **After SAYREASON-02 merges:** the user reloads the installed extension and runs one pass with that pass's reasoning switch off and one with it on, through their Custom (LM Studio) profile.
      - The orchestrating agent records the LM Studio log's `reasoning_tokens` for each run (0 when off, above 0 when on) in the SAYREASON-02 audit record.
      - The user enters no credential into any artifact.
@@ -192,3 +197,7 @@ Output rules:
 
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
 | --- | --- | --- | --- |
+
+### SAYREASON-01A audit
+
+Pending
