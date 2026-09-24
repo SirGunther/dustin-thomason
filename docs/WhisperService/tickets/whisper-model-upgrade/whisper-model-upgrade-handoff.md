@@ -154,7 +154,17 @@ Output rules:
 
 ### WMODEL-01 audit
 
-Pending
+- **Status:** Accepted and merged
+- **Reviewed commit:** `06adb8d85953b481a71c902f181b0842a934a35a` (review 1)
+- **Required evidence:** Complete in the implementation report; starting commit `9677c12e2bfcfe3d11689c324f90281ea2b99a1e`, branch `agent/wmodel-01-model-catalog`, worktree `C:\WhisperService-worktrees\wmodel-01-model-catalog`, pushed to `origin/agent/wmodel-01-model-catalog`; no departures reported. The scratch-home run reports `small.en` hashing to EV-010's value, `configure model` refusing an absent file and keeping `small.en` selected, and two smoke runs with `"ok":true,"modelInitializations":1` (127,914 ms on `small.en`, 122,662 ms on `base.en`)
+- **Independent verification:** `git merge-base --is-ancestor 9677c12 06adb8d` true; one commit; `git diff --stat 9677c12..06adb8d` lists exactly the 8 owned files. Read the full diff: `modelIdForConfig` matches file name and lowercased hash against `MODELS`, `validateConfig` calls it, `selectModel` checks id, presence, and hash with the now-exported `sha256` and returns a copy, and the `configure model` branch saves only after `selectModel` resolves. With `127.0.0.1:8178` free, reran `npm audit --audit-level=high` (0 vulnerabilities), `npm test` (26 pass, 0 fail), `node --check` on the 8 changed `.mjs` files, and `git diff --check 9677c12..HEAD`; all passed. Mutation probes, each restored afterwards: reverting health's fallback to the hard-coded name fails `tests/service.test.mjs`; removing the `modelIdForConfig` call from `validateConfig`, skipping `selectModel`'s hash check, and making `selectModel` mutate its input each fail `tests/config.test.mjs`; saving before `selectModel` fails `tests/cli.test.mjs`. `%LOCALAPPDATA%\WhisperService\config.json` SHA-256 is `65DF91E9…AFEE392`, matching the report, and its models folder still holds only `ggml-base.en.bin`. The ticket file changes only checkboxes and objectives; its line pointers did not match the reviewed commit, and the orchestrator corrected them to `constants.mjs:8-23`, `config.mjs:10-27`/`:29-55`/`:114`/`:118-128`/`:130-143`, `cli.mjs:19`/`:52-57`, and `service.mjs:74`. The scratch-home smoke runs were not repeated. After the merge, `npm test` on `main` passed (26 pass, 0 fail)
+- **Scope verdict:** Pass. Only owned files changed; `scripts/setup.mjs` still imports the legacy constants, which WMODEL-02 removes
+- **Correctness verdict:** Pass. Residual risk: the first `tests/cli.test.mjs` case asserts that `configure model small.en` rejects and leaves `config.json` unchanged, but not the rejection's message; the missing-file message is asserted directly on `selectModel` in `tests/config.test.mjs`
+- **Merge verdict:** Merged. No in-scope findings
+- **Merged commit:** `bcc5049e9fd149ba19706a7afe1003c3f7d70174` (`--no-ff` into `main`, pushed to `origin/main`)
+
+| Finding | File and symbol/line evidence | Required disposition | Resolution |
+| --- | --- | --- | --- |
 
 ### WMODEL-02 audit
 
