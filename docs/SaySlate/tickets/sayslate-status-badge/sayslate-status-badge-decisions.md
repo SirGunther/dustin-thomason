@@ -9,6 +9,8 @@ Requirements: [sayslate-status-badge-requirements.md](./sayslate-status-badge-re
 | LD-003 | The full-page badge reads `Phase 1` while the first AI pass runs and `Phase 2` while the second runs. These are the labels Floating Slate already uses (EV-010). | The user wants the full page to match what Floating Slate shows in the browser. | REQ-001, REQ-003 | Dustin Thomason, 2026-09-24 clarification (REQ-003) | LD-002's "Pass" wording |
 | LD-004 | Floating Slate's badge wording and behavior stay unchanged. SAYSTAT-02 is withdrawn before dispatch. | Floating Slate is the reference the full page is being made consistent with. | REQ-003 | Dustin Thomason, 2026-09-24: "we want to keep it with phase one and phase two because that is how the extension inside the browser works" | Open decision 1's recommendation to change Floating Slate's labels to "Pass" |
 | LD-005 | The full-page badge follows Floating Slate's pass states, with the same labels (EV-010, EV-012, EV-013). See the four states below the table. | The full page matches Floating Slate's labels, states, and colors. The one timing difference keeps the full page from reporting a stage that is not running, which REQ-001 requires; Floating Slate's badge does report one in that case (EV-011). | REQ-001, REQ-003 | Dustin Thomason, 2026-09-24: "it should be consistent with what the standalone browser extension would do" … "change the wording to whatever it is over there"; the label timing: [Original ticket](./sayslate-status-badge-original-ticket.md), message 1, "displays the current status of the process" | — |
+| LD-006 | Discarding the processed result, or clearing everything, sets the badge to "Ready" only when no pass request is in flight and dictation is not running. A discard or clear while a pass request is in flight leaves "Phase N" showing. | The discard button and Ctrl+Alt+X both reach the discard while a pass runs (EV-025). REQ-001 requires the running stage on the badge for as long as the pass runs, so "Ready" there would report a pass as finished while it is still running. | REQ-001 | REQ-001; LD-005 state 4; resolved from sources, open decision 3 | Narrows LD-005 state 4 |
+| LD-007 | When dictation and a pass overlap (EV-026), the dictation state owns the badge while dictation runs: a pass that succeeds or fails during dictation does not replace "Listening". When dictation stops while a pass request is still in flight, the badge shows that pass's `processing` / "Phase N" instead of "Ready". | The badge reports the current activity ([origin](./sayslate-status-badge-original-ticket.md), message 1, "displays the current status of the process"). While dictating, that is "Listening" (EV-003), which LD-005 already keeps over discard and clear. Once dictation stops, the running pass is the current activity, and "Ready" would report a stage that is still running, against REQ-001. | REQ-001 | REQ-001; EV-003; LD-005 state 4's "Listening" rule; resolved from sources, open decision 4 | Narrows LD-005 states 1–3 |
 
 LD-005's four states:
 
@@ -23,6 +25,8 @@ The new `processing` and `complete` styles cover light and dark themes, using Fl
 
 - [x] 1. Is Floating Slate's badge part of this work, changing "Phase 1" / "Phase 2" to "Pass 1" / "Pass 2"? — Resolved as LD-004
 - [x] 2. On the full page, what does the badge show after a pass succeeds or fails, how is each state styled, and when does it return to "Ready"? — Resolved as LD-005
+- [x] 3. What does the full-page badge show when the result is discarded, or everything is cleared, while a pass request is in flight? — Resolved from sources as LD-006
+- [x] 4. What does the full-page badge show when dictation starts or stops while a pass request is in flight? — Resolved from sources as LD-007
 
 ## Open Decision Register
 
@@ -62,4 +66,24 @@ The new `processing` and `complete` styles cover light and dark themes, using Fl
 
 Users already see this sequence in Floating Slate, so the full page adds no new words or colors. The cost is that "Pass 2 ready" stays on the badge until the next action rather than reverting to "Ready" by itself.
 **Evidence:** EV-003, EV-005, EV-007, EV-008, EV-010, EV-012, EV-013; Dustin Thomason, 2026-09-24 answer (REQ-003)
+**Depends on:** —
+
+### 3. Full-page badge when the result is discarded or cleared during a pass
+
+**State:** Resolved
+**Value:** Resolved from sources as LD-006.
+**Investigation:** Recorded by the orchestrating agent before SAYSTAT-01's dispatch. The discard button is enabled while the first pass runs, and Ctrl+Alt+X reaches `clearTranscript`, which discards the result, while either pass runs (EV-025, `C:\SaySlate\app.js:686,881,1275,1344-1353`). SAYSTAT-01's discard rule as first written reset the badge to "Ready" whenever dictation was not running, so a discard during a pass would show "Ready" while that pass's request was still in flight.
+**Why user input is required:** Not required. REQ-001 fixes the badge while a pass runs, so the only rule consistent with it is to leave "Phase N" showing.
+**Recommendation:** —
+**Evidence:** EV-025; REQ-001
+**Depends on:** —
+
+### 4. Full-page badge when dictation overlaps a pass
+
+**State:** Resolved
+**Value:** Resolved from sources as LD-007.
+**Investigation:** Recorded by the orchestrating agent before SAYSTAT-01's dispatch. Ctrl+Alt+D starts dictation while a pass runs, although the start button is disabled then (EV-026, `C:\SaySlate\app.js:878,980-1005,1344-1349`). As first written, SAYSTAT-01 would let a pass that settles during dictation replace "Listening" with "Phase N ready" or "Phase N failed". A dictation stop during a pass would also show "Ready" while that pass's request was in flight (`app.js:913-917`).
+**Why user input is required:** Not required. REQ-001 and EV-003 each fix the badge for one of the two activities, and LD-005 already gives "Listening" precedence over the other badge states. Together they settle both overlap orders. Whether Ctrl+Alt+D should be blocked during a pass, as the start button is, changes dictation behavior. That is outside this handoff and is not decided here.
+**Recommendation:** —
+**Evidence:** EV-003, EV-026; REQ-001; LD-005
 **Depends on:** —

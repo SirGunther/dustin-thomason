@@ -10,14 +10,16 @@
 
 ## Goal
 
-When a full-page AI pass runs, from its button, its shortcut, or the Finish workflow, the top badge shows the same stages Floating Slate shows: "Phase 1" or "Phase 2" while the pass runs (LD-003), then that pass's result, then "Ready" as LD-005 sets out. It must be legible in both themes. This ticket must not become a shared pass pipeline, a Floating Slate change (LD-004), new labels for the stop or copy steps, or a change to how passes run.
+When a full-page AI pass runs, from its button, its shortcut, or the Finish workflow, the top badge shows the same stages Floating Slate shows: "Phase 1" or "Phase 2" while the pass runs (LD-003), then that pass's result, then "Ready" as LD-005 sets out, with LD-006 and LD-007 covering a discard, clear, or dictation that overlaps a pass. It must be legible in both themes. This ticket must not become a shared pass pipeline, a Floating Slate change (LD-004), new labels for the stop or copy steps, or a change to how passes run.
 
 ## Build checklist
 
-- [ ] In `runFirstPass` (`app.js:740`), call `setStatus("processing", "Phase 1")` after the active profile resolves and immediately before the provider request. The missing-profile return (EV-005) then leaves the badge unchanged (LD-003, LD-005).
-- [ ] In `runFirstPass`, call `setStatus("complete", "Phase 1 ready")` after the result is stored, and `setStatus("error", "Phase 1 failed")` in the failure path (LD-005).
-- [ ] Apply the same three states to `runSecondPass` (`app.js:785`) with "Phase 2" (LD-003, LD-005).
-- [ ] In `discardResultTranscript` (`app.js:702`), call `setStatus("idle", "Ready")` only when dictation is not running. This covers the discard button (`app.js:1389`) and `clearTranscript`, which calls it after stopping dictation (`app.js:1275`). A discard during dictation keeps "Listening" (EV-003, EV-007, LD-005).
+- [ ] Add one `let` beside `firstPassRunning` (`app.js:100-102`) that holds the label of the pass whose provider request is in flight: "Phase 1", "Phase 2", or `""` when no request is in flight (LD-006, LD-007).
+- [ ] In `runFirstPass` (`app.js:740`), after the active profile resolves and immediately before the provider request, set that label to "Phase 1" and call `setStatus("processing", "Phase 1")`. Reset the label to `""` in the pass's `finally`. The missing-profile return (EV-005) then leaves the badge and the label unchanged (LD-003, LD-005).
+- [ ] In `runFirstPass`, call `setStatus("complete", "Phase 1 ready")` after the result is stored, and `setStatus("error", "Phase 1 failed")` in the failure path, each only when dictation is not running. While dictation runs, "Listening" stays (LD-005, LD-007).
+- [ ] Apply the same label, states, and dictation condition to `runSecondPass` (`app.js:785`) with "Phase 2" (LD-003, LD-005, LD-007).
+- [ ] In `discardResultTranscript` (`app.js:702`), call `setStatus("idle", "Ready")` only when dictation is not running and no pass request is in flight (the label is `""`). This covers the discard button (`app.js:1389`) and `clearTranscript`, which calls it after stopping dictation (`app.js:1275`), including Finish's final clear. A discard during dictation keeps "Listening"; a discard during a pass request keeps "Phase N" (EV-003, EV-007, EV-025, LD-005, LD-006).
+- [ ] In `setListeningUI` (`app.js:904-917`), where dictation stopping now sets `idle` / "Ready", set `processing` with the in-flight pass label instead when a pass request is in flight. The existing `error` check stays as it is (EV-026, LD-007).
 - [ ] Add `.status-pill[data-state="processing"]` and `.status-pill[data-state="complete"]` rules, with their `.status-dot` variants, beside the existing states at `app.css:655-686`. Use `#5b7fa3` for processing and the accent color for complete (EV-013, LD-005).
 - [ ] Add dark-theme variants of both states beside `app.css:1207-1219` (EV-008, LD-005).
 - [ ] Add scenarios to `tests/app-dictation-integration.test.mjs` that drive the real click handlers through `buildContext` (EV-018), with an `aiResponder` whose promise the test settles. Assert `elements.statusPill.dataset.state` and `elements.statusText.textContent` at each point:
@@ -28,6 +30,8 @@ When a full-page AI pass runs, from its button, its shortcut, or the Finish work
   - [ ] **Finish, second pass enabled:** "Phase 1", then "Phase 2", observed while each is in flight, then `idle` / "Ready" after the final clear.
   - [ ] **Finish, second pass fails:** ends at `error` / "Phase 2 failed", and the transcript is not cleared.
   - [ ] **Discard:** discarding after "Phase 2 ready" gives "Ready"; discarding while dictating keeps "Listening".
+  - [ ] **Discard during a pass:** with a prior result shown, clicking discard while "Phase 1" is in flight keeps `processing` / "Phase 1"; when the pass settles, `complete` / "Phase 1 ready" (EV-025, LD-006).
+  - [ ] **Dictation during a pass:** a Ctrl+Alt+D keydown while "Phase 1" is in flight gives "Listening" (EV-026). Then, in one scenario, settling the pass while dictating keeps "Listening", and stopping dictation afterwards gives "Ready". In another, stopping dictation while the pass is still in flight gives `processing` / "Phase 1", then `complete` / "Phase 1 ready" when it settles (LD-007).
 - [ ] Add one line under `CHANGELOG.md` `[Unreleased]` stating that the full-page status badge now shows each AI pass as it runs, matching Floating Slate (EV-023).
 
 ## Exit gate
@@ -36,7 +40,7 @@ When a full-page AI pass runs, from its button, its shortcut, or the Finish work
 - [ ] `node --check app.js` exits 0.
 - [ ] `git diff --check` reports nothing.
 - [ ] The six pass labels in `app.js` are exactly the ones Floating Slate uses: "Phase 1", "Phase 1 ready", "Phase 1 failed", "Phase 2", "Phase 2 ready", "Phase 2 failed" (EV-010).
-- [ ] Every new badge assertion follows a real user action (a dispatched click). No test calls `setStatus` or replaces a pass function.
+- [ ] Every new badge assertion follows a real user action: a dispatched click on a control the page has enabled at that moment, or a dispatched `keydown` for a README shortcut (EV-026). No test calls `setStatus` or replaces a pass function.
 - [ ] The existing prompt-construction assertions at `tests/app-dictation-integration.test.mjs:666-675` pass unmodified.
 - [ ] Loaded-extension check (handoff dispatch rule 6): screenshots of the full-page badge in `idle`, `processing`, `complete`, and `error`, in light and dark themes, show each state legibly and distinct from `idle`. Screenshot paths are reported.
 - [ ] `git diff --stat <starting commit>..HEAD` lists only the owned files.
