@@ -168,4 +168,15 @@ Output rules:
 
 ### WMODEL-02 audit
 
-Pending
+- **Status:** Changes requested
+- **Reviewed commit:** `2a763b80db9239b77d3e41e56794c0e85c1c037f` (review 1)
+- **Required evidence:** Complete in the review 1 report; starting commit `bcc5049e9fd149ba19706a7afe1003c3f7d70174`, branch `agent/wmodel-02-setup-model-choice`, worktree `C:\WhisperService-worktrees\wmodel-02-setup-model-choice`, pushed to `origin/agent/wmodel-02-setup-model-choice`; no departures reported. The scratch-home run reports `ggml-small.en.bin identity verified.` with EV-010's hash, the selection still `base.en` afterwards, no re-download on a second run, no `ggml-base.en.bin` created by a flagless setup after `configure model small.en`, and smoke `"ok":true,"modelInitializations":1` with the worker ready on `ggml-small.en.bin`
+- **Independent verification:** Review 1: `git merge-base --is-ancestor bcc5049 2a763b8` true; one commit; `git diff --stat bcc5049..2a763b8` lists exactly the 5 owned files. Read the full diff: `parseModelArg` rejects an unknown or missing value with the `MODELS` ids, `resolveModelId` returns the explicit id or `modelIdForConfig(await loadConfig(paths))` and writes nothing, `provisionModel` uses the entry's file in `paths.models`, hash, and URL, the success message is `<file> identity verified.`, the module-level run is guarded like `cli.mjs`'s, and the source-checkout and build steps are unchanged. With `127.0.0.1:8178` free, reran `npm audit --audit-level=high` (0 vulnerabilities), `npm test` (30 pass, 0 fail), `node --check` on the 3 changed `.mjs` files, `git diff --check bcc5049..HEAD`, and `git grep -n -E "MODEL_SHA256|MODEL_FILE"` (no matches); all passed. Mutation probes, each restored afterwards: skipping `parseModelArg`'s validation, having `resolveModelId` ignore the selection, and having an explicit id write the selection each fail `tests/setup.test.mjs`. `%LOCALAPPDATA%\WhisperService\config.json` SHA-256 is `65DF91E9…AFEE392`, and its models folder still holds only `ggml-base.en.bin`. The README heading structure places the origin and token paragraphs under the new subsection (F1). The scratch-home runs were not repeated
+- **Scope verdict:** Pass. Only owned files changed
+- **Correctness verdict:** Changes requested (F1)
+- **Merge verdict:** Held. F1 is unresolved
+- **Merged commit:** —
+
+| Finding | File and symbol/line evidence | Required disposition | Resolution |
+| --- | --- | --- | --- |
+| F1 — "Change the model" subsection absorbs the origin and token setup | `README.md:30` `### Change the model` is inserted inside `## Setup` (`:17`) before the origin-registration and token paragraphs (`:46-63`), which have no heading of their own, so they render under "Change the model" until `## Manual operation` (`:65`) | Correctable within ownership: move the `### Change the model` subsection, content unchanged, to the end of `## Setup`, after "Normal startup never prints the token." and before `## Manual operation`, so the origin and token paragraphs stay directly under `## Setup`. Update the ticket's `Documentation describes both models` evidence pointers and fill the F1 objective | Pending |
