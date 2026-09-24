@@ -105,3 +105,15 @@ Complete every objective below in place, using the handoff's Compact Audit Trail
 **Value:**
 **Evidence:**
 **Depends on:**
+
+### F1 — Full-page reasoning assertions read a shared call log
+**State:**
+**Value:**
+**Evidence:**
+**Depends on:**
+
+### F2 — Ticket file not updated in place
+**State:**
+**Value:**
+**Evidence:**
+**Depends on:**

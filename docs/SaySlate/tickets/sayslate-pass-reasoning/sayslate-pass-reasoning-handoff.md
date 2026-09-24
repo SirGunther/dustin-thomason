@@ -19,14 +19,18 @@ SAYREASON-01  Dispatcher sends the reasoning setting to LM Studio
      |
      v
 SAYREASON-02  Per-pass reasoning switches  <--  SAYSTAT-01 (status-badge handoff) merged first
+     |
+     v
+SAYREASON-02A  Remove the reasoning listener guards (SAYREASON-02 audit F3)
 ```
 
 | Wave | Tickets | Parallel? | Purpose |
 | --- | --- | --- | --- |
 | 1 | [SAYREASON-01](./tickets/SAYREASON-01.md) | No | Give the dispatcher a `reasoning` input that only Custom (LM Studio) requests use. |
 | 2 | [SAYREASON-02](./tickets/SAYREASON-02.md) | No | Add the two switches, store them, and pass each pass's setting from both surfaces. |
+| 3 | [SAYREASON-02A](./tickets/SAYREASON-02A.md) | No | Give the app-dictation fixture the four reasoning ids and remove the listener guards they forced (SAYREASON-02 audit F3). Starts from `origin/main` after SAYREASON-02 merges. |
 
-2 tickets in 2 waves. SAYREASON-02 uses SAYREASON-01's `reasoning` input (LD-003). It also waits for the status-badge handoff's SAYSTAT-01 to merge, because both change `app.js` and `CHANGELOG.md`. SAYREASON-01 shares no file with SAYSTAT-01, so it can run while SAYSTAT-01 is in flight.
+3 tickets in 3 waves; SAYREASON-02A was added from the SAYREASON-02 audit (F3) and depends on SAYREASON-02 merging. SAYREASON-02 uses SAYREASON-01's `reasoning` input (LD-003). It also waits for the status-badge handoff's SAYSTAT-01 to merge, because both change `app.js` and `CHANGELOG.md`. SAYREASON-01 shares no file with SAYSTAT-01, so it can run while SAYSTAT-01 is in flight.
 
 **Confirmed:** Dustin Thomason, 2026-09-24. He directed the orchestrating agent to start this work in a separate worktree while SAYSTAT-01 is in flight, and to merge once SAYSTAT-01 completes.
 
@@ -158,5 +162,22 @@ Output rules:
 | --- | --- | --- | --- |
 
 ### SAYREASON-02 audit
+
+- **Status:** Changes requested
+- **Reviewed commit:** `05090dd588960cf79211b9ff03409b61afc60697` (review 1)
+- **Required evidence:** Complete in the review 1 report; starting commit `a1688338cee39aa536be12d9e56daa204e9fe40e`, branch `agent/sayreason-02-pass-reasoning-switches`, worktree `C:\SaySlate-worktrees\sayreason-02-pass-reasoning-switches`, pushed to `origin`. The report records one departure, the listener guards (F3). The ticket's checklist and objectives were not updated in place (F2)
+- **Independent verification:** Review 1: `git merge-base --is-ancestor a168833 05090dd` true; one commit. `git diff --stat a168833..HEAD` lists the 8 owned files; `aiProviderClient.js`, `openAICompatibleClient.js`, `floating.html`, `floating.css`, `tests/verify.mjs`, and `tests/app-dictation-integration.test.mjs` are unchanged. The owned test diffs remove only harness lines (the full-page fixture's id list, Floating Slate's no-op `onChanged`, and its `buildEnvironment` return), no assertion. Traced both surfaces: `runFirstPass`/`runSecondPass` pass `processingConfig.<pass>Reasoning` and Floating Slate's two `generate` calls pass `config.<pass>Reasoning`; these are Floating Slate's only `generate` calls, so Finish and the ChatGPT send use them. Orchestrator probes (scratch copies of the worktree): replacing `runFirstPass`'s `reasoning` with `false` fails `tests/ai-provider-ui.test.mjs`; replacing Floating Slate's second-pass `reasoning` with `false`, or dropping `firstPassReasoning` from its `normalizeConfig`, fails `tests/floating-dictation-integration.test.mjs`. Removing the pass clicks from the full-page Reload and Second-pass-off scenarios leaves both passing (F1). Read all 4 screenshots: both switches show in light and dark themes, and "Reasoning on" for the first pass survives the reload. Reran `node tests/verify.mjs` (exit 0), `node --check` on the 4 changed `.js`/`.mjs` files, and `git diff --check a168833..HEAD`; all passed
+- **Scope verdict:** Pass — only owned files changed. The guards (F3) are in an owned file but exist only because a file outside the ownership lacks the new ids
+- **Correctness verdict:** Production behavior matches LD-002 through LD-006. The Reload and Second-pass-off assertions do not bind to the request the action caused (F1)
+- **Merge verdict:** Held — F1 and F2 are correctable within the ticket's ownership. F3 needs other ownership and is routed to SAYREASON-02A, which does not block this merge
+- **Merged commit:** —
+
+| Finding | File and symbol/line evidence | Required disposition | Resolution |
+| --- | --- | --- | --- |
+| F1 — Full-page reasoning assertions read a shared call log | `tests/ai-provider-ui.test.mjs` `lastChatCompletionsBody` reads the last `/chat/completions` call in `fetchImpl.__calls`, which every scenario shares. With the pass clicks removed, the Reload and Second-pass-off scenarios still pass (orchestrator probe) | Correctable within ownership: before each pass action in the new full-page reasoning scenarios, record the call count; afterwards assert exactly one new `/chat/completions` call and read `reasoning_effort` from that call | Open |
+| F2 — Ticket file not updated in place | `tickets/SAYREASON-02.md`: every checkbox is unchecked and every objective is blank at review 1; the objectives appear only in the report | Correctable within ownership: update the ticket's checklist, exit gate, and objectives in place (dispatch rule 7), including the F1 objective | Open |
+| F3 — Reasoning listeners guarded for an out-of-ownership fixture | `app.js` listener wiring: `if (firstPassReasoningInput)` / `if (secondPassReasoningInput)`. No other listener in `app.js` is guarded, and `openPromptSettings`/`savePromptSettings` use the same elements unguarded. The guards exist because the `ELEMENT_IDS` fixture in `tests/app-dictation-integration.test.mjs` lacks the four new ids, and SAYREASON-02 must not change that file | Needs other ownership: [SAYREASON-02A](./tickets/SAYREASON-02A.md) adds the ids to that fixture and removes both guards, after SAYREASON-02 merges | Routed to SAYREASON-02A |
+
+### SAYREASON-02A audit
 
 Pending
