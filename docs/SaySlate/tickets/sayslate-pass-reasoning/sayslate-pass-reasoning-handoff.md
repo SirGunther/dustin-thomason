@@ -145,14 +145,14 @@ Output rules:
 
 ### SAYREASON-01 audit
 
-- **Status:** Approved; merge held until SAYSTAT-01 merges, per the user's direction (Confirmed line)
+- **Status:** Merged
 - **Reviewed commit:** `75555e3ae19516eac8ef10eefcb9d1f73a19535e` (review 1)
 - **Required evidence:** Complete in the implementation report; starting commit `668a10fee66d513615a19972778b19019770fbc5`, branch `agent/sayreason-01-dispatcher-reasoning`, worktree `C:\SaySlate-worktrees\sayreason-01-dispatcher-reasoning`, pushed to `origin/agent/sayreason-01-dispatcher-reasoning`
 - **Independent verification:** `git merge-base --is-ancestor 668a10f 75555e3` true; one commit. Traced the request path: `generate` gains `reasoning = false` (`aiProviderClient.js:52`), used only in the `OPENAI_CHAT_COMPLETIONS` case to choose `"medium"`/`"none"` for Custom and `undefined` for OpenAI (`:100-105`); `adapterArgs` (`:78-88`) is unchanged, so the Gemini and Anthropic adapters receive the same arguments. The six new scenarios run the real registry, adapters, and dispatcher in `node:vm` against a fake `fetch` and assert the parsed request body. The test diff removes no line, so the existing assertions are unmodified. Running the new test file against the base `aiProviderClient.js` (scratch copy) fails at scenario 7 (`actual: 'none'`, `expected: 'medium'`), so the scenarios detect the change. Reran `node tests/verify.mjs` (exit 0), `node --check aiProviderClient.js`, `node --check tests/ai-provider-client.test.mjs`, and `git diff --check 668a10f..HEAD`; all passed
 - **Scope verdict:** Pass. Only `aiProviderClient.js` (+6/−3) and `tests/ai-provider-client.test.mjs` (+172) changed, both owned. The ticket's "Other providers unchanged" Value claimed byte-for-byte identical requests, which is more than the scenarios assert; the orchestrator corrected it to the asserted fact
 - **Correctness verdict:** Pass. Residual risk: the Gemini and Anthropic scenarios assert only that no field is added, not full body equality; the unchanged `adapterArgs` covers the rest by construction
-- **Merge verdict:** Pending, no in-scope findings. Waiting for SAYSTAT-01 to merge into `origin/main`
-- **Merged commit:** Pending
+- **Merge verdict:** Merged — no in-scope findings. Held, per the user's direction (Confirmed line), until SAYSTAT-01's merge `0e1b26bdb201da9a52c1ce04b761d730a799b79b` reached `origin/main`, then merged on top of it. After the merge, `node tests/verify.mjs` and `node --check aiProviderClient.js` on `main` passed
+- **Merged commit:** `a1688338cee39aa536be12d9e56daa204e9fe40e` (`--no-ff` into `main`, pushed to `origin/main`)
 
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
 | --- | --- | --- | --- |
