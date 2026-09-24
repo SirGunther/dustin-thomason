@@ -177,8 +177,18 @@ Output rules:
 | --- | --- | --- | --- |
 | F1 — Full-page reasoning assertions read a shared call log | `tests/ai-provider-ui.test.mjs` `lastChatCompletionsBody` reads the last `/chat/completions` call in `fetchImpl.__calls`, which every scenario shares. With the pass clicks removed, the Reload and Second-pass-off scenarios still pass (orchestrator probe) | Correctable within ownership: before each pass action in the new full-page reasoning scenarios, record the call count; afterwards assert exactly one new `/chat/completions` call and read `reasoning_effort` from that call | Resolved in `542fa4a` (review 2 probes fail as required) |
 | F2 — Ticket file not updated in place | `tickets/SAYREASON-02.md`: every checkbox is unchecked and every objective is blank at review 1; the objectives appear only in the report | Correctable within ownership: update the ticket's checklist, exit gate, and objectives in place (dispatch rule 7), including the F1 objective | Resolved at review 2 |
-| F3 — Reasoning listeners guarded for an out-of-ownership fixture | `app.js` listener wiring: `if (firstPassReasoningInput)` / `if (secondPassReasoningInput)`. No other listener in `app.js` is guarded, and `openPromptSettings`/`savePromptSettings` use the same elements unguarded. The guards exist because the `ELEMENT_IDS` fixture in `tests/app-dictation-integration.test.mjs` lacks the four new ids, and SAYREASON-02 must not change that file | Needs other ownership: [SAYREASON-02A](./tickets/SAYREASON-02A.md) adds the ids to that fixture and removes both guards, after SAYREASON-02 merges | Routed to SAYREASON-02A |
+| F3 — Reasoning listeners guarded for an out-of-ownership fixture | `app.js` listener wiring: `if (firstPassReasoningInput)` / `if (secondPassReasoningInput)`. No other listener in `app.js` is guarded, and `openPromptSettings`/`savePromptSettings` use the same elements unguarded. The guards exist because the `ELEMENT_IDS` fixture in `tests/app-dictation-integration.test.mjs` lacks the four new ids, and SAYREASON-02 must not change that file | Needs other ownership: [SAYREASON-02A](./tickets/SAYREASON-02A.md) adds the ids to that fixture and removes both guards, after SAYREASON-02 merges | Resolved by SAYREASON-02A, merged `753a5b1` |
 
 ### SAYREASON-02A audit
 
-Pending
+- **Status:** Merged
+- **Reviewed commit:** `807e2e821803c09f6830c462f03eacbdbfe4c791` (review 1)
+- **Required evidence:** Complete in the implementation report; starting commit `d99088446df2239dbb19aacff1180065e875a9e1`, branch `agent/sayreason-02a-reasoning-listener-guards`, worktree `C:\SaySlate-worktrees\sayreason-02a-reasoning-listener-guards`, pushed to `origin`
+- **Independent verification:** `git merge-base --is-ancestor d990884 807e2e8` true; one commit. The diff changes exactly the two guarded lines in `app.js`, now unguarded `addEventListener` calls, and appends the four ids with a `// SAYREASON-02:` comment to `ELEMENT_IDS` in `tests/app-dictation-integration.test.mjs`; no other line changes. `node tests/verify.mjs` passes with the guards removed, so the fixture now supplies the elements `app.js` wires. `git grep` for the guard pattern in `app.js` returns nothing. Reran `node tests/verify.mjs` (exit 0), `node --check app.js`, `node --check tests/app-dictation-integration.test.mjs`, and `git diff --check d990884..HEAD`; all passed. After the merge, `node tests/verify.mjs` and `node --check app.js` on `main` passed
+- **Scope verdict:** Pass — only the owned lines changed
+- **Correctness verdict:** Pass — resolves SAYREASON-02 audit F3
+- **Merge verdict:** Merged — no in-scope findings
+- **Merged commit:** `753a5b10411b321e1adfa859134564d6197cb418` (`--no-ff` into `main`, pushed to `origin/main`)
+
+| Finding | File and symbol/line evidence | Required disposition | Resolution |
+| --- | --- | --- | --- |

@@ -14,17 +14,17 @@ SAYREASON-02 wires the two reasoning switches with `if (firstPassReasoningInput)
 
 ## Build checklist
 
-- [ ] In `tests/app-dictation-integration.test.mjs`, add `"firstPassReasoningInput"`, `"firstPassReasoningState"`, `"secondPassReasoningInput"`, and `"secondPassReasoningState"` to `ELEMENT_IDS`, with a one-line `// SAYREASON-02: …` comment like the existing `// SAYAI-05: …` one.
-- [ ] In `app.js`'s listener wiring, replace `if (firstPassReasoningInput) firstPassReasoningInput.addEventListener(…)` and `if (secondPassReasoningInput) secondPassReasoningInput.addEventListener(…)` with the same `addEventListener` calls, unguarded.
+- [x] In `tests/app-dictation-integration.test.mjs`, add `"firstPassReasoningInput"`, `"firstPassReasoningState"`, `"secondPassReasoningInput"`, and `"secondPassReasoningState"` to `ELEMENT_IDS`, with a one-line `// SAYREASON-02: …` comment like the existing `// SAYAI-05: …` one.
+- [x] In `app.js`'s listener wiring, replace `if (firstPassReasoningInput) firstPassReasoningInput.addEventListener(…)` and `if (secondPassReasoningInput) secondPassReasoningInput.addEventListener(…)` with the same `addEventListener` calls, unguarded.
 
 ## Exit gate
 
-- [ ] `node tests/verify.mjs` exits 0.
-- [ ] `node --check app.js` and `node --check tests/app-dictation-integration.test.mjs` exit 0.
-- [ ] `git diff --check` reports nothing.
-- [ ] `git grep -n "if (firstPassReasoningInput)\|if (secondPassReasoningInput)" -- app.js` returns nothing.
-- [ ] `git diff <starting commit>..HEAD -- tests/app-dictation-integration.test.mjs` changes only `ELEMENT_IDS`, and every existing scenario in that file passes unmodified.
-- [ ] `git diff --stat <starting commit>..HEAD` lists only `app.js` and `tests/app-dictation-integration.test.mjs`.
+- [x] `node tests/verify.mjs` exits 0.
+- [x] `node --check app.js` and `node --check tests/app-dictation-integration.test.mjs` exit 0.
+- [x] `git diff --check` reports nothing.
+- [x] `git grep -n "if (firstPassReasoningInput)\|if (secondPassReasoningInput)" -- app.js` returns nothing.
+- [x] `git diff <starting commit>..HEAD -- tests/app-dictation-integration.test.mjs` changes only `ELEMENT_IDS`, and every existing scenario in that file passes unmodified.
+- [x] `git diff --stat <starting commit>..HEAD` lists only `app.js` and `tests/app-dictation-integration.test.mjs`.
 
 ## Out of scope
 
@@ -35,25 +35,21 @@ SAYREASON-02 wires the two reasoning switches with `if (firstPassReasoningInput)
 Complete every objective below in place, using the handoff's Compact Audit Trail Output Rule. Resolved requires implemented code, direct evidence, and focused verification; intent or partial implementation is Unresolved.
 
 ### Fixture carries the reasoning ids
-**State:**
-**Value:**
-**Evidence:**
-**Depends on:**
+**State:** Resolved
+**Value:** `ELEMENT_IDS` now includes the four reasoning-switch ids, so the fake DOM builds them exactly like the real `app.html` page (EV-016).
+**Evidence:** tests/app-dictation-integration.test.mjs:34-35 (`SAYREASON-02` comment + four ids)
 
 ### Reasoning listeners wired unguarded
-**State:**
-**Value:**
-**Evidence:**
-**Depends on:**
+**State:** Resolved
+**Value:** Both reasoning-switch listeners are now unconditional `addEventListener` calls, matching every other listener in the wiring block.
+**Evidence:** app.js:1473-1474
 
 ### Scope and architecture compliance
-**State:**
-**Value:**
-**Evidence:**
-**Depends on:**
+**State:** Resolved
+**Value:** The commit touches only the two guarded lines in `app.js` and the `ELEMENT_IDS` list in the test file; no other line, scenario, or assertion changed.
+**Evidence:** `git diff --stat` (working tree, pre-commit): `app.js | 4 ++--`, `tests/app-dictation-integration.test.mjs | 4 ++-` — 2 files changed, 5 insertions(+), 3 deletions(-)
 
 ### Implementation completeness
-**State:**
-**Value:**
-**Evidence:**
-**Depends on:**
+**State:** Resolved
+**Value:** All build-checklist and exit-gate items verified; branch pushed to origin.
+**Evidence:** commit 807e2e821803c09f6830c462f03eacbdbfe4c791 on `agent/sayreason-02a-reasoning-listener-guards`, pushed to `origin/agent/sayreason-02a-reasoning-listener-guards`; `node tests/verify.mjs` exit 0 (24 focused test files passed); `git grep` for the guard pattern returns nothing

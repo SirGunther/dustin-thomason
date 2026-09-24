@@ -14,6 +14,44 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
 
 ## Session log (newest first)
 
+### 2026-09-24T20:14:00Z — Per-pass reasoning merged: a reasoning switch for each pass
+
+- **Direction:** Dustin confirmed the handoff and asked for a separate worktree while SAYSTAT-01 was
+  in flight, with the merge held until SAYSTAT-01 completed.
+- **Problem → requirement → solution:** Custom (LM Studio) passes always sent
+  `reasoning_effort: "none"`. The user wants reasoning off for the grammar pass and optionally on for
+  the coherence pass (REQ-001–003). So each pass now has its own switch, and the Custom request
+  carries that pass's setting.
+- **Shipped** (SaySlate `main`, all `--no-ff` and pushed):
+  - `a168833` SAYREASON-01: `generate` takes `reasoning`. Custom sends `"medium"` when it is on and
+    `"none"` when it is off. OpenAI, Gemini, and Claude requests are unchanged, and the schema-free
+    retry still sends no reasoning field.
+  - `d990884` SAYREASON-02: "Reasoning on/off" switches for the first and second pass in the AI
+    prompts panel, both off by default and stored in `sayslate-grammar-config` with no schema bump.
+    Every full-page and Floating Slate pass sends its saved setting. `CHANGELOG.md` and `README.md`
+    are updated.
+  - `753a5b1` SAYREASON-02A: removed two `if (…)` listener guards that SAYREASON-02 added only because
+    a test fixture it could not change lacked the new ids.
+- **Review:** SAYREASON-01 passed on review 1. SAYREASON-02 took two rounds:
+  - F1: two full-page scenarios still passed with their pass click removed. Fixed in `542fa4a`, and
+    the same probes now fail as they should.
+  - F2: the ticket file had not been updated in place.
+  - F3: the listener guards, routed to SAYREASON-02A.
+
+  Details are in the handoff's audit records.
+- **Verification:** `node tests/verify.mjs`, `node --check` on every changed file, and
+  `git diff --check` pass on each branch and on merged `main` `753a5b1`. Probes on scratch copies
+  confirmed the new tests fail when the wiring is removed. Loaded-extension screenshots show both
+  switches in light and dark themes, and a switch turned on is still on after a reload.
+- **Docs:** the "Reasoning (thinking)" section of the endpoint doc now describes the switches
+  (`a256f91`).
+- **Left open:**
+  - The live LM Studio check: one pass with its switch off and one with it on, recording
+    `reasoning_tokens`.
+  - Two lines of the endpoint doc outside the "Reasoning (thinking)" section still say SaySlate
+    always sends `"none"`: the "AI pass" row in "Values SaySlate uses" and the V5 verification
+    row.
+
 ### 2026-09-24T19:32:00Z — SAYSTAT-01 merged: full-page badge shows AI pass stages
 
 - **Pre-dispatch:** the orchestrator's code check found two overlaps that the ticket as written
@@ -40,6 +78,26 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
   disabled. The badge now reports that correctly, but dictation during a first pass can add text
   the pass doesn't see. Blocking the shortcuts would change dictation behavior, so it needs a
   separate decision.
+
+### 2026-09-24T18:10:00Z — Per-pass reasoning handoff drafted
+
+- **Scope:** feature two, a reasoning on/off switch for each pass that affects only Custom
+  (LM Studio) requests.
+- **Written:** the `agentic-handoff` set in
+  [`tickets/sayslate-pass-reasoning/`](tickets/sayslate-pass-reasoning/):
+  - requirements: REQ-001–003 and EV-001–024;
+  - decisions: LD-001–006, with four open questions all resolved from sources;
+  - the handoff, SAYREASON-01 (dispatcher `reasoning` input) and SAYREASON-02 (switches, storage,
+    both surfaces, docs).
+- **Key values:**
+  - "On" sends `reasoning_effort: "medium"` and "off" sends `"none"`. The levels aren't proven to
+    differ.
+  - Both switches are off by default, and the second-pass switch stays usable when that pass is off.
+  - Floating Slate uses the saved settings without controls of its own.
+- **Not done:**
+  - The delivery order awaits confirmation, and the set isn't committed.
+  - SAYREASON-02 also waits for the status badge's SAYSTAT-01 to merge (both change `app.js` and
+    `CHANGELOG.md`).
 
 ### 2026-09-24T17:20:00Z — Status badge handoff: full page matches Floating Slate
 
@@ -121,8 +179,12 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
 
 - **Working:** SaySlate provider profiles on local `main`, and the Custom LM Studio path over
   Tailscale end to end.
-- **Confirmed:** no reasoning pass on the LM Studio host (`reasoning_tokens: 0`, 2026-09-23).
+- **Confirmed:** no reasoning pass on the LM Studio host (`reasoning_tokens: 0`, 2026-09-23). That
+  is now the behavior with a pass's reasoning switch off, which is the default.
 - **Open:**
+  - Per-pass reasoning (`tickets/sayslate-pass-reasoning/`, merged `753a5b1`): reload the extension
+    and run one Custom pass with its reasoning switch off and one with it on; record each run's
+    `reasoning_tokens` in the SAYREASON-02 audit.
   - Write the SAYAI-06 validation review; the README and ROADMAP updates wait for it (LD-029).
   - A successful Gemini generation on this build; OpenAI and Claude profiles run live.
 - **Someday:** self-host the Tailscale coordination server (Headscale) and a relay on spare
