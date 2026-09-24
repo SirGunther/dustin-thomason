@@ -4,7 +4,7 @@
   POST agent session completion to a Power Automate manual-trigger webhook.
 
 .EXAMPLE
-  .\scripts\notify-agent-complete.ps1 -Status "Completed" -Message "Work finished; all tests passed."
+  .\scripts\notify-agent-complete.ps1 -Status "<model name> - Completed" -Message "Work finished; all tests passed."
 
 .NOTES
   Optional override: set $env:AGENT_COMPLETE_WEBHOOK_URL before invoking.
@@ -12,7 +12,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('Completed')]
+    [ValidateNotNullOrEmpty()]
     [string]$Status,
 
     [Parameter(Mandatory = $true)]
