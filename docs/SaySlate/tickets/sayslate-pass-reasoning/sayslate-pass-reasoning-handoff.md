@@ -49,7 +49,7 @@ SAYREASON-01A  Stream Custom passes and time out on silence (REQ-004, found afte
    - Each ticket gets its own fresh SaySlate worktree, on branch `agent/<bare-ticket-slug>` at `C:\SaySlate-worktrees\<bare-ticket-slug>`. The ticket header supplies only the bare slug.
    - A ticket never uses `C:\SaySlate`, the orchestrating agent's checkout, or another ticket's worktree. The existing `sayai-*` and `saystat-*` worktrees belong to other handoffs and are not touched.
    - A branch or worktree collision is a blocker: never delete, reset, or reuse it.
-4. **No overlapping concurrency.** This handoff has no parallel waves, and only one of its tickets runs at a time. SAYREASON-01 may run alongside the status-badge handoff's SAYSTAT-01 because their owned files do not overlap. SAYREASON-02 never runs alongside SAYSTAT-01.
+4. **No overlapping concurrency.** This handoff has no parallel waves, and only one of its tickets runs at a time. SAYREASON-01 may run alongside the status-badge handoff's SAYSTAT-01 because their owned files do not overlap. SAYREASON-02 never runs alongside SAYSTAT-01. SAYREASON-01A may run alongside the status-badge handoff's SAYSTAT-01A: their only shared file is `CHANGELOG.md`, where each adds a line to `[Unreleased]`. If the second merge conflicts there, the orchestrating agent keeps both lines unchanged and records the resolution in the audit.
 5. **Testing.** Before reporting, the implementation agent runs every command below and records each exact command and its result:
    - `node tests/verify.mjs`
    - `node --check <file>` for every changed `.js` and `.mjs` file
