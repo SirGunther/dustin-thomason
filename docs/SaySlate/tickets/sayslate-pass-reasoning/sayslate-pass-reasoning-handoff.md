@@ -200,4 +200,15 @@ Output rules:
 
 ### SAYREASON-01A audit
 
-Pending
+- **Status:** Merged
+- **Reviewed commit:** `8b9c8dad8bab34ebe9da84552696478153940385` (review 1)
+- **Required evidence:** Complete in the implementation report; starting commit `753a5b10411b321e1adfa859134564d6197cb418`, branch `agent/sayreason-01a-stream-custom-passes`, worktree `C:\SaySlate-worktrees\sayreason-01a-stream-custom-passes`, pushed to `origin`
+- **Independent verification:** `git merge-base --is-ancestor 753a5b1 8b9c8da` true; one commit; `git diff --stat` lists the 6 owned files. The test diffs remove only the three dispatcher Custom fakes (now SSE, as EV-030 required) and one fake comment; no assertion. Traced the path: the dispatcher adds `stream: true` for Custom only, outside `adapterArgs`; the adapter adds `stream: true` to the structured body only, restarts the timer after `fetch` resolves and after every `reader.read()`, reads SSE only when `content-type` is `text/event-stream`, and otherwise uses the unchanged JSON path. The retry body is unchanged. Orchestrator probes (scratch copies): removing the per-chunk timer restart fails the slow-but-steady scenario with `request_timeout`; removing the dispatcher's `stream` fails `tests/ai-provider-client.test.mjs`. Reran the live check against the Chrome machine's LM Studio (`google/gemma-4-12b-qat`, 5 s limit): the streamed dispatcher call resolved with validated text after 37.0 s, and the same request non-streamed rejected with `request_timeout` after 5.0 s. Reran `node tests/verify.mjs` (exit 0), `node --check` on the 5 changed `.js`/`.mjs` files, and `git diff --check 753a5b1..HEAD`; all passed
+- **Scope verdict:** Pass — only owned files changed
+- **Correctness verdict:** Pass. Accepted without a finding: `isEventStream` tolerates a response without `headers.get`. No test depends on it (the suite passes with it removed), and it only routes such a response to the existing JSON path. Residual risk: streaming through Tailscale Serve to the LM Studio host is not yet observed; if Serve buffered the stream, a pass over 90 s would still time out. The user's rerun of a long reasoning pass covers it
+- **Merge verdict:** Merged — no in-scope findings. SAYSTAT-01A had merged first (`7e3e7b9`); `git merge-tree` showed no conflict, and both `[Unreleased]` lines are present in the merged `CHANGELOG.md`. After the merge, `node tests/verify.mjs`, `node --check aiProviderClient.js`, and `node --check openAICompatibleClient.js` on `main` passed
+- **Merged commit:** `cd0a82a22afd6c8ac92507c4c35b754fa7770ae3` (`--no-ff` into `main`, pushed to `origin/main`)
+- **Post-merge user validation:** Pending — rerun, through the installed extension and the LM Studio host, a pass with reasoning on that previously timed out
+
+| Finding | File and symbol/line evidence | Required disposition | Resolution |
+| --- | --- | --- | --- |

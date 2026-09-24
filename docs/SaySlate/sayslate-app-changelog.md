@@ -14,6 +14,34 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
 
 ## Session log (newest first)
 
+### 2026-09-24T22:18:00Z — SAYREASON-01A merged: LM Studio passes stream and time out on silence
+
+- **Problem:** in the live check, a reasoning pass showed "timed out" in SaySlate while LM Studio
+  finished the request. The adapter sent one non-streamed request under one 90 s timer (EV-025).
+  Generation time grows with the tokens produced, about 26 tokens/s on the Chrome machine, so any
+  response over about 2,350 tokens fails, with reasoning on or off (EV-029).
+- **Requirement:** REQ-004. A Custom pass is not reported as timed out while the server is still
+  producing its response, and it still fails when the server stops.
+- **Solution (LD-007):** Custom requests send `stream: true`. The 90 s timer restarts on every
+  chunk, so it measures silence. The SSE `content` deltas are joined and validated like the JSON
+  result, and `reasoning_content` is ignored. OpenAI, Gemini, Claude, and the schema-free retry are
+  unchanged. Before deciding, a probe of the Chrome machine's LM Studio showed that it streams the
+  exact SaySlate request shape, with no gap above 840 ms (EV-028).
+- **Shipped:** SaySlate `main` `cd0a82a` (`--no-ff`, pushed), merged after SAYSTAT-01A's `7e3e7b9`
+  with no conflict. Files: `aiProviderClient.js`, `openAICompatibleClient.js`, three test files, and
+  `CHANGELOG.md`.
+- **Verification:**
+  - `node tests/verify.mjs`, `node --check`, and `git diff --check` pass on the branch and on merged
+    `main`.
+  - Mutation probes fail when the per-chunk timer restart or the dispatcher's `stream` is removed.
+  - Live on the Chrome machine's LM Studio with a 5 s limit: the streamed pass completed in 37 s,
+    and the same request non-streamed timed out at 5 s.
+- **Left open:**
+  - Rerun a long reasoning pass through the installed extension and the LM Studio host. That also
+    confirms Tailscale Serve passes the stream through.
+  - The endpoint doc's "AI pass" row (90 s, `"none"`) and V5 row are outside this handoff's writable
+    section and still describe the old behavior.
+
 ### 2026-09-24T20:05:00Z — SAYSTAT-01A merged: full-page shortcuts follow their buttons during a pass
 
 - **Why:** SAYSTAT-01's audit left Ctrl+Alt+D and Ctrl+Alt+X acting during a pass although their
@@ -202,9 +230,9 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
 - **Confirmed:** no reasoning pass on the LM Studio host (`reasoning_tokens: 0`, 2026-09-23). That
   is now the behavior with a pass's reasoning switch off, which is the default.
 - **Open:**
-  - Per-pass reasoning (`tickets/sayslate-pass-reasoning/`, merged `753a5b1`): reload the extension
-    and run one Custom pass with its reasoning switch off and one with it on; record each run's
-    `reasoning_tokens` in the SAYREASON-02 audit.
+  - Per-pass reasoning (`tickets/sayslate-pass-reasoning/`, merged through `cd0a82a`): reload the
+    extension, rerun a long pass with reasoning on (it should no longer time out), and run one with
+    reasoning off; record each run's `reasoning_tokens` in the SAYREASON-02 audit.
   - Write the SAYAI-06 validation review; the README and ROADMAP updates wait for it (LD-029).
   - A successful Gemini generation on this build; OpenAI and Claude profiles run live.
 - **Someday:** self-host the Tailscale coordination server (Headscale) and a relay on spare
