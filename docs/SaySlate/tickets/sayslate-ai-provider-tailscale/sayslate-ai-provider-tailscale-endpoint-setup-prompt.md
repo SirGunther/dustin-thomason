@@ -1,5 +1,9 @@
 # SaySlate Private LM Studio Endpoint — Setup Agent Prompt
 
+**Status:** Completed on 2026-09-23. The redacted result and verification record live in
+[`docs/tailscale/sayslate-lmstudio-endpoint.md`](../../../tailscale/sayslate-lmstudio-endpoint.md).
+Retain this prompt as a rebuild/recovery runbook; do not rerun it merely to dispatch SAYAI-06.
+
 Paste everything below the line into an agent session running **on the machine that hosts LM Studio**.
 The agent's Part A report is what SAYAI-06 needs. Part B stays with you: you type those values
 directly into SaySlate yourself.

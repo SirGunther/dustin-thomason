@@ -14,10 +14,15 @@ Prove REQ-004–REQ-007 and LD-002, LD-012, LD-016–LD-018, and LD-022–LD-029
 extension and a private Tailscale/LM Studio endpoint, then record an honest release verdict. This
 ticket must not repair defects: the handoff's unresolved-work route governs every failed path.
 
+**Environment precondition:** Met by EV-036. This proves the private route is available, but it does
+not pre-check any item below; this ticket must exercise the exact merged SaySlate build and every
+listed acceptance condition.
+
 ## Build checklist
 
-- [ ] The high-reasoning orchestrator starts from the exact merged SAYAI-05 commit and loads that
-  unpacked extension in local Chrome or Edge Developer Mode under handoff rule 6.
+- [ ] The high-reasoning orchestrator records current `origin/main`, confirms it contains the
+  SAYAI-05 merge and subsequent reviewed fixes, and loads that exact unpacked extension in local
+  Chrome or Edge Developer Mode under handoff rule 6.
 - [ ] Confirm the user-provided Tailscale Serve HTTPS endpoint reaches LM Studio privately; never
   record the hostname, token, model credentials, or transcript content in an artifact.
 - [ ] Enter the user-provided endpoint, model ID, and Bearer token directly into the extension UI,

@@ -55,12 +55,12 @@ SAYAI-06
 | 3 | [SAYAI-03](./tickets/SAYAI-03.md) | No | Implement provider transports and canonical structured results. |
 | 4 | [SAYAI-04](./tickets/SAYAI-04.md) | No | Add non-generative provider connection diagnostics. |
 | 5 | [SAYAI-05](./tickets/SAYAI-05.md) | No | Integrate profiles, connection testing, and inference into both surfaces. |
-| 6 | [SAYAI-06](./tickets/SAYAI-06.md) | No | **Deferred by LD-032 — do not dispatch this session.** Prove the private Tailscale/LM Studio path once the endpoint exists. |
+| 6 | [SAYAI-06](./tickets/SAYAI-06.md) | No | **Ready for dispatch.** EV-036 satisfies the external-environment prerequisite; run the complete live acceptance and closure ticket. |
 
 There are six tickets in six waves. They are sequential because adjacent tickets consume the
 provider contract established by the prior wave, and settings, manifest, transport, and UI routing
-must not be reconciled independently by low-reasoning agents. SAYAI-06 is deferred by LD-032: this
-session is complete when SAYAI-05 is reviewed, merged, and pushed.
+must not be reconciled independently by low-reasoning agents. LD-032 records the historical deferral
+when the endpoint did not exist. EV-036 now removes that blocker, so SAYAI-06 is the remaining wave.
 
 **Confirmed:** Dustin Thomason delegated dependency-safe ticket ordering to the author on
 2026-09-22; the exact order is locked by LD-019.
@@ -92,8 +92,9 @@ session is complete when SAYAI-05 is reviewed, merged, and pushed.
    `chromium.launchPersistentContext` with `--disable-extensions-except=<worktree>` and
    `--load-extension=<worktree>`, using only non-secret test values; none enter a prompt, artifact,
    commit, console, or screenshot. SAYAI-06's high-reasoning orchestrator launches the extension the
-   same way in a headed window, the user types the endpoint, model, and token directly into the
-   extension UI, and the orchestrator records only redacted outcomes. If that environment cannot be operated, SAYAI-06 remains Unresolved rather than being
+   same way in a headed window. EV-036 confirms the environment is available; the user still types
+   the endpoint, model, and token directly into the extension UI, and the orchestrator records only
+   redacted outcomes. If that environment cannot be operated, SAYAI-06 remains Unresolved rather than being
    marked complete from automated tests.
 7. **Commit and push.** The implementation agent commits only its owned SaySlate files and pushes
    its ticket branch. It never merges. Ticket checklist/objective updates are written in place to
@@ -298,14 +299,14 @@ Output rules:
 
 ### SAYAI-06 audit
 
-- **Status:** Deferred by LD-032 — not dispatched this session
-- **Environment prerequisite:** Setup prompt for the private endpoint, whose Part A report is the readiness input for this ticket: [sayslate-ai-provider-tailscale-endpoint-setup-prompt.md](./sayslate-ai-provider-tailscale-endpoint-setup-prompt.md) (2026-09-23)
+- **Status:** Ready for dispatch — EV-036 satisfies LD-032's former environment blocker
+- **Environment prerequisite:** Met by EV-036. The redacted live result is in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../../../tailscale/sayslate-lmstudio-endpoint.md); the retained setup/recovery runbook is [sayslate-ai-provider-tailscale-endpoint-setup-prompt.md](./sayslate-ai-provider-tailscale-endpoint-setup-prompt.md)
 - **Reviewed commit:** Pending
 - **Required evidence:** Pending
 - **Independent verification:** Pending
 - **Scope verdict:** Pending
 - **Correctness verdict:** Pending
-- **Merge verdict:** Held — deferred by LD-032 until the private endpoint exists
+- **Merge verdict:** Pending — the environment exists, but the complete SAYAI-06 live acceptance and closure record has not yet been executed
 - **Merged commit:** Pending
 
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
