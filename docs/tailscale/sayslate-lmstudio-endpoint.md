@@ -28,6 +28,9 @@ Chrome machine (SaySlate)                 LM Studio host
   including requests from localhost.
 - LM Studio CORS is off and isn't needed: the SaySlate extension has host permission for the
   endpoint origin.
+- **Every device that runs SaySlate against this endpoint needs Tailscale**, signed in to the same
+  tailnet. Anything outside the tailnet can't resolve or reach the `ts.net` name. The Chrome
+  machine was added 2026-09-23 with the same winget command as step 1.
 
 ## Values SaySlate uses
 
@@ -42,7 +45,7 @@ SaySlate calls:
 | Call | Request | Time limit |
 | --- | --- | --- |
 | Test Connection | `GET <base>/models` (model ID must appear in `data[].id`) | 15 s |
-| AI pass | `POST <base>/chat/completions` with `response_format: json_schema` (`sayslate_result`, strict) | 90 s |
+| AI pass | `POST <base>/chat/completions` with `response_format: json_schema` (`sayslate_result`, strict) and `reasoning_effort: "none"` (see [Reasoning](#reasoning-thinking)) | 90 s |
 
 ## Host inventory at setup
 
@@ -53,6 +56,58 @@ SaySlate calls:
 | LM Studio | 0.4.25+1 |
 | Model | `google/gemma-4-12b-qat`: 12B QAT, GGUF, 7.15 GB, 262144 context |
 | LM Studio server | port 1234, `networkInterface: 127.0.0.1`, `autoStartOnLaunch: true`, JIT loading on |
+
+## LM Studio
+
+### Server settings
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| Listening address | `127.0.0.1:1234` ("Serve on local network" off) | Only Tailscale Serve reaches it |
+| Require API token | On | Every request, including localhost, needs `Authorization: Bearer <token>` |
+| CORS | Off | Not needed; the extension has host permission for the endpoint origin |
+| JIT model loading | On | After a reboot the model loads on the first chat request (~14 s) |
+| Start server on launch | On (`autoStartOnLaunch: true`) | The server is up whenever the app is running |
+
+### Model
+
+- The model ID in SaySlate must match `data[].id` from `GET /v1/models` exactly:
+  `google/gemma-4-12b-qat`. Test Connection checks for that exact ID.
+- Keep it loaded with no idle unload (setup step 3), so a pass doesn't wait on a model load.
+- It's listed as type `vlm`, architecture `gemma4`, capabilities `tool_use`. LM Studio does not
+  list it as a reasoning model, but it can still think before answering (next section).
+
+### Reasoning (thinking)
+
+The model can run a reasoning pass before it answers. The answer is the same either way, and
+SaySlate reads only the final text, but reasoning is slow:
+
+| | Reasoning tokens | Total tokens | Time |
+| --- | --- | --- | --- |
+| Thinking on (this host's saved setting, SaySlate pass, 2026-09-23) | 321 | 354 | ~12 s |
+| Thinking off (same model, SaySlate-shaped request) | 0 | ~30 | ~2 s |
+
+Two things control it:
+
+| Control | Where | Effect |
+| --- | --- | --- |
+| **Enable Thinking** (saved, per model, per machine) | The model's settings in LM Studio. Stored as `enableThinking` in `%USERPROFILE%\.lmstudio\.internal\user-concrete-model-default-config\google\gemma-4-12b-qat.json` | The default for any request that doesn't say otherwise |
+| **`reasoning_effort`** (per request) | The chat-completions request body | Overrides the saved setting. `"none"` turns thinking off; `"minimal"`, `"low"`, `"medium"`, and `"high"` all turn it on |
+
+- **SaySlate sends `reasoning_effort: "none"`** on every Custom-profile pass, so thinking stays off
+  whatever each machine has saved (SaySlate commit `2bafd4e`; decision LD-041). OpenAI, Gemini, and
+  Claude profiles never send it, because OpenAI rejects it on non-reasoning models.
+- **The levels are not proven to differ.** One request per value gave `minimal` 335, `low` 411,
+  `medium` 638, and `high` 378 reasoning tokens: not in order. Treat it as an on/off switch.
+- Other field names had no effect: `reasoning`, `reasoning.effort`, and
+  `chat_template_kwargs.enable_thinking` were ignored.
+- **Check it** in LM Studio's Developer log for a SaySlate request:
+  `usage.completion_tokens_details.reasoning_tokens` should be `0`, and `reasoning_content` empty.
+  V5 in the verify script now sends the same field and prints the count.
+
+The per-request override was measured on the Chrome machine's LM Studio, whose saved setting is
+off. On this host the saved setting is on, so the first V5 run here with the updated script is
+the confirmation that `"none"` overrides a saved "on".
 
 ## Setup steps (what was done, in order)
 
@@ -104,9 +159,9 @@ prints status lines only. It never prints or writes the token.
 | V2 | local, no token | 401/403 | 401 |
 | V3 | tailnet `GET /v1/models` + token | 200, model listed | 200, listed, <1 s |
 | V4 | tailnet, no token | 401/403 | 401 |
-| V5 | tailnet structured chat + token | 200, `content` parses to `{text}` | 200, parsed, 6.7 s |
+| V5 | tailnet structured chat + token, with `reasoning_effort: "none"` as SaySlate sends it | 200, `content` parses to `{text}`, reasoning tokens 0 | 200, parsed, 6.7 s (run before the field was added; re-run pending) |
 | V6 | `tailscale funnel status` + listeners | Funnel off, loopback only | tailnet only; `127.0.0.1:1234` |
-| V7 | V4 run from the Chrome machine | 401 means reachable and auth enforced | pending |
+| V7 | V4 run from the Chrome machine | 401 means reachable and auth enforced | Passed 2026-09-23, end to end: from the Chrome machine, SaySlate's Test Connection and a first pass both succeeded over the tailnet |
 
 V7 command (run on the Chrome machine; no token needed):
 

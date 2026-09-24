@@ -31,11 +31,12 @@ $r = Send 'GET' "$tailBase/models" $false $null;  "V4 tailnet models, no token: 
 
 $msg = @{ role = 'user'; content = 'Correct the grammar of this sentence and return only the corrected sentence: this are a simple test sentence.' }
 $schema = @{ type = 'json_schema'; json_schema = @{ name = 'sayslate_result'; strict = $true; schema = @{ type = 'object'; properties = @{ text = @{ type = 'string' } }; required = @('text'); additionalProperties = $false } } }
-$body = @{ model = $model; messages = @($msg); response_format = $schema } | ConvertTo-Json -Depth 10
+# Same body SaySlate sends for a Custom profile, including reasoning_effort "none" (LD-041).
+$body = @{ model = $model; messages = @($msg); response_format = $schema; reasoning_effort = 'none' } | ConvertTo-Json -Depth 10
 $r = Send 'POST' "$tailBase/chat/completions" $true $body
-$ok = $false; $text = ''
-try { $text = (((($r.body | ConvertFrom-Json).choices[0].message.content) | ConvertFrom-Json).text); $ok = ($text -is [string]) -and $text.Length -gt 0 } catch {}
-"V5 structured chat + token: HTTP $($r.code)  parsed {text}: $ok  elapsed: $([math]::Round($r.secs,1))s  text: $text"
+$ok = $false; $text = ''; $reasoning = 'n/a'
+try { $parsed = $r.body | ConvertFrom-Json; $reasoning = $parsed.usage.completion_tokens_details.reasoning_tokens; $text = ((($parsed.choices[0].message.content) | ConvertFrom-Json).text); $ok = ($text -is [string]) -and $text.Length -gt 0 } catch {}
+"V5 structured chat + token: HTTP $($r.code)  parsed {text}: $ok  reasoning tokens: $reasoning  elapsed: $([math]::Round($r.secs,1))s  text: $text"
 if (-not $ok) {
     $body2 = @{ model = $model; messages = @($msg) } | ConvertTo-Json -Depth 10
     $r = Send 'POST' "$tailBase/chat/completions" $true $body2
