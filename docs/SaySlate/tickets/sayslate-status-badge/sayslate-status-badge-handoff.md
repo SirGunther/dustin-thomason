@@ -16,6 +16,9 @@ The user asked for SaySlate's top status badge to show the current status of the
 
 ```text
 SAYSTAT-01  Full-page badge matches Floating Slate's pass stages
+     |
+     v
+SAYSTAT-01A Full-page shortcuts follow their buttons during a pass
 
 SAYSTAT-02  Withdrawn before dispatch (LD-004): no dependencies, not run
 ```
@@ -23,16 +26,17 @@ SAYSTAT-02  Withdrawn before dispatch (LD-004): no dependencies, not run
 | Wave | Tickets | Parallel? | Purpose |
 | --- | --- | --- | --- |
 | 1 | [SAYSTAT-01](./tickets/SAYSTAT-01.md) | No | Make the full-page badge show each AI pass as Floating Slate does, then its result. **Merged** as `0e1b26b`, 2026-09-24. |
+| 2 | [SAYSTAT-01A](./tickets/SAYSTAT-01A.md) | No | Block Ctrl+Alt+D, Ctrl+Alt+X, and Ctrl+Alt+R while a pass runs, as their buttons are blocked, and remove SAYSTAT-01's now-unreachable overlap handling (LD-008, LD-009). Added after SAYSTAT-01's merge from its audit's residual risk. |
 | — | [SAYSTAT-02](./tickets/SAYSTAT-02.md) | — | Withdrawn by LD-004; Floating Slate's wording stays as it is. |
 
-1 ticket in 1 wave. SAYSTAT-02 is withdrawn and is never dispatched.
+2 tickets in 2 waves. SAYSTAT-01A depends on SAYSTAT-01, which is merged. SAYSTAT-02 is withdrawn and is never dispatched.
 
 **Confirmed:** Dustin Thomason, 2026-09-24. Answering open decisions 1 and 2 withdrew SAYSTAT-02 (LD-004), which leaves SAYSTAT-01 as the only ticket and no order left to choose.
 
 ## Agent dispatch and merge rules
 
 1. **Dispatch prompt.** The orchestrating agent sends the implementation agent, verbatim, this handoff's *Resolved and unresolved work*, *Rules for every low-reasoning implementation agent*, *Required evidence for every ticket*, and *Compact Audit Trail Output Rule* sections, followed by the complete ticket file. The agent reads only these and the documents the ticket cites.
-2. **Base.** SAYSTAT-01 starts from `origin/main` at `668a10fee66d513615a19972778b19019770fbc5`, or a verified fast-forward successor that contains no status-badge change.
+2. **Base.** SAYSTAT-01 starts from `origin/main` at `668a10fee66d513615a19972778b19019770fbc5`, or a verified fast-forward successor that contains no status-badge change. SAYSTAT-01A starts from `origin/main` at `753a5b10411b321e1adfa859134564d6197cb418`, which contains SAYSTAT-01's merge `0e1b26b` and the per-pass reasoning handoff's merges, or a verified fast-forward successor.
 3. **Isolation.**
    - The branch prefix is `agent` and the worktree root is `C:\SaySlate-worktrees`.
    - Each ticket gets its own fresh SaySlate worktree, on branch `agent/<bare-ticket-slug>` at `C:\SaySlate-worktrees\<bare-ticket-slug>`. The ticket header supplies only the bare slug.
@@ -51,6 +55,7 @@ SAYSTAT-02  Withdrawn before dispatch (LD-004): no dependencies, not run
      - Save one screenshot per state and theme outside the repository.
      - This check covers styling only; the ticket's `node:vm` scenarios prove the state sequence.
      - No provider credential, endpoint, or token is entered, so the check involves no runtime secret.
+   - **SAYSTAT-01A:** none. It changes no style or markup, and its `node:vm` scenarios drive the real `handleShortcut` with dispatched `keydown` events.
 7. **Commit and push.** The implementation agent commits only its owned SaySlate files and pushes its ticket branch. It never merges.
    - That ticket's sole assigned writer updates its checklist and objectives in place in this `C:\dustin-thomason\docs\SaySlate\tickets\sayslate-status-badge\` folder.
    - The orchestrating agent validates those documentation updates and commits them separately.
@@ -151,6 +156,10 @@ Output rules:
 | --- | --- | --- | --- |
 | F1 — Dark-theme CSS comment misstates the cascade | `app.css` comment above `html[data-theme="dark"] .status-pill[data-state="processing"]` says `complete`'s background resolves through `var(--accent-pale)` in dark. `html[data-theme="dark"] .status-pill` (`app.css:1193-1196`, specificity 0,2,1) overrides the background of every `.status-pill[data-state=…]` rule (0,2,0), for `processing` and `complete` alike, as it already does for `listening` and `error`. `#9fbcdb` carries no statement of what it is | Keep the rules. They render correctly (screenshots), and omitting a dark `complete` rule is accepted: its border and text use `var(--accent)`, which the dark palette redefines. Rewrite the comment so it states the actual cascade (border and text from the state rules; background from the dark `.status-pill` rule, as for `listening` and `error`) and what `#9fbcdb` is: a lighter tint of `#5b7fa3` for contrast on the dark surface | Resolved in `88284c6` — the comment above the dark `processing` rule is rewritten; no rule or value changed |
 | F2 — In-flight dictation stop clicks a disabled button | `tests/app-dictation-integration.test.mjs`, scenario "Dictation during a pass: stopping dictation while it is still in flight shows that pass instead": `elements.startButton.dispatch("click")` while `startButton.disabled === true` (`app.js:878` via `updateTextControls`, called from `setListeningUI`; orchestrator probe). The exit-gate item "a dispatched click on a control the page has enabled at that moment" is checked without evidence | Stop dictation in that scenario with the Ctrl+Alt+D keydown (`README.md:11`), the path a user has while the button is disabled. Before each `startButton` click in the two dictation-during-a-pass scenarios and the discard-while-dictating scenario, assert that the button is enabled | Resolved in `88284c6` — the in-flight stop uses the Ctrl+Alt+D keydown; enabled assertions precede both remaining `startButton` clicks |
+
+### SAYSTAT-01A audit
+
+Pending
 
 ### SAYSTAT-02 audit
 
