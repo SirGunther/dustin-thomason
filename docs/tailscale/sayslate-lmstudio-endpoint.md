@@ -94,16 +94,23 @@ Two things control it:
 | **Enable Thinking** (saved, per model, per machine) | The model's settings in LM Studio. Stored as `enableThinking` in `%USERPROFILE%\.lmstudio\.internal\user-concrete-model-default-config\google\gemma-4-12b-qat.json` | The default for any request that doesn't say otherwise |
 | **`reasoning_effort`** (per request) | The chat-completions request body | Overrides the saved setting. `"none"` turns thinking off; `"minimal"`, `"low"`, `"medium"`, and `"high"` all turn it on |
 
-- **SaySlate sends `reasoning_effort: "none"`** on every Custom-profile pass, so thinking stays off
-  whatever each machine has saved (SaySlate commit `2bafd4e`; decision LD-041). OpenAI, Gemini, and
-  Claude profiles never send it, because OpenAI rejects it on non-reasoning models.
+- **SaySlate sends `reasoning_effort` on every Custom-profile pass, set per pass.** The AI prompts
+  panel has a reasoning switch for the first pass and one for the second, both off by default. A
+  pass with its switch off sends `"none"`, so thinking stays off whatever each machine has saved. A
+  pass with its switch on sends `"medium"`, which turns thinking on (SaySlate merges `a168833` and
+  `d990884`; pass-reasoning decisions LD-002 to LD-005, which supersede LD-041's fixed `"none"`).
+  Floating Slate uses the switches saved on the full page. OpenAI, Gemini, and Claude profiles
+  never send the field, because OpenAI rejects it on non-reasoning models. The schema-free retry
+  after an HTTP 400/422 sends only the model and messages, so a retried pass falls back to the
+  saved Enable Thinking setting.
 - **The levels are not proven to differ.** One request per value gave `minimal` 335, `low` 411,
   `medium` 638, and `high` 378 reasoning tokens: not in order. Treat it as an on/off switch.
 - Other field names had no effect: `reasoning`, `reasoning.effort`, and
   `chat_template_kwargs.enable_thinking` were ignored.
 - **Check it** in LM Studio's Developer log for a SaySlate request:
-  `usage.completion_tokens_details.reasoning_tokens` should be `0`, and `reasoning_content` empty.
-  V5 in the verify script now sends the same field and prints the count.
+  `usage.completion_tokens_details.reasoning_tokens` should be `0` and `reasoning_content` empty
+  for a pass with its switch off, and above `0` for a pass with its switch on.
+  V5 in the verify script sends `"none"` and prints the count.
 
 The per-request override was first measured on the Chrome machine's LM Studio, whose saved setting
 is off. **Confirmed on this host 2026-09-23**, where the saved setting is on: after the SaySlate
