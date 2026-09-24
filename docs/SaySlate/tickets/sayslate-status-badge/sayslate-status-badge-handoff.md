@@ -138,7 +138,19 @@ Output rules:
 
 ### SAYSTAT-01 audit
 
-Pending
+- **Status:** Changes requested
+- **Reviewed commit:** `58bb47517fe4efe4ad2e5457bc30437c00910c9a` (review 1)
+- **Required evidence:** Complete in the review 1 report. Starting commit `668a10fee66d513615a19972778b19019770fbc5`, branch `agent/saystat-01-full-page-pass-status`, worktree `C:\SaySlate-worktrees\saystat-01-full-page-pass-status`, pushed to `origin`. The report states no departure, but the dark-theme `complete` variant was omitted (see F1)
+- **Independent verification:** Review 1: `git merge-base --is-ancestor 668a10f 58bb475` true; `git diff --name-only 668a10f 58bb475` lists only `CHANGELOG.md`, `app.css`, `app.js`, `tests/app-dictation-integration.test.mjs`. Reran `node tests/verify.mjs` (exit 0), `node --check` on both changed `.js`/`.mjs` files (exit 0), and `git diff --check 668a10f HEAD` (clean). The only removed test line is the closing `console.log`, so the prompt-construction assertions are unmodified. Orchestrator probes (scratch copies of the test file run against the worktree): `startButton.disabled` is `true` at the scenario's in-flight dictation-stop click (F2). Stopping with a real Ctrl+Alt+D keydown instead gives `processing` / "Phase 1", then "Phase 1 ready". Ctrl+Alt+X during a pass keeps `processing` / "Phase 1". A pass that fails during dictation keeps "Listening", then "Ready" on stop. Read all 8 screenshots: each state is legible and distinct from `idle` in both themes
+- **Scope verdict:** Pass — only the four owned files changed
+- **Correctness verdict:** Changes requested — F1, F2
+- **Merge verdict:** Held — F1 and F2 are correctable within the ticket's ownership
+- **Merged commit:** —
+
+| Finding | File and symbol/line evidence | Required disposition | Resolution |
+| --- | --- | --- | --- |
+| F1 — Dark-theme CSS comment misstates the cascade | `app.css` comment above `html[data-theme="dark"] .status-pill[data-state="processing"]` says `complete`'s background resolves through `var(--accent-pale)` in dark. `html[data-theme="dark"] .status-pill` (`app.css:1193-1196`, specificity 0,2,1) overrides the background of every `.status-pill[data-state=…]` rule (0,2,0), for `processing` and `complete` alike, as it already does for `listening` and `error`. `#9fbcdb` carries no statement of what it is | Keep the rules. They render correctly (screenshots), and omitting a dark `complete` rule is accepted: its border and text use `var(--accent)`, which the dark palette redefines. Rewrite the comment so it states the actual cascade (border and text from the state rules; background from the dark `.status-pill` rule, as for `listening` and `error`) and what `#9fbcdb` is: a lighter tint of `#5b7fa3` for contrast on the dark surface | Pending |
+| F2 — In-flight dictation stop clicks a disabled button | `tests/app-dictation-integration.test.mjs`, scenario "Dictation during a pass: stopping dictation while it is still in flight shows that pass instead": `elements.startButton.dispatch("click")` while `startButton.disabled === true` (`app.js:878` via `updateTextControls`, called from `setListeningUI`; orchestrator probe). The exit-gate item "a dispatched click on a control the page has enabled at that moment" is checked without evidence | Stop dictation in that scenario with the Ctrl+Alt+D keydown (`README.md:11`), the path a user has while the button is disabled. Before each `startButton` click in the two dictation-during-a-pass scenarios and the discard-while-dictating scenario, assert that the button is enabled | Pending |
 
 ### SAYSTAT-02 audit
 
