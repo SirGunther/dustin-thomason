@@ -14,6 +14,15 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
 
 ## Session log (newest first)
 
+### 2026-09-24T01:10:00Z — Reasoning override confirmed on the LM Studio host
+
+- **Confirmed:** after the SaySlate update (`2bafd4e`), the LM Studio host's log for a SaySlate pass
+  showed `reasoning_tokens: 0`. That host's saved Enable Thinking setting is on, so this proves
+  `reasoning_effort: "none"` overrides a saved "on", which the earlier local probes couldn't show.
+- **Recorded in:** the setup doc's V5 row and reasoning section, EV-035, and SaySlate's
+  `CHANGELOG.md`.
+- **Pushed:** SaySlate `main` and dustin-thomason `main`.
+
 ### 2026-09-24T00:59:00Z — AI providers live over Tailscale; Gemini error detail; LM Studio reasoning off
 
 - **Starting point:** the orchestrated handoff in
@@ -56,9 +65,11 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
 
 - **Working:** SaySlate provider profiles on local `main`, and the Custom LM Studio path over
   Tailscale end to end.
+- **Confirmed:** no reasoning pass on the LM Studio host (`reasoning_tokens: 0`, 2026-09-23).
 - **Open:**
-  - Confirm `reasoning_tokens: 0` on the LM Studio host.
   - Write the SAYAI-06 validation review; the README and ROADMAP updates wait for it (LD-029).
-  - Push SaySlate `main`.
+  - A successful Gemini generation on this build; OpenAI and Claude profiles run live.
+- **Someday:** self-host the Tailscale coordination server (Headscale) and a relay on spare
+  hardware, removing the dependency on Tailscale's service.
 - **Side effect:** LM Studio token auth is server-wide, so Argus's local LM Studio provider gets 401
   on that host until Argus supports tokens, or auth is turned off.

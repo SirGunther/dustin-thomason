@@ -105,9 +105,10 @@ Two things control it:
   `usage.completion_tokens_details.reasoning_tokens` should be `0`, and `reasoning_content` empty.
   V5 in the verify script now sends the same field and prints the count.
 
-The per-request override was measured on the Chrome machine's LM Studio, whose saved setting is
-off. On this host the saved setting is on, so the first V5 run here with the updated script is
-the confirmation that `"none"` overrides a saved "on".
+The per-request override was first measured on the Chrome machine's LM Studio, whose saved setting
+is off. **Confirmed on this host 2026-09-23**, where the saved setting is on: after the SaySlate
+update, the LM Studio log for a SaySlate pass showed `reasoning_tokens: 0`, so `"none"` overrides
+a saved "on".
 
 ## Setup steps (what was done, in order)
 
@@ -159,7 +160,7 @@ prints status lines only. It never prints or writes the token.
 | V2 | local, no token | 401/403 | 401 |
 | V3 | tailnet `GET /v1/models` + token | 200, model listed | 200, listed, <1 s |
 | V4 | tailnet, no token | 401/403 | 401 |
-| V5 | tailnet structured chat + token, with `reasoning_effort: "none"` as SaySlate sends it | 200, `content` parses to `{text}`, reasoning tokens 0 | 200, parsed, 6.7 s (run before the field was added; re-run pending) |
+| V5 | tailnet structured chat + token, with `reasoning_effort: "none"` as SaySlate sends it | 200, `content` parses to `{text}`, reasoning tokens 0 | 200, parsed, 6.7 s (before the field was added). With the field: 0 reasoning tokens, confirmed 2026-09-23 from the LM Studio log for a SaySlate pass |
 | V6 | `tailscale funnel status` + listeners | Funnel off, loopback only | tailnet only; `127.0.0.1:1234` |
 | V7 | V4 run from the Chrome machine | 401 means reachable and auth enforced | Passed 2026-09-23, end to end: from the Chrome machine, SaySlate's Test Connection and a first pass both succeeded over the tailnet |
 
