@@ -14,6 +14,26 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
 
 ## Session log (newest first)
 
+### 2026-09-24T20:05:00Z — SAYSTAT-01A merged: full-page shortcuts follow their buttons during a pass
+
+- **Why:** SAYSTAT-01's audit left Ctrl+Alt+D and Ctrl+Alt+X acting during a pass although their
+  buttons are disabled then. That note was wrongly handed to the user as a decision. It is
+  resolvable from the code: each button's disabled condition is the rule for its shortcut (REQ-004,
+  LD-008). The same gap existed for Ctrl+Alt+R during the second pass (EV-027).
+- **Shipped:** SaySlate `main` `7e3e7b9` (`--no-ff`, pushed). While a pass runs, Ctrl+Alt+D and
+  Ctrl+Alt+X do nothing, and neither does Ctrl+Alt+R during the second pass. Each shows Finish's
+  existing toast, "AI processing is already running". Since dictation can no longer overlap a pass
+  (EV-029), SAYSTAT-01's LD-007 compensation was removed: the pass result states are unconditional
+  again, and `setListeningUI` is back to its pre-SAYSTAT-01 form (LD-009). Files: `app.js`,
+  `tests/app-dictation-integration.test.mjs`, `CHANGELOG.md`.
+- **Review:** two rounds. F1: the Ctrl+Alt+R toast assertion could not fail, because it re-read the
+  toast Ctrl+Alt+D had just set. A mutation probe showed this, and the fix is in `bbfba0d`. Details
+  are in the handoff's SAYSTAT-01A audit record.
+- **Verification:** `node tests/verify.mjs`, `node --check` on the changed files, and
+  `git diff --check` pass on the branch and on merged `main`. The F1 mutant now fails.
+- **Status badge handoff:** complete. SAYSTAT-01 and SAYSTAT-01A are merged, SAYSTAT-02 is withdrawn,
+  and no residual risk is open.
+
 ### 2026-09-24T20:14:00Z — Per-pass reasoning merged: a reasoning switch for each pass
 
 - **Direction:** Dustin confirmed the handoff and asked for a separate worktree while SAYSTAT-01 was

@@ -67,11 +67,10 @@ Complete every objective below in place, using the handoff's Compact Audit Trail
 
 ### Implementation completeness
 **State:** Resolved
-**Value:** All build-checklist items and exit-gate conditions are implemented and verified; the branch is committed and pushed with a clean worktree.
-**Evidence:** Commit `9301fd99700bc1400f800478e4fa7cdc5bd8fc3e` on `agent/saystat-01a-shortcuts-during-pass`, pushed to `origin`; `git status --short --branch` clean post-commit
+**Value:** All build-checklist items and exit-gate conditions are implemented and verified, including F1's fix; the branch is committed and pushed with a clean worktree.
+**Evidence:** Commit `bbfba0d9397aa87f080dbc61d4ae5babe44478f2` on `agent/saystat-01a-shortcuts-during-pass`, pushed to `origin` (fast-forward of `9301fd99700bc1400f800478e4fa7cdc5bd8fc3e`); `git status --short --branch` clean post-commit
 
 ### F1 — The Ctrl+Alt+R toast assertion cannot fail
-**State:**
-**Value:**
-**Evidence:**
-**Depends on:**
+**State:** Resolved
+**Value:** `elements.toastMessage.textContent` is cleared immediately before the Ctrl+Alt+R keydown in the "Ctrl+Alt+D and Ctrl+Alt+R during Phase 2" scenario, so the following assertion can only pass if that keydown itself set the toast; the mutant that removes `showToast` from the `key === "r"` branch now fails the suite.
+**Evidence:** `tests/app-dictation-integration.test.mjs:1073` (`elements.toastMessage.textContent = "";` before the Ctrl+Alt+R `document.dispatch`); mutation probe — scratch export at `...\scratchpad\saystat-01a-mutant\` via `git archive HEAD` from commit `bbfba0d9397aa87f080dbc61d4ae5babe44478f2`, `key === "r"` branch's `showToast` line deleted, `node tests/app-dictation-integration.test.mjs` → exit 1 (`AssertionError: expected '' to equal 'AI processing is already running'` at test line 1079)

@@ -26,7 +26,7 @@ SAYSTAT-02  Withdrawn before dispatch (LD-004): no dependencies, not run
 | Wave | Tickets | Parallel? | Purpose |
 | --- | --- | --- | --- |
 | 1 | [SAYSTAT-01](./tickets/SAYSTAT-01.md) | No | Make the full-page badge show each AI pass as Floating Slate does, then its result. **Merged** as `0e1b26b`, 2026-09-24. |
-| 2 | [SAYSTAT-01A](./tickets/SAYSTAT-01A.md) | No | Block Ctrl+Alt+D, Ctrl+Alt+X, and Ctrl+Alt+R while a pass runs, as their buttons are blocked, and remove SAYSTAT-01's now-unreachable overlap handling (LD-008, LD-009). Added after SAYSTAT-01's merge from its audit's residual risk. |
+| 2 | [SAYSTAT-01A](./tickets/SAYSTAT-01A.md) | No | Block Ctrl+Alt+D, Ctrl+Alt+X, and Ctrl+Alt+R while a pass runs, as their buttons are blocked, and remove SAYSTAT-01's now-unreachable overlap handling (LD-008, LD-009). Added after SAYSTAT-01's merge from its audit's residual risk. **Merged** as `7e3e7b9`, 2026-09-24. |
 | — | [SAYSTAT-02](./tickets/SAYSTAT-02.md) | — | Withdrawn by LD-004; Floating Slate's wording stays as it is. |
 
 2 tickets in 2 waves. SAYSTAT-01A depends on SAYSTAT-01, which is merged. SAYSTAT-02 is withdrawn and is never dispatched.
@@ -159,18 +159,18 @@ Output rules:
 
 ### SAYSTAT-01A audit
 
-- **Status:** Changes requested
-- **Reviewed commit:** `9301fd99700bc1400f800478e4fa7cdc5bd8fc3e` (review 1)
-- **Required evidence:** Complete in the review 1 report. Starting commit `753a5b10411b321e1adfa859134564d6197cb418`, branch `agent/saystat-01a-shortcuts-during-pass`, worktree `C:\SaySlate-worktrees\saystat-01a-shortcuts-during-pass`, pushed to `origin`
-- **Independent verification:** Review 1: `git merge-base --is-ancestor 753a5b1 9301fd9` true; `git diff --stat 753a5b1 9301fd9` lists only `CHANGELOG.md`, `app.js`, `tests/app-dictation-integration.test.mjs`. Read the full `app.js` diff against LD-008 and LD-009: the guard sits after the Finish check and matches the buttons' pass conditions (`app.js:959,962,747`). The four result `setStatus` calls are unconditional. `setListeningUI` is identical to `668a10f` (`diff` of the function, empty). `git grep -n -e "isListening) setStatus" -e "LD-007" -- app.js` returns no matches. The removed test lines are only the two deleted scenarios and the replaced clipboard stub and return line. Reran `node tests/verify.mjs` (exit 0), `node --check` on both changed files (exit 0), and `git diff --check 753a5b1 HEAD` (clean). Mutation probe (a `git archive` export with the Ctrl+Alt+R branch's `showToast` removed): `node tests/app-dictation-integration.test.mjs` still exits 0 (F1)
+- **Status:** Accepted and merged
+- **Reviewed commit:** `bbfba0d9397aa87f080dbc61d4ae5babe44478f2` (review 2); review 1 was `9301fd99700bc1400f800478e4fa7cdc5bd8fc3e`
+- **Required evidence:** Complete in the review 1 report. Starting commit `753a5b10411b321e1adfa859134564d6197cb418`, branch `agent/saystat-01a-shortcuts-during-pass`, worktree `C:\SaySlate-worktrees\saystat-01a-shortcuts-during-pass`, pushed to `origin`. The review 2 report is complete; final commit `bbfba0d9397aa87f080dbc61d4ae5babe44478f2`, a fast-forward of `9301fd9`
+- **Independent verification:** Review 1: `git merge-base --is-ancestor 753a5b1 9301fd9` true; `git diff --stat 753a5b1 9301fd9` lists only `CHANGELOG.md`, `app.js`, `tests/app-dictation-integration.test.mjs`. Read the full `app.js` diff against LD-008 and LD-009: the guard sits after the Finish check and matches the buttons' pass conditions (`app.js:959,962,747`). The four result `setStatus` calls are unconditional. `setListeningUI` is identical to `668a10f` (`diff` of the function, empty). `git grep -n -e "isListening) setStatus" -e "LD-007" -- app.js` returns no matches. The removed test lines are only the two deleted scenarios and the replaced clipboard stub and return line. Reran `node tests/verify.mjs` (exit 0), `node --check` on both changed files (exit 0), and `git diff --check 753a5b1 HEAD` (clean). Mutation probe (a `git archive` export with the Ctrl+Alt+R branch's `showToast` removed): `node tests/app-dictation-integration.test.mjs` still exits 0 (F1). Review 2: `git merge-base --is-ancestor 9301fd9 bbfba0d` true. `git diff --quiet 9301fd9 bbfba0d -- app.js CHANGELOG.md` confirms production code is unchanged; the diff is three test lines that clear `toastMessage` before the Ctrl+Alt+R keydown. The same mutant, rerun by the orchestrator on a `git archive` export of `bbfba0d`, now exits 1. Reran `node tests/verify.mjs` (exit 0), `node --check tests/app-dictation-integration.test.mjs` (exit 0), and `git diff --check 753a5b1 HEAD` (clean). After the merge, `node tests/verify.mjs` on `main` passed
 - **Scope verdict:** Pass — only the three owned files changed
-- **Correctness verdict:** Changes requested — F1
-- **Merge verdict:** Held — F1 is correctable within the ticket's ownership
-- **Merged commit:** —
+- **Correctness verdict:** Pass. SAYSTAT-01's residual risk is closed: dictation and a pass can no longer overlap (EV-029), and LD-007's compensating branches are gone (LD-009)
+- **Merge verdict:** Merged — F1 resolved
+- **Merged commit:** `7e3e7b91926d3045387f7bab7755c544cad4a491` (`--no-ff` into `main`, pushed to `origin/main`)
 
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
 | --- | --- | --- | --- |
-| F1 — The Ctrl+Alt+R toast assertion cannot fail | `tests/app-dictation-integration.test.mjs`, scenario "Shortcuts during a pass: Ctrl+Alt+D and Ctrl+Alt+R do nothing while \"Phase 2\" is in flight". The Ctrl+Alt+D keydown just before it already set `toastMessage.textContent` to "AI processing is already running", so the assertion after Ctrl+Alt+R re-reads that text. Mutation probe: removing `showToast` from the `key === "r"` branch leaves the test green | Make the Ctrl+Alt+R toast assertion observe only Ctrl+Alt+R: clear `elements.toastMessage.textContent` immediately before that keydown, or otherwise prove the toast came from it, so the mutant fails. Rerun the mutant to show it now fails | Pending |
+| F1 — The Ctrl+Alt+R toast assertion cannot fail | `tests/app-dictation-integration.test.mjs`, scenario "Shortcuts during a pass: Ctrl+Alt+D and Ctrl+Alt+R do nothing while \"Phase 2\" is in flight". The Ctrl+Alt+D keydown just before it already set `toastMessage.textContent` to "AI processing is already running", so the assertion after Ctrl+Alt+R re-reads that text. Mutation probe: removing `showToast` from the `key === "r"` branch leaves the test green | Make the Ctrl+Alt+R toast assertion observe only Ctrl+Alt+R: clear `elements.toastMessage.textContent` immediately before that keydown, or otherwise prove the toast came from it, so the mutant fails. Rerun the mutant to show it now fails | Resolved in `bbfba0d` — `toastMessage` cleared before the Ctrl+Alt+R keydown; the mutant exits 1 (implementation agent and orchestrator) |
 
 ### SAYSTAT-02 audit
 
