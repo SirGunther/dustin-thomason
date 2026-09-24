@@ -176,7 +176,7 @@ Output rules:
 - **Correctness verdict:** Pass. Production behavior matches LD-002 through LD-006. Residual risk: LM Studio's handling of `"medium"` is proven by EV-005, not yet by a SaySlate run with a switch on (the post-merge user check in dispatch rule 6)
 - **Merge verdict:** Merged — F1 and F2 resolved; F3 routed to SAYREASON-02A, which does not block this merge
 - **Merged commit:** `d99088446df2239dbb19aacff1180065e875a9e1` (`--no-ff` into `main`, pushed to `origin/main`)
-- **Post-merge user validation:** Pending — one Custom (LM Studio) pass with its reasoning switch off and one with it on; record each run's `reasoning_tokens`
+- **Post-merge user validation:** On 2026-09-24 Dustin Thomason reported that passes with reasoning on used reasoning and took longer ("everything used reasoning, definitely took longer"), and after SAYREASON-01A that a reasoning pass completes without a timeout. The `reasoning_tokens` counts were not recorded. The off value's effect is established by EV-005, and the scenarios prove the payload, so this does not block (dispatch rule 6)
 
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
 | --- | --- | --- | --- |
@@ -208,7 +208,7 @@ Output rules:
 - **Correctness verdict:** Pass. Accepted without a finding: `isEventStream` tolerates a response without `headers.get`. No test depends on it (the suite passes with it removed), and it only routes such a response to the existing JSON path. Residual risk: streaming through Tailscale Serve to the LM Studio host is not yet observed; if Serve buffered the stream, a pass over 90 s would still time out. The user's rerun of a long reasoning pass covers it
 - **Merge verdict:** Merged — no in-scope findings. SAYSTAT-01A had merged first (`7e3e7b9`); `git merge-tree` showed no conflict, and both `[Unreleased]` lines are present in the merged `CHANGELOG.md`. After the merge, `node tests/verify.mjs`, `node --check aiProviderClient.js`, and `node --check openAICompatibleClient.js` on `main` passed
 - **Merged commit:** `cd0a82a22afd6c8ac92507c4c35b754fa7770ae3` (`--no-ff` into `main`, pushed to `origin/main`)
-- **Post-merge user validation:** Pending — rerun, through the installed extension and the LM Studio host, a pass with reasoning on that previously timed out
+- **Post-merge user validation:** On 2026-09-24 Dustin Thomason reported, after reloading: "Reasoning pass seems to work just fine now, no issues with time out." This covers the residual risk: the stream passes through Tailscale Serve to the LM Studio host
 
 | Finding | File and symbol/line evidence | Required disposition | Resolution |
 | --- | --- | --- | --- |

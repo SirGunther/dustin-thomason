@@ -230,9 +230,9 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
 - **Confirmed:** no reasoning pass on the LM Studio host (`reasoning_tokens: 0`, 2026-09-23). That
   is now the behavior with a pass's reasoning switch off, which is the default.
 - **Open:**
-  - Per-pass reasoning (`tickets/sayslate-pass-reasoning/`, merged through `cd0a82a`): reload the
-    extension, rerun a long pass with reasoning on (it should no longer time out), and run one with
-    reasoning off; record each run's `reasoning_tokens` in the SAYREASON-02 audit.
+  - Per-pass reasoning (`tickets/sayslate-pass-reasoning/`, merged through `cd0a82a`) is complete;
+    on 2026-09-24 the user confirmed a reasoning pass completes without a timeout. Optional: the
+    endpoint doc's "AI pass" and V5 rows still describe the old fixed `"none"` and 90 s total limit.
   - Write the SAYAI-06 validation review; the README and ROADMAP updates wait for it (LD-029).
   - A successful Gemini generation on this build; OpenAI and Claude profiles run live.
 - **Someday:** self-host the Tailscale coordination server (Headscale) and a relay on spare
