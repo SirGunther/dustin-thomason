@@ -159,7 +159,18 @@ Output rules:
 
 ### SAYSTAT-01A audit
 
-Pending
+- **Status:** Changes requested
+- **Reviewed commit:** `9301fd99700bc1400f800478e4fa7cdc5bd8fc3e` (review 1)
+- **Required evidence:** Complete in the review 1 report. Starting commit `753a5b10411b321e1adfa859134564d6197cb418`, branch `agent/saystat-01a-shortcuts-during-pass`, worktree `C:\SaySlate-worktrees\saystat-01a-shortcuts-during-pass`, pushed to `origin`
+- **Independent verification:** Review 1: `git merge-base --is-ancestor 753a5b1 9301fd9` true; `git diff --stat 753a5b1 9301fd9` lists only `CHANGELOG.md`, `app.js`, `tests/app-dictation-integration.test.mjs`. Read the full `app.js` diff against LD-008 and LD-009: the guard sits after the Finish check and matches the buttons' pass conditions (`app.js:959,962,747`). The four result `setStatus` calls are unconditional. `setListeningUI` is identical to `668a10f` (`diff` of the function, empty). `git grep -n -e "isListening) setStatus" -e "LD-007" -- app.js` returns no matches. The removed test lines are only the two deleted scenarios and the replaced clipboard stub and return line. Reran `node tests/verify.mjs` (exit 0), `node --check` on both changed files (exit 0), and `git diff --check 753a5b1 HEAD` (clean). Mutation probe (a `git archive` export with the Ctrl+Alt+R branch's `showToast` removed): `node tests/app-dictation-integration.test.mjs` still exits 0 (F1)
+- **Scope verdict:** Pass — only the three owned files changed
+- **Correctness verdict:** Changes requested — F1
+- **Merge verdict:** Held — F1 is correctable within the ticket's ownership
+- **Merged commit:** —
+
+| Finding | File and symbol/line evidence | Required disposition | Resolution |
+| --- | --- | --- | --- |
+| F1 — The Ctrl+Alt+R toast assertion cannot fail | `tests/app-dictation-integration.test.mjs`, scenario "Shortcuts during a pass: Ctrl+Alt+D and Ctrl+Alt+R do nothing while \"Phase 2\" is in flight". The Ctrl+Alt+D keydown just before it already set `toastMessage.textContent` to "AI processing is already running", so the assertion after Ctrl+Alt+R re-reads that text. Mutation probe: removing `showToast` from the `key === "r"` branch leaves the test green | Make the Ctrl+Alt+R toast assertion observe only Ctrl+Alt+R: clear `elements.toastMessage.textContent` immediately before that keydown, or otherwise prove the toast came from it, so the mutant fails. Rerun the mutant to show it now fails | Pending |
 
 ### SAYSTAT-02 audit
 
