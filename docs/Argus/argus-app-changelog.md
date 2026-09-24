@@ -10,6 +10,89 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### 2026-09-24T14:05:00Z — Remote LM Studio over Tailscale: settings UI half merged; feature complete pending the user's token
+
+- **Problem:** after Ticket A, the host accepted external LM Studio, but the External Service select offered only `openai-compatible`, so nobody could choose it. A connection test that the token-protected server refused also reported only `HTTP 401`.
+- **Requirement:**
+  - The drawer must offer LM Studio without overwriting anything the user typed.
+  - A refused test must say whether a key was rejected or was needed but never sent.
+  - Every other connection-test message must stay the same.
+- **Solution, Ticket B (merged):**
+  - `index.html` adds the `lm-studio` option, "LM Studio (private HTTPS, e.g. Tailscale)".
+  - In `app.js`, a `change` listener swaps only the OpenAI defaults that Argus itself filled in, and keeps typed values. The endpoint placeholder `https://your-device.your-tailnet.ts.net/v1/chat/completions` is set on change and again on render.
+  - `runtime/desktop-application.mjs`: `fetchJson` attaches the HTTP status to its error. 401 and 403 give `<label> rejected the API key (HTTP n).` when a key was sent. When none was sent they give `<label> requires an API key (HTTP n). Local providers never send one; connect through External Service with an API key.` All other messages are unchanged.
+  - The README provider bullet and a dated ADR-020 amendment in `Architecture/DesignDecisions.md` describe the new provider.
+- **How it was run:**
+  - First the permission classifier's `Merge Without Review` block was investigated. It is a built-in `soft_deny` rule, printed with `claude auto-mode defaults --label Merge`, not a missing permission.
+  - The five SaySlate merges on 09-23 passed because that session's handoff doc names agent merges. The Argus SCRIBE-06B merge on 09-15 passed after the user answered "Yes, push the merge."
+  - An implementation subagent worked on branch `agent/remote-lm-studio-settings-ui` (worktree `C:\Argus-worktrees\remote-lm-studio-settings-ui`, commit `ae99f6a`).
+  - I reviewed it, reran the gates, and checked it live. It is merged `--no-ff` as `1309769` and pushed to `origin/main`. The merged tree is byte-identical to the reviewed branch.
+- **Tests added:** `tests/remote-lm-studio-settings.test.mjs`, 10 tests.
+  - They stub `globalThis.fetch` in process and cover: the save path (the result is redacted, the settings JSON on disk holds no key, and the key is readable under the LM Studio scope); a rejected base URL, which leaves prior settings unchanged; `GET /v1/models` with Bearer auth; model listed and model missing; 401 and 403; a payload key overriding the saved one; no key at all (no fetch); local 401/403 with no auth header; regressions in OpenAI-compatible, 500, timeout, and network-error messages; and a static check that the UI option and listener are wired.
+  - Negative control, run by the subagent: with the production files stashed, 3 of the 10 fail on exactly the new behavior.
+- **Live acceptance (branch build, isolated profile):**
+  - Electron was launched from the worktree with `--user-data-dir` and `ARGUS_SESSION_ROOT` pointed at scratch directories, then driven over CDP. Save was never clicked.
+  - The user's running Argus (started 2026-09-21) was not touched, and its `argus-ai-provider-settings.json` and credential file kept their 2026-09-18 timestamps and sizes.
+  - Observed results:
+    - the select lists both providers;
+    - choosing LM Studio clears the OpenAI defaults and shows the placeholder;
+    - no key gives `External provider API key is not configured.`;
+    - **a deliberately invalid key against the real remote server over Tailscale gives `LM Studio rejected the API key (HTTP 401).`**, so this is the host process's own request reaching the server;
+    - a `.../v1` base URL is refused with the full-URL message;
+    - switching back to OpenAI-compatible keeps the typed endpoint and model.
+- **Not done:**
+  - No processing request has been sent with the real token, because only the user has it. The user needs to save the endpoint, model, and token once in the drawer; see Current state.
+  - The Electron IPC wrapper puts `Error invoking remote method 'argus.ai-provider-test': ModelProviderConfigurationError:` in front of validation errors. This predates the change and affects every provider; left as is.
+  - The branches and worktrees are kept, following the existing `agent/*` convention.
+  - The user asked, in pasted text, for a user-level `autoMode.allow` rule so that coordinator merges clear the classifier. It has not been applied yet and is waiting for the user to confirm in their own words.
+- **Regression:** `renderAiProviderSettings` still falls back to the same OpenAI defaults, and the literals were moved into named constants.
+  - The `testProviderConnection` change is confined to the 401/403 branch of its `catch`. The startup probe calls the same function, so it picks up the new wording.
+  - `saveAiProviderSettings`, `synchronizeModelProvider`, the credential store, and the lane are untouched.
+- **API docs:** not relevant. There is no HTTP API surface, and the `ai.provider-configure` schema was checked and is unchanged (`contracts:check` passes).
+- **Tests run** (final state, on the branch tree that was merged):
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | Argus | not rerun | `package.json` and lockfile unchanged since the Ticket A run (22 high / 1 critical, pre-existing electron-forge dev chain) |
+| lint | — | Argus | not applicable | No `lint` script in `package.json` |
+| tests | `node --test tests/*.test.mjs` | full suite, 423 tests | 416 pass / 0 fail / 7 skipped on runs 2 and 3 | My run 1 had 1 failure whose test name was not captured. The subagent's run and my runs 2 and 3 were clean, and the two new files passed 18/18 on three repeat runs. The failing test is unidentified |
+| contracts | `npm run contracts:check` | 67 messages | pass | — |
+| package | `npm run package:graph` | 7 graphs | pass (`argus-electron-production` 202 files, 12 components) | — |
+
+### 2026-09-24T04:11:30Z — Remote LM Studio over Tailscale: validator and model-lane half merged; settings UI half not started
+
+- **Problem:** the LM Studio server moved behind Tailscale Serve on another tailnet machine (`https://<device>.<tailnet>.ts.net`, setup in `docs/tailscale/sayslate-lmstudio-endpoint.md`) with API-token auth on, so every request needs `Authorization: Bearer <token>`. Argus's local LM Studio mode is loopback-only and by design never carries a credential. Its External mode already had HTTPS, Bearer auth, and a `safeStorage`-held key, but only one provider kind (`openai-compatible`). With that kind Argus had no way to turn off the remote host's saved "Enable Thinking" setting, which is on (~12 s and ~321 reasoning tokens per SaySlate pass, vs ~2 s with thinking off). SaySlate fixed the same problem with LD-041 ("I don't want to use thinking").
+- **Requirement:** Argus must use the remote LM Studio with its token, with thinking off on every request. Local Ollama, local LM Studio, and external OpenAI-compatible requests must stay byte-identical, because OpenAI rejects `reasoning_effort` on non-reasoning models.
+- **Solution, Ticket A (merged):**
+  - `normalizeModelProviderSettings` now accepts `mode: 'external'` with `provider: 'lm-studio'`. That combination must use HTTPS and the `openai-compatible` protocol, with an endpoint path ending in `/chat/completions`. A base URL like `.../v1` would pass the `/models` connection test and then fail every real POST, so it is rejected with a message that shows the expected form.
+  - The new pure function `providerRequestExtensions(configuration)` in `services/serial-ai-model-lane/model-config.mjs` returns `{ reasoning_effort: 'none' }` only for external LM Studio. `requestConfiguredModel` spreads it into the OpenAI-compatible body, so the Scribe batch, legacy extraction, and classification requests all carry it.
+  - There is no contract change: the `ai.provider-configure` provider enum already listed `lm-studio`, and `contracts:check` passes.
+  - The credential scope is `v1:lm-studio:<endpoint>`, separate from `openai-compatible` on the same URL.
+- **How it was run:** an implementation subagent worked on branch `agent/remote-lm-studio-provider` (worktree `C:\Argus-worktrees\remote-lm-studio-provider`, commit `6423403`). I reviewed it and added one commit correcting a lane comment the change had made stale (`a707ece`). It is merged to `main` with `--no-ff` (merge `f5d5e39`, pushed to `origin/main`). The merged tree is byte-identical to the tested branch (`git diff --stat` between them is empty).
+- **Tests added:** `tests/remote-lm-studio-provider.test.mjs`, 8 tests:
+  - normalization: accept, reject, and unchanged behavior for existing combinations;
+  - credential-scope separation through the fake-`safeStorage` store;
+  - `providerRequestExtensions` for every provider kind;
+  - the real lane child process for all three workloads: bodies carry `reasoning_effort: 'none'` plus Bearer auth, a missing credential yields `MODEL_CREDENTIAL_MISSING` with 0 network calls, and a local credential or external base URL is still refused.
+  - External mode requires HTTPS, so the lane child gets a test-only `NODE_OPTIONS` preload that redirects `fetch` for the placeholder origin `lm-studio.example.ts.net` to the loopback test endpoint. Method, headers, and body pass through unchanged. No certificates or key fixtures are needed.
+  - Negative control, run by the subagent and again by me: with the one-line spread removed from `index.mjs`, the body test fails (`actual: undefined, expected: 'none'`).
+- **Regression:** local LM Studio exact-body assertions in `tests/scribe-structured-response.test.mjs` pass unmodified. The extension function returns a frozen `{}` for every configuration except external LM Studio.
+- **API docs:** not relevant. The `ai.provider-configure` schema (`contracts/`) was checked and is unchanged, and there is no HTTP API surface in this repo.
+- **Not done:**
+  - **Ticket B (settings UI plus connection-test messaging) has not started.** The auto-mode permission classifier refused to create its worktree ("Merge Without Review"), so it is waiting on the user.
+  - Until B lands, the External Service select offers only `openai-compatible`, so the new provider cannot be chosen from the UI yet.
+  - No request has reached the real remote server with a token. The token is the user's, stored in their password manager.
+  - From this machine, the remote endpoint answers `401` without a token in 0.14 s, so it is reachable over the tailnet and auth is enforced.
+- **Tests run** (final state, on the branch tree that was merged):
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | Argus | fail: 22 high / 1 critical | Pre-existing electron-forge dev-dependency chain; `package.json`/lockfile unchanged from `main` |
+| lint | — | Argus | not applicable | No `lint` script in `package.json` |
+| tests | `node --test tests/*.test.mjs` | full suite, 413 tests | 406 pass / 0 fail / 7 skipped | Baseline on `ef2576d` was 398/0/7; the subagent saw one `EPERM` checkpoint-rename flake in `scribe-production-integration` on its first run, and its rerun and mine were clean |
+| contracts | `npm run contracts:check` | 67 messages | pass | — |
+| package | `npm run package:graph` | 7 graphs | pass, deterministic | — |
+
 ### 2026-09-21T00:00:00Z — Timestamp/text spacing fix; merged fix-logged-items-sort-order into main
 
 - **Problem found while reviewing the sort fix:** Logged Items rows had a 4px smaller timestamp-to-text inset than Raw Transcript rows — `.row-main`'s `margin-left: 4px` was scoped to `#transcriptList` only (predates the UX-008 row-time restructuring that gave both panes the same row layout), so derived rows sat at `margin-left: 0px`.
@@ -601,6 +684,12 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Current state
 
+**AI provider as of 2026-09-24.** Argus can use the LM Studio server on the other tailnet machine through **AI Provider → External Service → LM Studio**. That requires the full Tailscale Serve URL `https://<device>.<tailnet>.ts.net/v1/chat/completions`, model `google/gemma-4-12b-qat`, and the LM Studio API token.
+- The token is stored with Electron `safeStorage` and scoped to that provider and endpoint.
+- Every request pins `reasoning_effort: "none"`, so thinking stays off whatever the host has saved.
+- Local LM Studio stays loopback-only and credential-free. A local server that has token auth on now reports that it needs the External Service path, instead of a bare `HTTP 401`.
+- This machine's Argus is still saved as local LM Studio. It switches only after the user saves the external settings, and a running instance only picks up the new UI after a restart.
+
 **Scribe status as of 2026-09-13 (SCRIBE-06 acceptance, corrected after review).** The Scribe pipeline is implemented end to end and proven against a real LM Studio model for three-row admission, the real 15-second idle remainder, stateless bounded requests carrying the protected instruction, multiple-item outcomes with intact provenance, failure retention, and consecutive batches surviving inferences roughly eight times longer than the wire’s admission deadline with zero wire failures. Those scenarios drive the production graph directly and do **not** cover the shipped desktop startup sequence. One open defect sits at that seam: session start publishes the session policy twice, producing a duplicate `scribe.recovery-request` under one idempotency key and an `IDEMPOTENCY_KEY_CONFLICT`. Confirmed and bisected to `eebc74f`; **impact not established** — an earlier claim that it zeroed every session was withdrawn under review after a real desktop session recorded Logged Items normally. Record: `docs/incidents/2026-09-12-scribe-session-start-recovery-conflict.md`; acceptance evidence and remaining user validation: `docs/validation/SCRIBE-ACCEPTANCE-VALIDATION.md`. `MOD-003` and `MOD-004` remain Open with narrowed triggers.
 
 Argus has two complementary POC layers:
@@ -624,6 +713,7 @@ The next recommended slice is Phase 9 observability. The deferred Phase 7A edito
 
 ## Plans
 
+- [2026-09-24] Remote LM Studio over Tailscale. Ticket A adds the external `lm-studio` provider kind, pins `reasoning_effort: "none"` on its requests, and requires a full `/chat/completions` HTTPS endpoint. Ticket B adds the External Service select option with endpoint/model defaults, reports 401/403 connection tests as an API-key failure, and updates the README and an ADR-020 amendment. Status: implemented. Ticket A merged as `f5d5e39`, Ticket B merged as `1309769`.
 - [2026-08-22] Phase 8 permissions and packaging: default-deny manifest authority, Node-enforced restrictions, honest enforcement matrix, fail-closed unavailable providers, and deterministic inspectable packages with integrity hashes. Status: implemented for review (ADR-018, `Architecture/PermissionsPackagingPhase8Evidence.md`). Native and OCI proofs remain evidence-triggered under `NAT-001`/`CNT-001`.
 - [2026-08-12] Establish canonical Argus changelog, feature catalog, decision register, docs index, and repository pointer. Status: implemented.
 - [2026-08-12] Preserve the completed POC as an immutable folder, ZIP, and SHA-256 comparison baseline. Status: implemented.

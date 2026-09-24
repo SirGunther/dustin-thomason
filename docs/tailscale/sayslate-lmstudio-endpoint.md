@@ -183,8 +183,21 @@ A timeout or connection error there means that machine isn't on the tailnet.
 ## Side effects
 
 - Token auth covers the whole LM Studio server. **Argus's local LM Studio provider**
-  (`http://127.0.0.1:1234`, which by design stores no credentials) now gets 401. That's out of
-  scope for SaySlate; Argus needs token support before it can use LM Studio on this host again.
+  (`http://127.0.0.1:1234`, which by design stores no credentials) now gets 401. Its connection
+  test now says the server needs an API key and points to the External Service path.
+- **Argus uses this endpoint** through **AI Provider → External Service → LM Studio** (Argus
+  commits `f5d5e39` and `1309769`, 2026-09-24). This works from the Chrome machine and from this
+  host itself, since Serve answers the host's own tailnet name. The values differ from SaySlate's:
+
+  | Setting | Argus value |
+  | --- | --- |
+  | Endpoint | `https://<device>.<tailnet>.ts.net/v1/chat/completions` (the full URL; Argus refuses a `/v1` base URL) |
+  | Model | `google/gemma-4-12b-qat` |
+  | API key | the same LM Studio token, saved in Argus's `safeStorage` credential store |
+
+  Argus sends `reasoning_effort: "none"` on every request to this provider, like SaySlate's Custom
+  profile. Test Connection is `GET <origin>/v1/models`, and an HTTP 401 or 403 is reported as a
+  rejected API key.
 
 ## Rollback
 
