@@ -14,6 +14,33 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
 
 ## Session log (newest first)
 
+### 2026-09-24T19:32:00Z — SAYSTAT-01 merged: full-page badge shows AI pass stages
+
+- **Pre-dispatch:** the orchestrator's code check found two overlaps that the ticket as written
+  would have misreported:
+  - A discard during the first pass, or Ctrl+Alt+X during either pass, would show "Ready" while the
+    pass was still running (EV-025).
+  - Ctrl+Alt+D starts dictation during a pass although the start button is disabled then (EV-026).
+    A finished pass would then replace "Listening", and stopping dictation would show "Ready"
+    mid-pass.
+
+  Both were resolved from sources as LD-006 and LD-007, and the ticket was revised before dispatch
+  (`e71d540`).
+- **Shipped:** SaySlate `main` `0e1b26b` (`--no-ff`, pushed). The full-page badge reads "Phase 1" or
+  "Phase 2" while a pass request runs, then "Phase N ready" or "Phase N failed". It returns to
+  "Ready" after a discard, a clear, or Finish. It uses Floating Slate's colors in both themes.
+  Files: `app.js`, `app.css`, `tests/app-dictation-integration.test.mjs`, `CHANGELOG.md`.
+- **Review:** two rounds. Two findings were fixed in `88284c6`: F1, a CSS comment that misstated
+  the dark-theme cascade, and F2, a test that clicked a disabled button. Details are in the
+  handoff's SAYSTAT-01 audit record.
+- **Verification:** `node tests/verify.mjs`, `node --check` on both changed files, and
+  `git diff --check` pass on the branch and on merged `main`. Loaded-extension screenshots show all
+  four states in both themes.
+- **Left open:** Ctrl+Alt+D and Ctrl+Alt+X still act during a pass while their buttons are
+  disabled. The badge now reports that correctly, but dictation during a first pass can add text
+  the pass doesn't see. Blocking the shortcuts would change dictation behavior, so it needs a
+  separate decision.
+
 ### 2026-09-24T17:20:00Z — Status badge handoff: full page matches Floating Slate
 
 - **Direction:** keep Floating Slate's "Phase 1" / "Phase 2" wording and make the full page match
@@ -96,7 +123,6 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
   Tailscale end to end.
 - **Confirmed:** no reasoning pass on the LM Studio host (`reasoning_tokens: 0`, 2026-09-23).
 - **Open:**
-  - Status badge handoff (`tickets/sayslate-status-badge/`): dispatch SAYSTAT-01.
   - Write the SAYAI-06 validation review; the README and ROADMAP updates wait for it (LD-029).
   - A successful Gemini generation on this build; OpenAI and Claude profiles run live.
 - **Someday:** self-host the Tailscale coordination server (Headscale) and a relay on spare

@@ -21,7 +21,7 @@ When a full-page AI pass runs, from its button, its shortcut, or the Finish work
 - [x] In `discardResultTranscript` (`app.js:702`), call `setStatus("idle", "Ready")` only when dictation is not running and no pass request is in flight (the label is `""`). This covers the discard button (`app.js:1389`) and `clearTranscript`, which calls it after stopping dictation (`app.js:1275`), including Finish's final clear. A discard during dictation keeps "Listening"; a discard during a pass request keeps "Phase N" (EV-003, EV-007, EV-025, LD-005, LD-006).
 - [x] In `setListeningUI` (`app.js:904-917`), where dictation stopping now sets `idle` / "Ready", set `processing` with the in-flight pass label instead when a pass request is in flight. The existing `error` check stays as it is (EV-026, LD-007).
 - [x] Add `.status-pill[data-state="processing"]` and `.status-pill[data-state="complete"]` rules, with their `.status-dot` variants, beside the existing states at `app.css:655-686`. Use `#5b7fa3` for processing and the accent color for complete (EV-013, LD-005).
-- [x] Add dark-theme variants of both states beside `app.css:1207-1219` (EV-008, LD-005). Note: "complete" needed no property override — it is fully `var(--accent)`/`var(--accent-pale)` driven in the light rule, so it already resolves correctly under the dark `:root` block; a comment in `app.css` records why no dark block was added for it. "processing" got a dark legibility override since its light rule uses the fixed, non-variable `#5b7fa3` hue.
+- [x] Add dark-theme variants of both states beside `app.css:1207-1219` (EV-008, LD-005). Note (corrected per F1): every pill's *background* in dark theme comes from `html[data-theme="dark"] .status-pill` (`app.css:1215-1218`, specificity 0,2,1), which outranks each `[data-state=...]` rule's own background (0,2,0) — true for `processing` and `complete` alike, same as `listening`/`error`. "complete" needed no override because its border-color and color are `var(--accent)`, which `:root`'s dark block already redefines. "processing" got a dark override for border-color and color only, since its light rule uses the fixed, non-variable `#5b7fa3` hue; `#9fbcdb` is a lighter tint of that hue for contrast on the dark surface. The `app.css` comment above the dark `processing` rule now states this cascade explicitly.
 - [x] Add scenarios to `tests/app-dictation-integration.test.mjs` that drive the real click handlers through `buildContext` (EV-018), with an `aiResponder` whose promise the test settles. Assert `elements.statusPill.dataset.state` and `elements.statusText.textContent` at each point:
   - [x] **First pass:** `processing` / "Phase 1" while in flight, then `complete` / "Phase 1 ready".
   - [x] **Second pass:** `processing` / "Phase 2" while in flight, then `complete` / "Phase 2 ready".
@@ -40,7 +40,7 @@ When a full-page AI pass runs, from its button, its shortcut, or the Finish work
 - [x] `node --check app.js` exits 0.
 - [x] `git diff --check` reports nothing.
 - [x] The six pass labels in `app.js` are exactly the ones Floating Slate uses: "Phase 1", "Phase 1 ready", "Phase 1 failed", "Phase 2", "Phase 2 ready", "Phase 2 failed" (EV-010).
-- [x] Every new badge assertion follows a real user action: a dispatched click on a control the page has enabled at that moment, or a dispatched `keydown` for a README shortcut (EV-026). No test calls `setStatus` or replaces a pass function.
+- [x] Every new badge assertion follows a real user action: a dispatched click on a control the page has enabled at that moment, or a dispatched `keydown` for a README shortcut (EV-026). No test calls `setStatus` or replaces a pass function. Corrected per F2: the "stopping dictation while still in flight" scenario clicked `startButton` while it was disabled (`app.js:878`, firstPassRunning true) — replaced with the same Ctrl+Alt+D keydown used to start dictation, the real path available while that button is disabled. An explicit `disabled === false` assertion was added before every remaining `startButton` click in the two dictation-during-a-pass scenarios and the discard-while-dictating scenario.
 - [x] The existing prompt-construction assertions at `tests/app-dictation-integration.test.mjs:666-675` pass unmodified (content unchanged; the assertions now sit later in the file after the new scenarios were inserted above them near the end of the file).
 - [x] Loaded-extension check (handoff dispatch rule 6): screenshots of the full-page badge in `idle`, `processing`, `complete`, and `error`, in light and dark themes, show each state legibly and distinct from `idle`. Screenshot paths are reported below.
 - [x] `git diff --stat <starting commit>..HEAD` lists only the owned files.
@@ -67,8 +67,8 @@ Complete every objective below in place, using the handoff's Compact Audit Trail
 
 ### Badge styling in both themes
 **State:** Resolved
-**Value:** Light-theme `processing`/`complete` rules match Floating Slate's hues exactly (EV-013); a dark override was added for `processing` (fixed hue, needs its own legibility pass) and none for `complete` (already fully `var(--accent)`-driven), with a comment explaining the asymmetry; verified in the browser in both themes.
-**Evidence:** `app.css:686-706` (light rules); `app.css:1220-1232` (dark rules + comment); loaded-extension screenshots: `C:\Users\dktho\AppData\Local\Temp\claude\c--Users-dktho-OneDrive-SCRIPTS-ALL-SYSTEMS-To-Do-List-WorkLists\e91f5e96-c4aa-4cb8-8a72-de207439bc80\scratchpad\saystat-01\badge-{light,dark}-{idle,processing,complete,error}.png`
+**Value:** Light-theme `processing`/`complete` rules match Floating Slate's hues exactly (EV-013). In dark theme, background comes from the existing `html[data-theme="dark"] .status-pill` rule for every state alike (corrected per F1, not from each state's own background); `processing` additionally gets a dark border-color/color override since its hue is fixed rather than variable-driven, while `complete` needs none since its border-color/color are `var(--accent)`. Verified in the browser in both themes.
+**Evidence:** `app.css:686-706` (light rules); `app.css:1243-1259` (dark rules + corrected comment); loaded-extension screenshots: `C:\Users\dktho\AppData\Local\Temp\claude\c--Users-dktho-OneDrive-SCRIPTS-ALL-SYSTEMS-To-Do-List-WorkLists\e91f5e96-c4aa-4cb8-8a72-de207439bc80\scratchpad\saystat-01\badge-{light,dark}-{idle,processing,complete,error}.png`
 
 ### Tests through the real click paths
 **State:** Resolved
@@ -83,16 +83,14 @@ Complete every objective below in place, using the handoff's Compact Audit Trail
 ### Implementation completeness
 **State:** Resolved
 **Value:** Every build-checklist and exit-gate item is implemented and verified; `node tests/verify.mjs`, `node --check app.js`, and `git diff --check` all exit 0, and the six Floating-Slate-matching labels are exact.
-**Evidence:** final commit `58bb47517fe4efe4ad2e5457bc30437c00910c9a` on `agent/saystat-01-full-page-pass-status`
+**Evidence:** final commit `88284c6b6944fb3c2f168648ecd1272b0fe3d236` on `agent/saystat-01-full-page-pass-status` (supersedes `58bb47517fe4efe4ad2e5457bc30437c00910c9a`, held for F1/F2)
 
 ### F1 — Dark-theme CSS comment misstates the cascade
-**State:**
-**Value:**
-**Evidence:**
-**Depends on:**
+**State:** Resolved
+**Value:** Rewrote the comment above the dark `processing` rule to state the real cascade: `html[data-theme="dark"] .status-pill` (0,2,1) supplies every state's background, outranking each `[data-state=...]` rule's own background (0,2,0), for `processing` and `complete` alike; only border-color/color are left for a state rule, and `complete`'s come from `var(--accent)` (redefined by the dark palette) while `processing`'s are a dedicated dark-only override. Also states what `#9fbcdb` is: a lighter tint of `#5b7fa3` for contrast on the dark surface. Comment-only change; no rule or value changed.
+**Evidence:** `app.css:1243-1251` (rewritten comment, commit `88284c6`)
 
 ### F2 — In-flight dictation stop clicks a disabled button
-**State:**
-**Value:**
-**Evidence:**
-**Depends on:**
+**State:** Resolved
+**Value:** The "stopping dictation while still in flight" scenario now stops dictation with the same Ctrl+Alt+D keydown used to start it, instead of a `startButton` click while that button is disabled (`app.js:878`, firstPassRunning true) — the real path a user has at that moment. Added `assert.equal(elements.startButton.disabled, false, ...)` before each of the two remaining real `startButton` clicks (the settled-during-dictation stop, and the discard-while-dictating start).
+**Evidence:** `tests/app-dictation-integration.test.mjs` — "Dictation during a pass: stopping dictation while it is still in flight..." scenario (second keydown replaces the disabled click); enabled-assertions added before the `startButton` clicks in the "Ctrl+Alt+D while Phase 1 is in flight" and "Discard: ... discarding while dictating" scenarios; run: `node tests/app-dictation-integration.test.mjs` — passes; commit `88284c6`
