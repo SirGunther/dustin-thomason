@@ -186,12 +186,13 @@ A timeout or connection error there means that machine isn't on the tailnet.
   (`http://127.0.0.1:1234`, which by design stores no credentials) now gets 401. Its connection
   test now says the server needs an API key and points to the External Service path.
 - **Argus uses this endpoint** through **AI Provider → External Service → LM Studio** (Argus
-  commits `f5d5e39` and `1309769`, 2026-09-24). This works from the Chrome machine and from this
-  host itself, since Serve answers the host's own tailnet name. The values differ from SaySlate's:
+  commits `f5d5e39`, `1309769` and `8003780`, 2026-09-24). This works from the Chrome machine and
+  from this host itself, since Serve answers the host's own tailnet name. The values are the same
+  as SaySlate's:
 
   | Setting | Argus value |
   | --- | --- |
-  | Endpoint | `https://<device>.<tailnet>.ts.net/v1/chat/completions` (the full URL; Argus refuses a `/v1` base URL) |
+  | Endpoint | `https://<device>.<tailnet>.ts.net/v1`, the same base URL as SaySlate. Argus stores it as `.../v1/chat/completions`, and the full URL is also accepted |
   | Model | `google/gemma-4-12b-qat` |
   | API key | the same LM Studio token, saved in Argus's `safeStorage` credential store |
 

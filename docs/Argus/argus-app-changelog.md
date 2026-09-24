@@ -10,6 +10,37 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Session log (newest first)
 
+### 2026-09-24T14:45:00Z — Accept the SaySlate `/v1` base URL for remote LM Studio
+
+- **Problem:** the user entered the exact endpoint SaySlate uses, `https://<device>.<tailnet>.ts.net/v1`. Argus's Test Connection refused it before sending any request: `External LM Studio endpoint must be the full chat completions URL…`. SaySlate stores a base URL and appends `/chat/completions` itself (`openAICompatibleClient.js` `postChatCompletions`). Argus's lane posts to the stored endpoint verbatim, so Ticket A had required the full URL. I had deliberately chosen to reject the `/v1` form, and that choice was wrong: one value should work in both apps.
+- **Requirement:** external LM Studio accepts both SaySlate's `/v1` base URL and the full URL, and stores one canonical full URL. That URL is used by the settings file, the credential scope, the lane's POST, and the `/v1/models` connection test. Every other provider's path stays unchanged.
+- **Solution:** in `runtime/model-provider-settings.mjs`, `externalLmStudioEndpoint` replaces `assertExternalLmStudioEndpoint`:
+  - a path ending in `/chat/completions` is kept;
+  - a path ending in `/v1` (after at most one trailing slash, optionally under a reverse-proxy sub-path) gets `/chat/completions` appended;
+  - every other path is rejected with `must be the server's /v1 base URL or its full /v1/chat/completions URL`.
+  - Normalizing twice gives the same result. External `openai-compatible` `/v1` paths are not rewritten.
+  - The drawer placeholder is now `https://your-device.your-tailnet.ts.net/v1`, and the ADR-020 amendment was updated to match.
+- **How it was run:** a subagent worked on branch `agent/lm-studio-base-url` (commit `514a71c`). I reviewed it, reran the gates, and checked it live. It is merged `--no-ff` as `8003780` and pushed. The merged tree is byte-identical to the branch.
+- **Tests:** in `tests/remote-lm-studio-provider.test.mjs` and `tests/remote-lm-studio-settings.test.mjs`, the old rejected-base-URL cases now assert normalization. New coverage:
+  - `/v1`, `/v1/`, `/lm/v1` and `/lm/v1/` all normalize;
+  - normalization is idempotent;
+  - invalid paths are still rejected;
+  - a base-URL input has the same credential scope as the full URL;
+  - the lane accepts `/v1`. Its fetch redirect now forwards only the exact normalized URL, so the test proves where the POST goes;
+  - desktop save persists the full URL, and a test from `/v1` issues exactly one `GET /v1/models` with Bearer auth.
+  - Negative control, run by the subagent: with the production file reverted, 9 of the 22 tests fail.
+- **Live acceptance (fix branch, isolated `--user-data-dir` profile, Save never clicked):** both `https://<device>.<tailnet>.ts.net/v1` and `.../v1/` pass validation. With a deliberately invalid key, both reach the real remote server and return `LM Studio rejected the API key (HTTP 401).` The user's Argus instance (restarted at 10:28 local) and its saved settings files were not touched.
+- **Not done:** the user's running Argus loaded the pre-fix code at 10:28, so it must be restarted before the base URL is accepted. No processing request has run with the real token yet.
+- **Tests run** (final state, on the branch tree that was merged):
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | Argus | not rerun | `package.json`/lockfile unchanged (pre-existing 22 high / 1 critical, electron-forge dev chain) |
+| lint | — | Argus | not applicable | No `lint` script |
+| tests | `node --test tests/*.test.mjs` | full suite, 427 tests | 420 pass / 0 fail / 7 skipped | Clean on my run and on the subagent's two runs |
+| contracts | `npm run contracts:check` | 67 messages | pass | — |
+| package | `npm run package:graph` | 7 graphs | pass | — |
+
 ### 2026-09-24T14:05:00Z — Remote LM Studio over Tailscale: settings UI half merged; feature complete pending the user's token
 
 - **Problem:** after Ticket A, the host accepted external LM Studio, but the External Service select offered only `openai-compatible`, so nobody could choose it. A connection test that the token-protected server refused also reported only `HTTP 401`.
@@ -684,7 +715,7 @@ Personal-project changelog for the Argus browser UI proof, executable Node archi
 
 ## Current state
 
-**AI provider as of 2026-09-24.** Argus can use the LM Studio server on the other tailnet machine through **AI Provider → External Service → LM Studio**. That requires the full Tailscale Serve URL `https://<device>.<tailnet>.ts.net/v1/chat/completions`, model `google/gemma-4-12b-qat`, and the LM Studio API token.
+**AI provider as of 2026-09-24.** Argus can use the LM Studio server on the other tailnet machine through **AI Provider → External Service → LM Studio**. It takes the same values as SaySlate: endpoint `https://<device>.<tailnet>.ts.net/v1` (stored as `.../v1/chat/completions`; the full URL is also accepted), model `google/gemma-4-12b-qat`, and the LM Studio API token.
 - The token is stored with Electron `safeStorage` and scoped to that provider and endpoint.
 - Every request pins `reasoning_effort: "none"`, so thinking stays off whatever the host has saved.
 - Local LM Studio stays loopback-only and credential-free. A local server that has token auth on now reports that it needs the External Service path, instead of a bare `HTTP 401`.
@@ -713,7 +744,7 @@ The next recommended slice is Phase 9 observability. The deferred Phase 7A edito
 
 ## Plans
 
-- [2026-09-24] Remote LM Studio over Tailscale. Ticket A adds the external `lm-studio` provider kind, pins `reasoning_effort: "none"` on its requests, and requires a full `/chat/completions` HTTPS endpoint. Ticket B adds the External Service select option with endpoint/model defaults, reports 401/403 connection tests as an API-key failure, and updates the README and an ADR-020 amendment. Status: implemented. Ticket A merged as `f5d5e39`, Ticket B merged as `1309769`.
+- [2026-09-24] Remote LM Studio over Tailscale. Ticket A adds the external `lm-studio` provider kind, pins `reasoning_effort: "none"` on its requests, and requires a full `/chat/completions` HTTPS endpoint. Ticket B adds the External Service select option with endpoint/model defaults, reports 401/403 connection tests as an API-key failure, and updates the README and an ADR-020 amendment. Status: implemented. Ticket A merged as `f5d5e39`, Ticket B as `1309769`, and the `/v1` base-URL fix as `8003780`.
 - [2026-08-22] Phase 8 permissions and packaging: default-deny manifest authority, Node-enforced restrictions, honest enforcement matrix, fail-closed unavailable providers, and deterministic inspectable packages with integrity hashes. Status: implemented for review (ADR-018, `Architecture/PermissionsPackagingPhase8Evidence.md`). Native and OCI proofs remain evidence-triggered under `NAT-001`/`CNT-001`.
 - [2026-08-12] Establish canonical Argus changelog, feature catalog, decision register, docs index, and repository pointer. Status: implemented.
 - [2026-08-12] Preserve the completed POC as an immutable folder, ZIP, and SHA-256 comparison baseline. Status: implemented.
