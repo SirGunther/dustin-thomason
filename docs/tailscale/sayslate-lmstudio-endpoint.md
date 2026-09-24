@@ -56,10 +56,16 @@ SaySlate calls:
 
 ## Setup steps (what was done, in order)
 
-1. **Install Tailscale.** The winget ID is case-sensitive with `-e`:
+1. **Install Tailscale** with winget:
    ```powershell
    winget install --id Tailscale.Tailscale -e --source winget
    ```
+   The command actually run (non-interactive) was the same plus
+   `--accept-package-agreements --accept-source-agreements --silent`. It installed the official
+   `tailscale-setup-1.102.4-amd64.msi` from `pkgs.tailscale.com`, and winget verified the hash.
+   - The ID is case-sensitive with `-e`: `tailscale.tailscale` returns "No package found".
+   - `--source winget` keeps winget from also querying the Microsoft Store source, which stops and
+     asks you to accept the Store's terms first.
 2. **Join the host to the tailnet.** Run `tailscale up`, open the printed
    `login.tailscale.com/a/...` link, and click **Connect**. A browser that is already signed in to
    Tailscale does not mean the machine has joined; `tailscale status` must stop saying
