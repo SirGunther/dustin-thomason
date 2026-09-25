@@ -575,6 +575,12 @@ Unrelated deltas → split commits or refrain from **`git add -A`** wholesale.
 
 Heavy **rebase/merge choreography**, tagging, signatures, husky internals. This memo covers **straight line**: optional **audit + lint + serial test gates → git status/add/commit/push** when Node repo applies.
 
+## no-unrequested-rules
+
+# No unrequested rules or memories
+
+Do not create or edit a rule, memory, or any other standing instruction unless the user explicitly asks for it. This applies even to a correction you think should be remembered. Take the correction, apply it to the work in front of you, and move on.
+
 ## personal-methodology
 
 # Personal methodology (dustin-thomason)

@@ -234,6 +234,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `direct-responses` | always | Answer a direct question with the direct answer, first sentence, no preamble — especially "why did you do that". |
 | `dnu-folders` | always | A dnu folder is retired work kept for posterity. Never load it as context, never cite it, never treat it as current — unless the user names it explicitly. |
 | `git-commit-workflow` | always | Standard commit/push habit for dustin-thomason—runs to completion via npm audit/lint/serial-test gates (when applicable), git status → add → commit → push when an agent pushes work here or in sibling Node repos. |
+| `no-unrequested-rules` | always | Do not save rules or memories unless the user explicitly asks for one. |
 | `personal-methodology` | always | Routes dustin-thomason personal standards into any workspace repo (Atlas, Callisto, etc.) without copying rules there or requiring @-mentions. |
 | `problem-requirement-solution` | always | Coherent implementation philosophy — reason in order Problem → Requirement → Solution so the line of thinking stays clear for the end user, in implementations, plans, specs, and changelog/PR narratives. |
 | `source-truth` | always | Stop and ask for the source artifact rather than inferring exact labels, mappings, wording, or evidence from memory or partial context. |

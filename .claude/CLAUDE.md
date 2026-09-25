@@ -12,6 +12,7 @@ scope:scoped rules stay on-demand via `.claude/rules/` path matching.
 @rules/direct-responses.md
 @rules/dnu-folders.md
 @rules/git-commit-workflow.md
+@rules/no-unrequested-rules.md
 @rules/personal-methodology.md
 @rules/problem-requirement-solution.md
 @rules/source-truth.md
