@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hermes Agent Intro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            transition: background-color 0.5s ease;
+            background-color: #f0f2f5;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background-color: #007bff;
+            color: white;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.05);
+            background-color: #0056b3;
+        }
+        #surprise-text {
+            margin-top: 30px;
+            font-weight: bold;
+            font-size: 1.5rem;
+            min-height: 2em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hello! I am Hermes Agent, powered by Google Gemma 4.</h1>
+    <button id="surpriseBtn">Surprise Me!</button>
+    <div id="surprise-text"></div>
+
+    <script>
+        const btn = document.getElementById('surpriseBtn');
+        const text = document.getElementById('surprise-text');
+        const surprises = [
+            "✨ You're doing great! Keep building cool things.",
+            "🚀 To infinity and beyond!",
+            "🎨 The background is now a random color!",
+            "🎉 Surprise! I just thought about the future of AI.",
+            "🍕 Pizza is technically a salad. (Don't believe me, just enjoy the surprise)",
+            "🌌 You are made of stardust.",
+            "🤖 I'm just a bunch of weights and biases, but I'm happy to help!"
+        ];
+
+        btn.addEventListener('click', () => {
+            const randomSurprise = surprises[Math.floor(Math.random() * surprises.length)];
+            text.innerText = randomSurprise;
+            
+            // Random background color
+            const randomHue = Math.floor(Math.random() * 360);
+            document.body.style.backgroundColor = `hsl(${randomHue}, 70%, 85%)`;
+            
+            // Little extra: button shake
+            btn.style.transform = 'scale(0.9)';
+            setTimeout(() => btn.style.transform = 'scale(1.05)', 100);
+            setTimeout(() => btn.style.transform = 'scale(1)', 200);
+        });
+    </script>
+</body>
+</html>

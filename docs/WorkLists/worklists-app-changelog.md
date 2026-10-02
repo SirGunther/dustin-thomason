@@ -36,6 +36,80 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-09-28T19:30:00Z - Erebus board sweep: owner review verdicts applied to the 43 cards
+
+- Summary: The owner reviewed the 43 cards and added a **Review** column to
+  `tickets/erebus-board-sweep/erebus-board-sweep-inventory.md`, table A. Those verdicts were applied to
+  the live board under `worklists-card-sync`. One serialized writer made one `PATCH /todos/{id}` per
+  card, each carrying a `lastModified` precondition read just before the write. Each card's first
+  line was checked against the inventory title before writing.
+- Results:
+  - **Checked Completed:** 9 cards; their status was left alone.
+  - **In Review:** 17 set, plus 2 that were already In Review.
+  - **In Progress:** 13 set.
+  - **Rejected by the server (400):** rows 2 (`todo-1782760132922-97997fda`) and 15
+    (`todo-1781479892635-11fa9a76`), with `Task status is not available for this card's color tags`.
+    Both carry only `UI/UX`, which is not a status-enabled tag. They are unchanged, and the tag is the
+    owner's call.
+  - No 409s, identity mismatches or missing cards.
+- Verification:
+  - Before/after `GET /data` diff: only the target fields plus `lastModified` changed on the 39 written
+    cards. There were 16 column and 1 board `lastModified` bumps and nothing else.
+  - A separate re-read of all 43 cards, taking the verdicts straight from the inventory file:
+    41 match; 2 are the rejections.
+- Files: the inventory's summary bullet now records the applied verdicts; the owner's Review column
+  was not edited. Scratchpad evidence: `card-sync-before.json` / `card-sync-after.json` (contain the
+  `models[].apiKey` values from `/data`), `card-sync-results.json`, `card-sync.log`.
+- Tests run: none; no code changed. Tooling gates are not relevant (docs and board data only).
+
+### 2026-09-28T18:36:42Z - Erebus board sweep (51 packages on `local-fixes`, not merged to `main`)
+
+- Summary: Worked the Erebus board autonomously. `main` was fast-forwarded to `ee8e2de` and pushed
+  first; after that every fix went to its own `fix/<slug>` branch in an isolated worktree under
+  `C:\WorkLists-worktrees\`, was reviewed against its card, and was merged `--no-ff` into
+  `local-fixes`. **`main` was not touched after the initial push. The board was read-only
+  throughout.**
+- Plan, per-package status, verification ledger and review guide:
+  `docs/WorkLists/tickets/erebus-board-sweep/erebus-board-sweep-plan.md` (canonical detail for this
+  sweep); agent brief alongside it.
+- Problem: 93 open WorkLists cards on the Erebus board, unranked, several describing silent data
+  loss.
+- Requirement: fix what an agent can finish correctly, highest impact first, without destabilising
+  the release line; every fix reviewed and revertable on its own.
+- Solution: 51 packages — 36 from board cards (43 card ids) and 15 found during the sweep. Highest
+  impact: the DAL lock admitted every caller at once (concurrent moves silently lost; now a FIFO
+  mutex with serialized operations); AI paths that dropped generated items; note writes that could
+  overwrite a concurrent edit; save failures that were silent; background refreshes that closed
+  Settings, stole focus and moved scroll; API keys served to the browser.
+- Files/areas: server.js, dal.js, gemmaNormalize.js, modelProviderClient.js, openapi.js, prompts/,
+  public/ (todolist2.js, todoliststyles2.css, several new small modules), packages/markdown-kit,
+  tests/ (≈50 new suites).
+- User-visible impact: see the plan's tier tables; nothing is live until `local-fixes` is merged.
+- Tests run (final state, `local-fixes` `1b4cda0`):
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | lint | `npm run lint` | WorkLists, whole tree | pass | - |
+  | tests | `node --test --test-concurrency=4 "tests/*.test.js"` | WorkLists, all suites | **2081 / 2081 pass** | The 3 failures carried since June are repaired |
+  | browser | `npm run test:browser` | notes-pane smoke, real Chromium | **15 / 15** | - |
+  | integration QA 1 | Playwright, 42 flows × 2 widths | tree `40ea134` | 42 / 42 PASS | stubbed model |
+  | integration QA 2 | Playwright, final tree × 2 widths | tree `df51b22` | 105 / 108 at 1600 | 1 regression found and fixed; 1 pre-existing contrast fail; stubbed model, fake voice |
+
+- Tests added/updated: every package added its own `tests/<slug>.test.js`; existing assertions were
+  changed only where behaviour changed on purpose, each named in the merge commit.
+- Regression impact: not isolated — shared render, refresh, DAL and AI paths changed. Covered by
+  two integration QA passes against copies of the live data.
+- API docs: `openapi.js` updated in every package that changed a route (new `GET /api/integrity`,
+  `PUT /statuses/order`, `PATCH /boards/:boardId/column-widths`, `formattingPromptId`,
+  storage-failure `503` responses, draft job types, model `capabilities`).
+- Conflicts / exceptions:
+  - Not merged to `main` — owner review first (see the plan's "What needs you").
+  - Not pushed (`local-fixes` and the `fix/*` branches are local).
+  - No live AI model was called; real voice and the browser's own Ctrl+F were not automatable.
+  - The dustin-thomason pre-commit hook refuses commits while the untracked
+    `agents/skills/hermes-memory/` skill is present, so this entry and the sweep docs are
+    uncommitted.
+
 ### 2026-09-27T17:13:56Z - Live regression test for the active-model key scenario
 
 - Summary: added a regression suite that calls the real provider instead of stubs. It has two

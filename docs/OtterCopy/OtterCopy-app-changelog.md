@@ -8,6 +8,71 @@ Personal project changelog for extension behavior, prompt workflow changes, noti
 
 ## Session log
 
+### 2026-09-30T18:13:03Z — OtterCopy
+- **Summary:** Added an optional "WorkLists to-do ID" field to the popup. When it holds a value at the start of an AI run (standard, extended refine or extended handoff), the finished result is posted once to that WorkLists card as a child note (`POST http://127.0.0.1:3010/api/notes`, `{eventId: <card id>, text: <result>}`).
+- **Problem:** OtterCopy results had to be pasted into WorkLists by hand.
+- **Requirement:**
+  - A to-do ID present at run start puts the result on that card as a note.
+  - An empty field behaves exactly as before.
+  - The user can see whether WorkLists is running and whether the post worked.
+  - The ID survives a failure.
+- **Solution:**
+  - **`worklistsClient.js` (new):**
+    - `isValidCardId` checks the ID format only: `todo-<digits>` or `todo-<digits>-<8 hex>`. It matched all 2963 live card IDs. There is deliberately no check that the card exists, because an ID can only be copied from an existing card.
+    - `checkAvailability` sends `HEAD /openapi.json`, which is served from memory.
+    - `postNote` makes exactly one request, never retries, never throws, and times out after 10 s.
+  - **`background.js`:** threads `worklistsCardId` through both job paths. It posts after the cancellation check and before the "completed" write, and records `worklists: {status: "posted"|"failed", noteId|error}` in that same write, so a failed post can never mark the refinement failed.
+  - **Popup:**
+    - One input with an availability indicator on its label row, checked when the popup opens and again on paste or change.
+    - An invalid ID blocks the run with "Not a valid to-do ID."
+    - On success nothing is stored, so closing the popup clears the field.
+    - After a failed run, or a failed post, the ID comes back through the existing last-attempt snapshot.
+    - The completion text reads `Sent to WorkLists.` or `WorkLists post failed: <reason>`.
+  - **`manifest.json`:** adds `http://127.0.0.1:3010/*`. It uses the IPv4 loopback address because WorkLists listens only on `127.0.0.1`.
+- **How it was built:**
+  - The base branch `worklists-note-dump` holds the shared client, its tests and the permission.
+  - Two sub-agents worked in separate worktrees: `-background` (`19a02be`) and `-popup` (`2582cc6`).
+  - Review fix `304b34f`:
+    - Moved the availability text onto the label row, because the popup hit the 600px popup height limit.
+    - Made a failed post replace the "Use Copy latest result" hint so the error isn't cut off by the two-line status box.
+  - Merged as `5b1cf3b`, then fast-forwarded onto `main`.
+- **Out of scope by decision:** toggle, settings block, resend button, retry, size pre-check (the server's 100 KB limit is about 30 pages, so it returns 413 only if exceeded), and the card-exists check.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| tests | `node --test tests/*.test.mjs` | worklistsClient.js (12 cases: ID format, POST shape, invalid ID sends nothing, refused connection, text/JSON/HTML error bodies, timeout, unreadable 201, HEAD availability) | 12 pass | — |
+| integration | client against a throwaway WorkLists server (`PORT=3011`, empty `DATA_DIR`) | real `POST /api/notes` / `HEAD /openapi.json` contract | 201 + stored note; 400 detail; 413 at 120k chars; refused port | caught Express labelling `res.send` text as text/html; the client was fixed to drop only markup bodies |
+| syntax | `node --check` on background.js, popup.js, worklistsClient.js and the other scripts | merged tree | pass | — |
+| layout | headless Edge screenshot at 360×600 | popup | the new field fits; the Latest result / Stop row is about 25px past the 600px cap | open decision: shrink the Direction/Manual textareas from 3 to 2 rows to fit (tried in a scratch copy, fits) |
+
+- **Tests added/updated:** `tests/worklists-client.test.mjs` is the first test file in this repo. It uses Node's built-in `node:test`, so no `package.json` is needed. `background.js` and the popup wiring have no Chrome harness. Residual risk: the wiring still needs a live run in Edge (post succeeds, post fails with WorkLists stopped, reopen restores the ID).
+- **Regression impact:** With an empty field, the only differences are an extra `worklistsCardId: ""` in the run messages and the snapshot, and the new field in the popup. Payload handling, the completion write, Power Automate, the toast and the failure paths are otherwise unchanged. Exact copy never sends the ID.
+- **Known edge:** clicking Stop during the (normally millisecond) post leaves the note posted while the record says "cancelled". On extended runs the success notification still fires in that case, which was already true before this change, only in a shorter window.
+- **API docs:** Not relevant. OtterCopy exposes no HTTP API, and WorkLists was not changed.
+- **Tooling gates:** No `package.json`, so there is no lint or audit gate. Tests run through `node --test`.
+
+### 2026-09-30T17:18:38Z — OtterCopy
+- **Summary:** Opened OtterCopy's host permissions to the self-hosted LM Studio endpoint that SaySlate and Argus already use (Tailscale Serve, `https://<device>.<tailnet>.ts.net/v1`), so a model can be moved off the overloaded Google API by configuration alone.
+- **Problem:** Google's generative-language API is returning overload errors, and OtterCopy has no retry, so a single 503 fails the whole run.
+- **Requirement:** OtterCopy's service worker must be able to call the tailnet LM Studio endpoint. LM Studio's CORS setting is off, so without a host permission the request is blocked.
+- **Solution:** Added `"https://*.ts.net/*"` to `host_permissions` in `manifest.json`. It is a wildcard so the real tailnet hostname stays out of the repo. The existing `openai-compatible` adapter needs no code change. Setup is done in the popup: adapter `openai-compatible`, model `google/gemma-4-12b-qat`, Base URL = the full `…/v1/chat/completions` URL (this adapter does not append a path), API key = the LM Studio token, Options JSON `{"reasoning_effort":"none"}`. The host's saved thinking setting is on, and without `reasoning_effort` each call spends most of its tokens reasoning.
+- **Recon note:** `node src/cli.mjs configure origin add …` belongs to WhisperService (local speech-to-text, `127.0.0.1:8178`). It does not apply to OtterCopy or LM Studio.
+- **Files/Areas:** `manifest.json` (+1 host permission).
+- **User-visible impact:** None until an LM Studio model is configured and selected. After reloading the unpacked extension, Edge grants the new host permission.
+- **Open risks (live run needed):** (a) the fetch runs in the service worker without streaming, so a long reply may exceed the MV3 30 s fetch-response limit (SaySlate moved its calls to extension pages and added streaming for this reason); (b) LM Studio's loaded context length may be too small for long transcripts; (c) the fixed 4.2 s gap between extended-run calls is tuned for Google and wastes about 60 s per run on a local model.
+- **Tests run:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| syntax | `node -e "JSON.parse(…manifest.json…)"` | manifest.json | pass | — |
+| reachability | `curl.exe -s -o NUL -w "%{http_code}" https://<device>.<tailnet>.ts.net/v1/models` | tailnet endpoint from this machine | 401 (reachable, token enforced) | runbook V7 check; no authenticated call made |
+
+- **Tests added/updated:** None. The change is a manifest permission with no logic, and the repo has no test harness.
+- **Regression impact:** Isolated. The change only adds permission entries; the existing Google/OpenAI/Groq/OpenRouter/Power Platform entries are unchanged, and no JS was touched.
+- **API docs:** Not relevant. OtterCopy is a browser extension with no HTTP or Swagger surface.
+- **Tooling gates:** No `package.json`, so there are no lint, test or audit gates.
+
 ### 2026-07-02T19:00:17Z — OtterCopy
 - **Summary:** Shipped four planned tickets — refine-copy layout-shift fix (T2), top-level Active/Final-pass model pickers (T1), provider-centralized API keys with migration (T3), and JSON import/export of configs (T4).
 - **Plan used:** `~/.claude/plans/i-have-4-tickets-eager-squirrel.md` (build order T2 → T1 → T3 → T4; T4 gated on T3 schema).

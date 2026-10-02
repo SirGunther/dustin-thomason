@@ -14,6 +14,197 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
 
 ## Session log (newest first)
 
+### 2026-09-28T21:30:00Z — Logged-in ChatGPT: composer located, send button found in its form
+
+- **Problem:** two symptoms, both from the user's logged-in live test on `c17c85c`.
+  - SaySlate sat on "Preparing send" with the blue arrow never pressed. The logged-in Send is
+    `<button type="submit" aria-label="Send">`, which has no id and no `data-composer-submit`. It
+    was copied by the user and is identical in temporary and regular chats.
+  - On a fresh chat, SaySlate refused with "Place the cursor in the ChatGPT message composer…"
+    because focus was not in the composer when Floating Slate opened. The user's requirement is
+    that the composer is always found.
+- **Requirement:**
+  - Press only the composer's own send button.
+  - Find the composer when the saved target is not the composer.
+  - Keep refusing when there are zero or two visible composers, when the composer was replaced,
+    and off ChatGPT.
+- **Solution** (`chatGPTAdapter.js`; per the user, all ChatGPT markup knowledge lives there):
+  - Selectors are declared once, each with a note naming the markup it matches.
+  - `findSendButton(composer, document)` returns, inside the composer's own form, the first known
+    marker, else the first `button[type='submit']`. Outside that form it returns a page-wide known
+    marker only. A `type=submit` button only submits its own form.
+  - `findComposer(document)` returns the single visible composer.
+  - `floatingHost.js` only calls them. A found composer is captured at the end of its content, so
+    text is appended after a draft.
+- **Process:**
+  1. An implementation subagent committed `c72ad1e`.
+  2. The code review asked for changes, and the test review found gaps. Both independently
+     reproduced the same blocking defect: the first design walked every ancestor up to body, so
+     it could reach the app root and press an unrelated form's submit button. Every fixture had
+     sat directly under body, so no test caught it.
+  3. The fix round, `c5d78f8`, limits the search to the composer's form. It adds app-shell
+     negatives, a Send element re-rendered during the wait, a composer hidden by a stylesheet, and
+     a draft that is appended to.
+  4. Re-review: approved, and the tests valid. Every mutation (a, m, l, n, o, h, k, d2, c, d, e,
+     i, j) is caught.
+- **Shipped:** merged to local `main` as `553590a` (`--no-ff`, not pushed; `main` is 7 ahead of
+  `origin/main`).
+- **Tests run:**
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | tests | `node tests/verify.mjs` | merged `main`, 25 test files plus static checks | pass | — |
+  | whitespace | `git diff --check c17c85c HEAD` | merged change | pass | — |
+  | browser | `node tests/browser/chatgpt-composer.browser.mjs --live` | branch `c5d78f8`: B1–B19, L1 | 20 of 20 pass | opt-in; L1 blocked the send click, 0 POSTs |
+  | audit, lint | — | — | not applicable | SaySlate has no `package.json` |
+
+- **Regression impact:** plain insert (Ctrl+Alt+F), the replaced-composer path (copied, not sent),
+  the off-ChatGPT refusal, the logged-out form, and the `#prompt-textarea` markup are all covered
+  and passing. B7 changed on purpose: a saved non-composer field now leads to the found composer.
+- **Left open, unverified:**
+  - Whether the logged-in Send shares a `<form>` with the composer. The artifact does not show
+    it. If it does not, SaySlate inserts and does not send; it never presses another button.
+  - Stop mode while a reply streams.
+  - A draft's trailing space collapses when text is appended. This is pre-existing behavior and
+    may be a harness artifact.
+
+### 2026-09-28T19:40:00Z — ChatGPT send button: captured, reviewed, tests match the page
+
+- **Problem:** the send button changed, and SaySlate must press the new one. The user will not log
+  in to a remote-debugging Chrome profile, which would expose the session. So the logged-in page
+  cannot be observed. The debug window was closed, port 9222 verified shut, and its never-logged-in
+  profile deleted.
+- **Capture:** Playwright on chatgpt.com without a login (pipe transport, no port), box empty and
+  then typed. The send button is `button[data-composer-submit]`, with `type="submit"` and
+  `aria-label="Send message"`, inside `form[data-mobile-composer]`. There is no
+  `#composer-submit-button`. Ready is signalled by removing `aria-disabled="true"` and
+  `data-visually-disabled`; `disabled` stays false in both states.
+- **Finding:** `main` already selected and waited on that button since `8a7c108`. That code had not
+  been independently reviewed.
+- **Reviews:**
+  - Code reviewer: approved. The selector matches only Send, and readiness matches the capture.
+  - Test reviewer: gaps found. No fixture held the captured add-files or dictation buttons, so
+    widening the selector to them passed every test (M13). Ready was modeled as
+    `aria-disabled="false"`, and the not-ready to ready change was never run end to end.
+- **Fix, tests only:**
+  - An implementation subagent committed `2f51b07` on `fix/sayslate-send-button-tests`.
+  - New `tests/support/chatGPTLoggedOutComposer.mjs` holds the captured markup and its typed-state
+    change.
+  - The adapter, floating-host, and browser fixtures carry all three buttons.
+  - New browser scenario B11: Send never becomes ready, and nothing is pressed.
+  - No production file changed.
+- **Re-review:** valid.
+  - Fixtures match the capture exactly, by a comparison script.
+  - M1–M13 and M13b are caught. M13 and M13b fail both node suites and B5/B11.
+  - M6 (treat any `aria-disabled` as not ready) now passes, which is correct for the real page.
+- **Shipped:** merged to local `main` as `c17c85c` (`--no-ff`, not pushed; `main` is 4 ahead of
+  `origin/main`).
+- **Tests run:**
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | tests | `node tests/verify.mjs` | merged `main`, 25 test files | pass | — |
+  | whitespace | `git diff --check 8a7c108 HEAD` | merged change | pass | — |
+  | browser | `node tests/browser/chatgpt-composer.browser.mjs --live` | branch `2f51b07`: B1–B11, L1 | 12 of 12 pass | opt-in; L1 blocked the send click, 0 POSTs |
+  | audit, lint | — | — | not applicable | SaySlate has no `package.json` |
+
+- **Regression impact:** none in production. `chatGPTAdapter.js`, `floatingHost.js`, and
+  `shortcutProtocol.js` have a 0-line diff from `8a7c108`.
+- **Left open, both unverified:**
+  - The logged-in send button, which was not observable without a login.
+  - Stop mode, raised by both reviewers. The Send button carries
+    `data-stop-label="Stop generating"`, so pressing Ctrl+Alt+S while a reply streams might press
+    Stop. Checking it needs a generating state, which means sending a message.
+
+### 2026-09-28T17:45:00Z — Floating Slate process and submit accepts ChatGPT's current composer
+
+- **Context:** another agent was asked to fix "an error when the extension drops completed text"
+  into the ChatGPT composer (captured markup in the prompt, now
+  `C:\SaySlate\tests\fixtures\chatgpt-composer-2026-09-28.html`), on local branch
+  `fix/sayslate-floating-input`. This session reviewed that work, added tests, and merged.
+- **Review of the other agent's change: rejected.** It left one uncommitted edit to
+  `floatingHost.js`, which wrapped the manual contenteditable fallback in `try/catch` and rewrote
+  its event as `new InputEvent({ bubbles, composed, inputType, data })`.
+  - It does not touch the cause. The error comes from `chatGPTAdapter.js`, and with the edit the
+    captured composer is still refused with the same message.
+  - It adds a defect. `InputEvent`'s first argument is the event type, so the fallback now
+    dispatches a non-bubbling event named `"[object Object]"` and never an `input` event.
+  - The `try/catch` duplicates the one already in `commitText`. `git diff --check` fails on five
+    trailing-whitespace lines.
+  - `node tests/verify.mjs` still passed, because no test covered this code. The edit was
+    discarded before the fix; the points above describe all of it.
+- **Problem:** on chatgpt.com, process and submit (Ctrl+Alt+S or the send icon) fails after the
+  passes finish with "Place the cursor in the ChatGPT message composer before opening SaySlate."
+  `isChatGPTComposer` accepted only `#prompt-textarea`, or a textarea whose form holds
+  `#composer-submit-button`. ChatGPT's current composers have neither:
+  - The logged-in ProseMirror composer in the captured markup has no id. It carries
+    `data-composer-markdown`.
+  - The logged-out composer, observed live on 2026-09-28, is `textarea#mobile-composer-prompt`.
+    Its send button is `button[data-composer-submit]`.
+- **Requirement:** process and submit must accept ChatGPT's message composer in each variant it
+  serves, and still refuse other fields on chatgpt.com, other hosts, a replaced composer, and a
+  send button that never becomes enabled.
+- **Solution:** in `chatGPTAdapter.js`, the editor selector adds
+  `[contenteditable='true'][data-composer-markdown]` and the send selector adds
+  `button[data-composer-submit]`. `floatingHost.js` is unchanged from `main`.
+- **Tests added:**
+  - `tests/chatgpt-adapter.test.mjs`: four accepted composer variants; five refused fields; send
+    buttons by id, by attribute, and enabled late; refusal when disabled, aria-disabled, an
+    unrelated submit, a text mismatch, or a replaced composer. It uses the new shared
+    `tests/support/elementModel.mjs`.
+  - `tests/floating-host-insert.test.mjs` (new): drives `floatingHost.js` through runtime messages.
+    Positive: submits from the id-less ProseMirror composer and from the logged-out textarea; the
+    manual fallback dispatches one bubbling `input` event. Negative: replaced composer (copied, not
+    submitted); non-composer field; unmarked ProseMirror editor; off ChatGPT; insertion and both
+    clipboard paths failing.
+  - `tests/browser/chatgpt-composer.browser.mjs` (new, opt-in, Playwright with Chrome): scenarios
+    B1–B10 in real Chrome on fixture pages served at `https://chatgpt.com/`, one with a real
+    ProseMirror editor, plus L1 against the live logged-out chatgpt.com. L1 intercepts the send
+    click and aborts conversation POSTs, so nothing is sent.
+- **Evidence** (browser check, 2026-09-28):
+
+  | Scenario | `main` | Other agent's edit | This fix |
+  | -------- | ------ | ------------------ | -------- |
+  | B1 captured markup, submit | fail: wrong-target | fail: wrong-target | pass |
+  | B2 real ProseMirror, submit | fail: wrong-target | fail: wrong-target | pass |
+  | B3 manual fallback `input` event | pass | fail: `"[object Object]"` | pass |
+  | B4 `#prompt-textarea` markup | pass | pass | pass |
+  | B5 logged-out textarea markup | fail: wrong-target | fail: wrong-target | pass |
+  | B6 composer replaced: copied, not sent | fail: wrong-target first | fail: wrong-target first | pass |
+  | B7 other chatgpt.com field refused | pass | pass | pass |
+  | B8 unmarked ProseMirror refused | pass | pass | pass |
+  | B9 non-ChatGPT host refused | pass | pass | pass |
+  | B10 send never enabled: 20 s bound | fail: wrong-target first | fail: wrong-target first | pass |
+  | L1 live logged-out chatgpt.com | fail: wrong-target | not run | pass: ChatGPT enabled its send button, 0 POSTs |
+
+  The new unit tests fail on `main` and on the other agent's edit with the user-visible message.
+  Mutation probes M1–M8 each fail a new test: dropping either new selector, accepting
+  non-editable or non-button markers, removing or de-bubbling the fallback event, skipping the
+  wrong-target guard, and submitting after a clipboard fallback.
+- **Left open:** the logged-in composer was checked through the captured markup and a real
+  ProseMirror editor, not the live logged-in page. The capture does not include the logged-in send
+  button. If it has neither `#composer-submit-button` nor `data-composer-submit`, text is inserted
+  and not sent, with the 20 s message. The remaining check is one Ctrl+Alt+S run on the user's
+  logged-in ChatGPT.
+- **Tests run:**
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | tests | `node tests/verify.mjs` | all 25 `tests/*.test.mjs` plus static checks | pass | — |
+  | syntax | `node --check` | 5 changed or added `.js`/`.mjs` files | pass | — |
+  | whitespace | `git diff --check` | working tree | pass | — |
+  | browser | `node tests/browser/chatgpt-composer.browser.mjs --live` | B1–B10, L1 | 11 of 11 pass | opt-in; needs Playwright and Chrome |
+  | audit, lint | — | — | not applicable | SaySlate has no `package.json` |
+
+- **Regression impact:** `floatingHost.js`, `floating.js`, and `background.js` are unchanged. The
+  adapter change adds selectors and removes none. B4 and the `#composer-submit-button` cases pass.
+- **API docs:** not relevant. SaySlate is a Chrome extension with no HTTP API; the runtime message
+  shapes checked in `background.js` and `floatingHost.js` are unchanged.
+- **Shipped:** `be3ae6e` "Accept current ChatGPT composers for submission" on
+  `fix/sayslate-floating-input`, merged to local `main` as `8a7c108` (`--no-ff`, not pushed;
+  `main` is 2 ahead of `origin/main`). On merged `main`, `node tests/verify.mjs` (25 files),
+  `git diff --check cd0a82a HEAD`, and browser scenarios B1–B10 pass again.
+
 ### 2026-09-24T22:18:00Z — SAYREASON-01A merged: LM Studio passes stream and time out on silence
 
 - **Problem:** in the live check, a reasoning pass showed "timed out" in SaySlate while LM Studio
@@ -230,6 +421,9 @@ documented in [`docs/tailscale/sayslate-lmstudio-endpoint.md`](../tailscale/says
 - **Confirmed:** no reasoning pass on the LM Studio host (`reasoning_tokens: 0`, 2026-09-23). That
   is now the behavior with a pass's reasoning switch off, which is the default.
 - **Open:**
+  - Floating Slate process and submit on ChatGPT (`553590a`, local `main`, not pushed). Not
+    verified: the user's logged-in Ctrl+Alt+S run, which confirms the Send shares the composer's
+    form, and Ctrl+Alt+S during a streaming reply (Stop).
   - Per-pass reasoning (`tickets/sayslate-pass-reasoning/`, merged through `cd0a82a`) is complete;
     on 2026-09-24 the user confirmed a reasoning pass completes without a timeout. Optional: the
     endpoint doc's "AI pass" and V5 rows still describe the old fixed `"none"` and 90 s total limit.
