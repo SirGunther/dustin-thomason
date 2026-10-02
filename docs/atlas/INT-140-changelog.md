@@ -62,6 +62,29 @@
 
 _Newest first._
 
+### 2026-10-02T21:05:00Z — callisto-back-end + europa-back-end + atlas-front-end (implementation, in progress)
+
+- **Summary:** implementing the INT-140 spec, with one subagent per repo, each in its own worktree. Pieces are reviewed and merged into the integration worktrees.
+- **Integration worktrees:** all on branch `INT-140`, all with node_modules junctions to the main checkouts.
+
+  | Worktree | Base |
+  | --- | --- |
+  | `C:\Users\dustin.thomason\wt\callisto-INT-140` | `origin/main` @ `11a3f684` |
+  | `wt\europa-INT-140` | `origin/main` @ `1082fda` |
+  | `wt\atlas-INT-140` | `origin/main` @ `9c184231` |
+
+- **Bases moved:** INT-138's PRs #464 (callisto) and #582 (atlas) have merged to `main`.
+- **Audit:**
+
+  | Repo | `npm audit --audit-level=high` | Commits |
+  | --- | --- | --- |
+  | callisto-back-end | pass | allowed |
+  | europa-back-end | fail, 5 high (`brace-expansion`, `fast-uri`, `joi`, `multer`) | held, pending a user waiver |
+  | atlas-front-end | fail, 15 high (`axios`, `brace-expansion`, `browserslist`, `immutable`, `ip-address`, `js-yaml`, `nanoid`, `node-forge`, `postcss`, `tar`, `undici`) | held, pending a user waiver |
+
+  INT-140 changes no `package.json` or lockfile.
+- **Intended commit subjects (callisto):** `INT-140: Add proceeding created audit chain`, `INT-140: Audit File Navigator proceeding creation`.
+
 ### 2026-10-02T20:45:43Z — dustin-thomason (final spec review: approved with one correction)
 
 - **Summary:** the user-pasted final spec review approved the spec with one P3. `value?: string` was declared on `oldState` as well as `newState`, but the new europa-back-end branch reads only `newState.value`. Accepted: LD-011 and the spec's entity change are narrowed to `newState.value?: string`, and `oldState` is unchanged.

@@ -1,4 +1,7 @@
 # Implementation Instructions
+---
+
+#Initiation
 
 ### Original Ticket
 
@@ -10,6 +13,8 @@
 - loaded and available
 - on main (if not otherwise specified such as continuing with a body of work)
 Stash any work on the branches if no current work or create a separate worktree
+
+### (Optional) Relevant Work
 
 ---
 
@@ -28,7 +33,7 @@ C:\dustin-thomason\agents\skills\write-spec\SKILL.md
 
 ---
 
-Implement the spec on a new branch
+# Implement the spec on a new branch
 
 INT-139
 
