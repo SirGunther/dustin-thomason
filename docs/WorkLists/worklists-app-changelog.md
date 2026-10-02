@@ -36,6 +36,128 @@ Track implementation sessions and current delivery status for the WorkLists appl
 
 ## Session log (newest first)
 
+### 2026-09-27T17:13:56Z - Live regression test for the active-model key scenario
+
+- Summary: added a regression suite that calls the real provider instead of stubs. It has two
+  positive cases and two negative cases for the 17:05:12Z fix below.
+- Problem: the unit tests for that fix replace the provider with `app.locals.gemmaGenerateContent`.
+  Nothing showed that the owner's real key and real active model work through the real code
+  path, or that the original misconfiguration still fails against Google.
+- Requirement: one run against the real provider must show both results. The correctly configured
+  active model must succeed. The original misconfiguration (key in `apiKeyEnvVar`, empty `apiKey`)
+  must fail, under the real model name.
+- Solution: `tests/live-active-model-smoke.js`, run with `npm run test:live`. It is kept out of
+  `npm test` because it needs network access and a real key, and it makes about nine billable
+  requests.
+  - It reads the active record from the real `data/models.json` (read-only) and copies it into a
+    temp `DATA_DIR`, which is deleted afterwards.
+  - It sets `GEMINI_API_KEY` to a fabricated key that Google rejects. A positive case therefore
+    cannot pass on the fallback key.
+  - Only the log and trace sinks are redirected, so `logs/gemma-errors.log` is not written to. No
+    provider stub is used.
+  - The suite skips, with a stated reason, when there is no active model or the active model is
+    not a Google model.
+  - Positive: `POST /api/gemma-normalize` returns 200 from the real active model. A real
+    `refine-card` job completes, every traced stage uses the active model, and the refined text is
+    saved.
+  - Negative: `PATCH` with the real key in `apiKeyEnvVar` returns 400 and the record is unchanged.
+    A seeded copy of the 2026-09-27 misconfiguration gets a real `400 API_KEY_INVALID` from
+    Google, reported as `<model> request was rejected` with the correct `diagnostics.model`.
+- Proof that it catches the regression: with `HEAD` versions of `gemmaNormalize.js` and `dal.js`
+  swapped in temporarily, both negative cases failed (`200 !== 400`; "Gemma request was
+  rejected…"). Both files were restored and checked byte-identical with `cmp`.
+- Files/areas: `tests/live-active-model-smoke.js` (new), `package.json` (`test:live` script).
+- Tests run (final post-change state):
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists | pass (exit 0) | - |
+  | lint | `npx prettier --check` on the 8 touched files | touched files | pass | Full `npm run lint` still fails only on the pre-existing untracked stray root file noted below |
+  | tests | `npm test` | WorkLists, 140 suites | 813 tests: 809 pass / 4 fail | Same four pre-existing failures; the count is unchanged, so the live file is not picked up by the glob |
+  | live | `npm run test:live` | real Google provider, real active model | 4 pass / 0 fail | Depends on network and on the owner's real key |
+
+- Tests added/updated: 4 live tests, listed above.
+- Regression impact: isolated to test code. No production file changed. `package.json` only gained
+  a script; dependencies and the other scripts are unchanged.
+- API docs: not relevant. No route, schema, or status changed.
+- Conflicts / exceptions: not committed. The key-shaped string checked in the output files had 0
+  occurrences, so the key was not printed.
+
+### 2026-09-27T17:05:12Z - Active model rejected with API_KEY_INVALID, logged as Gemma
+
+- Summary: The owner activated `Gemini 3.1 Flash-Lite` and every AI refine failed with
+  `API_KEY_INVALID`, and the failure log named `gemma-4-31b-it`. The key they use in SaySlate is
+  valid. Two read-only exploration subagents traced the model path and the key path separately
+  and reached the same result.
+- Problem:
+  - The working key had been typed into **API key env** (`apiKeyEnvVar`), the field for the
+    *name* of an environment variable, on all three model records. `apiKey` was empty on all three.
+  - `server.js` `applyRuntimeModelOverrides` therefore injected `.env.local` `GEMINI_API_KEY`, a
+    39-char `AIza` key last changed 2026-05-18. Google now rejects that key.
+  - The request did go to the active model. The failure diagnostics overwrote `model` with the
+    `GEMMA_MODEL` default: the error path in `normalizeTextWithGemma` spread a second
+    `createGemmaDiagnostics()` call made without `modelName`. The user-facing message also
+    hardcoded "Gemma". Together these made a key problem look like a model-selection problem.
+    All 29 entries in `logs/gemma-errors.log` carry the wrong model for this reason.
+- Requirement: a call for the active model must use the key configured for that model, and must
+  not silently fall back to another key when that key is in the wrong field. Failures must name
+  the model that was actually called.
+- Evidence: a scratch script called `gemini-3.1-flash-lite` once with each stored key. The key
+  from the `apiKeyEnvVar` field returned OK; the `.env.local` key returned `400 API_KEY_INVALID`.
+- Solution:
+  - Data: `PATCH /api/models/:id` on the running server moved the key into `apiKey` and cleared
+    `apiKeyEnvVar` for all three records. A live `POST /api/gemma-normalize` (no writes) then
+    returned `ok: true` from `model-1779752465866-e8bbb70d` / `gemini-3.1-flash-lite`.
+  - `gemmaNormalize.js`: both error-path diagnostics calls pass `modelName`, and
+    `mapGemmaSdkError(error, modelName)` names the model in every message. It falls back to
+    "Gemma" only when no model is known.
+  - `dal.js`: `normalizeModelPayloadInput` rejects an `apiKeyEnvVar` that is not a variable name
+    or that starts with `AIza`, with a 400 that says where the key goes. It checks only when the
+    field is sent, so activation and unrelated writes on older records are not blocked.
+  - `server.js`: a model that names its own env var (other than `GEMINI_API_KEY`) keeps that key.
+    Before this change the shared Gemini key replaced it whenever `GEMINI_API_KEY` was set.
+  - `openapi.js`: `ModelMutationRequest.apiKeyEnvVar` documents the name-only rule and the 400.
+- Files/areas: `gemmaNormalize.js`, `dal.js`, `server.js`, `openapi.js`,
+  `tests/gemma-normalize.test.js`, `tests/api.test.js`; `data/models.json` (gitignored; changed
+  through the API).
+- User-visible impact: AI actions work again on the active model with no restart, because the
+  data fix alone resolves the failure. The code changes load on the next server restart. After
+  that, error toasts and logs name the real model, and a key typed into **API key env** is
+  refused at save time instead of being ignored.
+- Tests run (final post-change state):
+
+  | Gate | Command | Scope | Result | Exception / risk |
+  | ---- | ------- | ----- | ------ | ---------------- |
+  | audit | `npm audit --audit-level=high` | WorkLists | pass (exit 0; 4 moderate, none high) | - |
+  | lint | `npm run lint` | WorkLists, whole tree | **fail** | Only the pre-existing untracked stray root file `C:dustin-thomasonagentsskillshermes-memorySKILL.md`. `npx prettier --check` on all six touched files passes. |
+  | tests | `npm test` | WorkLists, 140 suites | **813 tests: 809 pass / 4 fail** | Same four failures as the pre-edit baseline (807 / 803 / 4): card action definitions, fileRepository nested-path containment, AI note reveal targets, voice shortcut scope. |
+
+- Tests added/updated: added 6 tests. In `gemma-normalize.test.js`: rejected key on a non-Gemma
+  active model names that model in both the message and `diagnostics.model`; the parse-failure
+  path keeps the active model; a refine-card job sends every stage (including the swallowed
+  selection and classification stages) to the active model and reports it on failure; a named
+  env var key beats the shared Gemini key. In `api.test.js`: key-shaped `apiKeyEnvVar` values are
+  rejected on POST and PATCH and leave the record unchanged; variable names and an empty value are
+  accepted. Updated the rate-limit assertion from the literal "Gemma" to `${GEMMA_MODEL}`, because
+  the message now names the model.
+- Regression impact: not isolated. The error messages are shared by every AI route and job type.
+  The 400 rule applies to both model mutation routes. The key-precedence change affects only
+  Google models whose `apiKeyEnvVar` names a variable other than `GEMINI_API_KEY` and whose
+  `apiKey` is empty. All existing gemma-normalize, api, and model-provider suites pass (155/155
+  focused).
+- API docs: `openapi.js` updated (`ModelMutationRequest.apiKeyEnvVar` description). POST and
+  PATCH `/api/models` already documented a 400 response. Paths, methods, and response schemas are
+  unchanged.
+- Conflicts / exceptions:
+  - Not committed or pushed; no commit was requested.
+  - The running server (PID 41308, `node server.js`) was not restarted, so it still runs the
+    earlier code.
+  - `.env.local` `GEMINI_API_KEY` still holds the rejected key. The three models no longer use it.
+    Any Google model saved later with an empty `apiKey` will fall back to it.
+  - Security: during exploration the key sitting in `apiKeyEnvVar` was printed in plain text in a
+    subagent's tool output. It is also stored in plain text in OneDrive-synced `data/models.json`
+    (gitignored). Rotating it is the owner's decision.
+
 ### 2026-08-29T06:09:26Z - Batch and folder selection, with Cairn's folder tree
 
 - Summary: The document picker became a folder tree with multi-select. One document, several, or
@@ -4277,6 +4399,8 @@ Track implementation sessions and current delivery status for the WorkLists appl
   - N/A - no HTTP API contract change in this session.
 
 ## Current state
+
+- Model settings: every model record carries its key in `apiKey`. `apiKeyEnvVar` accepts only an environment variable name; a key typed there is rejected with 400. AI failure messages and `diagnostics.model` name the model that was actually called, not the `GEMMA_MODEL` default. `.env.local` `GEMINI_API_KEY` holds a key Google rejects (verified 2026-09-27) and is only a fallback for Google models with an empty `apiKey`.
 
 - The markdown authoring surface (`public/markdownRenderer.js`, `markdownEditor.js`, `markdownAuthoring.js`, `editSession.js`) exists in two places: authored in WorkLists `public/` and vendored byte-identically into Cairn `vendor/`, held true by Cairn’s `tools/check-vendor-parity.mjs`. WorkLists has no package boundary, which is why the copies exist. A spec to extract them into `@worklists/markdown-kit` is written and ready for implementation planning: `docs/WorkLists/tickets/markdown-kit-package-extraction/specs/markdown-kit-package-extraction-spec.md`. Not yet implemented.
 

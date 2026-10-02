@@ -4,6 +4,9 @@
 >
 > Originally scoped to p-lana's review comments (see git history); broadened 2026-07-24 to cover any reviewer's requested changes, sourced from actual GitHub PR review comments (inline + review-summary + issue-level), not from memory or paraphrase.
 
+### Guiding principle
+Do not use comments to document behavior or decisions. Code and tests enforce behavior; the changelog records decisions and history. Keep a code comment only for an external constraint that cannot be understood from the local code. Do not claim comments prevent regressions.
+
 ## Self-review checklist (run before requesting review)
 
 * [ ] **No hardcoded user-facing strings.** Any string shown to a user (toast/notify message, error message, label) is pulled from the i18n JSON locale files, not written inline in a `.ts`/`.vue` file. *(Class A)*

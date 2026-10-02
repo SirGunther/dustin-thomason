@@ -5,7 +5,7 @@
 | Ticket | INT-138 |
 | Project | atlas |
 | Date | 2026-09-23 |
-| Status | draft |
+| Status | accepted |
 | Source | [INT-138-original-ticket.md](../INT-138-original-ticket.md) |
 
 ## Evidence
@@ -52,6 +52,8 @@ The other three rows carried no design words.
 > - When no collection applies, the record reads "Collection: N/A".
 > - Ops can narrow the audit log down to only Categorize records.
 > - When several files are categorized at the same time, a record shows up for each one of them. *(added Phase 1)*
+> - When a file's categorization is removed, a record of that shows up too. *(added Phase 3, LD-009)*
+> - When the system categorizes a file that someone asked for, the record shows the person who asked. *(added Phase 3, LD-012)*
 
 ## 4. Concatenated Story
 
@@ -72,6 +74,10 @@ An Ops manager doesn't want a file's deliverable type to change without knowing 
 | When no collection applies, the record reads "Collection: N/A". | Vague phrasing: it doesn't say whose collection. When a collection applies is still open (OQ-06). | When no collection applies to the file, the record reads "Collection: N/A". |
 | Ops can narrow the audit log down to only Categorize records. | Wordiness. | Ops can narrow the audit log to just Categorize records. |
 | When several files are categorized at the same time, a record shows up for each one of them. | Wordiness. | When several files are categorized at once, each file gets its own record. |
+| Every categorization of a file's deliverable type shows up in Europa's audit log. *(Phase 3 re-review)* | Vague phrasing: "categorization" left open whether a change or a removal counts; LD-009 settles that every set, change and removal counts. | Every time a file's deliverable type or collection is set, changed or removed, a record shows up in Europa's audit log. |
+| Each categorization record reads Categorize as its action and File as what was acted on. *(Phase 3 re-review)* | Vague phrasing: the reader sees the action exactly as `CATEGORIZE` and the resource as `FILE`, the same upper-case form every other action shows (LD-010). | Each categorization record reads CATEGORIZE as its action and FILE as what was acted on. |
+| When a file's categorization is removed, a record of that shows up too. | Non-observable outcome: doesn't say what the record reads. | When a file's categorization is removed, its record reads "Deliverable Type: N/A" and "Collection: N/A". |
+| When the system categorizes a file that someone asked for, the record shows the person who asked. | Wordiness. | When a file is categorized for someone who asked for it, the record shows who asked. |
 
 ## User Story
 
@@ -79,13 +85,15 @@ An Ops manager doesn't want a file's deliverable type categorized with no record
 
 ## Acceptance Criteria
 
-- Every categorization of a file's deliverable type shows up in Europa's audit log.
+- Every time a file's deliverable type or collection is set, changed or removed, a record shows up in Europa's audit log.
 - Each categorization record shows who did it and the date and time.
-- Each categorization record reads Categorize as its action and File as what was acted on.
+- Each categorization record reads CATEGORIZE as its action and FILE as what was acted on.
 - Each categorization record reads "Filepath: [file path]", "Deliverable Type: [deliverable type]" and "Collection: [collection]", in that order.
 - When no collection applies to the file, the record reads "Collection: N/A".
 - Ops can narrow the audit log to just Categorize records.
 - When several files are categorized at once, each file gets its own record.
+- When a file's categorization is removed, its record reads "Deliverable Type: N/A" and "Collection: N/A".
+- ~~When a file is categorized for someone who asked for it, the record shows who asked.~~ *(withdrawn 2026-09-29: it covers only the Planet Summary path, which is out of scope)*
 
 ## Open Questions
 
@@ -93,19 +101,27 @@ Carried, not decided. **Fact** means the code can answer it. **Decision** means 
 
 | # | Question | Kind | Owner / resolved by | Why it's open (ticket text) | Status |
 | --- | --- | --- | --- | --- | --- |
-| OQ-01 | Which moments count as a categorization: a file getting its first deliverable type, a change from one type to another, a type being cleared? Does a change to only the collection count? | Decision | Product | "**categorization** actions taken" doesn't say which | **open → D1** |
-| OQ-02 | Are deliverable types set in more than one way, for example at upload or on many files at once? Does each file get its own record? Are categorizations already logged today under some other event type? | Fact, then decision | Phase 1 traced it. Product decides which paths count | "for **deliverable type categorization**" doesn't say how it happens | **Fact half closed (Phase 1).** Four user paths set a type or collection: upload (1 file), approve v1/v2 (many), recategorize (many), unapprove (clears). One system path exists (transcript summary). No path logs the type or collection today, and recategorize logs nothing at all (report F1). Each file needs its own record (criterion 7). **Decision half → D1** |
-| OQ-03 | Should a record show what the file was categorized *from* as well as *to*? | Decision | Product | The path format has one value each: "\[deliverable type\]", "\[collection\]" | **open → D3** |
+| OQ-01 | Which moments count as a categorization: a file getting its first deliverable type, a change from one type to another, a type being cleared? Does a change to only the collection count? | Decision | Product | "**categorization** actions taken" doesn't say which | **Closed (Phase 3) → LD-009** |
+| OQ-02 | Are deliverable types set in more than one way, for example at upload or on many files at once? Does each file get its own record? Are categorizations already logged today under some other event type? | Fact, then decision | Phase 1 traced it. Product decides which paths count | "for **deliverable type categorization**" doesn't say how it happens | **Fact half closed (Phase 1).** Four user paths set a type or collection: upload (1 file), approve v1/v2 (many), recategorize (many), unapprove (clears). One system path exists (transcript summary). No path logs the type or collection today, and recategorize logs nothing at all (report F1). Each file needs its own record (criterion 7). **Decision half closed (Phase 3) → LD-009** |
+| OQ-03 | Should a record show what the file was categorized *from* as well as *to*? | Decision | Product | The path format has one value each: "\[deliverable type\]", "\[collection\]" | **Closed (Phase 3) → LD-002** |
 | OQ-04 | Does "user info" mean the same user details the audit log already shows for other actions? Same question for how date/time is shown. | Fact, then decision only if parity isn't wanted | Phase 1 (existing audit-log records) | "user info", "date/time" | **Closed (Phase 1).** Other records show User Email, User Name and a Date in local or UTC time, built from the whole signed-in user sent with each event. Categorize records get the same (report F3/F4). No decision is needed unless Product wants something beyond parity |
-| OQ-05 | Which file path: the file's location as users see it in Atlas, or where it's stored? | Fact, then decision | Phase 1 (how existing File-resource records show a path) | "Filepath: \[file path\]" | **Fact half closed (Phase 1).** For every existing file record, the path shown is the storage key (e.g. `MMYYYY/jobId/proceedingId/<uuid>.ext`). The readable file name sits in the separate Resource column (report F5). **Decision half → D4:** is the storage key what Ops means? |
+| OQ-05 | Which file path: the file's location as users see it in Atlas, or where it's stored? | Fact, then decision | Phase 1 (how existing File-resource records show a path) | "Filepath: \[file path\]" | **Fact half closed (Phase 1).** For every existing file record, the path shown is the storage key (e.g. `MMYYYY/jobId/proceedingId/<uuid>.ext`). The readable file name sits in the separate Resource column (report F5). **Decision half closed (Phase 3) → LD-003:** the storage key, matching every FILE record |
 | OQ-06 | When does a collection "apply" to a file? | Fact | Phase 1 (how deliverable types relate to collections) | "if applicable, \[collection\], if not, "N/A"" | **Closed (Phase 1).** Only Transcript and Video files can be in a collection. Exhibits, MVC, Audio and Planet Suite have none, and a Transcript or Video file can still have none. "N/A" shows whenever the file has no collection after the action (report F5) |
-| OQ-07 | Should categorizations made before this ships show up, or only new ones? | Fact, then decision | Product | The ticket doesn't mention history | **Fact half closed (Phase 1).** Callisto keeps no who/when history for past recategorizations, so there is nothing reliable to rebuild them from. The only partial trace is the outbox rows to Planet Portal, and only when that flag was on (report F5, §8). **Decision half → D5** |
+| OQ-07 | Should categorizations made before this ships show up, or only new ones? | Fact, then decision | Product | The ticket doesn't mention history | **Fact half closed (Phase 1).** Callisto keeps no who/when history for past recategorizations, so there is nothing reliable to rebuild them from. The only partial trace is the outbox rows to Planet Portal, and only when that flag was on (report F5, §8). **Decision half closed (Phase 3) → LD-011:** no backfill |
 | OQ-08 | Can anyone besides Ops see these records, and do they follow the audit log's existing access rules? | Fact | Phase 1 (audit-log access in Europa) | "Ops can view a log in Europa" | **Closed (Phase 1).** The audit page requires the `AUDIT` read permission (`atlas-front-end` `src/globalRouter/routes.ts:35-52`). Access is not set per event type, so Categorize records follow the existing rule (report F3/F4) |
-| OQ-09 | Is deliverable type categorization all of INT-138, with other Client Access actions covered by other tickets? | Decision (scope) | Product / principal dev | The user story says "key actions related to Client Access". The criteria name only categorization | **open → D6** |
-| OQ-10 | Does a record labelled `CATEGORIZED` satisfy "reads Categorize", or must the label read "Categorize"? (Criterion 3 depends on this.) | Decision | Product + principal dev | "A new Event Type is created for this action: **Categorize**". Every existing event type reads in upper-case past tense (`APPROVED`, `RENAMED`, …) with no separate label (report F2/F4) | **open → D2.** Added Phase 1 |
+| OQ-09 | Is deliverable type categorization all of INT-138, with other Client Access actions covered by other tickets? | Decision (scope) | Product / principal dev | The user story says "key actions related to Client Access". The criteria name only categorization | **Closed (Phase 3) → LD-001** |
+| OQ-10 | Does a record labelled `CATEGORIZED` satisfy "reads Categorize", or must the label read "Categorize"? (Criterion 3 depends on this.) | Decision | Product + principal dev | "A new Event Type is created for this action: **Categorize**". Every existing event type reads in upper-case past tense (`APPROVED`, `RENAMED`, …) with no separate label (report F2/F4) | **Closed (Phase 3) → LD-010.** Added Phase 1 |
 
 ## Story log
 
+- **2026-09-25 (Phase 3) — accepted:**
+  - Folded the locked decisions ([INT-138-locked-decisions.md](../specs/INT-138-locked-decisions.md)) into the criteria.
+  - Criterion 1 reworded to name set, change and removal (LD-009).
+  - Criterion 3 reworded to `CATEGORIZE` / `FILE` (LD-010).
+  - Criterion 8 added: a removal reads N/A / N/A (LD-009).
+  - Criterion 9 added: a Planet Summary names the person who asked (LD-012).
+  - Every open question is closed (OQ-01 → LD-009, OQ-03 → LD-002, OQ-09 → LD-001, OQ-10 → LD-010; decision halves OQ-02 → LD-009, OQ-05 → LD-003, OQ-07 → LD-011).
+  - 9 criteria, 0 open questions.
 - **2026-09-23 (Phase 1, applied at Phase 2's first action):**
   - Closed 3 questions by evidence (OQ-04, OQ-06, OQ-08).
   - Split 3 into fact and decision (OQ-02 → D1, OQ-05 → D4, OQ-07 → D5); the fact halves are closed.

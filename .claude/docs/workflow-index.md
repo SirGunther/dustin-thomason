@@ -255,6 +255,7 @@ Every rule, skill, doc, and script under `agents/` (and `scripts/`), auto-built 
 | `job-story` | Turn a feature request or ticket into a job story — a structured user story plus acceptance criteria, built through a matrix sequence that strips solution-speak and unobservable outcomes before emitting. Produces a referenceable artifact the finished work gets held against. Use when the user says "job story", "write the story", "turn this into a story", "acceptance criteria for this ticket", or asks to define what done means for a request. |
 | `orchestrate` |  |
 | `reasoning-framework` | 'Apply a fixed Bayesian decision-theoretic reasoning sequence to evaluate questions, competing explanations, evidence, uncertainty, consequences, causality, and whether additional information would change the decision. Use when the user invokes "Reasoning Framework," requests Bayesian or decision-theoretic reasoning, or asks for a structured evaluation of evidence and competing explanations.' |
+| `resolution-framework` |  |
 | `workflow-housekeeping` | Audit dustin-thomason workflow docs, rules, and index for drift, duplicates, and missing entries. Use when user asks to housekeeping workflows, sync workflow-index, validate personal Cursor setup, or after adding a new playbook or rule. |
 | `working-framework` |  |
 | `write-spec` | Create or update epic/story specs and dev notes for Callisto/Atlas. Use when the user asks to write a spec, author PRDV ticket documentation, create a dev note for estimation, or extend specs under a systems/ wiki tree. |

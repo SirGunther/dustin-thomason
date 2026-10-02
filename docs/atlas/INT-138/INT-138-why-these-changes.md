@@ -51,6 +51,26 @@ The full trace is in report §5.
 
 - Nothing moved. The report, coverage ledger, diagrams and test plan were emitted from the approved plan without changing the class or the root code.
 
+### Phase 3 — 2026-09-23 to 2026-09-25 — [COURSE CHANGE]
+
+- **What changed after learning more:** the recon had recommended leaving unapprove and the system Planet Summary path unlogged, to keep the change small. The user's correction ("this is an audit process") reversed that. An audit trail records every change, so all six paths that set, change or clear a categorization now emit (LD-009).
+  - The same principle settled the literal: the ticket's own `CATEGORIZE` (LD-010).
+  - It also ruled out backfill (LD-011): a reconstructed record isn't an audit record.
+- **New understanding:** "who" on the system path means the person who requested the summary, captured when the request is made (LD-012). The categorization itself runs outside any user request, so its IP and user agent are `system` (LD-014).
+- **Discarded:** the "which paths" question itself, which the purpose of the feature answered.
+
+### Phase 5 — 2026-09-25 — [NEW UNDERSTANDING]
+
+- **The spec held on behavior.** Implementation forced three wording or structure corrections, none of which changed behavior (see the testing-implementation doc, scenarios 4, 5 and 7):
+  - the requester converter moved from the service into the context assembler, because services may not import converters;
+  - one unresolved-id warning per repository kind instead of per id;
+  - `Array.from` instead of spreading a `Set`, because of the ES5 target.
+- **Tooling finding:** callisto's convention checks don't scan on Windows (concern C12).
+- **Code change + why:**
+  - the audit core gains a categorization event (missing capability);
+  - five Client Access services and the Planet Summary completion now send it (missing capability; for recategorize it was a coverage gap);
+  - Atlas lists and renders it (missing capability).
+
 ## Changes made — categorized (filled as implementation locks; subject to update)
 
 _Not yet. Filled from Phase 5._

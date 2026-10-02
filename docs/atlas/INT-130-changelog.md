@@ -80,6 +80,59 @@ Atlas semantics mirrored exactly (`composables/useSortParams.ts`):
 
 ## Session log
 
+### 2026-09-25T20:35:00Z — proteus-front-end — Product follow-up: remove the Proceedings search tab
+
+- **Problem:** Product reviewed the shipped prototype and asked for one removal ([INT-130-followup.md](INT-130/INT-130-followup.md), with [image.png](INT-130/image.png) circling the tab): *"a proceeding results page. We don't currently have this in Atlas. Proceedings are just discoverable in the Jobs search."*
+- **Requirement:** The Search page must present only the tabs Atlas has — Jobs and Cases — without weakening the ability to find a proceeding, which Atlas delivers through the Jobs search.
+- **Solution:** Deleted the tab and the code that existed only to serve it. This was already recorded as departure #5 during the build ("The Proceedings tab has no sortable columns… a Proteus-only tab with no Atlas equivalent"), so Product's request confirms a known divergence rather than introducing new scope.
+
+**Removed:**
+
+| Path | Action |
+| --- | --- |
+| `src/pages/Search/components/SearchProceedingsTable.tsx` | deleted |
+| `src/pages/Search/hooks/useSearchProceedings.ts` | deleted |
+| `src/pages/Search/components/SearchView.tsx` | dropped the import, hook call, tab trigger and tab panel; empty-state copy rewritten |
+| `src/pages/Search/constants.ts` | dropped `SEARCH_PROCEEDINGS_QUERY_KEY` and `SEARCH_TABS` |
+| `src/pages/Search/types.ts` | `SearchTabKey` is now `'jobs' \| 'cases'` |
+
+**Deliberately kept — the removal stops at the page boundary:**
+
+- **`proceedingsApi.getAll` and the `jobs/proceedings-witnesses` mock route stay.** Verified before deleting: the Schedule page consumes the same method (`useScheduleProceedings.ts`). Removing the API because one of its two callers went away would have broken an unrelated screen.
+- **`JOB_SORT_COLUMNS.PROCEEDINGS` stays.** It sits three lines from the deleted tab constants and shares the string `'proceedings'`, but it is the Jobs table's Proceedings **column** sort key — a wire value sent to the API. Deleting it by name-association would have silently broken a column this ticket exists to make sortable.
+
+**Two judgment calls worth recording:**
+
+- **Deleted rather than hidden.** The user's initial read was "probably just make the tab invisible." Product's word is *remove*, and this prototype is loaded into Claude Code by a PM to iterate on — a fully wired but invisible tab is a trap for whoever reads it next. The code is recoverable from git history if Product reverses.
+- **`SEARCH_TABS` was dead code and went with it.** It was declared and never consumed (`SearchView` hardcodes its triggers). Editing it to drop one row would have meant maintaining a dead list that still named a removed tab.
+
+**Stale copy caught.** The empty state read *"Search jobs, cases and proceedings"* / *"…and proceedings by witness"* — it would have advertised a tab that no longer exists. Now reads *"Search jobs and cases"* / *"find jobs by job number or proceeding name, and cases by name or number,"* which is accurate to the `jobs/search` haystack and matches Product's own framing that proceedings are found through the Jobs search.
+
+**Verification — Chromium 1440×900, 0 console and 0 page errors:**
+
+| Check | Result |
+| --- | --- |
+| Tabs rendered | pass — `Jobs 26`, `Cases 1`; no Proceedings tab |
+| Jobs **Proceedings column** still sorts | pass — alphabetical, empties last, both directions |
+| Proceeding links still navigate | pass — `/proceedings/605879` |
+| Cases tab intact | pass — 3 headers, 16 rows |
+| Empty-state copy | pass — no longer names a Proceedings tab |
+| Schedule regression (shares `proceedingsApi.getAll`) | pass — renders, no errors |
+| Route sweep (`/schedule`, `/cases`, `/cases/1`, `/jobs/:id`, `/proceedings/:id`, `/`) | pass |
+
+**Gates:**
+
+| Gate | Command | Scope | Result | Exception / risk |
+| ---- | ------- | ----- | ------ | ---------------- |
+| audit | `npm audit --audit-level=high` | `proteus-front-end` | **fail — exit 1** | Same 4 pre-existing advisories; no dependency or lockfile change. Waived by the user for this lane. |
+| lint | `npm run lint` | `proteus-front-end` | pass — exit 0 | — |
+| type-check | `npm run type-check` | `proteus-front-end` | pass — exit 0 | — |
+| build | `npm run build` | `proteus-front-end` | pass — exit 0 | pre-existing chunk-size warning only |
+| browser | Playwright/Chromium 1440×900 | table above | pass | 0 console, 0 page errors |
+
+- **Tests added/updated:** none — same standing exception (no harness; `test:unit:ci` is a stub). This change only removes code, so no new behavior went uncovered; the risk is a missed reference, which type-check and the browser sweep both cover.
+- **Commit:** `2a13c8ba453ccf60afa823913c9ca4aea09175ed` on `INT-130-followup`, fast-forwarded into `prototype-main` and pushed (`4087a1a..2a13c8b`). `origin/prototype-main` verified equal to local. The edits were initially made while `prototype-main` was checked out; they were moved onto a branch before committing, since the standing rule is never to commit directly on `prototype-main`.
+
 ### 2026-09-22T00:40:00Z — proteus-front-end — code-review fix pass
 
 - **Problem:** An external review of `1c87768` returned one Major and four Minor findings. The Major one was mine and real: **two job-column comparators measured the wrong quantity**, so "sortable columns remain sortable" was satisfied in form but not in behavior.
@@ -219,7 +272,7 @@ The `cases` mock route is shared with the `/cases` page, which **already sent `s
 2. **Search tab count badges use `variant="secondary"`, including at zero.** In this theme `secondary` is *brighter* than `default` (`rgb(42,31,255)` vs `rgb(6,36,126)`) — the trap recorded in PRDV-16936, which used `outline` for muted/zero states. These badges are INT-129's surface and outside INT-130's AC, so they were left alone rather than widened into scope.
 3. **`/search` measures `scrollWidth` 598 at 390px against the shell's 571 baseline.** **Proven not to be this ticket's doing:** with `table { display: none }` injected the page still measures **598**, and every change here is inside the table. The table itself sits correctly inside an `overflow-x-auto` container. Pre-existing on the Search page from INT-129.
 4. **The Cases tab is not URL-addressable** (tab state is local `useState`, not a query param as in Atlas), so a sorted Cases view cannot be deep-linked. Out of AC scope; noted because it also means sort params can only be reached by clicking, which is what Atlas's tab-change clearing intends anyway.
-5. **The Proceedings tab has no sortable columns.** It is a Proteus-only tab with no Atlas equivalent, so Atlas defines no sort for it and the AC does not cover it. Left untouched.
+5. ~~**The Proceedings tab has no sortable columns.**~~ **Resolved 2026-09-25 — the tab was removed entirely** at Product's request, for exactly the reason recorded here: it is a Proteus-only tab with no Atlas equivalent. See the 2026-09-25 session entry.
 6. **The `/cases` `name` comparator is out-of-scope and was kept deliberately — explicitly approved, not overlooked.** A second review correctly observed that Search's Cases tab only ever sends `caseShortName`, so the `name` key added to the shared `cases` mock route serves the separate My Cases page and is independently removable. It is kept because removing it would **re-break a working control**: `/cases` already sent `sortBy: 'name'` to a route that ignored it, so its "Case name" tab was a silent no-op, and it is now verified genuinely alphabetical with the default "Last updated" tab round-tripping to byte-identical order. Reverting would restore the no-op to buy scope purity. Recorded here as a conscious scope decision so it is auditable rather than incidental.
 7. **String columns still collate with `localeCompare`, not Callisto's `COLLATE "C"`.** Raised during the review fix pass and **deliberately not changed**. `applyCaseShortNameSort` uses `LTRIM(NULLIF(case.short_name,'')) COLLATE "C"` with `NULLS LAST`; the mock's `caseShortName`, `caseNo` and `name` comparators use `localeCompare`. The two agree on this fixture data (ASCII, title-case, no diacritics or blank names) but diverge on case-mixing, since byte order sorts all uppercase before lowercase. The reviewer flagged only `jobDate` and `proceedings`; changing the collation of three already-passing columns is a systematic decision about every string sort on the page, not a drive-by fix, so it is recorded for a deliberate call rather than silently altered.
 8. **i18n (review Pattern A) — not applicable, recorded rather than marked compliant.** Proteus has no i18n package and no locale tree; page copy lives in `constants.ts` per repo convention. Introducing i18n architecture would exceed this ticket. The Atlas strings this ticket needed were copied verbatim with their source cited in-file.
