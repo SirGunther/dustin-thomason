@@ -12,9 +12,9 @@ modified_by: Dustin Thomason
 > **Ticket:** INT-140
 >
 > **Repos (branch `INT-140`):**
-> - `callisto-back-end` sends the record. Branch from `origin/main` @ `59b1abd3`.
+> - `callisto-back-end` sends the record. Branch from `origin/main` @ `11a3f684`.
 > - `europa-back-end` builds its path. Branch from `origin/main` @ `1082fdad`.
-> - `atlas-front-end` lists the resource type and renders the path. Branch from `origin/INT-138` @ `36999e87`, stacked on PR #582.
+> - `atlas-front-end` lists the resource type and renders the path. Branch from `origin/main` @ `9c184231`, which includes INT-138's PR #582.
 >
 > **Decisions:** [INT-140-locked-decisions.md](INT-140-locked-decisions.md). LD and F IDs below refer to that ledger.
 >
@@ -24,7 +24,7 @@ Citation prefixes, each on the branch the repo starts from:
 - `pa/` = callisto `src/proceedings/domain/sub-domains/proceeding-audit/`. These files are the same on `main` and `INT-138`.
 - `ps/` = callisto `src/proceedings/domain/services/proceeding-service/`.
 - `eu/` = europa-back-end `src/audits-event/`, on `main`.
-- `atlas/` = atlas-front-end `src/europa/`, on `origin/INT-138`.
+- `atlas/` = atlas-front-end `src/europa/`, on `origin/main` (the same as `origin/INT-138` @ `36999e87` for these files).
 
 ---
 
@@ -103,6 +103,11 @@ Each proceeding created from File Navigator produces its own audit record, with 
 | ~~LD-019~~ Withdrawn | Callisto's `audit-event-resource.de.ts` is not touched |
 | LD-020 A typed `applyCreated` path, separate from rename's `apply` | New param type, port method, dispatcher, assembler and converter methods |
 | LD-021 Private month-year formatter in the new converter, taking a `Date`, plus a parity spec | No dependency from the audit sub-domain on the upload key helper |
+| LD-022 The job date is read through the proceedings-owned `JOB_DATE_READER` port, bound `useExisting: JobAggregator` | `ProceedingService` doesn't inject another domain's aggregator |
+| LD-023 No hand-written casts in the INT-140 specs | europa test payloads are typed literals |
+| LD-024 No explanatory comments in the INT-140 diff, except the converter's parity constraint | The Atlas constant carries no comment |
+| LD-025 Commit subjects use the `INT-140:` prefix | Matches the merged `INT-*` history |
+| LD-026 The europa-back-end display labels are inline strings | The ticket defines them, and europa-back-end has no i18n |
 
 No open questions.
 
@@ -134,7 +139,7 @@ Displayed path, example: `Path: 092026/5512/881 | Proceeding Name: Day 1`. Atlas
 
 | Step | Failure | Result |
 | --- | --- | --- |
-| 1. `jobAggregator.getJobDateById(jobId)` | Rejects (for example `'Job date not found'`, `src/jobs/domain/aggregators/job.aggregator.ts:14-16`) | The error propagates. Nothing is created or dispatched |
+| 1. `jobDateReader.getJobDateById(jobId)` | Rejects (for example `'Job date not found'`, `src/jobs/domain/aggregators/job.aggregator.ts:14-16`) | The error propagates. Nothing is created or dispatched |
 | 2. `proceedingAggregator.createProceedings(...)` | Rejects, including a 409 `DuplicateProceedingError` | The error propagates. Nothing is dispatched |
 | 3. One proceeding's `dispatchProceedingAuditCreatedEvent` | Resolves `false` (the SQS send failed; the producer has already logged it, `src/audits/infrastructure/adapters/outbound/producers/sqs/sqs-audit-event.producer.ts:31-34`) | The response is the created proceedings |
 | 3. One proceeding's `dispatchProceedingAuditCreatedEvent` | Rejects | The error propagates, as rename's dispatch does (`ps/proceeding.service.ts:84-93`). The service adds no catch and no logger |
@@ -149,27 +154,30 @@ New (`+`) and changed (`~`) files:
 
 ```
 callisto-back-end/src/
-└── proceedings/domain/
-    ├── services/proceeding-service/
-    │   ├── proceeding.service.ts                                                  ~
-    │   └── __specs__/proceeding.service.spec.ts                                   ~
-    └── sub-domains/proceeding-audit/
-        ├── proceeding-audit.module.ts                                             ~ (+ converter provider)
-        ├── domain/
-        │   ├── aggregators/
-        │   │   ├── proceeding-audit-created.param.ts                              +
-        │   │   ├── proceeding-audit.aggregator.ts                                 ~
-        │   │   └── __specs__/proceeding-audit.aggregator.spec.ts                  ~
-        │   └── ports/proceeding-audit-dispatcher.port.ts                          ~
-        └── infrastructure/dispatchers/
-            ├── proceeding-audit.dispatcher.ts                                     ~
-            ├── __specs__/proceeding-audit.dispatcher.spec.ts                      ~
-            └── proceeding-to-audit-event-assembler/
-                ├── proceeding-to-audit-event.assembler.ts                         ~
-                ├── proceeding-creation-to-audit.converter.ts                      +
-                └── __specs__/
-                    ├── proceeding-to-audit-event.assembler.spec.ts                ~
-                    └── proceeding-creation-to-audit.converter.spec.ts             +
+└── proceedings/
+    ├── proceedings.module.ts                                                      ~ (+ JOB_DATE_READER binding)
+    └── domain/
+        ├── ports/job-date-reader.port.ts                                              +
+        ├── services/proceeding-service/
+        │   ├── proceeding.service.ts                                                  ~
+        │   └── __specs__/proceeding.service.spec.ts                                   ~
+        └── sub-domains/proceeding-audit/
+            ├── proceeding-audit.module.ts                                             ~ (+ converter provider)
+            ├── domain/
+            │   ├── aggregators/
+            │   │   ├── proceeding-audit-created.param.ts                              +
+            │   │   ├── proceeding-audit.aggregator.ts                                 ~
+            │   │   └── __specs__/proceeding-audit.aggregator.spec.ts                  ~
+            │   └── ports/proceeding-audit-dispatcher.port.ts                          ~
+            └── infrastructure/dispatchers/
+                ├── proceeding-audit.dispatcher.ts                                     ~
+                ├── __specs__/proceeding-audit.dispatcher.spec.ts                      ~
+                └── proceeding-to-audit-event-assembler/
+                    ├── proceeding-to-audit-event.assembler.ts                         ~
+                    ├── proceeding-creation-to-audit.converter.ts                      +
+                    └── __specs__/
+                        ├── proceeding-to-audit-event.assembler.spec.ts                ~
+                        └── proceeding-creation-to-audit.converter.spec.ts             +
 
 europa-back-end/src/audits-event/domain/
 ├── entities/audit-event/audit-event-resource.entity.ts                            ~ (LD-011: + newState.value?)
@@ -205,7 +213,8 @@ Modified:
 | `ProceedingAuditDispatcher` (`pa/infrastructure/dispatchers/proceeding-audit.dispatcher.ts:19-24`) | + `applyCreated`. `apply` and `applyCreated` send through a private `sendAuditEvent` that makes the same producer call |
 | `ProceedingToAuditEventAssembler` (`pa/…/proceeding-to-audit-event.assembler.ts`) | Gains a third constructor dependency (the new converter) and `applyCreated`. `apply` keeps its converter call and output, and builds its envelope through a private `toAuditEvent` shared with `applyCreated` |
 | `ProceedingAuditModule` (`pa/proceeding-audit.module.ts:10-17`) | + `ProceedingCreationToAuditEventResourceConverter` provider |
-| `ProceedingService` (`ps/proceeding.service.ts`) | Gains a `JobAggregator` dependency. `createProceedings` is rewritten |
+| `ProceedingService` (`ps/proceeding.service.ts`) | Gains a `JobDateReaderPort` dependency, `@Inject(JOB_DATE_READER)`. `createProceedings` is rewritten (LD-022) |
+| `ProceedingsModule` (`src/proceedings/proceedings.module.ts:197-208`) | + `{ provide: JOB_DATE_READER, useExisting: JobAggregator }`, next to the existing port bindings |
 | `AuditEventResource` (`eu/domain/entities/audit-event/audit-event-resource.entity.ts:16-26` on `main`) | + `value?: string` in `newState` only (LD-011) |
 | `SearchAuditEventsPaginatedTS` (`eu/…/search-audit-events-paginated.transaction.script.ts` on `main`) | + `CREATED` and `PROCEEDING` constants (next to `:13`) and a branch |
 | `atlas/utils/constants.ts` | + `'PROCEEDING'` in `resourceTypes` (`:18`); + `MULTI_PART_PATH_RESOURCE_TYPES` |
@@ -218,7 +227,7 @@ Modified:
 - `src/audits/constants.ts`.
 - `src/audits/domain/domain-events/audit-event-resource.de.ts`.
 
-**Wiring needs no change.** `JobAggregator` is exported by `JobModule` (`src/jobs/job.module.ts:62`), which `ProceedingsModule` imports (`src/proceedings/proceedings.module.ts:111`).
+**Wiring.** `ProceedingService` reads the job date through the proceedings-owned port `JOB_DATE_READER` (`src/proceedings/domain/ports/job-date-reader.port.ts`), not through another domain's aggregator directly (`.cursor/rules/architecture-patterns.mdc:1280`). `ProceedingsModule` binds the port with `useExisting: JobAggregator`. `JobAggregator` is exported by `JobModule` (`src/jobs/job.module.ts:62`), which `ProceedingsModule` imports (`:111`). This follows INT-138's merged `CLIENT_ACCESS_FILE_AUDIT` binding (`proceedings.module.ts:205-208`). Services that already inject `JobAggregator` directly are left unchanged, as INT-138 left its existing direct injections (`f1b64114`).
 
 ## 3. New entities
 
@@ -420,7 +429,8 @@ This mirrors the two-method chain INT-138 added to `proceeding-file-audit` (`app
 // ~ ps/proceeding.service.ts
 constructor(
 	// …existing twelve dependencies unchanged…
-	private readonly jobAggregator: JobAggregator,
+	@Inject(JOB_DATE_READER)
+	private readonly jobDateReader: JobDateReaderPort,
 ) {}
 
 async createProceedings(
@@ -428,7 +438,7 @@ async createProceedings(
 	values: string[],
 	user: AuthUser,
 ): Promise<{ id: number; value: string }[]> {
-	const jobDate = await this.jobAggregator.getJobDateById(jobId);
+	const jobDate = await this.jobDateReader.getJobDateById(jobId);
 	const proceedings = await this.proceedingAggregator.createProceedings({
 		jobId,
 		values,
@@ -448,7 +458,16 @@ async createProceedings(
 }
 ```
 
-- **Imports:** `JobAggregator` from `src/jobs/domain/aggregators/job.aggregator`.
+- **Imports:** `JOB_DATE_READER` and `JobDateReaderPort` from `src/proceedings/domain/ports/job-date-reader.port`.
+
+```ts
+// NEW src/proceedings/domain/ports/job-date-reader.port.ts
+export const JOB_DATE_READER = Symbol('JOB_DATE_READER');
+
+export type JobDateReaderPort = {
+	getJobDateById(id: number): Promise<Date>;
+};
+```
 - **Precedents:** `MultiPartUploadProceedingFileService` uses the same job-date read (`multi-part-upload-proceeding-file.service.ts:43`). The recategorize service uses the same `Promise.all` dispatch (`recategorize-deliverable-files.service.ts:50-57` on `INT-138`).
 
 ---
@@ -484,8 +503,6 @@ const PROCEEDING = 'PROCEEDING';
 // ~ atlas/utils/constants.ts
 export const resourceTypes = ['FILE', 'FOLDER', 'PERMISSION', 'PROCEEDING', 'USER'];
 
-// Event types whose path is multi-part only for the listed resource types.
-// CREATED is shared with FILE records, whose path is a plain S3 key.
 export const MULTI_PART_PATH_RESOURCE_TYPES: Readonly<
   Record<string, ReadonlySet<string>>
 > = {
@@ -511,15 +528,17 @@ pathSegments: hasMultiPartPath(item) ? toPathSegments(item.path) : null,
 ## Cross-cutting
 
 - **Companion tickets:**
-  - INT-138: Atlas's multi-part render. This PR is stacked on #582.
+  - INT-138: Atlas's multi-part render, merged to `main` in #582.
   - INT-139: no dependency. Its later changes to the same europa-back-end and Callisto files are textual neighbours (see Branches).
 - **Feature flags:** none. `CreateProceedingsTS` has none, and the dispatch runs on every create.
 
 ## Optional callouts
 
 - **HTTP surface:** N/A. No route, method, body, status or auth change in Callisto or europa-back-end. The create endpoint's success response is unchanged. Its failure responses are unchanged, except that a job-date failure now happens before the write (LD-017).
-- **Registries and module wiring:** `ProceedingAuditModule` adds one provider. Nothing else.
-- **Ports:** `ProceedingAuditDispatcherPort` gains `applyCreated`, implemented by `ProceedingAuditDispatcher` (bound to `PROCEEDING_AUDIT_DISPATCHER`, `pa/proceeding-audit.module.ts:11-14`).
+- **Registries and module wiring:** `ProceedingAuditModule` adds one provider. `ProceedingsModule` adds the `JOB_DATE_READER` binding. Nothing else.
+- **Ports:**
+  - `ProceedingAuditDispatcherPort` gains `applyCreated`, implemented by `ProceedingAuditDispatcher` (bound to `PROCEEDING_AUDIT_DISPATCHER`, `pa/proceeding-audit.module.ts:11-14`).
+  - New `JobDateReaderPort` (`JOB_DATE_READER`), implemented by `JobAggregator` through `useExisting` (LD-022).
 - **Domain events:** the `CREATED` audit event with a `PROCEEDING` resource, sent on the existing audit SQS queue.
 - **Domain exceptions:** N/A. None are added. Errors propagate unchanged (LD-017).
 - **Authorization:** N/A. The existing `ProceedingsCreateAuthGuard` and `ProceedingsJobIdBodyRestrictionActionGuard` are unchanged (`create-proceedings.action.ts:18-19`).
@@ -528,12 +547,12 @@ pathSegments: hasMultiPartPath(item) ? toPathSegments(item.path) : null,
 
 | Repo | Spec | Cases |
 | --- | --- | --- |
-| callisto | `ps/__specs__/proceeding.service.spec.ts`, "when: creating proceedings" (`:374`) | **Happy path:** the job date is read once with `jobId`; `createProceedings` gets `{ jobId, values, userId }`; one `dispatchProceedingAuditCreatedEvent` per proceeding with `{ proceeding, jobId, jobDate, user }`; the created proceedings are returned. **Job-date read rejects:** it rejects with that error; `createProceedings` and the dispatch are never called. **Create rejects**, with `DuplicateProceedingError` as one case: it rejects with that error; nothing is dispatched. **A dispatch resolves `false`:** the created proceedings are returned. **A dispatch rejects:** it rejects with that error, as rename does. Setup: add a `JobAggregator` mock (`createMock`). Existing cases are unchanged |
+| callisto | `ps/__specs__/proceeding.service.spec.ts`, "when: creating proceedings" (`:374`) | **Happy path:** the job date is read once with `jobId`; `createProceedings` gets `{ jobId, values, userId }`; one `dispatchProceedingAuditCreatedEvent` per proceeding with `{ proceeding, jobId, jobDate, user }`; the created proceedings are returned. **Job-date read rejects:** it rejects with that error; `createProceedings` and the dispatch are never called. **Create rejects**, with `DuplicateProceedingError` as one case: it rejects with that error; nothing is dispatched. **A dispatch resolves `false`:** the created proceedings are returned. **A dispatch rejects:** it rejects with that error, as rename does. Setup: add a typed `JobDateReaderPort` mock provided under `JOB_DATE_READER`. Existing cases are unchanged |
 | callisto | `pa/domain/aggregators/__specs__/proceeding-audit.aggregator.spec.ts` | `dispatchProceedingAuditCreatedEvent` calls `applyCreated` with `eventType: 'CREATED'` and the params; it returns `true`/`false` as given; it propagates a rejection. The rename cases (`:41`, `:98`, `:125`) are unchanged |
 | callisto | `pa/infrastructure/dispatchers/__specs__/proceeding-audit.dispatcher.spec.ts` | `applyCreated` assembles through `applyCreated` and produces the event on `sqsAuditEventUrl`. `apply` is unchanged (`:49`) |
 | callisto | `pa/…/__specs__/proceeding-to-audit-event.assembler.spec.ts` | `applyCreated`: `type: 'CREATED'`, `identity: user.identity`, `createdAt` (the mocked date), `serviceName`, and exactly one resource from the new converter (LD-018). Existing `apply` cases (`:43`, `:101`) keep their exact expected output |
 | callisto | `pa/…/__specs__/proceeding-creation-to-audit.converter.spec.ts` (new) | The full record shape per the Record contract. `oldState` is `null`. `resourceBucket` is `''`. A `Date` job date of 2026-09-15 gives `092026/5512/881`. **Parity:** for January, September and December dates, the path prefix equals `new GetProceedingFileKey().getMonthYear(date)` (LD-021) |
-| europa | `eu/…/__specs__/search-audit-events-paginated.transaction.script.spec.ts` | `CREATED` + `PROCEEDING`: the path is `Path: 092026/5512/881 \| Proceeding Name: Day 1` and the bucket is `''`, with `oldState: null`. `CREATED` + `FILE`: the path is `newState.path` and the bucket is `newState.bucket` (default branch). `RENAMED` + `PROCEEDING` with `{ value }` states: the path and bucket are `resourcePath` / `resourceBucket` (default branch). Use `createMockAuditEvent` (`eu/test-utils.ts:16`) |
+| europa | `eu/…/__specs__/search-audit-events-paginated.transaction.script.spec.ts` | `CREATED` + `PROCEEDING`: the path is `Path: 092026/5512/881 \| Proceeding Name: Day 1` and the bucket is `''`, with `oldState: null`. `CREATED` + `FILE`: the path is `newState.path` and the bucket is `newState.bucket` (default branch). `RENAMED` + `PROCEEDING` with `{ value }` states: the path and bucket are `resourcePath` / `resourceBucket` (default branch). Use `createMockAuditEvent` (`eu/test-utils.ts:16`) and typed literals, with no hand-written casts (LD-023) |
 | atlas | `atlas/utils/__specs__/constants.spec.ts` | `resourceTypes` lists `PROCEEDING` exactly once; `MULTI_PART_PATH_RESOURCE_TYPES.CREATED` has `PROCEEDING` and not `FILE` |
 | atlas | `atlas/pages/HomePage/SearchDataGrid/__specs__/SearchDataGrid.spec.ts` | `CREATED` + `PROCEEDING` renders two lines with bold `Path` and `Proceeding Name`. `RENAMED` + `PROCEEDING` renders the raw path on one line. The existing `CREATED` + `FILE` cases (`:200-230`) stay as the regression guard |
 
@@ -577,9 +596,11 @@ pathSegments: hasMultiPartPath(item) ? toPathSegments(item.path) : null,
 
 ## Branches
 
-- **callisto-back-end:** `INT-140` from `origin/main` @ `59b1abd3`.
+- **callisto-back-end:** `INT-140` from `origin/main` @ `11a3f684`.
 - **europa-back-end:** `INT-140` from `origin/main` @ `1082fdad`, without the unpushed `d9fb272`.
-- **atlas-front-end:** `INT-140` from `origin/INT-138` @ `36999e87`. The PR targets `INT-138` until #582 merges, then retargets `main`. If #582 changes before then, rebase.
+- **atlas-front-end:** `INT-140` from `origin/main` @ `9c184231`.
+- **Revised 2026-10-02:** INT-138's #464 and #582 merged to `main` before implementation, so all three repos branch from `main` (LD-014, F-31).
+- **Revised 2026-10-07:** rebased onto callisto `8f31f933`, europa `e5ff3be` and atlas `c15c22e3`. The expected europa conflicts with INT-139 and `d9fb272` were resolved by keeping both sides (F-37).
 - **Expected conflicts** with INT-138/INT-139 work, resolved by keeping both sides:
   - europa-back-end `audit-event-resource.entity.ts` (`d9fb272` adds `deliverableType` / `collection`) and the search TS (`d9fb272` adds the `CATEGORIZE` branch and `toDisplayValue`);
   - atlas-front-end `constants.ts` (INT-139 adds `RECATEGORIZE` next to these lines).
