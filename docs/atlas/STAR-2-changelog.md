@@ -88,7 +88,16 @@
 
 ### Practical implication
 
-Dustin is not expected to migrate the apps in STAR-2. His deliverable is the verified dependency and gap inventory, plus enough provenance that Megna and the migration team can trust it.
+Dustin is acting as the engineer documenting technical reality. The deliverable is the verified dependency and gap inventory, plus enough provenance that the data and migration teams can trust it. He is not expected to decide stakeholder relevance, application value, lifecycle, or product scope, and he is not migrating the apps in STAR-2.
+
+### Engineering working boundary
+
+- OJB, ADB, and TCB are the systems actively being inventoried.
+- Scope follows their complete data paths, not the Power App boundary. Database objects, views/queries, gateways, connections, Power BI/Power Query assets, Power Automate flows, SharePoint stores, and app connections are all first-class inventory items.
+- Each component must be named, assigned to its actual environment, and marked as existing, reported/unverified, missing/not created, inaccessible, or historical.
+- Shared components may identify other consumers to show blast radius, but they do not trigger tenant-wide discovery of unrelated apps.
+- Lucid must contain a separate current-state page for OJB, ADB, and TCB, using environment/platform swimlanes and visible missing-component states.
+- Product decisions and building or testing replacement environments remain separate work.
 
 ---
 
@@ -96,8 +105,8 @@ Dustin is not expected to migrate the apps in STAR-2. His deliverable is the ver
 
 | Added | Plan (path or link) | Status | One-line approach |
 | --- | --- | --- | --- |
-| 2026-10-20 | [STAR-2 Power Platform dependency inventory](STAR-2/STAR-2-power-platform-dependency-inventory.md) | active | Build the app universe, trace each live dependency chain, extract used RB9/Lagrange objects, map to Callisto, de-duplicate, and validate gaps. |
-| 2026-10-20 | [STAR-2 current-state Power Platform architecture](STAR-2/STAR-2-power-platform-current-state-architecture.md) | active companion | Reconcile the C3/Lucid diagram with live app, dataset, flow, SharePoint, and RB9/Lagrange evidence; track dormant and duplicate paths separately. |
+| 2026-10-20 | [STAR-2 Power Platform dependency inventory](STAR-2/STAR-2-power-platform-dependency-inventory.md) | active | Trace the complete OJB, ADB, and TCB technical paths, name every connected asset and environment, extract RB9/Lagrange usage, map it to Callisto, and de-duplicate the result. |
+| 2026-10-20 | [STAR-2 current-state Power Platform architecture](STAR-2/STAR-2-power-platform-current-state-architecture.md) | active companion | Produce one environment-aware Lucid page for OJB, ADB, and TCB and reconcile every database, gateway, query, flow, store, and application edge with evidence. |
 | 2026-10-20 | [RB9 rules](../rb9/rb9-rules.md) | active companion | Capture reusable RB9 behavior and workaround obligations discovered during STAR-2 before promoting stable facts to the shared wiki. |
 | 2026-07-06 | [Power Platform to AWS investigation](../power-platform-aws-investigation/README.md) | prior research; revalidate | Use earlier OJB/ADB architecture, risks, and interview leads as evidence leads rather than current truth. |
 
@@ -106,6 +115,16 @@ Dustin is not expected to migrate the apps in STAR-2. His deliverable is the ver
 ## Session log
 
 _Newest first._
+
+### 2026-10-20 — Engineering scope and Lucid deliverables tightened
+
+- **Summary:** bounded active STAR-2 engineering work to OJB, ADB, and TCB while expanding each system boundary to include every technical component that feeds it. Removed tenant-wide Power App discovery from the working definition of complete. Added explicit environment/existence-state capture and a separate Lucid current-state page for each system.
+- **Engineering boundary:** document system behavior, asset names, environments, data movement, tables/columns, and technical gaps. Stakeholder relevance, product scope, lifecycle choices, prioritization, migration implementation, and environment construction are not STAR-2 engineering decisions.
+- **Files:**
+  - docs/atlas/STAR-2/STAR-2-power-platform-dependency-inventory.md
+  - docs/atlas/STAR-2/STAR-2-power-platform-current-state-architecture.md
+  - docs/atlas/STAR-2-changelog.md
+- **Notes:** Connected assets include queries/views, gateways, data sources, connectors, connection references, Power BI/Power Query assets, Power Automate flows/actions, SharePoint stores, and app connections. Shared consumers are recorded only when needed to describe reuse or blast radius.
 
 ### 2026-10-20T07:24:00Z — Job Completion, Job Suggestions, and ADB pipeline discovery
 
@@ -190,6 +209,9 @@ _Newest first._
 19. A reachable app/list can be silently stale: Daily Jobs reportedly stopped in Dec 2025 without alert or escalation.
 20. Two logical RB-query uses can share one dataset; count apps, pipelines, queries, datasets, and physical database connections separately.
 21. The source scope is narrowed to Jobs and JobsTasks families for the reported Job Suggestions/ADB pattern, but base versus VQM and exact columns remain open.
+22. OJB, ADB, and TCB—not the entire Power Platform tenant—are the active engineering boundary.
+23. The inventory follows complete data paths, so gateways, connections, queries, flows, semantic models, and SharePoint stores are deliverables even when they are not Power Apps.
+24. Environment placement and existence state are required diagram facts; deciding whether a missing component should be built is separate work.
 
 ## Current state (as of 2026-10-20)
 
