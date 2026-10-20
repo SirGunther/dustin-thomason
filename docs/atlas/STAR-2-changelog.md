@@ -5,9 +5,9 @@
 - **Jira:** [STAR-2](https://pd-product-dev.atlassian.net/browse/STAR-2)
 - **Work type:** Investigation and documentation; no application migration in scope
 - **Repositories/systems inspected:** Power Platform, RB9/Lagrange, Callisto, `dustin-thomason`, and `pd-tech-wiki`
-- **Branch:** Not cut; initial working artifacts are being recorded in `dustin-thomason`
-- **PR:** Not opened
-- **Artifacts:** [STAR-2/](STAR-2/)
+- **Documentation state:** The maintained technical artifacts now live in `pd-tech-wiki`; this file remains the STAR-2 work log and provenance trail.
+- **Wiki PRs:** [Bootstrap #61](https://github.com/planetdepos/pd-tech-wiki/pull/61); [Jaimie architecture review #62](https://github.com/planetdepos/pd-tech-wiki/pull/62)
+- **Maintained artifacts:** [Dependency inventory](https://github.com/planetdepos/pd-tech-wiki/blob/main/projects/atlas-workflows/power-platform-dependency-inventory.md), [current-state architecture](https://github.com/planetdepos/pd-tech-wiki/blob/main/projects/atlas-workflows/power-platform-current-state-architecture.md), and [RB9 rules](https://github.com/planetdepos/pd-tech-wiki/blob/main/projects/atlas-workflows/rb9-rules.md)
 - **Original ticket:** [STAR-2-original-ticket.md](STAR-2/STAR-2-original-ticket.md)
 
 ---
@@ -62,7 +62,7 @@
 - Dustin and Larry are named to find the existing OJB/ADB field-mapping spreadsheet.
 - Earlier `docs/power-platform-aws-investigation/` artifacts contain useful ADB/OJB leads from June and July 2026, but they predate STAR-2 and must be revalidated.
 - The shared wiki contains a material conflict: an older system map says Power Apps point directly at RB9; the newer kickoff says app access is mediated through Power Automate and Power BI. STAR-2 must resolve the live state from connection references and definitions.
-- The long-lived companion [RB9 rules artifact](../rb9/rb9-rules.md) captures reusable behavior and architectural obligations discovered by this ticket.
+- The maintained [RB9 rules artifact](https://github.com/planetdepos/pd-tech-wiki/blob/main/projects/atlas-workflows/rb9-rules.md) captures reusable behavior and architectural obligations discovered by this ticket; the personal-repository copy is historical working material.
 
 ## What is explicitly expected from Dustin
 
@@ -105,9 +105,9 @@ Dustin is acting as the engineer documenting technical reality. The deliverable 
 
 | Added | Plan (path or link) | Status | One-line approach |
 | --- | --- | --- | --- |
-| 2026-10-20 | [STAR-2 Power Platform dependency inventory](STAR-2/STAR-2-power-platform-dependency-inventory.md) | active | Trace the complete OJB, ADB, and TCB technical paths, name every connected asset and environment, extract RB9/Lagrange usage, map it to Callisto, and de-duplicate the result. |
-| 2026-10-20 | [STAR-2 current-state Power Platform architecture](STAR-2/STAR-2-power-platform-current-state-architecture.md) | active companion | Produce one environment-aware Lucid page for OJB, ADB, and TCB and reconcile every database, gateway, query, flow, store, and application edge with evidence. |
-| 2026-10-20 | [RB9 rules](../rb9/rb9-rules.md) | active companion | Capture reusable RB9 behavior and workaround obligations discovered during STAR-2 before promoting stable facts to the shared wiki. |
+| 2026-10-20 | [STAR-2 Power Platform dependency inventory](https://github.com/planetdepos/pd-tech-wiki/blob/main/projects/atlas-workflows/power-platform-dependency-inventory.md) | active; nearing closure | Trace the complete OJB, ADB, and TCB technical paths, name every connected asset and environment, extract RB9/Lagrange usage, map it to Callisto, and de-duplicate the result. |
+| 2026-10-20 | [STAR-2 current-state Power Platform architecture](https://github.com/planetdepos/pd-tech-wiki/blob/main/projects/atlas-workflows/power-platform-current-state-architecture.md) | active companion | Maintain the evidence-backed OJB, ADB, and TCB current-state paths and use them to complete the Lucid pages. |
+| 2026-10-20 | [RB9 rules](https://github.com/planetdepos/pd-tech-wiki/blob/main/projects/atlas-workflows/rb9-rules.md) | active companion | Preserve reusable RB9 behavior, workaround obligations, and migration compatibility contracts in the shared wiki. |
 | 2026-07-06 | [Power Platform to AWS investigation](../power-platform-aws-investigation/README.md) | prior research; revalidate | Use earlier OJB/ADB architecture, risks, and interview leads as evidence leads rather than current truth. |
 
 ---
@@ -115,6 +115,17 @@ Dustin is acting as the engineer documenting technical reality. The deliverable 
 ## Session log
 
 _Newest first._
+
+### 2026-10-20 — Jaimie architecture review incorporated and wiki made source of record
+
+- **Summary:** incorporated the relevant Jaimie review findings into the shared PD Tech Wiki and made those pages the maintained technical artifacts. The documented path now shows the Ops semantic model branching to ADB Lite and ADB Lite Live, with the current ADB and Job Suggestions paths reportedly using ADB Lite Live.
+- **Pipeline detail:** recorded the hourly `VUL Ingest Job ADBLite` flow and a separate SB-originated on-demand ingestion path. ADB receives an intentionally limited selected-field payload and performs additional sorting in the app; the exact payload field list still requires an export or captured definition.
+- **Shared blast radius:** recorded MyPD only as an adjacent consumer of shared assets, including `VUL  Job Suggestions`, the OJB list/interface, DCR Regions, and purpose-built SharePoint lists. This does not expand active STAR-2 discovery beyond OJB, ADB, and TCB.
+- **Compatibility rule:** clarified that a SharePoint list is a Phase 1 compatibility boundary only when its schema/internal names, types, keys, grain, permissions, update behavior, cadence, freshness, and lineage are preserved—not merely its rows.
+- **Closure assessment:** the bounded topology is nearing completion. STAR-2 should remain open until the exact selected columns (including the ADB payload), the de-duplicated Lagrange-to-Callisto mapping and missing flags, stable asset IDs/exports, reviewed Lucid pages, and the Jira/data-team handoff are linked or reconciled. If these already exist in the take-off material, the remaining work is evidence reconciliation rather than new discovery.
+- **Maintained files:** [dependency inventory](https://github.com/planetdepos/pd-tech-wiki/blob/main/projects/atlas-workflows/power-platform-dependency-inventory.md), [current-state architecture](https://github.com/planetdepos/pd-tech-wiki/blob/main/projects/atlas-workflows/power-platform-current-state-architecture.md), and [RB9 rules](https://github.com/planetdepos/pd-tech-wiki/blob/main/projects/atlas-workflows/rb9-rules.md).
+- **Wiki change:** [planetdepos/pd-tech-wiki#62](https://github.com/planetdepos/pd-tech-wiki/pull/62), merged as `5b402439c329e7608a8daa64053844c3cf6f9e30`.
+- **Scope note:** unrelated meeting topics were intentionally omitted. No application, flow, list, semantic model, database, or production configuration changed.
 
 ### 2026-10-20 — Engineering scope and Lucid deliverables tightened
 
@@ -212,22 +223,23 @@ _Newest first._
 22. OJB, ADB, and TCB—not the entire Power Platform tenant—are the active engineering boundary.
 23. The inventory follows complete data paths, so gateways, connections, queries, flows, semantic models, and SharePoint stores are deliverables even when they are not Power Apps.
 24. Environment placement and existence state are required diagram facts; deciding whether a missing component should be built is separate work.
+25. The reviewed current path is RB9/Lagrange → Ops semantic model → ADB Lite/ADB Lite Live; ADB and Job Suggestions reportedly consume the Live branch.
+26. Scheduled and on-demand refreshes are separate lineage edges even when they land in the same SharePoint-backed application surface.
+27. A limited payload between a flow and Power App is a field-level contract; app-side sorting does not reveal which upstream columns were omitted.
+28. A SharePoint projection is compatible only when schema, keys, grain, permissions, update behavior, cadence, freshness, and lineage remain equivalent.
+29. Shared consumers such as MyPD should be recorded for blast radius without turning STAR-2 into tenant-wide or cross-department discovery.
 
 ## Current state (as of 2026-10-20)
 
-- Ticket requirements are captured verbatim.
-- The working inventory structure exists.
-- Known candidate apps and OJB flow names are seeded as unverified leads.
-- Jobs Notes Log is recorded as a reported-current OJB dependency lead; its category vocabulary, columns, actor/time semantics, and measured scale remain open.
-- `VQM_Jobs` and `VQM_JobsTasks` definitions are confirmed in Lagrange code and recorded as historical ADB dependency leads; deployed/live RB9 parity and actual consumer-selected columns remain open.
-- A blocking target query-surface decision is now recorded for ADB, TCB, OJB, and other consumers; no layer or owner has yet been approved.
-- Shared kickoff evidence says direct RB9 Power App connections were removed for permissions, but live connection references and the exact former connector still need export.
-- A current-state architecture companion now records the reported Job Completion, Job Suggestions/TCB, MyPD/Jaimie, LitTech supervisor, and ADB wiring, with unknowns explicit.
-- Daily Jobs List Reference is reported stale since Dec 2025 and is not wired to `VUL  Job Suggestions`; Job Completion lifecycle remains undecided.
-- The C3/RB9 Replacement Power Platform Lucid diagram is registered as evidence but has not yet been exported or reconciled.
-- No live tenant export, app source, flow definition, Power BI metadata, deployed-database result, or Callisto mapping has yet been recorded in the STAR-2 artifact; current VQM evidence is repository definition code only.
-- No claim of inventory completeness has been made.
-- Migration remains out of scope.
+- The maintained dependency inventory, current-state architecture, and RB9 rules now live in PD Tech Wiki; this personal-repository file remains the chronological STAR-2 work log.
+- Active engineering scope remains OJB, ADB, and TCB, following each complete data path through semantic models, flows, connectors, SharePoint stores, and app surfaces.
+- The current ADB/Job Suggestions lineage is documented as RB9/Lagrange → Ops semantic model → ADB Lite/ADB Lite Live, with both consumers reportedly using ADB Lite Live.
+- The scheduled `VUL Ingest Job ADBLite` flow and separate SB-originated on-demand flow are documented, but stable IDs, exported definitions, exact queries, and the precise ADB payload fields remain open.
+- Jobs Notes Log activity semantics and VQM compatibility behavior remain captured as OJB/RB9 migration contracts; unresolved field-level details stay explicitly marked.
+- MyPD is recorded only as adjacent shared-component blast radius and does not expand the bounded STAR-2 inventory.
+- The SharePoint boundary now includes schema, internal names, types, keys, grain, permissions, update behavior, cadence, freshness, and lineage—not row parity alone.
+- The ticket is nearing technical completion, but closure still requires reconciliation of exact selected columns, the de-duplicated Lagrange-to-Callisto mapping and missing flags, stable asset evidence, reviewed Lucid pages, and the Jira/data-team handoff.
+- Migration, replacement environment construction, and product lifecycle decisions remain out of scope.
 
 ## Attempt history
 
