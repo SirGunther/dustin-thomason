@@ -103,6 +103,32 @@ The July ADB notes refer to `VQM jobs` and `VQM jobs tests`. Lagrange code confi
 
 See [RB9 Problem 3](../../rb9/rb9-rules.md) for lineage, cardinality, and compatibility obligations.
 
+## Target query-surface decision — blocking handoff
+
+Direct Power App access to RB9 was reportedly removed for permissions, so the visible app is not necessarily where the database query lives. The target cannot be decided by asking only whether Callisto contains the same table names.
+
+STAR-2 owns discovery of the required output and legacy logic. It does **not** implement the replacement, but it must make the implementation handoff unambiguous.
+
+| Consumer | Current query layer | Legacy server-side shape | Candidate target layer | Decision owner(s) | Status / evidence needed |
+| --- | --- | --- | --- | --- | --- |
+| ADB | Historical lead: Power BI semantic model | `VQM_Jobs` and likely `VQM_JobsTasks` | Callisto compatibility view, rebuilt semantic-model query, or both | Dustin + Megna + semantic-model/Ops owner; confirm | Blocking: export model schema, Power Query/native SQL/DAX, selected columns, refresh, and owner |
+| Title and Contents Builder (TCB) | Unknown | Unknown | TBD after app/flow inspection | Dustin + app owner + Megna; confirm | Blocking: export app/flows/connections and identify any VQM/list-table logic |
+| OJB | Historical/current leads: Power Automate plus SharePoint projections | Jobs Notes Log and other queries/views pending | Purpose-built Callisto view/API/flow query; decide | Dustin + Megna + OJB/Ops owner; confirm | Blocking: extract every flow query, payload, cursor, and required output |
+| Other Power Platform consumers | Unknown | Unknown | Per-consumer decision | App owner + Dustin + data owner | Blocking: complete tenant inventory and trace every connection |
+
+### Required decision package
+
+For each consumer, produce:
+
+- current connection path and database engine/connector, including gateway and connection reference;
+- exact source objects, columns, formulas/queries, filters, joins, lookups, sorting, row grain, and freshness;
+- whether each transformation currently occurs in a VQM object, Power Query/semantic model, flow, or Power Fx;
+- Callisto's available base tables, relationships, views, and approved access paths;
+- chosen target layer and named owner for rebuilding/maintaining the query;
+- a representative old-versus-new parity test and business acceptance owner.
+
+A PostgreSQL connector exists, but that fact alone does not select direct Power App access. The sanctioned security model, delegation behavior, data volume, and support ownership remain decision inputs.
+
 ## Per-app dependency mapping
 
 Add one row per source object usage. Do not combine columns whose behavior differs.
@@ -152,6 +178,7 @@ Use this to preserve who supplied a fact, who performed work, what was learned, 
 | 2026-10-20 | Documentation bootstrap | Created STAR-2 and RB9 Rules working artifacts | Converted known information into evidence-led scaffolds without asserting completeness | [Changelog](../STAR-2-changelog.md) | Verified artifact | Add live findings as discovery proceeds. |
 | 2026-10-20 | Dustin Thomason | Described OJB's use of selected Jobs Notes Log categories and metadata as operational activity records | Identified a concrete OJB table dependency, an incomplete category vocabulary, last-modified incremental behavior, multi-million-row scale, and unresolved actor/completion semantics | [RB9 Problem 2](../../rb9/rb9-rules.md) | Reported-current | Extract the live OJB query and category list; confirm schema and measure the table. |
 | 2026-10-20 | Dustin Thomason plus Lagrange repository review | Raised VQM task/resource relationship and one-to-one migration risk; inspected existing Lagrange implementations | Confirmed `VQM_Jobs` and `VQM_JobsTasks` as ordinary Lagrange views; confirmed lookup-derived labels and omitted raw keys in the task view; did not find SQL aggregation in the reviewed definitions | [RB9 Problem 3](../../rb9/rb9-rules.md); `lagrange-back-end` entity/migration code | Mixed: repository-confirmed definitions, consumer usage and RB9 parity pending | Extract live ADB/OJB queries, compare RB9 DDL, and identify any VQM object that truly aggregates rows. |
+| 2026-10-20 | Dustin Thomason plus documentation review | Explained that direct RB9 Power App access was disabled and that legacy VQM surfaces worked around application-side filtering/lookup limitations; raised uncertainty over whether Callisto or Ops semantic models will own replacement queries | Located the query-surface ownership decision in STAR-2; confirmed shared kickoff says Power Automate/Power BI are current RB9 touchpoints; repository evidence says RB9 is MSSQL and Lagrange is PostgreSQL; connector and exact delegation behavior remain per-app evidence items | [RB9 Problem 3](../../rb9/rb9-rules.md); `pd-tech-wiki/projects/atlas-workflows/kickoff.md`; Microsoft connector/delegation docs | Mixed: reported current practice plus documented platform/repository facts | Export app/flow/model definitions and obtain Callisto's approved read-surface catalog; assign target query owner per consumer. |
 
 ## Gaps and unknowns
 
@@ -178,6 +205,12 @@ Use this to preserve who supplied a fact, who performed work, what was learned, 
 21. Do live RB9 VQM definitions match Lagrange, and are any RB9 objects materialized or cached rather than ordinary views?
 22. Which VQM objects or columns truly aggregate multiple rows, rather than only enriching one row with lookup values?
 23. Will Callisto preserve Job → Job Task → Resource keys/cardinality and provide compatibility projections for the exact legacy columns still used?
+24. What database engine and connector did each legacy connection reference actually use? Current repository evidence says RB9 MSSQL, not MySQL.
+25. Which specific Power Fx/connector expressions failed delegation or lookup requirements, and were the limitations in the connector, formula shape, permissions, or data volume?
+26. Is direct Power App access to Callisto PostgreSQL prohibited, merely unplanned, or an approved candidate after gateway/security/delegation validation?
+27. For each app, which team owns rebuilding the query: Callisto/data, Power BI/Ops, Power Automate/API, or the app owner?
+28. What Callisto base tables, views/materialized views, relationships, and read contracts will be available, on what schedule?
+29. What freshness, latency, row-volume, filtering, and parity requirements must each target query surface meet?
 
 ## Immediate next actions
 
@@ -186,10 +219,11 @@ Use this to preserve who supplied a fact, who performed work, what was learned, 
 | 1 | Export/admin-list apps, flows, connections, and environments; record visibility limitations. | Dustin | Power Platform admin if needed | App universe baseline. |
 | 2 | Reconcile baseline with Dustin, Jamie, and LitTech; classify active/retired/unknown. | Dustin | Jamie, LitTech | Reviewed app list with explicit gaps. |
 | 3 | Inventory OJB first: app, flows, SharePoint lists, gateway, Jobs Notes Log categories/fields, queries, cursors, and writes. | Dustin | Jamie/Ops | Complete OJB dependency chain and activity vocabulary. |
-| 4 | Extract OJB and ADB source definitions; verify exact VQM names, selected columns, row grain, and consumer logic; compare Lagrange views with live RB9. | Dustin | Megna, Larry | Per-app object map, VQM lineage, and parity gaps. |
-| 5 | Map used objects to Callisto and record semantic differences/missing coverage. | Megna | Dustin, Larry | Old-to-new mapping. |
-| 6 | De-duplicate used objects and review with Megna and business owners. | Dustin | Megna, app owners | Acceptance-ready consolidated inventory. |
-| 7 | Link the reviewed artifact from STAR-2/Confluence and promote stable RB9 rules to `pd-tech-wiki`. | Dustin | Megna, wiki owner | Team-visible handoff and durable knowledge. |
+| 4 | Extract OJB, ADB, TCB, and other source definitions; identify connector, exact VQM names, selected columns, filters/lookups, row grain, and the layer currently performing each transformation. | Dustin | Jamie, app/model owners | Per-app query contract and VQM lineage. |
+| 5 | Publish the Callisto read-surface catalog and decide, per consumer, whether the replacement query lives in Callisto SQL, a semantic model, Power Automate/API, or another governed layer. | Megna / target data owner; confirm | Dustin, Larry, Ops/BI owner, Platform/security | Signed query-surface and ownership matrix. |
+| 6 | Map used objects to Callisto and record semantic differences/missing coverage against the chosen target layer. | Megna | Dustin, Larry | Old-to-new mapping. |
+| 7 | De-duplicate used objects and review with Megna and business owners. | Dustin | Megna, app owners | Acceptance-ready consolidated inventory. |
+| 8 | Link the reviewed artifact from STAR-2/Confluence and promote stable RB9 rules to `pd-tech-wiki`. | Dustin | Megna, wiki owner | Team-visible handoff and durable knowledge. |
 
 ## Acceptance-criteria tracker
 
@@ -197,7 +231,8 @@ Use this to preserve who supplied a fact, who performed work, what was learned, 
 | --- | --- | --- |
 | All known Power Apps listed with owner, purpose, and data source | Not started | Candidate lead list only; no tenant export or owner validation. |
 | Each app mapped to tables and columns | Started | Jobs Notes Log and historical ADB VQM leads are recorded; live queries and exact consumer-selected columns remain pending. |
-| Consolidated old-to-new inventory and missing flags | Not started | Requires per-app extraction and current Callisto schema. |
+| Consolidated old-to-new inventory and missing flags | Not started | Requires per-app extraction, a current Callisto surface catalog, and target query-layer decisions. |
+| Target query surface and owner agreed per consumer | Started | Decision package and candidate layers documented; no consumer decision or owner confirmation yet. |
 | Gaps and unknowns explicit | Started | Initial gap register exists above. |
 | Stored/linked in team system and shared with Megna | Not started | Current artifact is in Dustin's working repo; final destination/review pending. |
 

@@ -66,6 +66,11 @@ These entries are starting leads, not a claim that discovery is complete.
 | RB9-R-023 | View grain and cardinality | The reviewed Lagrange `VQM_JobsTasks` definition remains one row per `TaskNo`; a job can therefore have multiple task rows, and each reviewed task row has a nullable `RsrcNo`. It contains joins but no SQL aggregate, `GROUP BY`, or list-concatenation operation. | A future one-row-per-job or assumed one-to-one model could collapse tasks or overwrite resource assignments. Conversely, claiming aggregation where none exists would produce the wrong migration design. | Confirmed for current Lagrange code; broader RB9 behavior reported but unverified | Compare row counts and duplicate keys with live RB9; identify any other VQM objects or columns that truly combine multiple rows. |
 | RB9-R-024 | Lagrange parity | Lagrange already implements `VQM_Jobs` and `VQM_JobsTasks` as ordinary PostgreSQL views using `CREATE VIEW`, not materialized views. Whether production RB9 uses identical definitions or different refresh/materialization behavior is unknown. | “Already in Lagrange” is partial evidence, not proof of production parity. Definition drift or different refresh semantics can change results. | Confirmed in repository; production parity unknown | Diff Lagrange DDL against the live RB9 objects and record ownership/version history. |
 | RB9-R-025 | Compatibility boundary | Future architecture must preserve normalized Job → Job Task → Resource relationships and deliberately reproduce only the VQM projection shapes consumers actually use. | Forcing relational data into a one-to-one target or making a derived label authoritative creates painful rework and another hidden contract. | Architecture obligation | Inventory consumer-selected columns, model canonical relationships, and add old-versus-new contract tests before cutover. |
+| RB9-R-026 | Direct Power App access | The 2026-10-14 Atlas Workflows kickoff says direct Power App connections to RB9 were removed earlier for permissions reasons; Power Automate and Power BI are the remaining RB9-data touchpoints. Live connection references still need verification. | The app itself may not contain the source query. Inventory must follow its flow, semantic model, gateway, and intermediate stores. | Reported-current in shared kickoff | Export live app/flow/model connection references and resolve the older systems-map conflict. |
+| RB9-R-027 | Power Apps query limitation | Dustin reports that the legacy Power App implementation could sort by date but could not safely perform the required filtering and cross-table lookups against the source. Server-side VQM objects supplied the usable shape. This is an observed implementation constraint, not a claim that Power Apps can never filter SQL data. | Repointing to base tables can silently reintroduce nondelegable formulas, partial result sets, excessive transfer, or missing lookups. | Reported historical behavior; formula/connector evidence pending | Extract the exact formulas, connector, delegation warnings, row limits, and VQM columns used by each app/model. |
+| RB9-R-028 | Database-engine terminology | Repository evidence identifies RB9 as Microsoft SQL Server/MSSQL and Lagrange as PostgreSQL. A recollection that the Power Apps source used “MySQL” conflicts with those artifacts and may refer generically to SQL or to a connector not yet found. | Choosing a connector or rewriting SQL against the wrong engine produces false feasibility assumptions and syntax/type differences. | MSSQL/PostgreSQL confirmed in repositories; MySQL recollection unverified | Inspect the retired/live connection reference and gateway data-source type before naming the legacy connector. |
+| RB9-R-029 | Connection versus architecture | Microsoft currently documents a premium PostgreSQL connector for Power Apps/Power Automate, but the existence of a connector does not authorize direct database access or prove equivalent Power Fx delegation, gateway, security, or performance behavior. | “A connection can be created” is not the migration decision. The sanctioned access path and query contract must be agreed separately. | Current vendor capability confirmed; Planet Depos policy/fit undecided | Platform/security and Power Platform owners must validate the intended connection path with a representative query. |
+| RB9-R-030 | Query-surface ownership | For each consumer, the team must decide whether filtering, joins, and lookups are owned by a Callisto view/materialized view, a Power BI semantic model, Power Automate/API logic, or another curated layer. | Without an owner, Ops may be asked to reconstruct undocumented VQM logic while Callisto assumes base tables are sufficient. | Blocking architecture decision | STAR-2 inventories required outputs and lineage; Callisto/data and consumer owners agree the target surface, owner, freshness, and parity test. |
 
 ## Problem 1 — Resource classification is encoded in a mutable name
 
@@ -232,6 +237,52 @@ Two different behaviors must be kept separate during discovery:
 
 The reviewed Lagrange definitions confirm the first behavior. They do **not** contain SQL aggregation. Dustin reports that broader VQM usage may combine relationships in other objects or production definitions; that remains a live-RB9 discovery item rather than a confirmed implementation fact.
 
+### Why VQM existed for Power Apps
+
+Dustin's current explanation adds an important historical constraint: the VQM layer was not merely a convenience. In the implemented Power App path, server-side VQM objects supplied filtered, lookup-enriched data that the app could not safely construct itself. Sorting by date was usable, but the required filters and cross-table lookups were not.
+
+That statement must be preserved as **implementation evidence**, not generalized into “Power Apps cannot filter SQL.” Current Microsoft documentation says:
+
+- delegation depends on the data source, connector, formula, and operators; a nondelegable formula processes only a bounded local result set and can return incomplete answers;
+- SQL Server is a delegable source for supported formulas, but related-table expressions and unsupported operators can still break delegation;
+- a premium PostgreSQL connector exists for Power Apps/Power Automate and exposes row actions with OData `$filter`, `$orderby`, and `$select`;
+- Power BI's PostgreSQL connector supports Import, DirectQuery, native SQL, and relationship columns.
+
+Those capabilities do not settle Planet Depos' target design. Direct Power App access to RB9 was reportedly removed for permissions, and direct PostgreSQL access may remain undesirable even when technically possible.
+
+There is also a terminology conflict to resolve. The repositories identify the legacy source as RB9 **MSSQL/SQL Server**, not MySQL, and Lagrange as PostgreSQL. The old Power Platform connection reference and gateway data-source type are the evidence needed to determine what connector the application actually used.
+
+Sources reviewed 2026-10-20:
+
+- [Microsoft: Power Apps delegation and query limits](https://learn.microsoft.com/en-us/power-apps/maker/canvas-apps/delegation-overview)
+- [Microsoft: PostgreSQL connector for Power Apps and Power Automate](https://learn.microsoft.com/en-us/connectors/postgresql/)
+- [Microsoft: PostgreSQL connector for Power BI/Power Query](https://learn.microsoft.com/en-us/power-query/connectors/postgresql)
+- `pd-tech-wiki/projects/atlas-workflows/kickoff.md`
+- `lagrange-back-end/README.md`
+
+### Where the decision belongs
+
+This is a **STAR-2 discovery and handoff gate**, followed by a target-architecture decision. STAR-2 should determine what each consumer needs and where the legacy logic lives; it should not silently assign Ops or the application maker to recreate that logic.
+
+| Possible target layer | What it would own | What must be agreed |
+| --- | --- | --- |
+| Callisto database view or materialized view | Stable joins, filters, lookup labels, legacy-compatible column shape | Data owner, DDL/versioning, refresh/freshness, keys, permissions, performance, and parity |
+| Power BI semantic model / Power Query | Consumer-specific joins, transformations, measures, refresh, and possibly native SQL | Model owner, workspace, source tables/views, refresh SLA, query folding/DirectQuery behavior, and validation |
+| Power Automate or an API | Bounded queries or purpose-built application payloads | Service owner, parameters, pagination, limits, retries, latency, auth, and schema version |
+| Direct Power App connector | Power Fx filtering/sorting/lookups against a sanctioned source | Explicit security approval, connector/gateway support, delegation proof, row-limit testing, and support owner |
+
+The right answer may differ by consumer. ADB might continue to consume a semantic model, while OJB could use flows or an API. Title and Contents Builder and the remaining apps need their actual formulas and connections inspected before choosing a layer.
+
+The minimum handoff is a per-consumer query contract containing:
+
+1. the required output columns and row grain;
+2. the legacy VQM/base-table lineage;
+3. filters, joins, lookup rules, sort, null/default behavior, and freshness;
+4. representative input/output cases;
+5. the target Callisto tables currently available;
+6. the layer and team that will own the rebuilt query;
+7. a parity test and acceptance owner.
+
 ### What Lagrange already implements
 
 | View | Base grain in reviewed definition | Relationship logic | Important shape change | Evidence state |
@@ -288,6 +339,8 @@ The canonical Callisto model should preserve actual relationship cardinality. A 
 6. **Test semantics, not only counts.** Compare representative jobs with multiple tasks, null resources, renamed resources, inactive lookups, and orphaned keys.
 7. **Verify production parity.** Diff live RB9 definitions against Lagrange; do not assume the repository view matches a vendor-hosted or separately maintained object.
 8. **Name freshness behavior correctly.** The reviewed Lagrange objects are ordinary views. If an RB9 object is materialized or cached, document refresh behavior separately.
+9. **Assign the query layer explicitly.** Record whether each legacy VQM transformation moves to Callisto SQL, a semantic model, Power Automate/API logic, or another governed surface.
+10. **Prove connector behavior rather than assuming it.** If any app will query PostgreSQL directly, validate delegation, row limits, gateway/security, and representative large-data queries before choosing that path.
 
 ### Validation checklist
 
@@ -300,6 +353,9 @@ The canonical Callisto model should preserve actual relationship cardinality. A 
 - [ ] Determine whether a task can have multiple current or historical resources outside `JobsTasks.RsrcNo`.
 - [ ] Preserve both ids and display values in the target contract where consumers require them.
 - [ ] Add contract tests comparing old and new outputs before consumer cutover.
+- [ ] Capture the retired/current Power Platform connection reference and confirm whether it used SQL Server, MySQL, PostgreSQL, Power BI, or Power Automate.
+- [ ] For ADB, TCB, OJB, and each remaining app, assign an owner for rebuilding or supplying the required query surface.
+- [ ] Obtain the Callisto read-surface catalog: available tables, views, relationships, supported access paths, and responsible data owner.
 
 ### Discovery and communication record
 
@@ -348,6 +404,7 @@ Add one entry per independently testable behavior. If a note contains two separa
 - Distinguish activity performer/completion from row author/modification metadata.
 - Preserve Job → Job Task → Resource cardinality and keys independently from VQM display projections.
 - Treat VQM definitions as versioned compatibility contracts; expose labels without making them authoritative identifiers.
+- Decide and document which governed layer owns each consumer's filtering, joins, lookups, freshness, and compatibility shape.
 
 ## Source trail
 
@@ -361,5 +418,7 @@ Add one entry per independently testable behavior. If a note contains two separa
 - Dustin Thomason's description of VQM lookup/relationship projections and one-to-one migration risk, 2026-10-20.
 - `lagrange-back-end/src/domain/jobs/domain/entities/vqm-jobs.entity.ts` and matching view migration, reviewed 2026-10-20.
 - `lagrange-back-end/src/domain/jobs-tasks/domain/entities/vqm-jobs-tasks.entity.ts` and matching view migration, reviewed 2026-10-20.
+- Dustin Thomason's description of disabled direct RB9 access, legacy Power Apps query/delegation constraints, and target query-surface uncertainty, 2026-10-20.
+- Microsoft Power Apps delegation, PostgreSQL connector, and Power Query PostgreSQL documentation, reviewed 2026-10-20.
 
 When a rule becomes stable cross-system knowledge, promote it to `pd-tech-wiki` with provenance and leave a link here. Do not maintain competing canonical versions.

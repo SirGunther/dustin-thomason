@@ -106,6 +106,17 @@ Dustin is not expected to migrate the apps in STAR-2. His deliverable is the ver
 
 _Newest first._
 
+### 2026-10-20T07:14:13Z — Power Platform query-surface ownership discovery
+
+- **Summary:** captured why VQM surfaces were operationally necessary for legacy Power Apps: the implemented path could sort by date but could not safely perform the required filtering and cross-table lookups, so server-side objects supplied the usable shape. Recorded that direct RB9 Power App access was reportedly removed for permissions and that current RB9 touchpoints are Power Automate and Power BI. Separated technical connector availability from approved architecture, corrected RB9/MySQL terminology to an explicit evidence conflict, and added a blocking per-consumer decision over whether Callisto SQL, a semantic model, Power Automate/API, or another layer owns the rebuilt query.
+- **Evidence:** Dustin SME report; Atlas Workflows kickoff; `lagrange-back-end` README/code; current Microsoft Power Apps delegation, PostgreSQL connector, and Power Query PostgreSQL documentation.
+- **Files:**
+  - docs/rb9/rb9-rules.md
+  - docs/atlas/STAR-2/STAR-2-power-platform-dependency-inventory.md
+  - docs/atlas/STAR-2-changelog.md
+- **Commit:** this documentation commit.
+- **Notes:** Microsoft currently documents a PostgreSQL connector, so inability to create any connection is not assumed. Direct access approval, exact delegation behavior, legacy connector type, Callisto surfaces, and query ownership remain intentionally undecided. No production configuration changed.
+
 ### 2026-10-20T07:07:47Z — VQM relationship and compatibility-rule discovery
 
 - **Summary:** documented the third RB9 oddity: `VQM_*` query surfaces hide lookup and relationship logic behind consumer-friendly columns, creating migration risk when labels replace keys or a future model assumes one-to-one cardinality. Confirmed from `lagrange-back-end` that `VQM_Jobs` and `VQM_JobsTasks` already exist as ordinary PostgreSQL views. The reviewed task view remains one row per `TaskNo`, resolves task/resource labels through joins, omits raw `Task`/`RsrcNo`, and does not contain SQL aggregation. Added the two views as ADB dependency leads and preserved live RB9/consumer parity as an open validation item.
@@ -157,6 +168,10 @@ _Newest first._
 10. The reviewed `VQM_JobsTasks` view is lookup-enriched, not SQL-aggregated: it keeps one row per `TaskNo` but replaces raw `Task`/`RsrcNo` with derived labels.
 11. View output grain, hidden join paths, omitted keys, null behavior, and mutable labels are migration contracts even when the view looks like a convenient flat table.
 12. Callisto should preserve normalized Job → Job Task → Resource relationships and provide compatibility projections only for verified consumer needs.
+13. Direct RB9 Power App connections were reportedly removed for permissions; inventory must follow Power Automate and Power BI rather than stop at the app.
+14. The legacy constraint was specific to the implemented connector/formulas and delegation behavior; it should not be generalized into “Power Apps cannot filter SQL.”
+15. Current artifacts identify RB9 as MSSQL and Lagrange as PostgreSQL; the recalled MySQL source is an evidence conflict to resolve from connection references.
+16. PostgreSQL connector availability does not decide the target. Each consumer needs an owned query surface, approved access path, and parity test.
 
 ## Current state (as of 2026-10-20)
 
@@ -165,6 +180,8 @@ _Newest first._
 - Known candidate apps and OJB flow names are seeded as unverified leads.
 - Jobs Notes Log is recorded as a reported-current OJB dependency lead; its category vocabulary, columns, actor/time semantics, and measured scale remain open.
 - `VQM_Jobs` and `VQM_JobsTasks` definitions are confirmed in Lagrange code and recorded as historical ADB dependency leads; deployed/live RB9 parity and actual consumer-selected columns remain open.
+- A blocking target query-surface decision is now recorded for ADB, TCB, OJB, and other consumers; no layer or owner has yet been approved.
+- Shared kickoff evidence says direct RB9 Power App connections were removed for permissions, but live connection references and the exact former connector still need export.
 - No live tenant export, app source, flow definition, Power BI metadata, deployed-database result, or Callisto mapping has yet been recorded in the STAR-2 artifact; current VQM evidence is repository definition code only.
 - No claim of inventory completeness has been made.
 - Migration remains out of scope.
