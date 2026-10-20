@@ -8,22 +8,25 @@ Jira: [STAR-2](https://pd-product-dev.atlassian.net/browse/STAR-2)
 
 ## Outcome
 
-Produce a verified inventory of every Power App that depends on RB9 or Lagrange, the complete set of tables and columns each app uses, and the corresponding Callisto objects or confirmed gaps.
+Produce a verified engineering dependency inventory for OJB, ADB, and TCB. The inventory covers the complete technical paths that feed those systems—not only the visible Power Apps—including database objects, views and queries, gateways, connections, semantic models, Power Query logic, Power Automate flows, SharePoint stores, and application connections.
 
-This document is the working evidence artifact. It must distinguish live evidence from historical leads. “Known app” does not mean “dependency verified,” and an empty mapping cell means unknown—not absent.
+For each path, name every technical asset, record the environment in which it exists, show how data moves between assets, and map the RB9/Lagrange fields to Callisto or an explicit technical gap.
+
+This document is the working evidence artifact. It distinguishes live evidence from historical leads. An empty mapping cell means unknown—not absent.
 
 ## Definition of complete
 
-- [ ] The Power App universe has been checked through tenant/admin inventory plus Dustin, Jamie, and LitTech input.
-- [ ] Every in-scope app has a confirmed owner or an explicit “owner unknown” gap.
-- [ ] Business purpose and user group are confirmed for every app.
-- [ ] Every app's complete dependency chain is traced through flows, semantic models, gateways, connections, and intermediate stores.
-- [ ] Every RB9/Lagrange table and column read or written is recorded per app.
-- [ ] Each old object has a verified Callisto equivalent or an explicit missing flag.
+- [ ] OJB, ADB, and TCB each have a bounded end-to-end technical dependency record.
+- [ ] Every component on those paths is named and typed, with a stable id or location where available.
+- [ ] Each component's environment and observed existence state are recorded: existing, reported/unverified, missing/not created, inaccessible, or historical.
+- [ ] Every path is traced through its actual source objects, views/queries, gateways, connections, semantic models or Power Query, flows, intermediate stores, and app connections.
+- [ ] Every RB9/Lagrange table and column read or written by those paths is recorded.
+- [ ] Each old object has a verified Callisto equivalent or an explicit missing, partial, or unknown flag.
 - [ ] A de-duplicated object list is produced.
-- [ ] Conflicts, inaccessible assets, and unknowns are explicit.
-- [ ] Megna has reviewed the inventory for Lagrange-to-Callisto planning.
-- [ ] The artifact is linked from Jira or Confluence.
+- [ ] One Lucid current-state page exists for each of OJB, ADB, and TCB, with environment boundaries and missing components visible.
+- [ ] Technical conflicts, inaccessible assets, and unknowns are explicit.
+- [ ] Ticket metadata such as owner/builder, purpose, and users is recorded from available evidence or marked unknown; resolving those business fields is not an engineering scope decision.
+- [ ] The inventory is linked from Jira or Confluence and supplied to the data team for Lagrange-to-Callisto planning.
 
 ## Evidence levels
 
@@ -37,30 +40,33 @@ This document is the working evidence artifact. It must distinguish live evidenc
 
 ## Discovery method
 
-1. **Establish the app universe**
-   - Pull the Power Platform admin inventory across relevant environments.
-   - Reconcile it with Dustin's, Jamie's, and LitTech's lists.
-   - Record inaccessible, orphaned, renamed, duplicate, and retired assets.
-2. **Trace each app's dependency chain**
-   - Inspect canvas app source/formulas.
-   - Inspect solution and non-solution Power Automate definitions.
-   - Inspect Power BI semantic models, reports, dataflows, and refresh configuration where used.
-   - Record connection references, gateway/data-source identities, and SharePoint/intermediate stores without copying secrets.
-3. **Extract data usage**
+1. **Bound the three systems**
+   - Treat OJB, ADB, and TCB as the systems in scope.
+   - Include every asset that feeds, transforms, stores, or exposes their data.
+   - Do not expand this work into a tenant-wide search for unrelated applications.
+2. **Trace every technical path**
+   - Follow each path from RB9/Lagrange through any view or query, gateway, connection, semantic model or Power Query, Power Automate flow, SharePoint store, and application connection.
+   - Record asset names, stable ids, environments, direction, query/connection mode, trigger or refresh behavior, and read/write behavior without copying secrets.
+3. **Record environment and existence**
+   - Identify the Power Platform environment, Power BI workspace, gateway/data-source location, SharePoint site, and database environment for each asset.
+   - Mark each expected component as existing, reported/unverified, missing/not created, inaccessible, or historical.
+4. **Extract data usage**
    - Capture source query text or formula evidence.
    - Expand views and stored procedures when needed to identify underlying objects.
    - Separate reads, writes, filters, joins, sort keys, high-water marks, and override/reconciliation fields.
-4. **Map to Callisto**
+5. **Map to Callisto and diagram**
    - Verify names, keys, types, nullability, semantics, relationships, and timestamp behavior.
    - Mark absent and semantically different objects explicitly.
-5. **Consolidate and validate**
-   - De-duplicate the used objects.
-   - Review with Megna and relevant app/business owners.
-   - Link supporting exports or sanitized evidence.
+   - Produce one environment-aware Lucid page for OJB, ADB, and TCB.
+6. **Consolidate the engineering handoff**
+   - De-duplicate the used objects and link supporting exports or sanitized evidence.
+   - Record technical unknowns without turning them into product, stakeholder, or lifecycle decisions.
 
-## Candidate application inventory
+## System and connected-asset inventory
 
-This is a lead list assembled from STAR-2, the 2026-10-14 Atlas Workflows kickoff, the older systems map, and the July Power Platform investigation. Rows are not confirmed in scope until live evidence shows an RB9/Lagrange dependency.
+OJB, ADB, and TCB are the active engineering scope. Their records include every connected asset on the data path, even when the asset is not a Power App. The remaining rows are retained only as adjacent evidence leads; they do not expand STAR-2 unless they are proven to be a component or shared dependency of an OJB, ADB, or TCB path.
+
+This register was assembled from STAR-2, the 2026-10-14 Atlas Workflows kickoff, the older systems map, and the July Power Platform investigation.
 
 | Asset | Type | Owner / builder | Business purpose / users | Reported data path | Dependency state | Inventory state | Evidence / next action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -126,7 +132,7 @@ STAR-2 owns discovery of the required output and legacy logic. It does **not** i
 | Job Completion Form | Historical Daily Jobs List Reference; no refresh since Dec 2025 | Jobs and JobsTasks family lead; exact dataset and objects unknown | Retire, leave dormant, restore, or redesign | Business owner + Dustin + Megna; confirm | Blocking lifecycle decision before migration scope is closed |
 | MyPD / Jaimie-related consumer | Reported VUL Job Suggestions old/new connections | Indirect Jobs and JobsTasks family lead | Keep one supported list contract or replace | Jaimie/app owner + Dustin + Megna; confirm | Blocking: confirm asset identity, two connections, live consumer, and direction |
 | OJB | Historical/current leads: Power Automate plus SharePoint projections | Jobs Notes Log and other queries/views pending | Purpose-built Callisto view/API/flow query; decide | Dustin + Megna + OJB/Ops owner; confirm | Blocking: extract every flow query, payload, cursor, and required output |
-| Other Power Platform consumers | Unknown | Unknown | Per-consumer decision | App owner + Dustin + data owner | Blocking: complete tenant inventory and trace every connection |
+| Other consumers of a shared OJB/ADB/TCB component | Unknown | Unknown | Record only when needed to describe a shared component's blast radius | _not a STAR-2 engineering decision_ | Trace the shared edge; do not expand into tenant-wide application discovery |
 
 ### Required decision package
 
