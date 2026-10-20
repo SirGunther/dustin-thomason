@@ -97,6 +97,7 @@ Dustin is not expected to migrate the apps in STAR-2. His deliverable is the ver
 | Added | Plan (path or link) | Status | One-line approach |
 | --- | --- | --- | --- |
 | 2026-10-20 | [STAR-2 Power Platform dependency inventory](STAR-2/STAR-2-power-platform-dependency-inventory.md) | active | Build the app universe, trace each live dependency chain, extract used RB9/Lagrange objects, map to Callisto, de-duplicate, and validate gaps. |
+| 2026-10-20 | [STAR-2 current-state Power Platform architecture](STAR-2/STAR-2-power-platform-current-state-architecture.md) | active companion | Reconcile the C3/Lucid diagram with live app, dataset, flow, SharePoint, and RB9/Lagrange evidence; track dormant and duplicate paths separately. |
 | 2026-10-20 | [RB9 rules](../rb9/rb9-rules.md) | active companion | Capture reusable RB9 behavior and workaround obligations discovered during STAR-2 before promoting stable facts to the shared wiki. |
 | 2026-07-06 | [Power Platform to AWS investigation](../power-platform-aws-investigation/README.md) | prior research; revalidate | Use earlier OJB/ADB architecture, risks, and interview leads as evidence leads rather than current truth. |
 
@@ -105,6 +106,18 @@ Dustin is not expected to migrate the apps in STAR-2. His deliverable is the ver
 ## Session log
 
 _Newest first._
+
+### 2026-10-20T07:24:00Z — Job Completion, Job Suggestions, and ADB pipeline discovery
+
+- **Summary:** created a current-state Power Platform architecture companion and mapped three distinct paths: the dormant Job Completion/Daily Jobs path, the reported-current `VUL  Job Suggestions`/TCB path, and the reported-current ADB path. Recorded that Job Suggestions and ADB reportedly use the same Power BI dataset/methodology and only the Jobs and JobsTasks families, while base versus VQM objects remains unresolved. Kept Daily Jobs and VUL separate, recorded the December 2025 staleness and missing alert/escalation, and treated rewiring as a future design rather than current state.
+- **Evidence:** Dustin SME notes; shared kickoff; Lagrange code; Jaimie Shareplane docs confirming the distinct `VUL  Job Suggestions` title. The C3/RB9 Replacement Power Platform Lucid diagram was named but not inspected because no local export/cache was available.
+- **Files:**
+  - docs/atlas/STAR-2/STAR-2-power-platform-current-state-architecture.md
+  - docs/atlas/STAR-2/STAR-2-power-platform-dependency-inventory.md
+  - docs/rb9/rb9-rules.md
+  - docs/atlas/STAR-2-changelog.md
+- **Commit:** this documentation commit.
+- **Notes:** Asset ids, Power BI dataset name, flow names, exact last refresh, MyPD identity, LitTech consumer, and Jobs versus VQM selection remain intentionally unverified. No app, flow, list, dataset, database, or production configuration changed.
 
 ### 2026-10-20T07:14:13Z — Power Platform query-surface ownership discovery
 
@@ -172,6 +185,11 @@ _Newest first._
 14. The legacy constraint was specific to the implemented connector/formulas and delegation behavior; it should not be generalized into “Power Apps cannot filter SQL.”
 15. Current artifacts identify RB9 as MSSQL and Lagrange as PostgreSQL; the recalled MySQL source is an evidence conflict to resolve from connection references.
 16. PostgreSQL connector availability does not decide the target. Each consumer needs an owned query surface, approved access path, and parity test.
+17. Power BI → Power Automate → SharePoint is a materialized application data product; dataset, flow, list, freshness, and owner are all part of the dependency.
+18. Daily Jobs List Reference and `VUL  Job Suggestions` are similar but distinct projections and must not be collapsed without schema/consumer proof.
+19. A reachable app/list can be silently stale: Daily Jobs reportedly stopped in Dec 2025 without alert or escalation.
+20. Two logical RB-query uses can share one dataset; count apps, pipelines, queries, datasets, and physical database connections separately.
+21. The source scope is narrowed to Jobs and JobsTasks families for the reported Job Suggestions/ADB pattern, but base versus VQM and exact columns remain open.
 
 ## Current state (as of 2026-10-20)
 
@@ -182,6 +200,9 @@ _Newest first._
 - `VQM_Jobs` and `VQM_JobsTasks` definitions are confirmed in Lagrange code and recorded as historical ADB dependency leads; deployed/live RB9 parity and actual consumer-selected columns remain open.
 - A blocking target query-surface decision is now recorded for ADB, TCB, OJB, and other consumers; no layer or owner has yet been approved.
 - Shared kickoff evidence says direct RB9 Power App connections were removed for permissions, but live connection references and the exact former connector still need export.
+- A current-state architecture companion now records the reported Job Completion, Job Suggestions/TCB, MyPD/Jaimie, LitTech supervisor, and ADB wiring, with unknowns explicit.
+- Daily Jobs List Reference is reported stale since Dec 2025 and is not wired to `VUL  Job Suggestions`; Job Completion lifecycle remains undecided.
+- The C3/RB9 Replacement Power Platform Lucid diagram is registered as evidence but has not yet been exported or reconciled.
 - No live tenant export, app source, flow definition, Power BI metadata, deployed-database result, or Callisto mapping has yet been recorded in the STAR-2 artifact; current VQM evidence is repository definition code only.
 - No claim of inventory completeness has been made.
 - Migration remains out of scope.
