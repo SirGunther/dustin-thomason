@@ -8,9 +8,17 @@ Jira: [STAR-2](https://pd-product-dev.atlassian.net/browse/STAR-2)
 
 ## Purpose
 
-This companion artifact records how RB9-derived data currently or historically moves through Power BI, Power Automate, SharePoint, and Power Apps. It translates notes from the C3 Power Platform / RB9 replacement Lucid diagram into testable dependency records.
+This companion artifact records the complete technical dependency paths for OJB, ADB, and TCB. A path begins at the data source and includes every view or query, gateway, connection, semantic model, Power Query step, Power Automate flow, SharePoint store, and application connection that carries the data.
 
-The [dependency inventory](STAR-2-power-platform-dependency-inventory.md) remains the acceptance-criteria artifact. [RB9 Rules](../../rb9/rb9-rules.md) holds reusable system behavior. This document holds the wiring, lifecycle state, diagram reconciliation, and per-pipeline unknowns.
+The [dependency inventory](STAR-2-power-platform-dependency-inventory.md) remains the acceptance-criteria artifact. [RB9 Rules](../../rb9/rb9-rules.md) holds reusable system behavior. This document holds the wiring, environment placement, observed existence state, diagram reconciliation, and per-pipeline technical unknowns.
+
+## Engineering boundary
+
+- **Systems in scope:** OJB, ADB, and TCB.
+- **Connected assets in scope:** anything that feeds, transforms, transports, stores, or exposes data for those systems, regardless of whether it is a Power App.
+- **Shared assets:** record other consumers only when necessary to show reuse or blast radius.
+- **Not part of this engineering inventory:** tenant-wide discovery of unrelated apps, stakeholder or relevance decisions, lifecycle approval, prioritization, migration implementation, or environment construction.
+- **Evidence rule:** document what exists, what is reported but unverified, and what is missing or not created. Do not convert those observations into product decisions.
 
 ## Evidence boundary
 
@@ -81,7 +89,7 @@ flowchart LR
 - **Lifecycle state:** dormant, broken, bypassed, or retired is not yet decided. “Nobody currently cares” is evidence of low observed dependency, not formal retirement.
 - **Source scope lead:** only the Jobs and JobsTasks families are reported, but base tables versus `VQM_Jobs`/`VQM_JobsTasks` remains unknown.
 
-Before STAR-2 excludes this app, the business owner should explicitly choose one of: retire, leave dormant, restore as-is, or redesign against a supported source.
+Job Completion is outside the active OJB/ADB/TCB boundary. Retain this path only where it documents a shared technical asset or prevents two similar lists from being conflated. A product lifecycle decision is not required to complete the engineering inventory.
 
 ### 2. `VUL  Job Suggestions` — reported current shared projection
 
@@ -138,24 +146,37 @@ Dustin reports that only two source families are used by the Job Suggestions and
 | `VUL  Job Suggestions` | Display name spelling and double spaces are brittle identifiers. | Immutable list id, site URL pointer, schema export |
 | “same dataset” | It may mean one semantic model, one dataflow, one connection, or duplicated queries. | Workspace, dataset/semantic-model id, lineage, refresh/query mode |
 
-## C3/Lucid reconciliation checklist
+## Lucid deliverables
 
-- [ ] Capture the Lucid document URL/id, exact title, owner, page name, revision timestamp, and an export.
-- [ ] Identify every RB9/Lagrange, Power BI, Power Automate, SharePoint, and Power App node.
-- [ ] Record each edge's direction, transformation, cadence/trigger, owner, and evidence status.
-- [ ] Compare diagram edges with live connection references, flow definitions, semantic-model lineage, and SharePoint list ids.
-- [ ] Mark stale, dormant, duplicated, retired, and proposed-only paths distinctly.
-- [ ] Resolve whether Job Suggestions and ADB share one physical dataset/query connection.
-- [ ] Resolve Job Completion versus Job Submission naming.
-- [ ] Link or embed the reviewed diagram from STAR-2 without copying credentials or private connection strings.
+Create one Lucid page for each in-scope system:
 
-## Immediate evidence requests
+| Page | Required content | Status |
+| --- | --- | --- |
+| OJB | Complete current path from RB9/Lagrange through queries, gateways/connections, flows, SharePoint working/archive stores, and the app | Pending |
+| ADB | Complete current path from RB9/Lagrange through the Power BI/Power Query layer, gateway/connections, Power Automate, SharePoint/state and override layers, and the app | Pending |
+| TCB | Complete current path from RB9/Lagrange through the Power BI/Power Query layer, gateway/connections, Job Suggestions flow, `VUL  Job Suggestions`, and the app | Pending |
 
-1. Power BI workspace, semantic-model/dataset name, id, owner, query mode, source, and refresh/on-demand behavior.
-2. Power Query/native SQL or other source query showing `Jobs`/`JobsTasks` versus VQM and exact columns.
-3. Power Automate flow names/ids and definitions for Job Suggestions, ADB, and historical Daily Jobs population.
-4. SharePoint list ids, schemas, item counts, last-item modification, and producer-run timestamps for Daily Jobs and VUL.
-5. App exports/formulas and connection references for Job Completion Form, TCB, ADB, and MyPD.
-6. Confirmation of the TCB, Jaimie/MyPD, and LitTech supervisor relationships to VUL.
-7. A business lifecycle decision for Job Completion Form and Daily Jobs List Reference.
-8. Monitoring evidence: failure alerts, freshness SLA, owner, and what happens when a list stops updating.
+Use environment or platform swimlanes. At minimum, distinguish database, gateway/connection, Power BI/Power Query, Power Automate, SharePoint, and Power App layers. Label the actual Power Platform environment, workspace, site, gateway/data source, and database environment where known.
+
+Use a visible status on every node:
+
+- **Existing and verified**
+- **Reported; verification pending**
+- **Missing or not created**
+- **Inaccessible**
+- **Historical/shared reference**
+
+For every node, record the asset name, type, stable id or location, environment, and evidence reference. For every edge, record direction, read/write behavior, connection/query method, trigger or refresh behavior, and the tables/columns or payload it carries. Do not place secrets or credentials in Lucid.
+
+## Technical to-do
+
+1. Capture the current C3/RB9 Replacement Power Platform Lucid document id, page names, revision, and export.
+2. Create or reconcile the OJB, ADB, and TCB Lucid pages using the environment/status convention above.
+3. Name every gateway, data source, connector, connection reference, Power BI workspace/model/query, Power Automate flow/action, SharePoint site/list, and Power App connection on those paths.
+4. Record the environment and observed existence state of every named component.
+5. Extract the source queries or Power Query steps proving `Jobs`/`JobsTasks` versus VQM and the exact selected columns.
+6. Confirm whether ADB and TCB use one physical dataset/query/connection or separate implementations.
+7. Export OJB flow definitions and identify every Jobs Notes Log category, table/column, cursor, and write target used.
+8. Capture SharePoint list ids and schemas for OJB stores, ADB state/override stores, and `VUL  Job Suggestions`.
+9. Export OJB, ADB, and TCB app connections/formulas needed to verify the last hop into each system.
+10. Map the resulting de-duplicated RB9/Lagrange fields to Callisto, marking missing, partial, and unknown items explicitly.
