@@ -92,6 +92,17 @@ These names came from July 2026 working notes. Confirm exact current names, IDs,
 | `rbPayload.json` | Payload/config reference | Unknown | Locate sanitized current source and determine whether still used. |
 | Jobs Notes Log | Large RB9/Lagrange activity source used by OJB | Reported-current; exact physical object, count, fields, and query unknown | Confirm schema; extract OJB filters/categories and incremental query; validate performer/completion semantics; measure scale and indexes. |
 
+## Known VQM view leads
+
+The July ADB notes refer to `VQM jobs` and `VQM jobs tests`. Lagrange code confirms the physical names `lagrange.VQM_Jobs` and `lagrange.VQM_JobsTasks`, making “tests” likely a transcription error. The historical note has not yet been validated against the live ADB semantic model.
+
+| Object | Confirmed Lagrange definition | Consumer lead | Remaining proof |
+| --- | --- | --- | --- |
+| `lagrange.VQM_Jobs` | Ordinary view over `Jobs`, with left joins to `Cases`, `Lists`, `Contacts`, and `Firms`; no SQL aggregation in reviewed definition | ADB Power BI semantic model (historical lead) | Live semantic-model query and selected columns; deployed Lagrange revision; live RB9 definition; Callisto mapping |
+| `lagrange.VQM_JobsTasks` | Ordinary view with one row per `JobsTasks.TaskNo`; resolves `Task` through `Lists` and `Resource` through `Resources`; omits raw `Task` and `RsrcNo`; no SQL aggregation in reviewed definition | ADB Power BI semantic model (historical lead); other Power Platform consumers unknown | Confirm “tests” typo; live semantic-model query and selected columns; production row grain; live RB9 definition; Callisto mapping |
+
+See [RB9 Problem 3](../../rb9/rb9-rules.md) for lineage, cardinality, and compatibility obligations.
+
 ## Per-app dependency mapping
 
 Add one row per source object usage. Do not combine columns whose behavior differs.
@@ -99,6 +110,8 @@ Add one row per source object usage. Do not combine columns whose behavior diffe
 | App | Component/query evidence | Direction | Lagrange/RB9 schema | Table/view/procedure | Column | Usage (select/filter/join/sort/write/cursor) | Callisto object | Mapping state | Semantic difference / transform | Last verified | Evidence link |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | OJB | Dustin current-practice report; live query pending | read | RB9/Lagrange (confirm) | Jobs Notes Log (business label; physical object pending) | Job key, note category, actor/modified-by, last-modified, and note/details fields (exact columns pending) | Selected categories represent activities; metadata supports who/when metrics; last-modified supports incremental updates | _pending_ | unknown | Category vocabulary is incomplete; performer versus editor and completion versus modification semantics are not validated | 2026-10-20 SME report | [RB9 Problem 2](../../rb9/rb9-rules.md) |
+| ADB | July investigation names `VQM jobs`; live semantic-model query pending | read | `lagrange` | `VQM_Jobs` | Consumer-selected columns pending; view exposes job fields plus lookup/relationship labels | Semantic-model source; exact selects, filters, and transformations unknown | _pending_ | unknown | View definition is confirmed in code, but production parity and actual ADB usage are not | 2026-10-20 code review plus historical lead | [RB9 Problem 3](../../rb9/rb9-rules.md) |
+| ADB | July investigation says `VQM jobs tests`, likely `VQM_JobsTasks`; live semantic-model query pending | read | `lagrange` | `VQM_JobsTasks` | Consumer-selected columns pending; physical view exposes `TaskNo`, `JobNo`, derived `Task` label, derived `Resource` name, and task dates/notes | Semantic-model source; exact selects, filters, and transformations unknown | _pending_ | unknown | View omits raw `Task` and `RsrcNo`; historical consumer name still needs confirmation | 2026-10-20 code review plus historical lead | [RB9 Problem 3](../../rb9/rb9-rules.md) |
 
 ### Mapping-state vocabulary
 
@@ -115,6 +128,8 @@ Populate from the per-app rows; do not maintain this independently by memory.
 
 | Lagrange/RB9 object | Type | Used columns | Used by apps/components | Operations | Callisto equivalent(s) | Coverage | Gap owner | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `lagrange.VQM_Jobs` | Ordinary view | Actual ADB-selected subset pending | ADB semantic model (historical lead) | read | _pending_ | unknown | Dustin / Megna | Lagrange code; live consumer query pending |
+| `lagrange.VQM_JobsTasks` | Ordinary view | Actual ADB-selected subset pending | ADB semantic model (historical lead) | read | _pending_ | unknown | Dustin / Megna | Lagrange code; live consumer query pending |
 | _pending discovery_ |  |  |  |  |  | unknown |  |  |
 
 ## Data-path and connection inventory
@@ -136,6 +151,7 @@ Use this to preserve who supplied a fact, who performed work, what was learned, 
 | 2026-10-20 | Dustin Thomason | Supplied Jira STAR-2 ticket text and requested working artifacts | Established required app inventory, table/column mapping, de-duplication, explicit gaps, Megna handoff, and migration exclusion | [Original ticket](STAR-2-original-ticket.md) | Confirmed requirement | Begin tenant and schema discovery. |
 | 2026-10-20 | Documentation bootstrap | Created STAR-2 and RB9 Rules working artifacts | Converted known information into evidence-led scaffolds without asserting completeness | [Changelog](../STAR-2-changelog.md) | Verified artifact | Add live findings as discovery proceeds. |
 | 2026-10-20 | Dustin Thomason | Described OJB's use of selected Jobs Notes Log categories and metadata as operational activity records | Identified a concrete OJB table dependency, an incomplete category vocabulary, last-modified incremental behavior, multi-million-row scale, and unresolved actor/completion semantics | [RB9 Problem 2](../../rb9/rb9-rules.md) | Reported-current | Extract the live OJB query and category list; confirm schema and measure the table. |
+| 2026-10-20 | Dustin Thomason plus Lagrange repository review | Raised VQM task/resource relationship and one-to-one migration risk; inspected existing Lagrange implementations | Confirmed `VQM_Jobs` and `VQM_JobsTasks` as ordinary Lagrange views; confirmed lookup-derived labels and omitted raw keys in the task view; did not find SQL aggregation in the reviewed definitions | [RB9 Problem 3](../../rb9/rb9-rules.md); `lagrange-back-end` entity/migration code | Mixed: repository-confirmed definitions, consumer usage and RB9 parity pending | Extract live ADB/OJB queries, compare RB9 DDL, and identify any VQM object that truly aggregates rows. |
 
 ## Gaps and unknowns
 
@@ -157,6 +173,11 @@ Use this to preserve who supplied a fact, who performed work, what was learned, 
 16. Does the selected actor identify the performer, author, last editor, assigned user, or an automation identity?
 17. Does last modified represent completion, and how do corrections or later edits affect historical metrics?
 18. What are the measured row count, growth rate, indexes, query plan, retention, and incremental-cursor guarantees for the Jobs Notes Log?
+19. Does the ADB semantic model actually use `VQM_Jobs` and `VQM_JobsTasks`, and which columns, filters, and transformations does it select?
+20. Was the historical label `VQM jobs tests` a transcription error for `VQM_JobsTasks`?
+21. Do live RB9 VQM definitions match Lagrange, and are any RB9 objects materialized or cached rather than ordinary views?
+22. Which VQM objects or columns truly aggregate multiple rows, rather than only enriching one row with lookup values?
+23. Will Callisto preserve Job → Job Task → Resource keys/cardinality and provide compatibility projections for the exact legacy columns still used?
 
 ## Immediate next actions
 
@@ -165,7 +186,7 @@ Use this to preserve who supplied a fact, who performed work, what was learned, 
 | 1 | Export/admin-list apps, flows, connections, and environments; record visibility limitations. | Dustin | Power Platform admin if needed | App universe baseline. |
 | 2 | Reconcile baseline with Dustin, Jamie, and LitTech; classify active/retired/unknown. | Dustin | Jamie, LitTech | Reviewed app list with explicit gaps. |
 | 3 | Inventory OJB first: app, flows, SharePoint lists, gateway, Jobs Notes Log categories/fields, queries, cursors, and writes. | Dustin | Jamie/Ops | Complete OJB dependency chain and activity vocabulary. |
-| 4 | Extract OJB tables/columns and compare with current Lagrange views. | Dustin | Megna, Larry | Per-app object map and Lagrange gaps. |
+| 4 | Extract OJB and ADB source definitions; verify exact VQM names, selected columns, row grain, and consumer logic; compare Lagrange views with live RB9. | Dustin | Megna, Larry | Per-app object map, VQM lineage, and parity gaps. |
 | 5 | Map used objects to Callisto and record semantic differences/missing coverage. | Megna | Dustin, Larry | Old-to-new mapping. |
 | 6 | De-duplicate used objects and review with Megna and business owners. | Dustin | Megna, app owners | Acceptance-ready consolidated inventory. |
 | 7 | Link the reviewed artifact from STAR-2/Confluence and promote stable RB9 rules to `pd-tech-wiki`. | Dustin | Megna, wiki owner | Team-visible handoff and durable knowledge. |
@@ -175,7 +196,7 @@ Use this to preserve who supplied a fact, who performed work, what was learned, 
 | Criterion | Status | Evidence / blocker |
 | --- | --- | --- |
 | All known Power Apps listed with owner, purpose, and data source | Not started | Candidate lead list only; no tenant export or owner validation. |
-| Each app mapped to tables and columns | Not started | Mapping table is empty. |
+| Each app mapped to tables and columns | Started | Jobs Notes Log and historical ADB VQM leads are recorded; live queries and exact consumer-selected columns remain pending. |
 | Consolidated old-to-new inventory and missing flags | Not started | Requires per-app extraction and current Callisto schema. |
 | Gaps and unknowns explicit | Started | Initial gap register exists above. |
 | Stored/linked in team system and shared with Megna | Not started | Current artifact is in Dustin's working repo; final destination/review pending. |

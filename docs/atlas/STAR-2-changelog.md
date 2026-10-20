@@ -106,6 +106,17 @@ Dustin is not expected to migrate the apps in STAR-2. His deliverable is the ver
 
 _Newest first._
 
+### 2026-10-20T07:07:47Z — VQM relationship and compatibility-rule discovery
+
+- **Summary:** documented the third RB9 oddity: `VQM_*` query surfaces hide lookup and relationship logic behind consumer-friendly columns, creating migration risk when labels replace keys or a future model assumes one-to-one cardinality. Confirmed from `lagrange-back-end` that `VQM_Jobs` and `VQM_JobsTasks` already exist as ordinary PostgreSQL views. The reviewed task view remains one row per `TaskNo`, resolves task/resource labels through joins, omits raw `Task`/`RsrcNo`, and does not contain SQL aggregation. Added the two views as ADB dependency leads and preserved live RB9/consumer parity as an open validation item.
+- **Plan used:** active STAR-2 dependency inventory plus the RB9 Rules companion artifact.
+- **Files:**
+  - docs/rb9/rb9-rules.md
+  - docs/atlas/STAR-2/STAR-2-power-platform-dependency-inventory.md
+  - docs/atlas/STAR-2-changelog.md
+- **Commit:** this documentation commit.
+- **Notes:** Historical notes saying `VQM jobs tests` were not rewritten; the inventory marks that phrase as a likely transcription error for `VQM_JobsTasks`. No live database, application, flow, semantic model, or production configuration changed.
+
 ### 2026-10-20T07:02:20Z — RB9/OJB activity-rule discovery
 
 - **Summary:** documented the second concrete RB9 oddity: OJB repurposes selected Jobs Notes Log categories and metadata as an operational activity ledger because RB9 lacks a flexible structured task/activity mechanism. Split the finding into activity vocabulary, actor/time semantics, multi-million-row scale, and last-modified incremental behavior. Added Jobs Notes Log as a concrete STAR-2 dependency lead and expanded the discovery gaps.
@@ -142,6 +153,10 @@ _Newest first._
 6. OJB uses the Jobs Notes Log as an activity ledger: selected categories stand in for operational task types and metadata supplies who/when metrics.
 7. Last-modified and modifying-user fields cannot be assumed to mean completed-at and performed-by until edit and automation behavior is verified.
 8. The Jobs Notes Log is multi-million-row scale, but exact size and query/index behavior still require measurement.
+9. Lagrange already implements `VQM_Jobs` and `VQM_JobsTasks` as ordinary PostgreSQL views; production RB9 parity remains unproven.
+10. The reviewed `VQM_JobsTasks` view is lookup-enriched, not SQL-aggregated: it keeps one row per `TaskNo` but replaces raw `Task`/`RsrcNo` with derived labels.
+11. View output grain, hidden join paths, omitted keys, null behavior, and mutable labels are migration contracts even when the view looks like a convenient flat table.
+12. Callisto should preserve normalized Job → Job Task → Resource relationships and provide compatibility projections only for verified consumer needs.
 
 ## Current state (as of 2026-10-20)
 
@@ -149,7 +164,8 @@ _Newest first._
 - The working inventory structure exists.
 - Known candidate apps and OJB flow names are seeded as unverified leads.
 - Jobs Notes Log is recorded as a reported-current OJB dependency lead; its category vocabulary, columns, actor/time semantics, and measured scale remain open.
-- No live tenant export, app source, flow definition, Power BI metadata, Lagrange query, or Callisto mapping has yet been recorded in the STAR-2 artifact.
+- `VQM_Jobs` and `VQM_JobsTasks` definitions are confirmed in Lagrange code and recorded as historical ADB dependency leads; deployed/live RB9 parity and actual consumer-selected columns remain open.
+- No live tenant export, app source, flow definition, Power BI metadata, deployed-database result, or Callisto mapping has yet been recorded in the STAR-2 artifact; current VQM evidence is repository definition code only.
 - No claim of inventory completeness has been made.
 - Migration remains out of scope.
 

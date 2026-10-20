@@ -61,6 +61,11 @@ These entries are starting leads, not a claim that discovery is complete.
 | RB9-R-018 | Activity actor and time | OJB uses Jobs Notes Log metadata to determine who performed an activity and when it was completed, including a last-modified value. It is not yet proven that the modifying user is always the performer or that last modified is always the completion time. | Later edits or system-written rows could silently change attribution and completion metrics. Future design must separate performed-at/by from recorded/modified-at/by. | Reported behavior; semantics unverified | Identify exact fields and test create, edit, reassignment, automation, and correction cases. |
 | RB9-R-019 | Log volume | The Jobs Notes Log is known to be very large—multi-million rows—but the current count is unverified. Estimates discussed range broadly and must not be treated as measurements. | Broad scans, view refreshes, backfills, and connector queries can become unsafe. Category, job, time-window, indexing, and incremental-query behavior are architectural concerns. | Reported scale; count unknown | Measure current row count, growth rate, indexes, query plans, retention, and per-category distribution. |
 | RB9-R-020 | OJB incremental reads | OJB checks a last-modified value when updating from the Jobs Notes Log, consistent with its other incremental updates. The full cursor, tie-breaker, overlap, retry, and late-edit behavior are not yet documented. | A timestamp-only cursor can miss same-timestamp rows or mishandle late edits. The replacement needs an explicit, replayable incremental contract. | Reported-current; mechanics unknown | Extract the actual OJB query and cursor storage; test timestamp collisions, retries, edits, and backfill. |
+| RB9-R-021 | VQM query surfaces | Planet Depos uses customer-specific `VQM_*` views as consumer-friendly query contracts. They join base rows to lookup and related tables so apps and reports receive business labels and related display values. | A consumer may depend on the view's grain, joins, aliases, null behavior, and selected columns even when it appears to need only one base table. | Confirmed in Lagrange; live RB9 parity unknown | Review `lagrange-back-end` VQM view definitions; compare with live RB9 definitions and consumer queries. |
+| RB9-R-022 | Keys replaced by labels | Lagrange `VQM_JobsTasks` exposes `Lists.ListValue` as `Task` and `Resources.FullName` as `Resource`, while omitting the underlying `JobsTasks.Task` and `JobsTasks.RsrcNo` keys from the view output. `VQM_Jobs` similarly resolves several codes and related records to labels. | Labels are mutable and may not be unique. Rebuilding from labels can lose referential identity and compound the Resource-name history problem. | Confirmed in Lagrange implementation | Preserve source keys in Callisto and decide whether compatibility projections must also expose legacy labels. |
+| RB9-R-023 | View grain and cardinality | The reviewed Lagrange `VQM_JobsTasks` definition remains one row per `TaskNo`; a job can therefore have multiple task rows, and each reviewed task row has a nullable `RsrcNo`. It contains joins but no SQL aggregate, `GROUP BY`, or list-concatenation operation. | A future one-row-per-job or assumed one-to-one model could collapse tasks or overwrite resource assignments. Conversely, claiming aggregation where none exists would produce the wrong migration design. | Confirmed for current Lagrange code; broader RB9 behavior reported but unverified | Compare row counts and duplicate keys with live RB9; identify any other VQM objects or columns that truly combine multiple rows. |
+| RB9-R-024 | Lagrange parity | Lagrange already implements `VQM_Jobs` and `VQM_JobsTasks` as ordinary PostgreSQL views using `CREATE VIEW`, not materialized views. Whether production RB9 uses identical definitions or different refresh/materialization behavior is unknown. | “Already in Lagrange” is partial evidence, not proof of production parity. Definition drift or different refresh semantics can change results. | Confirmed in repository; production parity unknown | Diff Lagrange DDL against the live RB9 objects and record ownership/version history. |
+| RB9-R-025 | Compatibility boundary | Future architecture must preserve normalized Job → Job Task → Resource relationships and deliberately reproduce only the VQM projection shapes consumers actually use. | Forcing relational data into a one-to-one target or making a derived label authoritative creates painful rework and another hidden contract. | Architecture obligation | Inventory consumer-selected columns, model canonical relationships, and add old-versus-new contract tests before cutover. |
 
 ## Problem 1 — Resource classification is encoded in a mutable name
 
@@ -214,6 +219,95 @@ The authoritative list must be derived from the current OJB app/flow/query defin
 | --- | --- | --- | --- | --- |
 | 2026-10-20 | Dustin Thomason | OJB uses selected Jobs Notes Log categories and row metadata to represent operational activities, identify who did work, and derive when it was completed/updated. The log is multi-million-row scale, exact count unknown, and additional categories likely accumulated after the original method was introduced. | Current SME report; live query/schema evidence pending | Inventory categories and fields from OJB, validate actor/time semantics, and measure the table. |
 
+## Problem 3 — VQM views hide lookup keys and relationship logic
+
+### Distilled statement
+
+The `VQM_*` query surfaces are useful: they turn RB9/Lagrange keys into the labels and related values that Power Platform and reporting consumers need. The architectural oddity is that consumers can start treating those derived columns as if they naturally belong to the base row.
+
+Two different behaviors must be kept separate during discovery:
+
+1. **Lookup enrichment / denormalization** — a view follows a key and exposes a label or related value on the base row.
+2. **True row aggregation** — a view combines multiple related rows into one value or one output row through grouping, concatenation, arrays, or similar logic.
+
+The reviewed Lagrange definitions confirm the first behavior. They do **not** contain SQL aggregation. Dustin reports that broader VQM usage may combine relationships in other objects or production definitions; that remains a live-RB9 discovery item rather than a confirmed implementation fact.
+
+### What Lagrange already implements
+
+| View | Base grain in reviewed definition | Relationship logic | Important shape change | Evidence state |
+| --- | --- | --- | --- | --- |
+| `lagrange.VQM_Jobs` | One source `Jobs` row per `JobNo`, assuming joined lookup keys are unique | Left-joins `Cases`, three aliases of `Lists`, two aliases of `Contacts`, and `Firms` | Exposes labels such as `Status`, `JobType`, `ExpertType`, `ScheduledContact`, `OrderingContact`, and `OrderingFirm`; some source codes/relationship hops are hidden | Confirmed from Lagrange entity and migration code; live RB9 parity and consumer-selected columns unknown |
+| `lagrange.VQM_JobsTasks` | One source `JobsTasks` row per `TaskNo`; multiple tasks may share a `JobNo` | `JobsTasks.Task → Lists.ListNo` and `JobsTasks.RsrcNo → Resources.RsrcNo` | Exposes `Lists.ListValue` as `Task` and `Resources.FullName` as `Resource`; omits the raw `Task` and `RsrcNo` keys | Confirmed from Lagrange entity and migration code; live RB9 parity and consumer-selected columns unknown |
+
+The task/resource projection is therefore:
+
+```text
+JobsTasks.Task   -> Lists.ListNo     -> Lists.ListValue     exposed as Task
+JobsTasks.RsrcNo -> Resources.RsrcNo -> Resources.FullName exposed as Resource
+```
+
+That is not a SQL aggregate in the reviewed code, but it is a reconstructed, consumer-facing relationship. The `Resource` column also inherits the mutable-name and missing-history problem described in Problem 1.
+
+### Why a one-to-one target is risky
+
+The confirmed relationship is not “one job equals one task.” A job can have many `JobsTasks` rows, each identified by `TaskNo`. The reviewed row has at most one nullable `RsrcNo`, but other assignment/history tables and production behavior still need review.
+
+A target that provides only one task or one resource field per job can:
+
+- collapse multiple task rows;
+- overwrite one assignment with another;
+- lose unassigned tasks;
+- make a display name, rather than `RsrcNo`, the only link to a resource;
+- change results when a Resource name is edited;
+- hide whether a null came from no assignment, a broken lookup, or filtering;
+- make future multi-resource support harder even if today's reviewed view is one-resource-per-task.
+
+The canonical Callisto model should preserve actual relationship cardinality. A compatibility view or API may reproduce a legacy VQM shape for a specific consumer, but that projection should not become the source of truth.
+
+### Migration contract to capture per derived column
+
+| Field | Record |
+| --- | --- |
+| View and column | Exact schema, object, alias, type, and nullability |
+| Grain | Key(s) that make one output row and expected duplicate behavior |
+| Lineage | Base table/column, every join hop, and join type |
+| Cardinality | 1:1, 1:0..1, 1:N, or M:N at each hop |
+| Transformation | Lookup, calculation, filter, aggregate, delimiter, ordering, de-duplication, or default |
+| Freshness | Ordinary view versus materialized/cached output, refresh trigger/cadence, and tolerated staleness |
+| Consumers | App, flow, semantic model, report, formula/query, and owner |
+| Target | Canonical Callisto relationship plus any compatibility projection |
+| Validation | Representative keys, null/orphan cases, duplicates, row counts, and old-versus-new result comparison |
+
+### Future architecture obligations
+
+1. **Keep canonical keys.** Preserve `JobNo`, `TaskNo`, `RsrcNo`, lookup ids, and target-system identifiers even when a consumer also needs labels.
+2. **Model the real grain.** Keep Job → Job Task as one-to-many unless live evidence proves a narrower scoped relationship.
+3. **Separate canonical data from presentation.** Human-readable task/resource values belong in a versioned projection or API contract, not as replacements for relational identity.
+4. **Reproduce only used compatibility shapes.** STAR-2 must identify the exact VQM columns each consumer selects before Callisto implements legacy-compatible surfaces.
+5. **Version derived logic.** Join paths, filters, aliases, null behavior, and any true aggregation need an owner and change history.
+6. **Test semantics, not only counts.** Compare representative jobs with multiple tasks, null resources, renamed resources, inactive lookups, and orphaned keys.
+7. **Verify production parity.** Diff live RB9 definitions against Lagrange; do not assume the repository view matches a vendor-hosted or separately maintained object.
+8. **Name freshness behavior correctly.** The reviewed Lagrange objects are ordinary views. If an RB9 object is materialized or cached, document refresh behavior separately.
+
+### Validation checklist
+
+- [ ] Capture the live RB9 DDL/metadata for `VQM_Jobs`, `VQM_JobsTasks`, and every VQM object used by Power Platform.
+- [ ] Confirm whether the historical phrase `VQM jobs tests` was a transcription error for `VQM_JobsTasks`.
+- [ ] Extract the ADB/OJB semantic-model, flow, and app queries to identify selected VQM columns.
+- [ ] Diff live RB9 and Lagrange definitions, including data types, joins, filters, aliases, and null behavior.
+- [ ] Identify any view that truly aggregates multiple tasks or resources and record grouping, order, delimiter, de-duplication, and empty-set behavior.
+- [ ] Verify row grain and duplicate behavior with jobs that have zero, one, and multiple tasks.
+- [ ] Determine whether a task can have multiple current or historical resources outside `JobsTasks.RsrcNo`.
+- [ ] Preserve both ids and display values in the target contract where consumers require them.
+- [ ] Add contract tests comparing old and new outputs before consumer cutover.
+
+### Discovery and communication record
+
+| Date | Communicator / evidence | What was learned | Evidence state | Follow-up |
+| --- | --- | --- | --- | --- |
+| 2026-10-20 | Dustin Thomason | VQM job/job-task surfaces provide convenient lookup-derived columns and may hide or combine task/resource relationship logic, creating concern if future models assume one-to-one relationships. | Current SME report; exact production examples pending | Capture live VQM definitions and consumer queries; identify any true aggregates. |
+| 2026-10-20 | `lagrange-back-end` code review | Confirmed `VQM_Jobs` and `VQM_JobsTasks` exist in Lagrange as ordinary views. Confirmed the reviewed task view is one row per `TaskNo`, joins task type and resource, drops raw `Task`/`RsrcNo` from its output, and contains no SQL aggregation. | Repository-confirmed; live database and RB9 parity pending | Validate deployed revision and compare with RB9. |
+
 ## Rule entry template
 
 Add one entry per independently testable behavior. If a note contains two separate failure modes or architectural obligations, split it.
@@ -252,6 +346,8 @@ Add one entry per independently testable behavior. If a note contains two separa
 - Require historical metrics to state which business date controls worker classification.
 - Replace Jobs Notes Log category parsing with a governed, first-class job activity model while retaining legacy traceability.
 - Distinguish activity performer/completion from row author/modification metadata.
+- Preserve Job → Job Task → Resource cardinality and keys independently from VQM display projections.
+- Treat VQM definitions as versioned compatibility contracts; expose labels without making them authoritative identifiers.
 
 ## Source trail
 
@@ -262,5 +358,8 @@ Add one entry per independently testable behavior. If a note contains two separa
 - `docs/power-platform-aws-investigation/`, prepared 2026-07-06 from internal notes and vendor documentation.
 - Dustin Thomason's description of current Resource naming, history, snapshots, and reporting impact, 2026-10-20.
 - Dustin Thomason's description of OJB use of the Jobs Notes Log for categorized activity tracking and metrics, 2026-10-20.
+- Dustin Thomason's description of VQM lookup/relationship projections and one-to-one migration risk, 2026-10-20.
+- `lagrange-back-end/src/domain/jobs/domain/entities/vqm-jobs.entity.ts` and matching view migration, reviewed 2026-10-20.
+- `lagrange-back-end/src/domain/jobs-tasks/domain/entities/vqm-jobs-tasks.entity.ts` and matching view migration, reviewed 2026-10-20.
 
 When a rule becomes stable cross-system knowledge, promote it to `pd-tech-wiki` with provenance and leave a link here. Do not maintain competing canonical versions.
