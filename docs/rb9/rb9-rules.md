@@ -52,6 +52,83 @@ These entries are starting leads, not a claim that discovery is complete.
 | RB9-R-009 | ADB overrides | Earlier ADB recovery work describes Power BI data as a base state with manual SharePoint overrides taking precedence until reconciliation. | The architectural requirement is immediate, visible user correction with provenance and deterministic reconciliation—not necessarily continued use of SharePoint. | Reported; current state unknown | `docs/power-platform-aws-investigation/decision-memo.md`; inspect ADB formulas, semantic model, and override list. |
 | RB9-R-010 | Connection path | Gateway, connector, connection reference, semantic model, and flow ownership are part of the dependency, not deployment trivia. | A future data service can be correct while the app still fails because of gateway reachability, connector limits, licensing, ownership, or stale shared connections. | Confirmed as inventory requirement | STAR-2 plus live Power Platform and gateway configuration. |
 | RB9-R-011 | Scope and ownership | No single complete Power App list exists; apps were built by Dustin, Jamie, and LitTech, and ownership may differ from current maintenance responsibility. | Discovery must search the tenant and interview builders/owners. “Known to Dustin” is not a completeness boundary. | Confirmed requirement | Jira STAR-2. |
+| RB9-R-012 | Resource classification | Planet Depos encodes worker classification in the Resource name text. A leading `#` denotes a current internal Planet Depos employee; a trailing `(I)` denotes an independent contractor. The encoding for an external employee or other states is not yet documented. | Identity/display text is carrying structured business meaning. Every consumer that parses or displays the name can accidentally become classification logic. | Reported-current by Dustin | Dustin Thomason, 2026-10-20; confirm exact physical table/column, syntax variants, and sample rows. |
+| RB9-R-013 | Resource history | Changing the classification marker changes the live Resource name for the entire database and affected materialized views. No effective-dated/version history is currently known. | Rerunning a historical report can classify past work using the person's current relationship instead of the relationship at the time of the work. | Reported-current by Dustin | Inspect RB9 audit/history facilities, update workflow, replicated tables, and affected materialized views. |
+| RB9-R-014 | Historical snapshots | The current workaround for missing Resource classification history is to snapshot a period so the table/view state at that time remains available. | Snapshots preserve evidence, but their cadence, completeness, ownership, retention, and “as of” semantics become part of metric correctness. | Reported-current by Dustin | Locate existing snapshots/jobs and record grain, timestamp, storage, owner, refresh cadence, and consumers. |
+| RB9-R-015 | Workforce metrics | Internal employees and independent contractors can change relationship in either direction. Metrics must classify a person as of the relevant reporting event/date rather than from the current Resource name. | Current-value joins can materially rewrite historical employee-versus-contractor metrics and trends. | Confirmed business requirement; implementation unknown | Identify affected reports and agree which effective date governs each metric. |
+
+## Problem 1 — Resource classification is encoded in a mutable name
+
+### Current practice
+
+The RB9 Resource table's name value is doing two jobs: it identifies the person and encodes the person's current relationship to Planet Depos. The exact physical table and column names still need schema confirmation.
+
+| Classification | Name convention reported in use | Meaning | Still unknown |
+| --- | --- | --- | --- |
+| Current internal Planet Depos employee | **#** at the beginning of the name | The person is currently working as an internal employee. | Exact spacing/casing rules; whether the marker also encodes active status; handling of former employees. |
+| Independent contractor | **(I)** at the end of the name | The person is currently treated as an independent contractor. | Exact spacing/casing variants; whether other contractor types use different suffixes. |
+| External employee | Not yet documented | A distinct category was named, but its encoding and meaning have not been captured. | Marker, definition, and whether this is separate from contractor status. |
+| Unmarked or other combinations | Not yet documented | Unknown. | Whether unmarked is a default category, incomplete data, inactive state, or another worker type; whether both markers can coexist. |
+
+This is an overloaded-field workaround: display text is also a classification code. Until live values and every consumer are inspected, downstream logic must not assume the two known markers cover all valid states.
+
+### Why historical metrics drift
+
+**Independent contractor at Period 1 → relationship changes → current Resource name is overwritten → materialized views refresh → a historical report may classify the person's past work using the new category.**
+
+The reverse transition creates the reverse distortion. The core issue is not merely the name formatting; it is that a current mutable value is being used to answer an effective-dated historical question.
+
+An illustrative failure:
+
+| Time | What happened | Current-value reporting result |
+| --- | --- | --- |
+| Period 1 | A person works as an independent contractor and is marked with **(I)**. | Period 1 metrics are initially contractor metrics. |
+| Period 2 | The same person becomes an internal employee and the Resource name is changed to start with **#**. | The live row and refreshed views now expose the internal marker. |
+| Later rerun of Period 1 | A report joins old work to the current Resource row/name. | Period 1 may be reclassified as internal even though the work occurred while the person was a contractor. |
+
+### Current workaround: point-in-time snapshots
+
+A snapshot preserves the table or materialized-view state for a defined period before later name changes rewrite the current representation. That makes historical reporting possible, but only if every snapshot records:
+
+- the business “as of” time it represents;
+- the extraction/load time;
+- the included tables, views, rows, and columns;
+- the source environment/revision;
+- whether it is a full snapshot or an incremental extract;
+- the owner, cadence, retention, and failure/retry behavior;
+- which reports treat it as authoritative.
+
+A snapshot is evidence of historical state, not a replacement for explicit effective-dated classification in the future system.
+
+### Future architecture obligations
+
+1. **Separate identity from classification.** A person's display name must not be the authoritative worker classification.
+2. **Model each business concept explicitly.** Worker relationship (employee/contractor/other), active status, and internal/external status may be separate axes; do not collapse them into one enum until the business definitions are confirmed.
+3. **Keep effective-dated history.** Classification changes need at least an effective start and end, or an equivalent immutable change/event history.
+4. **Define the reporting date.** Each metric must state whether classification is evaluated at job date, service date, invoice date, reporting-period end, snapshot date, or another business event.
+5. **Make changes auditable.** Record the old value, new value, effective date, actor/source, and recorded-at time.
+6. **Preserve raw legacy evidence during migration.** Retain the original RB9 name and parsed marker result. A migration parser should attach confidence/errors rather than silently normalizing ambiguous names.
+7. **Prevent refresh from rewriting history.** Materialized views may expose current state, but historical facts must join to an effective-dated record or immutable snapshot.
+8. **Reconcile snapshots.** Existing snapshots must be inventoried before retirement so historical reporting does not lose its only surviving classification evidence.
+
+### Validation checklist
+
+- [ ] Confirm the exact RB9 table and column names.
+- [ ] Collect sanitized examples of each valid marker and spacing/casing variant.
+- [ ] Define “internal employee,” “external employee,” “independent contractor,” active, and inactive as separate business concepts.
+- [ ] Determine what an unmarked name means and whether multiple markers can appear together.
+- [ ] Identify who can change the name, the operational procedure, and whether an audit trail exists anywhere.
+- [ ] Identify all tables, views, materialized views, queries, apps, and reports that parse or depend on these markers.
+- [ ] Locate every current snapshot process and record its owner, cadence, grain, storage, retention, and consumers.
+- [ ] Determine whether RB9 has other Resource fields that partially duplicate worker classification or status.
+- [ ] List the metrics affected and choose the correct “as of” date for each.
+- [ ] Test both transitions: contractor → internal and internal → contractor.
+
+### Discovery and communication record
+
+| Date | Communicator | What was learned | Evidence state | Follow-up |
+| --- | --- | --- | --- | --- |
+| 2026-10-20 | Dustin Thomason | Resource names currently encode worker classification with a leading **#** for a current internal employee and trailing **(I)** for an independent contractor. Updating the live name changes database-wide/current-view output; no version history is known. Point-in-time snapshots are used to preserve historical reporting, and worker relationship can change in either direction. | Current SME report; live/schema evidence pending | Validate syntax and categories, inspect affected views/reports, and inventory snapshot processes. |
 
 ## Rule entry template
 
@@ -87,6 +164,8 @@ Add one entry per independently testable behavior. If a note contains two separa
 - Model manual overrides as first-class, attributable state with an expiry or reconciliation rule.
 - Validate behavior with business owners, not only row counts and connector success.
 - Keep RB9-specific names at a boundary so consumers do not need a second wholesale retool when RB9 is retired.
+- Separate Resource display names from worker classification and preserve effective-dated relationship history.
+- Require historical metrics to state which business date controls worker classification.
 
 ## Source trail
 
@@ -95,5 +174,6 @@ Add one entry per independently testable behavior. If a note contains two separa
 - `pd-tech-wiki/projects/atlas-workflows/kickoff.md`, kickoff dated 2026-10-14.
 - `pd-tech-wiki/standards/data/rb9-replicated-timestamps.md`.
 - `docs/power-platform-aws-investigation/`, prepared 2026-07-06 from internal notes and vendor documentation.
+- Dustin Thomason's description of current Resource naming, history, snapshots, and reporting impact, 2026-10-20.
 
 When a rule becomes stable cross-system knowledge, promote it to `pd-tech-wiki` with provenance and leave a link here. Do not maintain competing canonical versions.
