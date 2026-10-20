@@ -56,6 +56,11 @@ These entries are starting leads, not a claim that discovery is complete.
 | RB9-R-013 | Resource history | Changing the classification marker changes the live Resource name for the entire database and affected materialized views. No effective-dated/version history is currently known. | Rerunning a historical report can classify past work using the person's current relationship instead of the relationship at the time of the work. | Reported-current by Dustin | Inspect RB9 audit/history facilities, update workflow, replicated tables, and affected materialized views. |
 | RB9-R-014 | Historical snapshots | The current workaround for missing Resource classification history is to snapshot a period so the table/view state at that time remains available. | Snapshots preserve evidence, but their cadence, completeness, ownership, retention, and “as of” semantics become part of metric correctness. | Reported-current by Dustin | Locate existing snapshots/jobs and record grain, timestamp, storage, owner, refresh cadence, and consumers. |
 | RB9-R-015 | Workforce metrics | Internal employees and independent contractors can change relationship in either direction. Metrics must classify a person as of the relevant reporting event/date rather than from the current Resource name. | Current-value joins can materially rewrite historical employee-versus-contractor metrics and trends. | Confirmed business requirement; implementation unknown | Identify affected reports and agree which effective date governs each metric. |
+| RB9-R-016 | OJB activity tracking | OJB repurposes categorized rows from the Jobs Notes Log as records of operational activities because RB9 does not provide an immediately extensible structured task/activity mechanism for these workflows. | The note log is functioning as an event/task ledger beyond its original communication purpose. Replacement architecture must recover the business activities, not merely copy notes. | Reported-current by Dustin | Dustin Thomason, 2026-10-20; inspect OJB queries, flows, formulas, and current note categories. |
+| RB9-R-017 | Activity vocabulary | Specific note categories are interpreted as specific completed activities. Reported examples include checking in exhibits and finalizing a training; the complete category-to-activity mapping is unknown and likely expanded after the original approach was introduced. | Categories form an undocumented integration contract. Missing one can omit work from operations visibility and metrics. | Reported-current; incomplete | Enumerate categories from OJB source and live data; confirm “finalizing a training” wording and business meaning. |
+| RB9-R-018 | Activity actor and time | OJB uses Jobs Notes Log metadata to determine who performed an activity and when it was completed, including a last-modified value. It is not yet proven that the modifying user is always the performer or that last modified is always the completion time. | Later edits or system-written rows could silently change attribution and completion metrics. Future design must separate performed-at/by from recorded/modified-at/by. | Reported behavior; semantics unverified | Identify exact fields and test create, edit, reassignment, automation, and correction cases. |
+| RB9-R-019 | Log volume | The Jobs Notes Log is known to be very large—multi-million rows—but the current count is unverified. Estimates discussed range broadly and must not be treated as measurements. | Broad scans, view refreshes, backfills, and connector queries can become unsafe. Category, job, time-window, indexing, and incremental-query behavior are architectural concerns. | Reported scale; count unknown | Measure current row count, growth rate, indexes, query plans, retention, and per-category distribution. |
+| RB9-R-020 | OJB incremental reads | OJB checks a last-modified value when updating from the Jobs Notes Log, consistent with its other incremental updates. The full cursor, tie-breaker, overlap, retry, and late-edit behavior are not yet documented. | A timestamp-only cursor can miss same-timestamp rows or mishandle late edits. The replacement needs an explicit, replayable incremental contract. | Reported-current; mechanics unknown | Extract the actual OJB query and cursor storage; test timestamp collisions, retries, edits, and backfill. |
 
 ## Problem 1 — Resource classification is encoded in a mutable name
 
@@ -130,6 +135,85 @@ A snapshot is evidence of historical state, not a replacement for explicit effec
 | --- | --- | --- | --- | --- |
 | 2026-10-20 | Dustin Thomason | Resource names currently encode worker classification with a leading **#** for a current internal employee and trailing **(I)** for an independent contractor. Updating the live name changes database-wide/current-view output; no version history is known. Point-in-time snapshots are used to preserve historical reporting, and worker relationship can change in either direction. | Current SME report; live/schema evidence pending | Validate syntax and categories, inspect affected views/reports, and inventory snapshot processes. |
 
+## Problem 2 — OJB uses the Jobs Notes Log as an activity ledger
+
+### Distilled statement
+
+RB9 does not provide OJB with a flexible, structured way to introduce a new operational task or record that somebody completed an activity. To close that gap, Planet Depos uses selected categories in the Jobs Notes Log as activity types. OJB pulls those rows and uses their metadata to answer questions such as:
+
+- What operational activity happened?
+- Which job did it happen on?
+- Who performed or recorded it?
+- When was it completed or last changed?
+
+The method was quick to extend and gave Operations the visibility and metrics it needed, but it turned a large, flexible communication log into an undocumented activity/event system.
+
+### Current data path
+
+The exact physical object and column names must be confirmed from the schema and OJB definitions.
+
+| Needed meaning | Reported source in Jobs Notes Log | Current interpretation | Validation needed |
+| --- | --- | --- | --- |
+| Job | Job association/key on the note row | Associates the activity with an RB9 job. | Exact key, joins, orphan behavior. |
+| Activity type | Note category | Selected categories represent specific operational tasks or completions. | Complete category list, ids versus labels, retired/renamed categories, effective dates. |
+| Performer | User/resource metadata associated with the note or modification | Used to report who did the work. | Whether this is author, last editor, assigned user, automation account, or true performer. |
+| Completion time | Last-modified timestamp or related note timestamp | Used to report when the activity was completed/updated. | Whether later edits rewrite the apparent completion time; timezone and timestamp choice. |
+| Details | Note text or other fields, where used | May carry context beyond the category. | Which fields OJB actually reads and whether any text parsing occurs. |
+| Incremental cursor | Last-modified value | Selects new or changed rows for OJB updates. | Exact predicate, tie-breaker, overlap window, retry, deletion, and backfill behavior. |
+
+### Activity types currently remembered
+
+These are discovery leads, not a complete or verified vocabulary:
+
+- checking in exhibits;
+- finalizing a training — wording and exact business activity still need confirmation;
+- additional categories introduced after the approach began.
+
+The authoritative list must be derived from the current OJB app/flow/query definitions and reconciled with live category usage and business-owner confirmation.
+
+### Why the workaround is risky
+
+1. **A communication log became a task/event ledger.** The data shape was not designed to guarantee activity semantics.
+2. **The activity vocabulary can grow informally.** A new category may become production behavior without entering a central contract or inventory.
+3. **Attribution may be ambiguous.** The row author, last editor, automation identity, and actual performer may not be the same person.
+4. **Modification time may not equal completion time.** A correction can potentially rewrite the time used by a metric.
+5. **The source is extremely large.** It is known to contain millions of rows, but the present count and growth rate are not verified.
+6. **Incremental correctness is unclear.** Last-modified polling needs deterministic ordering, overlap/replay behavior, and a tie-breaker.
+7. **Historical meaning may drift.** Renaming or repurposing a category can change how older rows are interpreted unless the mapping is versioned.
+
+### Future architecture obligations
+
+1. **Create a first-class job activity model.** At minimum, preserve a stable activity id, job id, activity type, performed-by identity, performed-at time, recorded-by identity, recorded-at time, source, and source-row id.
+2. **Separate execution from recording.** The person who did the work and the person/system that entered or edited the record must be independent fields.
+3. **Separate completion from modification.** A later correction must not silently rewrite the original completion time.
+4. **Make the activity vocabulary explicit and governed.** Activity types need stable identifiers, definitions, owners, lifecycle state, and mapping from legacy note categories.
+5. **Retain legacy traceability.** Migrated activities should retain the original Jobs Notes Log row id and raw category/value needed for audit or reconciliation.
+6. **Design for scale.** Consumers should read a bounded activity projection/API with appropriate indexes rather than repeatedly scanning the full notes log.
+7. **Define incremental guarantees.** Use a deterministic cursor such as modified time plus a stable id, with documented overlap, retry, replay, deletion/correction, and backfill behavior.
+8. **Reconcile counts and meaning.** Migration and ongoing sync need per-category count checks, late-arrival checks, and business validation.
+9. **Preserve historical category meaning.** If category mappings change, reports must still interpret an older row using the mapping applicable to that row or migration decision.
+
+### Discovery checklist
+
+- [ ] Confirm the exact RB9/Lagrange table and physical column names.
+- [ ] Extract every OJB query, flow, formula, dataset, or view that reads the Jobs Notes Log.
+- [ ] Enumerate all selected category ids and labels from code/config, not memory.
+- [ ] Compare selected categories with live row counts and recently used categories.
+- [ ] Ask OJB business owners what activity each category represents and when it is considered complete.
+- [ ] Confirm which field identifies the performer and what happens for automated/system-created notes.
+- [ ] Confirm which timestamp is used and what happens when a note is edited later.
+- [ ] Measure row count, growth rate, date range, indexes, query duration, and category distribution.
+- [ ] Document the incremental predicate, cursor storage, tie-breaker, overlap, retry, and backfill behavior.
+- [ ] Identify categories added after the original methodology and who approved/implemented them.
+- [ ] Determine whether note text is parsed or whether category alone drives behavior.
+- [ ] Test corrections, deleted/voided activities, duplicate notes, same-timestamp rows, and category renames.
+
+### Discovery and communication record
+
+| Date | Communicator | What was learned | Evidence state | Follow-up |
+| --- | --- | --- | --- | --- |
+| 2026-10-20 | Dustin Thomason | OJB uses selected Jobs Notes Log categories and row metadata to represent operational activities, identify who did work, and derive when it was completed/updated. The log is multi-million-row scale, exact count unknown, and additional categories likely accumulated after the original method was introduced. | Current SME report; live query/schema evidence pending | Inventory categories and fields from OJB, validate actor/time semantics, and measure the table. |
+
 ## Rule entry template
 
 Add one entry per independently testable behavior. If a note contains two separate failure modes or architectural obligations, split it.
@@ -166,6 +250,8 @@ Add one entry per independently testable behavior. If a note contains two separa
 - Keep RB9-specific names at a boundary so consumers do not need a second wholesale retool when RB9 is retired.
 - Separate Resource display names from worker classification and preserve effective-dated relationship history.
 - Require historical metrics to state which business date controls worker classification.
+- Replace Jobs Notes Log category parsing with a governed, first-class job activity model while retaining legacy traceability.
+- Distinguish activity performer/completion from row author/modification metadata.
 
 ## Source trail
 
@@ -175,5 +261,6 @@ Add one entry per independently testable behavior. If a note contains two separa
 - `pd-tech-wiki/standards/data/rb9-replicated-timestamps.md`.
 - `docs/power-platform-aws-investigation/`, prepared 2026-07-06 from internal notes and vendor documentation.
 - Dustin Thomason's description of current Resource naming, history, snapshots, and reporting impact, 2026-10-20.
+- Dustin Thomason's description of OJB use of the Jobs Notes Log for categorized activity tracking and metrics, 2026-10-20.
 
 When a rule becomes stable cross-system knowledge, promote it to `pd-tech-wiki` with provenance and leave a link here. Do not maintain competing canonical versions.

@@ -64,7 +64,7 @@ This is a lead list assembled from STAR-2, the 2026-10-14 Atlas Workflows kickof
 
 | Asset | Type | Owner / builder | Business purpose / users | Reported data path | Dependency state | Inventory state | Evidence / next action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Ops Job Board (OJB) | Power App plus flow family | Unknown; Dustin is current investigation lead | Operations job-board workflows; exact user groups to confirm | Historical lead: RB9 via Power Automate/gateway → SharePoint working/archive lists → app | Historical-lead | Priority; partial leads only | Export app and all related flows; verify environment, owners, lists, connection references, queries, and current production state. |
+| Ops Job Board (OJB) | Power App plus flow family | Unknown; Dustin is current investigation lead | Operations job-board workflows and activity metrics; exact user groups to confirm | Historical lead: RB9 via Power Automate/gateway → SharePoint working/archive lists → app. Current SME lead: selected Jobs Notes Log categories supply operational activity records and who/when metrics. | Reported-current dependency plus historical architecture leads | Priority; partial leads only | Export app and all related flows; verify environment, owners, lists, connection references, Jobs Notes Log queries/categories, and current production state. |
 | Automated Double Board (ADB) | Power App with Power BI/Power Automate and SharePoint leads | Unknown; Dustin/Jamie are knowledge sources | Scheduling/operations double-board process; exact users to confirm | Historical lead: Power BI semantic model as base plus SharePoint manual overrides | Historical-lead | Not inventoried | Inspect app formulas, semantic model, flows, override list, owners, refresh, and reconciliation. |
 | True Up Calendar (TUC) | Power App | Unknown | Calendar/operations process; confirm | Older systems map says SharePoint-backed; RB9/Lagrange dependency not proven | Unknown | Not inventoried | Locate live app and connections; ask Dustin/Jamie and business owner. |
 | Job Completion Form | Power App | Unknown | Confirm purpose and users | RB9/Lagrange dependency reported by kickoff only | Reported-current | Not inventoried | Locate app, owner, source, formulas, flows, and query objects. |
@@ -90,6 +90,7 @@ These names came from July 2026 working notes. Confirm exact current names, IDs,
 | Operations Job Boards | SharePoint working list | Unknown | URL/ID pointer, schema export, item count, indexes, views, retention, owner. |
 | Operations Job Boards Archive | SharePoint archive list | Unknown | URL/ID pointer, schema differences, retention, owner. |
 | `rbPayload.json` | Payload/config reference | Unknown | Locate sanitized current source and determine whether still used. |
+| Jobs Notes Log | Large RB9/Lagrange activity source used by OJB | Reported-current; exact physical object, count, fields, and query unknown | Confirm schema; extract OJB filters/categories and incremental query; validate performer/completion semantics; measure scale and indexes. |
 
 ## Per-app dependency mapping
 
@@ -97,7 +98,7 @@ Add one row per source object usage. Do not combine columns whose behavior diffe
 
 | App | Component/query evidence | Direction | Lagrange/RB9 schema | Table/view/procedure | Column | Usage (select/filter/join/sort/write/cursor) | Callisto object | Mapping state | Semantic difference / transform | Last verified | Evidence link |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| OJB | _pending_ | _read/write_ | _pending_ | _pending_ | _pending_ | _pending_ | _pending_ | unknown | _pending_ | _pending_ | _pending_ |
+| OJB | Dustin current-practice report; live query pending | read | RB9/Lagrange (confirm) | Jobs Notes Log (business label; physical object pending) | Job key, note category, actor/modified-by, last-modified, and note/details fields (exact columns pending) | Selected categories represent activities; metadata supports who/when metrics; last-modified supports incremental updates | _pending_ | unknown | Category vocabulary is incomplete; performer versus editor and completion versus modification semantics are not validated | 2026-10-20 SME report | [RB9 Problem 2](../../rb9/rb9-rules.md) |
 
 ### Mapping-state vocabulary
 
@@ -134,6 +135,7 @@ Use this to preserve who supplied a fact, who performed work, what was learned, 
 | 2026-10-14 | Atlas Workflows kickoff: Shaye, Craig, Dustin, Erik, Larry, Megna, Caitlin and others | Phase 1 Power Platform responsibilities and OJB milestone discussed | Named the candidate app list, Dustin's track, mapping collaborators, and Callisto/Lagrange questions | `pd-tech-wiki/projects/atlas-workflows/kickoff.md` | Reported-current | Confirm live assets and target-source decision. |
 | 2026-10-20 | Dustin Thomason | Supplied Jira STAR-2 ticket text and requested working artifacts | Established required app inventory, table/column mapping, de-duplication, explicit gaps, Megna handoff, and migration exclusion | [Original ticket](STAR-2-original-ticket.md) | Confirmed requirement | Begin tenant and schema discovery. |
 | 2026-10-20 | Documentation bootstrap | Created STAR-2 and RB9 Rules working artifacts | Converted known information into evidence-led scaffolds without asserting completeness | [Changelog](../STAR-2-changelog.md) | Verified artifact | Add live findings as discovery proceeds. |
+| 2026-10-20 | Dustin Thomason | Described OJB's use of selected Jobs Notes Log categories and metadata as operational activity records | Identified a concrete OJB table dependency, an incomplete category vocabulary, last-modified incremental behavior, multi-million-row scale, and unresolved actor/completion semantics | [RB9 Problem 2](../../rb9/rb9-rules.md) | Reported-current | Extract the live OJB query and category list; confirm schema and measure the table. |
 
 ## Gaps and unknowns
 
@@ -150,6 +152,11 @@ Use this to preserve who supplied a fact, who performed work, what was learned, 
 11. What constitutes semantic equivalence beyond matching names: keys, nulls, time zones, status translations, calculated fields, and row availability?
 12. Who validates each app's business behavior after data parity is established?
 13. Where will the final team-visible inventory live: Confluence, shared wiki, Jira attachment/link, or a generated artifact?
+14. What is the exact Jobs Notes Log physical table/view name and which columns does OJB read?
+15. Which note category ids/labels currently represent OJB activities, including categories added after the original implementation?
+16. Does the selected actor identify the performer, author, last editor, assigned user, or an automation identity?
+17. Does last modified represent completion, and how do corrections or later edits affect historical metrics?
+18. What are the measured row count, growth rate, indexes, query plan, retention, and incremental-cursor guarantees for the Jobs Notes Log?
 
 ## Immediate next actions
 
@@ -157,7 +164,7 @@ Use this to preserve who supplied a fact, who performed work, what was learned, 
 | --- | --- | --- | --- | --- |
 | 1 | Export/admin-list apps, flows, connections, and environments; record visibility limitations. | Dustin | Power Platform admin if needed | App universe baseline. |
 | 2 | Reconcile baseline with Dustin, Jamie, and LitTech; classify active/retired/unknown. | Dustin | Jamie, LitTech | Reviewed app list with explicit gaps. |
-| 3 | Inventory OJB first: app, flows, SharePoint lists, gateway, queries, cursors, and writes. | Dustin | Jamie/Ops | Complete OJB dependency chain. |
+| 3 | Inventory OJB first: app, flows, SharePoint lists, gateway, Jobs Notes Log categories/fields, queries, cursors, and writes. | Dustin | Jamie/Ops | Complete OJB dependency chain and activity vocabulary. |
 | 4 | Extract OJB tables/columns and compare with current Lagrange views. | Dustin | Megna, Larry | Per-app object map and Lagrange gaps. |
 | 5 | Map used objects to Callisto and record semantic differences/missing coverage. | Megna | Dustin, Larry | Old-to-new mapping. |
 | 6 | De-duplicate used objects and review with Megna and business owners. | Dustin | Megna, app owners | Acceptance-ready consolidated inventory. |
