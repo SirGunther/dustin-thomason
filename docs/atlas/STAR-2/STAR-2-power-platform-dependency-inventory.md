@@ -64,23 +64,21 @@ This document is the working evidence artifact. It distinguishes live evidence f
 
 ## System and connected-asset inventory
 
-OJB, ADB, and TCB are the active engineering scope. Their records include every connected asset on the data path, even when the asset is not a Power App. The remaining rows are retained only as adjacent evidence leads; they do not expand STAR-2 unless they are proven to be a component or shared dependency of an OJB, ADB, or TCB path.
+OJB, ADB, and TCB are the active engineering scope. Their records include every connected asset on the data path, even when the asset is not a Power App.
 
-This register was assembled from STAR-2, the 2026-10-14 Atlas Workflows kickoff, the older systems map, and the July Power Platform investigation.
+| System | Technical purpose | Reported data path | Inventory state | Next technical proof |
+| --- | --- | --- | --- | --- |
+| Ops Job Board (OJB) | Operations job-board workflows and activity metrics | RB9/Lagrange, including selected Jobs Notes Log activity records → gateway/Power Automate paths → SharePoint working/archive stores → OJB | Partial leads | Name every environment, gateway/connection, flow, list, query, cursor, table/column, and app connection; export definitions. |
+| Automated Double Board (ADB) | Scheduling/operations double-board process | Jobs/JobsTasks family → reported shared Power BI/Power Query layer → Power Automate → ADB SharePoint/state and override layers → ADB | Partial SME map | Name the workspace/model/query, gateway/connection, flow, stores, override path, app connection, and exact source columns; prove base versus VQM. |
+| Title and Contents Builder (TCB) | Presents suggested jobs that require work | Jobs/JobsTasks family → reported shared Power BI/Power Query layer → Power Automate → SharePoint `VUL  Job Suggestions` → TCB | Partial SME map | Name the workspace/model/query, gateway/connection, flow, list id/schema, app connection, and exact source/list columns; prove base versus VQM. |
 
-| Asset | Type | Owner / builder | Business purpose / users | Reported data path | Dependency state | Inventory state | Evidence / next action |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Ops Job Board (OJB) | Power App plus flow family | Unknown; Dustin is current investigation lead | Operations job-board workflows and activity metrics; exact user groups to confirm | Historical lead: RB9 via Power Automate/gateway → SharePoint working/archive lists → app. Current SME lead: selected Jobs Notes Log categories supply operational activity records and who/when metrics. | Reported-current dependency plus historical architecture leads | Priority; partial leads only | Export app and all related flows; verify environment, owners, lists, connection references, Jobs Notes Log queries/categories, and current production state. |
-| Automated Double Board (ADB) | Power App with Power BI/Power Automate and SharePoint leads | Unknown; Dustin/Jamie are knowledge sources | Scheduling/operations double-board process; exact users to confirm | Reported-current: the same Power BI dataset/methodology as Job Suggestions reads the Jobs/JobsTasks families, then Power Automate populates an ADB state/list layer. Historical notes also describe SharePoint overrides. | Reported-current dependency; exact topology pending | Partial SME map | Identify dataset/query, flow, destination list/state, app formulas, override path, owners, refresh, and whether base or VQM objects are used. |
-| True Up Calendar (TUC) | Power App | Unknown | Calendar/operations process; confirm | Older systems map says SharePoint-backed; RB9/Lagrange dependency not proven | Unknown | Not inventoried | Locate live app and connections; ask Dustin/Jamie and business owner. |
-| Job Completion Form | Power App | Unknown | Historically validated job data and made the correct job number easy for the signed-in user to select on web/mobile | Historical: RB-derived data → Power BI dataset/query → Power Automate → Daily Jobs List Reference → app. The list reportedly has not refreshed since Dec 2025. | Historical/dormant; retain-or-retire decision pending | Partial SME map | Confirm app id/owner, AD scoping, last successful run/list update, current usage, and formal lifecycle decision. Do not conflate with Job Submission Form/AJSF. |
-| Certifications app | Power App | Unknown | Confirm purpose and users | RB9/Lagrange dependency reported by kickoff only | Reported-current | Not inventoried | Locate app and dependency chain. |
-| MyPD | Power App or related tool; exact identity pending | Jaimie work referenced; owner/builder pending | Reported consumer/use around job suggestions; exact purpose and users to confirm | Reported lead: `VUL  Job Suggestions`, with apparent old and new connections created in Jaimie's work | Reported-current lead; identity and duplicate connections unverified | Partial verbal lead | Confirm whether “MyPD” was the intended name, inspect both connections, identify live/retired one, and trace producer/consumer direction. |
-| Title and Contents Builder (TCB) | Power App | Unknown | Uses suggested jobs to tell users which work needs to be completed; exact user groups to confirm | Reported-current: consumes SharePoint `VUL  Job Suggestions`, populated from a Power BI RB query by Power Automate | Reported-current indirect RB9 dependency | Partial SME map | Export app/formulas/connections; identify list id/schema, dataset/query/flow, exact Jobs/JobsTasks columns, owner, and freshness expectations. |
-| LitTech-built apps | One or more Power Apps | LitTech; individuals unknown | Unknown | Ticket states some RB9/Lagrange apps were built by LitTech | Reported-current | Names unknown | Request LitTech inventory and compare with tenant admin export. |
-| Jurisdictional Requirements | Power App over SharePoint list | Historical lead: Ops process owner; current owner unknown | Jurisdiction-specific production requirements | Older system map mentions SharePoint list + Power App; RB9 dependency unclear | Unknown | Scope undecided | Inspect connections and determine whether it belongs in STAR-2. |
-| Out-of-Town (OOT) chart | Power BI/reporting, not necessarily a Power App | Unknown | Calendar team location/services view | Older system map reports Excel + RB data | Historical-lead | Scope decision needed | Track as an RB9 Power Platform consumer even if excluded from “Power Apps”; coordinate with reporting inventory. |
-| Inquiries list | SharePoint/Power Platform candidate | Unknown | International inquiries | Older system map says moved out of RB | Historical-lead | Likely out of scope; verify | Confirm no current RB9/Lagrange dependency before excluding. |
+### Adjacent evidence—not additional active scope
+
+| Lead | Why it remains recorded | STAR-2 treatment |
+| --- | --- | --- |
+| Job Completion Form / Daily Jobs List Reference | Historical path may share the same dataset or query pattern and helps prevent Daily Jobs from being conflated with Job Suggestions | Record only the shared technical facts; no lifecycle decision is required. |
+| MyPD/Jaimie and possible LitTech supervisor consumers | May consume the shared `VUL  Job Suggestions` projection | Record the downstream edge only if needed to show reuse or blast radius. |
+| TUC, Certifications, Jurisdictional Requirements, OOT, Inquiries, and unidentified LitTech apps | Earlier documents named them as Power Platform leads | No active work unless evidence places one on an OJB, ADB, or TCB path. |
 
 ## Known OJB component leads
 
@@ -119,33 +117,26 @@ The July ADB notes refer to `VQM jobs` and `VQM jobs tests`. Lagrange code confi
 
 See [RB9 Problem 3](../../rb9/rb9-rules.md) for lineage, cardinality, and compatibility obligations.
 
-## Target query-surface decision — blocking handoff
+## Replacement-query engineering handoff
 
-Direct Power App access to RB9 was reportedly removed for permissions, so the visible app is not necessarily where the database query lives. The target cannot be decided by asking only whether Callisto contains the same table names.
+Direct Power App access to RB9 was reportedly removed for permissions, so the visible app is not necessarily the layer that queries the database. STAR-2 must document the current query path and required output; it does not choose the future product architecture or implementation owner.
 
-STAR-2 owns discovery of the required output and legacy logic. It does **not** implement the replacement, but it must make the implementation handoff unambiguous.
+| System | Current query path | Source-shape lead | Technical evidence still needed |
+| --- | --- | --- | --- |
+| OJB | Power Automate/gateway plus SharePoint projections; exact path pending | Jobs Notes Log and other queries/views pending | Flow queries, payloads, cursors, gateways/connections, stores, columns, transformations, and environments |
+| ADB | Reported shared Power BI/Power Query layer → Power Automate → ADB state/override layer | Jobs and JobsTasks families; base versus VQM unresolved | Model/query, connection, selected columns, filters, joins, refresh/trigger, flow, state store, overrides, and app connection |
+| TCB | Reported shared Power BI/Power Query layer → Power Automate → `VUL  Job Suggestions` → TCB | Jobs and JobsTasks families; base versus VQM unresolved | Model/query, connection, selected columns, filters, joins, refresh/trigger, flow, list contract, and app connection |
 
-| Consumer | Current query layer | Legacy server-side shape | Candidate target layer | Decision owner(s) | Status / evidence needed |
-| --- | --- | --- | --- | --- | --- |
-| ADB | Reported: shared Power BI dataset/query → Power Automate → ADB state/list; prior semantic-model and override leads also exist | Jobs and JobsTasks families; base versus VQM unresolved | Callisto compatibility view, rebuilt semantic-model query, purpose-built payload, or combination | Dustin + Megna + semantic-model/Ops owner; confirm | Blocking: reconcile dataset, materialization, and override paths; export exact queries/columns/refresh/owner |
-| Title and Contents Builder (TCB) | SharePoint `VUL  Job Suggestions` | Upstream Jobs and JobsTasks families; base versus VQM unresolved | Preserve/replace curated Job Suggestions projection | Dustin + app owner + Megna; confirm | Blocking: export app/list/flow/model and define required list contract/freshness |
-| Job Completion Form | Historical Daily Jobs List Reference; no refresh since Dec 2025 | Jobs and JobsTasks family lead; exact dataset and objects unknown | Retire, leave dormant, restore, or redesign | Business owner + Dustin + Megna; confirm | Blocking lifecycle decision before migration scope is closed |
-| MyPD / Jaimie-related consumer | Reported VUL Job Suggestions old/new connections | Indirect Jobs and JobsTasks family lead | Keep one supported list contract or replace | Jaimie/app owner + Dustin + Megna; confirm | Blocking: confirm asset identity, two connections, live consumer, and direction |
-| OJB | Historical/current leads: Power Automate plus SharePoint projections | Jobs Notes Log and other queries/views pending | Purpose-built Callisto view/API/flow query; decide | Dustin + Megna + OJB/Ops owner; confirm | Blocking: extract every flow query, payload, cursor, and required output |
-| Other consumers of a shared OJB/ADB/TCB component | Unknown | Unknown | Record only when needed to describe a shared component's blast radius | _not a STAR-2 engineering decision_ | Trace the shared edge; do not expand into tenant-wide application discovery |
+For each system, the handoff must contain:
 
-### Required decision package
+- the complete current connection path and environment placement;
+- the database engine, gateway/data source, connector, and connection reference;
+- exact source objects, columns, formulas or queries, filters, joins, lookups, sorting, row grain, and freshness;
+- where each transformation currently occurs: VQM object, Power Query/semantic model, flow, SharePoint, or Power Fx;
+- Callisto's matching objects or explicit missing, partial, or unknown coverage;
+- a representative old-versus-new technical parity case for later implementation work.
 
-For each consumer, produce:
-
-- current connection path and database engine/connector, including gateway and connection reference;
-- exact source objects, columns, formulas/queries, filters, joins, lookups, sorting, row grain, and freshness;
-- whether each transformation currently occurs in a VQM object, Power Query/semantic model, flow, or Power Fx;
-- Callisto's available base tables, relationships, views, and approved access paths;
-- chosen target layer and named owner for rebuilding/maintaining the query;
-- a representative old-versus-new parity test and business acceptance owner.
-
-A PostgreSQL connector exists, but that fact alone does not select direct Power App access. The sanctioned security model, delegation behavior, data volume, and support ownership remain decision inputs.
+Selecting and building the replacement query layer is separate from STAR-2.
 
 ## Per-app dependency mapping
 
@@ -204,80 +195,64 @@ Use this to preserve who supplied a fact, who performed work, what was learned, 
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-07-06 | Prior investigation contributors; individual claims require source review | Power Platform to AWS investigation package prepared | Seeded ADB/OJB architecture, risk, flow-name, gateway, and Lagrange leads | `docs/power-platform-aws-investigation/` | Historical-lead | Revalidate every production claim. |
 | 2026-10-14 | Atlas Workflows kickoff: Shaye, Craig, Dustin, Erik, Larry, Megna, Caitlin and others | Phase 1 Power Platform responsibilities and OJB milestone discussed | Named the candidate app list, Dustin's track, mapping collaborators, and Callisto/Lagrange questions | `pd-tech-wiki/projects/atlas-workflows/kickoff.md` | Reported-current | Confirm live assets and target-source decision. |
-| 2026-10-20 | Dustin Thomason | Supplied Jira STAR-2 ticket text and requested working artifacts | Established required app inventory, table/column mapping, de-duplication, explicit gaps, Megna handoff, and migration exclusion | [Original ticket](STAR-2-original-ticket.md) | Confirmed requirement | Begin tenant and schema discovery. |
+| 2026-10-20 | Dustin Thomason | Supplied Jira STAR-2 ticket text and requested working artifacts | Established required dependency inventory, table/column mapping, de-duplication, explicit gaps, data-team handoff, and migration exclusion | [Original ticket](STAR-2-original-ticket.md) | Confirmed requirement | Begin OJB, ADB, and TCB path and schema discovery. |
 | 2026-10-20 | Documentation bootstrap | Created STAR-2 and RB9 Rules working artifacts | Converted known information into evidence-led scaffolds without asserting completeness | [Changelog](../STAR-2-changelog.md) | Verified artifact | Add live findings as discovery proceeds. |
 | 2026-10-20 | Dustin Thomason | Described OJB's use of selected Jobs Notes Log categories and metadata as operational activity records | Identified a concrete OJB table dependency, an incomplete category vocabulary, last-modified incremental behavior, multi-million-row scale, and unresolved actor/completion semantics | [RB9 Problem 2](../../rb9/rb9-rules.md) | Reported-current | Extract the live OJB query and category list; confirm schema and measure the table. |
 | 2026-10-20 | Dustin Thomason plus Lagrange repository review | Raised VQM task/resource relationship and one-to-one migration risk; inspected existing Lagrange implementations | Confirmed `VQM_Jobs` and `VQM_JobsTasks` as ordinary Lagrange views; confirmed lookup-derived labels and omitted raw keys in the task view; did not find SQL aggregation in the reviewed definitions | [RB9 Problem 3](../../rb9/rb9-rules.md); `lagrange-back-end` entity/migration code | Mixed: repository-confirmed definitions, consumer usage and RB9 parity pending | Extract live ADB/OJB queries, compare RB9 DDL, and identify any VQM object that truly aggregates rows. |
 | 2026-10-20 | Dustin Thomason plus documentation review | Explained that direct RB9 Power App access was disabled and that legacy VQM surfaces worked around application-side filtering/lookup limitations; raised uncertainty over whether Callisto or Ops semantic models will own replacement queries | Located the query-surface ownership decision in STAR-2; confirmed shared kickoff says Power Automate/Power BI are current RB9 touchpoints; repository evidence says RB9 is MSSQL and Lagrange is PostgreSQL; connector and exact delegation behavior remain per-app evidence items | [RB9 Problem 3](../../rb9/rb9-rules.md); `pd-tech-wiki/projects/atlas-workflows/kickoff.md`; Microsoft connector/delegation docs | Mixed: reported current practice plus documented platform/repository facts | Export app/flow/model definitions and obtain Callisto's approved read-surface catalog; assign target query owner per consumer. |
-| 2026-10-20 | Dustin Thomason plus repository search | Mapped the reported Job Completion, Job Suggestions/TCB, MyPD/Jaimie, LitTech supervisor, and ADB relationships | Added a current-state architecture companion; separated Daily Jobs from `VUL  Job Suggestions`; recorded Dec 2025 staleness; limited the source lead to Jobs and JobsTasks families; found repo confirmation of the exact VUL double-space title; named the C3 Lucid diagram as uninspected evidence | [Architecture notes](STAR-2-power-platform-current-state-architecture.md); Jaimie Shareplane docs | Mixed: SME-reported topology plus repo-confirmed list naming | Export Lucid, Power BI, flows, lists, and apps; obtain lifecycle decision for Job Completion. |
+| 2026-10-20 | Dustin Thomason plus repository search | Mapped the reported Job Completion, Job Suggestions/TCB, MyPD/Jaimie, LitTech supervisor, and ADB relationships | Added a current-state architecture companion; separated Daily Jobs from `VUL  Job Suggestions`; recorded Dec 2025 staleness; limited the source lead to Jobs and JobsTasks families; found repo confirmation of the exact VUL double-space title; named the C3 Lucid diagram as uninspected evidence | [Architecture notes](STAR-2-power-platform-current-state-architecture.md); Jaimie Shareplane docs | Mixed: SME-reported topology plus repo-confirmed list naming | Export and reconcile the shared Lucid, Power BI, flow, list, and app assets that sit on ADB or TCB paths. |
 
-## Gaps and unknowns
+## Technical gaps and unknowns
 
-1. Which Power Platform environments contain the complete app/flow set?
-2. Does Dustin have Power Platform Administrator visibility, or only maker/owner visibility?
-3. What are the names and current owners of all LitTech-built apps?
-4. Which candidate apps are retired, renamed, duplicated, or disconnected?
-5. Which apps currently read RB9, which read Lagrange, and which use Power BI or Power Automate as the only RB9 touchpoint?
-6. Which components write data, where do they write it, and how is that state reconciled?
-7. Which Power BI semantic models/dataflows are dependencies rather than reporting-only consumers?
-8. Where is the existing OJB/ADB field-mapping spreadsheet, and is it current?
-9. What Lagrange views already satisfy OJB, and what are their underlying tables/columns?
-10. Which Callisto branch/schema revision is the mapping target?
-11. What constitutes semantic equivalence beyond matching names: keys, nulls, time zones, status translations, calculated fields, and row availability?
-12. Who validates each app's business behavior after data parity is established?
-13. Where will the final team-visible inventory live: Confluence, shared wiki, Jira attachment/link, or a generated artifact?
-14. What is the exact Jobs Notes Log physical table/view name and which columns does OJB read?
-15. Which note category ids/labels currently represent OJB activities, including categories added after the original implementation?
-16. Does the selected actor identify the performer, author, last editor, assigned user, or an automation identity?
-17. Does last modified represent completion, and how do corrections or later edits affect historical metrics?
-18. What are the measured row count, growth rate, indexes, query plan, retention, and incremental-cursor guarantees for the Jobs Notes Log?
-19. Does the ADB semantic model actually use `VQM_Jobs` and `VQM_JobsTasks`, and which columns, filters, and transformations does it select?
-20. Was the historical label `VQM jobs tests` a transcription error for `VQM_JobsTasks`?
-21. Do live RB9 VQM definitions match Lagrange, and are any RB9 objects materialized or cached rather than ordinary views?
-22. Which VQM objects or columns truly aggregate multiple rows, rather than only enriching one row with lookup values?
-23. Will Callisto preserve Job → Job Task → Resource keys/cardinality and provide compatibility projections for the exact legacy columns still used?
-24. What database engine and connector did each legacy connection reference actually use? Current repository evidence says RB9 MSSQL, not MySQL.
-25. Which specific Power Fx/connector expressions failed delegation or lookup requirements, and were the limitations in the connector, formula shape, permissions, or data volume?
-26. Is direct Power App access to Callisto PostgreSQL prohibited, merely unplanned, or an approved candidate after gateway/security/delegation validation?
-27. For each app, which team owns rebuilding the query: Callisto/data, Power BI/Ops, Power Automate/API, or the app owner?
-28. What Callisto base tables, views/materialized views, relationships, and read contracts will be available, on what schedule?
-29. What freshness, latency, row-volume, filtering, and parity requirements must each target query surface meet?
-30. What is the exact C3/Lucid document id, page, owner, revision, and reviewed export for `RB9 Replacement Power Platform`?
-31. What is the shared Power BI dataset/semantic-model name, id, workspace, owner, query mode, and source connection?
-32. Do Job Suggestions and ADB share one physical dataset/query connection, two queries in one model, or separate refresh paths?
-33. What are the exact Power Automate flows and SharePoint destinations for Job Suggestions, ADB, and historical Daily Jobs population?
-34. What are the immutable ids, schemas, grain, row counts, refresh timestamps, and owners of `VUL  Job Suggestions` and Daily Jobs List Reference?
-35. Does TCB consume `VUL  Job Suggestions` directly, and which fields/formulas does it use?
-36. Is the Jaimie-related consumer actually MyPD, and which of the reported old/new connections is live?
-37. What LitTech supervisor app/tool consumes Job Suggestions, if any?
-38. Is Job Completion Form formally retired, dormant, broken, or planned for restoration? Who owns that decision?
-39. Did “job submission form” refer to Job Completion Form or the distinct AJSF/Atlas Job Submission Form?
-40. Do the Power BI queries select base `Jobs`/`JobsTasks` or `VQM_Jobs`/`VQM_JobsTasks`, and which columns and filters?
-41. What alerts or freshness checks should detect another silently stale SharePoint projection?
+### OJB
+
+1. Which Power Platform environment contains OJB and its flows?
+2. What are the exact app, flow, gateway/data-source, connection-reference, and SharePoint list names and stable ids?
+3. Which Jobs Notes Log table, columns, categories, filters, actor/time fields, and incremental cursor are used?
+4. What other RB9/Lagrange objects, writes, reconciliation paths, and archive behaviors are part of OJB?
+
+### ADB
+
+5. Which environment, workspace, semantic model/dataset, Power Query/native query, gateway/data source, connection, flow, and stores form the active path?
+6. Does ADB select `Jobs`/`JobsTasks` or `VQM_Jobs`/`VQM_JobsTasks`, and which columns, filters, joins, and transformations are used?
+7. How do the materialized state path and SharePoint override path join, and what does the app read or write?
+
+### TCB
+
+8. Which environment, workspace, semantic model/dataset, Power Query/native query, gateway/data source, connection, and flow populate `VUL  Job Suggestions`?
+9. What are the immutable SharePoint list id, site, schema, keys, refresh/trigger behavior, and exact producer columns?
+10. Which list fields, formulas, and connection references does TCB consume?
+
+### Shared and target facts
+
+11. Do ADB and TCB share one physical dataset/query/connection or only a similar methodology?
+12. Which expected components currently exist, are only reported, are inaccessible, or have not been created?
+13. What Callisto objects match each used RB9/Lagrange table and column, and where are semantics partial or missing?
+14. What environment-aware Lucid pages and evidence exports are still absent?
 
 ## Immediate next actions
 
-| Order | Action | Primary | Support | Deliverable |
-| --- | --- | --- | --- | --- |
-| 1 | Export/admin-list apps, flows, connections, and environments; record visibility limitations. | Dustin | Power Platform admin if needed | App universe baseline. |
-| 2 | Reconcile baseline with Dustin, Jamie, and LitTech; classify active/retired/unknown. | Dustin | Jamie, LitTech | Reviewed app list with explicit gaps. |
-| 3 | Inventory OJB first: app, flows, SharePoint lists, gateway, Jobs Notes Log categories/fields, queries, cursors, and writes. | Dustin | Jamie/Ops | Complete OJB dependency chain and activity vocabulary. |
-| 4 | Export/reconcile the C3 Lucid diagram and extract Job Suggestions, ADB, Job Completion, TCB, and MyPD app/model/flow/list definitions; identify connector, base-vs-VQM objects, columns, filters/lookups, row grain, freshness, and lifecycle. | Dustin | Jaimie/Jamie, LitTech, app/model owners | Reviewed architecture map, per-app query contracts, and lifecycle register. |
-| 5 | Publish the Callisto read-surface catalog and decide, per consumer, whether the replacement query lives in Callisto SQL, a semantic model, Power Automate/API, or another governed layer. | Megna / target data owner; confirm | Dustin, Larry, Ops/BI owner, Platform/security | Signed query-surface and ownership matrix. |
-| 6 | Map used objects to Callisto and record semantic differences/missing coverage against the chosen target layer. | Megna | Dustin, Larry | Old-to-new mapping. |
-| 7 | De-duplicate used objects and review with Megna and business owners. | Dustin | Megna, app owners | Acceptance-ready consolidated inventory. |
-| 8 | Link the reviewed artifact from STAR-2/Confluence and promote stable RB9 rules to `pd-tech-wiki`. | Dustin | Megna, wiki owner | Team-visible handoff and durable knowledge. |
+| Order | Engineering action | Output |
+| --- | --- | --- |
+| 1 | Inventory OJB end to end and extract every named component, environment, connection, query, table/column, cursor, store, and app edge. | Verified OJB dependency record |
+| 2 | Inventory ADB end to end, including its Power BI/Power Query path, gateway/connections, flow, state store, override path, and app edge. | Verified ADB dependency record |
+| 3 | Inventory TCB end to end, including its shared query path, Job Suggestions flow, `VUL  Job Suggestions` contract, and app edge. | Verified TCB dependency record |
+| 4 | Create or reconcile one Lucid page for OJB, ADB, and TCB using environment/platform swimlanes and per-node existence states. | Three current-state diagrams |
+| 5 | Consolidate the RB9/Lagrange tables and columns and map each to Callisto as exact, partial, missing, or unknown. | De-duplicated old-to-new mapping |
+| 6 | Link the inventory, diagrams, and sanitized evidence from STAR-2/Confluence and provide the technical handoff to the data team. | Ticket-ready engineering handoff |
 
 ## Acceptance-criteria tracker
 
-| Criterion | Status | Evidence / blocker |
+| Engineering criterion | Status | Evidence / blocker |
 | --- | --- | --- |
-| All known Power Apps listed with owner, purpose, and data source | Started | Candidate list now includes reported Job Completion, TCB, MyPD, and ADB paths; tenant completeness and owner validation remain pending. |
-| Each app mapped to tables and columns | Started | Jobs Notes Log and historical ADB VQM leads are recorded; live queries and exact consumer-selected columns remain pending. |
-| Consolidated old-to-new inventory and missing flags | Not started | Requires per-app extraction, a current Callisto surface catalog, and target query-layer decisions. |
-| Target query surface and owner agreed per consumer | Started | Decision package and candidate layers documented; no consumer decision or owner confirmation yet. |
-| Gaps and unknowns explicit | Started | Initial gap register exists above. |
-| Stored/linked in team system and shared with Megna | Not started | Current artifact is in Dustin's working repo; final destination/review pending. |
+| OJB, ADB, and TCB have bounded end-to-end dependency records | Started | Reported paths exist; exact named assets and environments remain incomplete. |
+| Every connected component is named, typed, environment-located, and existence-marked | Started | Scaffolding exists; live ids and exports remain pending. |
+| Each system is mapped to exact RB9/Lagrange tables and columns | Started | Jobs Notes Log and Jobs/JobsTasks/VQM leads are recorded; exact live queries and selected columns remain pending. |
+| Consolidated old-to-new inventory has Callisto mappings and missing flags | Not started | Requires exact source extraction and Callisto comparison. |
+| One environment-aware Lucid page exists for OJB, ADB, and TCB | Not started | Page requirements and visual convention are documented. |
+| Technical gaps and unknowns are explicit | Started | System-specific gap register exists above. |
+| Owner/builder, purpose, and users are recorded from evidence or marked unknown | Started | These are metadata fields, not engineering scope decisions. |
+| Artifact is linked and handed to the data team | Not started | Current artifact remains in Dustin's working repository. |
 
 ## Out of scope
 
@@ -285,4 +260,7 @@ Use this to preserve who supplied a fact, who performed work, what was learned, 
 - Moving data into Callisto.
 - Repointing connections.
 - Production gateway, flow, dataset, SharePoint, RB9, Lagrange, or Callisto changes.
+- Building or testing replacement connections or environments.
+- Stakeholder relevance, product scope, lifecycle, prioritization, or target-architecture decisions.
+- Tenant-wide discovery unrelated to OJB, ADB, or TCB.
 - Treating historical notes as current production truth without live verification.
